@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'splash_screen.dart';
-import 'providers/auth_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
+import 'injection_container.dart' as di;
+import 'features/auth/presentation/pages/splash_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await di.init();
   runApp(const MyApp());
 }
 
@@ -12,14 +16,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    return BlocProvider(
+      create: (context) => di.sl<AuthBloc>()..add(const AuthCheckStatus()),
       child: MaterialApp(
         title: 'GetMyPair',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFEE5A52),
+            seedColor: const Color(0xFF667EEA),
             brightness: Brightness.light,
           ),
           useMaterial3: true,
@@ -44,9 +48,8 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const SplashScreen(),
+        home: const SplashPage(),
       ),
     );
   }
 }
-
