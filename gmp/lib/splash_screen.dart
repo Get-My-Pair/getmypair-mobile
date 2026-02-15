@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
+import 'screens/welcome_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -57,12 +61,33 @@ class _SplashScreenState extends State<SplashScreen>
     // Play text animation
     await _textController.forward();
 
-    // Wait 1 second, then navigate
+    // Wait 1 second, then check auth and navigate
     await Future.delayed(const Duration(seconds: 1));
 
     if (mounted) {
-      // Navigate to home/login screen
-      Navigator.of(context).pushReplacementNamed('/home');
+      // Check authentication status
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Wait for auth check to complete
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      if (mounted) {
+        if (authProvider.isAuthenticated) {
+          // User is authenticated, go to dashboard
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const DashboardScreen(),
+            ),
+          );
+        } else {
+          // User is not authenticated, go to welcome screen
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const WelcomeScreen(),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -81,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Myntra Logo with fade and scale animation
+            // GMP Logo with fade and scale animation
             FadeTransition(
               opacity: _logoFade,
               child: ScaleTransition(
@@ -90,11 +115,11 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 140,
                   height: 140,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEE5A52),
+                    color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFEE5A52).withOpacity(0.3),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                         blurRadius: 20,
                         spreadRadius: 5,
                       ),
@@ -102,11 +127,11 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   child: Center(
                     child: Text(
-                      'M',
+                      'GMP',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 80,
+                        fontSize: 60,
                       ),
                     ),
                   ),
@@ -114,13 +139,13 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
             const SizedBox(height: 50),
-            // Myntra Text with fade animation
+            // GetMyPair Text with fade animation
             FadeTransition(
               opacity: _textFade,
               child: Column(
                 children: [
                   Text(
-                    'Myntra',
+                    'GetMyPair',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: const Color(0xFF333333),
                       fontWeight: FontWeight.bold,
@@ -129,7 +154,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Online Shopping App',
+                    'Find Your Perfect Match',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF999999),
                       fontWeight: FontWeight.w400,
