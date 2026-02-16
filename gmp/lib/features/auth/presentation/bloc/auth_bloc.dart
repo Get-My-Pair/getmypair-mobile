@@ -71,7 +71,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await sendOTP(event.mobile);
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
-      (_) => emit(AuthOTPSent(event.mobile)),
+      (data) {
+        // Extract OTP from response if available (development mode only)
+        // OTP might come as int or String from backend
+        final otpValue = data['otp'];
+        String? otp;
+        if (otpValue != null) {
+          otp = otpValue is String ? otpValue : otpValue.toString();
+        }
+        emit(AuthOTPSent(event.mobile, otp: otp));
+      },
     );
   }
 

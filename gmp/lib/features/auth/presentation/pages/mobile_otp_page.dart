@@ -38,6 +38,81 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     context.read<AuthBloc>().add(AuthSendOTP(normalizedMobile));
   }
 
+  void _showOTPDialog(BuildContext context, String otp, String mobile) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('OTP Code (Development)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Your OTP code is:',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                otp,
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                  letterSpacing: 8,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'This is shown only in development mode.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Copy OTP to clipboard
+              Clipboard.setData(ClipboardData(text: otp));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('OTP copied to clipboard'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              // Navigate to OTP verification screen after copying
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => OTPPage(mobile: mobile),
+                ),
+              );
+            },
+            child: const Text('Copy & Continue'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Navigate to OTP verification screen
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => OTPPage(mobile: mobile),
+                ),
+              );
+            },
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
   String? _validateMobile(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your mobile number';
@@ -65,12 +140,17 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthOTPSent) {
-          // Navigate to OTP verification screen
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => OTPPage(mobile: state.mobile),
-            ),
-          );
+          // Show OTP in dialog if available (development mode)
+          if (state.otp != null && state.otp!.isNotEmpty) {
+            _showOTPDialog(context, state.otp!, state.mobile);
+          } else {
+            // Navigate to OTP verification screen if no OTP dialog
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => OTPPage(mobile: state.mobile),
+              ),
+            );
+          }
         } else if (state is AuthError) {
           // Show error message
           ScaffoldMessenger.of(context).showSnackBar(

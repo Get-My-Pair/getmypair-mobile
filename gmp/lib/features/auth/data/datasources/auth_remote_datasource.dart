@@ -5,7 +5,7 @@ import '../models/login_response_model.dart';
 import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
-  Future<void> sendOTP(String mobile);
+  Future<Map<String, dynamic>> sendOTP(String mobile);
   Future<LoginResponseModel> verifyOTP(String mobile, String otp);
   Future<LoginResponseModel> loginWithEmail({
     required String email,
@@ -28,7 +28,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl({required this.client});
 
   @override
-  Future<void> sendOTP(String mobile) async {
+  Future<Map<String, dynamic>> sendOTP(String mobile) async {
     try {
       // Ensure mobile has + prefix if it doesn't
       String normalizedMobile = mobile.trim();
@@ -37,10 +37,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         normalizedMobile = '+91$normalizedMobile';
       }
 
-      await client.post(
+      final response = await client.post(
         ApiEndpoints.sendOtp,
         body: {'mobile': normalizedMobile},
       );
+
+      // Return response data which may include OTP in development mode
+      final data = response['data'] as Map<String, dynamic>? ?? {};
+      
+      // Debug: Print OTP if available
+      if (data.containsKey('otp')) {
+        print('DEBUG: OTP received from backend: ${data['otp']}');
+      }
+      
+      return data;
     } catch (e) {
       throw ServerException('Failed to send OTP: ${e.toString()}');
     }

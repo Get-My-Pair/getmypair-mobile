@@ -3,7 +3,7 @@ import '../../../../core/errors/failures.dart';
 import '../entities/user.dart';
 
 abstract class AuthRepository {
-  Future<Either<Failure, void>> sendOTP(String mobile);
+  Future<Either<Failure, Map<String, dynamic>>> sendOTP(String mobile);
   Future<Either<Failure, Map<String, dynamic>>> verifyOTP(String mobile, String otp);
   Future<Either<Failure, Map<String, dynamic>>> loginWithEmail({
     required String email,

@@ -99,6 +99,67 @@ class _OTPPageState extends State<OTPPage> {
     context.read<AuthBloc>().add(AuthSendOTP(widget.mobile));
   }
 
+  void _showOTPDialog(BuildContext context, String otp) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('OTP Code (Development)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Your OTP code is:',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                otp,
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                  letterSpacing: 8,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'This is shown only in development mode.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Copy OTP to clipboard
+              Clipboard.setData(ClipboardData(text: otp));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('OTP copied to clipboard'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Copy & Close'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -128,12 +189,18 @@ class _OTPPageState extends State<OTPPage> {
             _isResending = false;
             _resendCountdown = 60;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('OTP sent successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          
+          // Show OTP in dialog if available (development mode)
+          if (state.otp != null && state.otp!.isNotEmpty) {
+            _showOTPDialog(context, state.otp!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('OTP sent successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
           _startResendCountdown();
         } else if (state is AuthError) {
           // Show error and clear OTP fields

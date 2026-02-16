@@ -21,11 +21,11 @@ class AuthRepositoryImpl implements AuthRepository {
   });
 
   @override
-  Future<Either<Failure, void>> sendOTP(String mobile) async {
+  Future<Either<Failure, Map<String, dynamic>>> sendOTP(String mobile) async {
     if (await networkInfo.isConnected) {
       try {
-        await remoteDataSource.sendOTP(mobile);
-        return const Right(null);
+        final response = await remoteDataSource.sendOTP(mobile);
+        return Right(response);
       } on ServerException catch (e) {
         return Left(ServerFailure(e.message));
       } on NetworkException catch (e) {
