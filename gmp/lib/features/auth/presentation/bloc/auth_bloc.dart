@@ -1,7 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/user.dart';
-import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/check_auth_status.dart';
 import '../../domain/usecases/complete_profile.dart';
 import '../../domain/usecases/get_current_user.dart';
@@ -152,6 +151,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       name: event.name,
       dateOfBirth: event.dateOfBirth,
       gender: event.gender,
+      location: event.location,
     );
 
     result.fold(

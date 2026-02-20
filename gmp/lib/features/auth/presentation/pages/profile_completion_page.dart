@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -76,7 +77,25 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
         _selectedGender != null;
   }
 
-  void _completeProfile() {
+  Future<Map<String, dynamic>?> _getLocationIfAllowed() async {
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) return null;
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        final requested = await Geolocator.requestPermission();
+        if (requested != LocationPermission.whileInUse && requested != LocationPermission.always) return null;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      );
+      return {'lat': pos.latitude, 'lng': pos.longitude};
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _completeProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -105,11 +124,15 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       return;
     }
 
+    final location = await _getLocationIfAllowed();
+
+    if (!mounted) return;
     context.read<AuthBloc>().add(AuthCompleteProfile(
       mobile: widget.mobile,
       name: _nameController.text.trim(),
       dateOfBirth: _selectedDate!,
       gender: _selectedGender!,
+      location: location,
     ));
   }
 

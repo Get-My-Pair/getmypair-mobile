@@ -16,6 +16,7 @@ abstract class AuthRemoteDataSource {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    Map<String, dynamic>? location,
   });
   Future<UserModel> getCurrentUser(String accessToken);
   Future<void> logout(String refreshToken, String? accessToken);
@@ -105,6 +106,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    Map<String, dynamic>? location,
   }) async {
     try {
       // Ensure mobile has + prefix if it doesn't
@@ -113,14 +115,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         normalizedMobile = '+91$mobile';
       }
 
+      final body = <String, dynamic>{
+        'mobile': normalizedMobile,
+        'name': name,
+        'dateOfBirth': dateOfBirth.toIso8601String().split('T')[0], // YYYY-MM-DD format
+        'gender': gender.toLowerCase(),
+      };
+      if (location != null && location.isNotEmpty) {
+        body['location'] = location;
+      }
+
       final response = await client.post(
         ApiEndpoints.completeProfile,
-        body: {
-          'mobile': normalizedMobile,
-          'name': name,
-          'dateOfBirth': dateOfBirth.toIso8601String().split('T')[0], // YYYY-MM-DD format
-          'gender': gender.toLowerCase(),
-        },
+        body: body,
       );
 
       return LoginResponseModel.fromJson(response);

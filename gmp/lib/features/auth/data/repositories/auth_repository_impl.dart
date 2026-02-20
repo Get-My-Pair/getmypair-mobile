@@ -6,8 +6,6 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
-import '../models/login_response_model.dart';
-import '../models/user_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
@@ -95,6 +93,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    Map<String, dynamic>? location,
   }) async {
     if (await networkInfo.isConnected) {
       try {
@@ -103,6 +102,7 @@ class AuthRepositoryImpl implements AuthRepository {
           name: name,
           dateOfBirth: dateOfBirth,
           gender: gender,
+          location: location,
         );
 
         // Save tokens if provided in response

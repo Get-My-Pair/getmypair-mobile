@@ -14,6 +14,7 @@ abstract class AuthRepository {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    Map<String, dynamic>? location,
   });
   Future<Either<Failure, User>> getCurrentUser();
   Future<Either<Failure, void>> logout();

@@ -13,12 +13,14 @@ class CompleteProfile {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    Map<String, dynamic>? location,
   }) async {
     return await repository.completeProfile(
       mobile: mobile,
       name: name,
       dateOfBirth: dateOfBirth,
       gender: gender,
+      location: location,
     );
   }
 }

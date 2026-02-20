@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
+import '../../../../core/constants/app_constants.dart';
+import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_state.dart';
 import 'welcome_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -121,10 +126,26 @@ class _SplashPageState extends State<SplashPage>
     // Start shimmer effect
     _shimmerController.repeat();
 
-    // Wait 2 seconds then navigate to welcome screen
+    // Wait minimum 2 seconds for splash, then navigate based on auth status
     await Future.delayed(const Duration(seconds: 2));
 
-    if (mounted) {
+    if (!mounted) return;
+    final authState = context.read<AuthBloc>().state;
+
+    if (authState is AuthAuthenticated) {
+      Navigator.of(context).pushAndRemoveUntil(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const CustomerDashboardPage(),
+          transitionsBuilder:
+              (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+        (route) => false,
+      );
+    } else {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
@@ -298,7 +319,7 @@ class _SplashPageState extends State<SplashPage>
                 ),
               ),
 
-              // Bottom loading indicator
+              // Bottom loading indicator + app version
               Positioned(
                 bottom: 80,
                 left: 0,
@@ -310,8 +331,15 @@ class _SplashPageState extends State<SplashPage>
                       opacity: _textFade.value,
                       child: Column(
                         children: [
-                          // Animated dots loader
                           _buildLoadingDots(),
+                          const SizedBox(height: 12),
+                          Text(
+                            '${AppConstants.appName} v${AppConstants.appVersion}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF79747E),
+                            ),
+                          ),
                         ],
                       ),
                     );

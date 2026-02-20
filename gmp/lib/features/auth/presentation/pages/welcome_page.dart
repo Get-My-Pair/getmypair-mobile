@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'mobile_otp_page.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
+
+  /// Ask location permission (per app user flow). Called before navigating to login.
+  static Future<void> askLocationPermissionIfNeeded() async {
+    final status = await Permission.location.status;
+    if (status.isDenied) {
+      await Permission.location.request();
+    }
+    // If permanently denied, user can enable in settings; we still allow app use.
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,17 +94,20 @@ class WelcomePage extends StatelessWidget {
               
               const Spacer(flex: 2),
               
-              // Get Started Button
+              // Get Started Button — ask location permission then go to login
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const MobileOTPPage(),
-                      ),
-                    );
+                  onPressed: () async {
+                    await WelcomePage.askLocationPermissionIfNeeded();
+                    if (context.mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const MobileOTPPage(),
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
