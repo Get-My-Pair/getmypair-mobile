@@ -25,7 +25,7 @@ class AppConstants {
   // API Configuration
   // Backend server runs on port 3000 by default
   // Update ApiEndpoints.baseUrl for different environments
-  static const String defaultApiBaseUrl = 'http://localhost:3000';
+  static const String defaultApiBaseUrl = 'https://getmypair-api.onrender.com';
   
   // Backend API Response Format
   // Success: { success: true, message: string, data?: object }

@@ -1,12 +1,25 @@
+import 'package:flutter/foundation.dart';
 import 'app_constants.dart';
 
 /// API endpoints for getmypair-mobile.
 /// Aligned with getmypair-api backend: /api/auth/*, /api/version.
 class ApiEndpoints {
   // Base URL — getmypair-api backend
+  // Production: Render.com hosted backend
   // Local: 'http://localhost:3000' (Web/iOS) or 'http://10.0.2.2:3000' (Android emulator)
   // Physical device: 'http://YOUR_IP:3000' (same network as backend)
-  static const String baseUrl = 'https://getmypair-api.onrender.com';
+  
+  /// Get base URL based on environment
+  static String get baseUrl {
+    // In debug mode, you can use local backend for testing
+    if (kDebugMode) {
+      // Uncomment and set your local IP for testing on physical device:
+      // return 'http://192.168.1.100:3000';
+      // For emulator use: 'http://10.0.2.2:3000';
+    }
+    // Production backend (Render.com)
+    return 'https://getmypair-api.onrender.com';
+  }
 
   static const String apiPrefix = '/api/auth';
 

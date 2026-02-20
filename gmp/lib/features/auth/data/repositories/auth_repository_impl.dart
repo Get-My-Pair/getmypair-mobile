@@ -35,8 +35,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(NetworkFailure(
         'No internet connection. Please check:\n'
         '1. Your device is connected to Wi-Fi or mobile data\n'
-        '2. Backend server is running on port 3000\n'
-        '3. API base URL is correctly configured in api_endpoints.dart'
+        '2. Backend server is accessible\n'
+        '3. Firewall/VPN is not blocking connections'
       ));
     }
   }
@@ -71,8 +71,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(NetworkFailure(
         'No internet connection. Please check:\n'
         '1. Your device is connected to Wi-Fi or mobile data\n'
-        '2. Backend server is running on port 3000\n'
-        '3. API base URL is correctly configured in api_endpoints.dart'
+        '2. Backend server is accessible\n'
+        '3. Firewall/VPN is not blocking connections'
       ));
     }
   }
@@ -128,8 +128,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(NetworkFailure(
         'No internet connection. Please check:\n'
         '1. Your device is connected to Wi-Fi or mobile data\n'
-        '2. Backend server is running on port 3000\n'
-        '3. API base URL is correctly configured in api_endpoints.dart'
+        '2. Backend server is accessible\n'
+        '3. Firewall/VPN is not blocking connections'
       ));
     }
   }
