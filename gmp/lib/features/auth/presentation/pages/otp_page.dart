@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -9,10 +12,14 @@ import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_pag
 
 class OTPPage extends StatefulWidget {
   final String mobile;
+  final String? countryCode;
+  final String? phoneNumber;
 
   const OTPPage({
     super.key,
     required this.mobile,
+    this.countryCode,
+    this.phoneNumber,
   });
 
   @override
@@ -20,83 +27,59 @@ class OTPPage extends StatefulWidget {
 }
 
 class _OTPPageState extends State<OTPPage> {
-  final List<TextEditingController> _controllers = List.generate(
-    6,
-    (index) => TextEditingController(),
-  );
-  final List<FocusNode> _focusNodes = List.generate(
-    6,
-    (index) => FocusNode(),
-  );
-  bool _isResending = false;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  String _otp = '';
   int _resendCountdown = 60;
+  Timer? _timer;
+  bool _canResend = false;
 
   @override
   void initState() {
     super.initState();
-    _startResendCountdown();
+    _startResendTimer();
   }
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    for (var node in _focusNodes) {
-      node.dispose();
-    }
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _startResendCountdown() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted && _resendCountdown > 0) {
-        setState(() {
+  void _startResendTimer() {
+    setState(() {
+      _resendCountdown = 60;
+      _canResend = false;
+    });
+
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_resendCountdown > 0) {
           _resendCountdown--;
-        });
-        _startResendCountdown();
-      }
+        } else {
+          _canResend = true;
+          timer.cancel();
+        }
+      });
     });
   }
 
-  void _onOTPChanged(int index, String value) {
-    if (value.length == 1) {
-      // Move to next field
-      if (index < 5) {
-        _focusNodes[index + 1].requestFocus();
-      } else {
-        // Last field, verify OTP
-        _verifyOTP();
-      }
-    } else if (value.isEmpty && index > 0) {
-      // Move to previous field
-      _focusNodes[index - 1].requestFocus();
-    }
-  }
-
   void _verifyOTP() {
-    final otp = _controllers.map((c) => c.text).join();
-    
-    if (otp.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter complete OTP'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
+    if (_otp.length != 6) return;
 
-    context.read<AuthBloc>().add(AuthVerifyOTP(
-      mobile: widget.mobile,
-      otp: otp,
-    ));
+    context.read<AuthBloc>().add(
+      AuthVerifyOTP(
+        mobile: widget.mobile,
+        otp: _otp,
+      ),
+    );
   }
 
   void _resendOTP() {
-    if (_resendCountdown > 0) return;
+    if (!_canResend) return;
 
     context.read<AuthBloc>().add(AuthSendOTP(widget.mobile));
+    _startResendTimer();
   }
 
   void _showOTPDialog(BuildContext context, String otp) {
@@ -140,7 +123,6 @@ class _OTPPageState extends State<OTPPage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // Copy OTP to clipboard
               Clipboard.setData(ClipboardData(text: otp));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -160,231 +142,384 @@ class _OTPPageState extends State<OTPPage> {
     );
   }
 
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(1, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  String get _displayPhoneNumber {
+    if (widget.countryCode != null && widget.phoneNumber != null) {
+      return '${widget.countryCode} ${widget.phoneNumber}';
+    }
+    return widget.mobile;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthOTPVerified) {
-          if (state.requiresProfileCompletion) {
-            // New user - navigate to profile completion
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => ProfileCompletionPage(
-                  mobile: widget.mobile,
-                ),
-              ),
-            );
-          } else {
-            // Existing user - navigate to dashboard
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const CustomerDashboardPage(),
-              ),
-              (route) => false,
-            );
-          }
-        } else if (state is AuthOTPSent) {
-          // OTP resent successfully
-          setState(() {
-            _isResending = false;
-            _resendCountdown = 60;
-          });
-          
-          // Show OTP in dialog if available (development mode)
-          if (state.otp != null && state.otp!.isNotEmpty) {
-            _showOTPDialog(context, state.otp!);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('OTP sent successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-          _startResendCountdown();
-        } else if (state is AuthError) {
-          // Show error and clear OTP fields
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
-          );
-          // Clear all fields
-          for (var controller in _controllers) {
-            controller.clear();
-          }
-          _focusNodes[0].requestFocus();
-          
-          // Reset resending state if it was a resend error
-          if (_isResending) {
-            setState(() {
-              _isResending = false;
-            });
-          }
-        }
-      },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          final isLoading = state is AuthLoading && !_isResending;
-          
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Verify OTP'),
-              elevation: 0,
-            ),
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 32),
-                    
-                    // Icon
-                    Icon(
-                      Icons.verified_user,
-                      size: 80,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Title
-                    Text(
-                      'Enter Verification Code',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    
-                    Text(
-                      'We sent a code to ${widget.mobile}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
-                    
-                    // OTP Input Fields
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(
-                        6,
-                        (index) => SizedBox(
-                          width: 50,
-                          height: 60,
-                          child: TextField(
-                            controller: _controllers[index],
-                            focusNode: _focusNodes[index],
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            maxLength: 1,
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                            decoration: InputDecoration(
-                              counterText: '',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[50],
-                            ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            onChanged: (value) => _onOTPChanged(index, value),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Verify Button
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : _verifyOTP,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : Text(
-                                'Verify',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                      ),
-                    ),
-                    const Spacer(),
-                    
-                    // Resend OTP
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Didn\'t receive the code? ',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
-                        ),
-                        if (_resendCountdown > 0)
-                          Text(
-                            'Resend in $_resendCountdown',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          )
-                        else
-                          TextButton(
-                            onPressed: (_isResending || _resendCountdown > 0) ? null : () {
-                              setState(() {
-                                _isResending = true;
-                              });
-                              _resendOTP();
-                            },
-                            child: _isResending
-                                ? const SizedBox(
-                                    height: 16,
-                                    width: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : Text(
-                                    'Resend',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Theme.of(context).colorScheme.primary,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(40),
+        child: AppBar(
+          leading: IconButton(
+            color: const Color.fromARGB(255, 48, 27, 11),
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
       ),
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthOTPVerified) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Phone verified successfully!'),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            );
+
+            if (state.requiresProfileCompletion) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => ProfileCompletionPage(
+                    mobile: widget.mobile,
+                  ),
+                ),
+              );
+            } else {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const CustomerDashboardPage(),
+                ),
+                (route) => false,
+              );
+            }
+          } else if (state is AuthOTPSent) {
+            if (state.otp != null && state.otp!.isNotEmpty) {
+              _showOTPDialog(context, state.otp!);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('OTP sent successfully'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              );
+            }
+          } else if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            );
+          }
+        },
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+
+                  // Header
+                  _buildHeader(),
+
+                  const SizedBox(height: 48),
+
+                  // OTP Input Card
+                  _buildOtpInputCard(),
+
+                  const SizedBox(height: 32),
+
+                  // Verify Button
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) {
+                      final isLoading = state is AuthLoading;
+                      final isEnabled = _otp.length == 6;
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: isEnabled ? _verifyOTP : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+                            disabledForegroundColor: Colors.white70,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: isEnabled ? 2 : 0,
+                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  'Verify OTP',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Resend OTP
+                  _buildResendSection(),
+
+                  const SizedBox(height: 24),
+
+                  // Help Text
+                  _buildHelpText(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Verify Phone',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+            Image.asset('assets/images/logo.png', width: 100, height: 100),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        RichText(
+          text: TextSpan(
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+            children: [
+              const TextSpan(text: 'Code sent to '),
+              TextSpan(
+                text: _displayPhoneNumber,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOtpInputCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Enter 6-digit code',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          PinCodeTextField(
+            appContext: context,
+            length: 6,
+            obscureText: false,
+            animationType: AnimationType.fade,
+            pinTheme: PinTheme(
+              shape: PinCodeFieldShape.box,
+              borderRadius: BorderRadius.circular(8),
+              fieldHeight: 50,
+              fieldWidth: 42,
+              activeFillColor: AppColors.surface,
+              inactiveFillColor: AppColors.surfaceVariant,
+              selectedFillColor: AppColors.surface,
+              activeColor: AppColors.primary,
+              inactiveColor: AppColors.border,
+              selectedColor: AppColors.primary,
+              borderWidth: 2,
+            ),
+            animationDuration: const Duration(milliseconds: 300),
+            enableActiveFill: true,
+            onChanged: (String value) {
+              setState(() {
+                _otp = value;
+              });
+            },
+            onCompleted: (String value) {
+              setState(() {
+                _otp = value;
+              });
+            },
+            beforeTextPaste: (text) => true,
+            textStyle: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Timer
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 16,
+                  color: _resendCountdown > 0
+                      ? AppColors.accent
+                      : AppColors.textTertiary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _resendCountdown > 0
+                      ? 'Code expires in ${_formatTime(_resendCountdown)}'
+                      : 'Code expired',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _resendCountdown > 0
+                        ? AppColors.textSecondary
+                        : AppColors.error,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResendSection() {
+    return Center(
+      child: Column(
+        children: [
+          Text(
+            'Didn\'t receive the code?',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          TextButton(
+            onPressed: _canResend ? _resendOTP : null,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              disabledForegroundColor: AppColors.textTertiary,
+            ),
+            child: Text(
+              _canResend
+                  ? 'Resend OTP'
+                  : 'Resend in ${_formatTime(_resendCountdown)}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpText() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.info.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.info.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.help_outline_rounded, size: 20, color: AppColors.info),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'OTP is valid for 5 minutes. Maximum 3 attempts allowed.',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ),
+      
+        ]
+      )
     );
   }
 }

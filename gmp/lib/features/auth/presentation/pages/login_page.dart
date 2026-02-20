@@ -18,11 +18,13 @@ class LoginPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Icon
-              Icon(
-                Icons.info_outline,
-                size: 80,
-                color: Colors.orange,
+              // Logo
+              Center(
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 200,
+                  height: 200,
+                ),
               ),
               const SizedBox(height: 32),
               

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import 'mobile_otp_page.dart';
 
 class WelcomePage extends StatelessWidget {
@@ -7,66 +8,87 @@ class WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // App Logo/Icon
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    'GMP',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 48,
-                        ),
-                  ),
-                ),
+              const Spacer(flex: 1),
+              
+              // Logo
+              Image.asset(
+                'assets/images/logo.png',
+                width: 180,
+                height: 180,
               ),
-              const SizedBox(height: 48),
+              
+              const SizedBox(height: 32),
               
               // Welcome Text
-              Text(
-                'Welcome to GetMyPair',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+              const Text(
+                'Welcome to',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.5,
+                ),
                 textAlign: TextAlign.center,
               ),
+              
+              const SizedBox(height: 8),
+              
+              const Text(
+                'Get My Pair',
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                  letterSpacing: -0.5,
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
               const SizedBox(height: 16),
               
               Text(
-                'Connect with your perfect match',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
+                'Find shoes. Fix shoes.\nEverything you need, all in one place.',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 64),
               
-              // Get Started / Login Button (Mobile OTP only)
+              const Spacer(flex: 2),
+              
+              // Features highlights
+              _buildFeatureRow(
+                icon: Icons.search_rounded,
+                text: 'Browse thousands of shoes',
+              ),
+              const SizedBox(height: 16),
+              _buildFeatureRow(
+                icon: Icons.build_rounded,
+                text: 'Find trusted repair services',
+              ),
+              const SizedBox(height: 16),
+              _buildFeatureRow(
+                icon: Icons.local_shipping_rounded,
+                text: 'Fast delivery to your doorstep',
+              ),
+              
+              const Spacer(flex: 2),
+              
+              // Get Started Button
               SizedBox(
                 width: double.infinity,
                 height: 56,
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -74,38 +96,103 @@ class WelcomePage extends StatelessWidget {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.phone_android),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 2,
                   ),
-                  label: Text(
-                    'Get Started',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Get Started',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_rounded, size: 20),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
               
-              // Info text
-              Text(
-                'Login with your mobile number',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+              const SizedBox(height: 16),
+              
+              // Terms text
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textTertiary,
+                      height: 1.5,
                     ),
-                textAlign: TextAlign.center,
+                    children: [
+                      const TextSpan(text: 'By continuing, you agree to our '),
+                      TextSpan(
+                        text: 'Terms of Service',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const TextSpan(text: ' and '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+              
+              const SizedBox(height: 32),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFeatureRow({required IconData icon, required String text}) {
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.primary,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

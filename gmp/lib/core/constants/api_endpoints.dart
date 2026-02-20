@@ -15,12 +15,13 @@ class ApiEndpoints {
   // 1. Check if backend server is running on port 3000
   // 2. Verify the baseUrl matches your platform (see above)
   // 3. For physical devices, ensure firewall allows connections
-  static const String baseUrl = 'http://localhost:3000';
-
-  // Live demo: 'http://localhost:3000';
   // static const String baseUrl = 'http://localhost:3000';
 
-  
+  // Live demo: 'http://localhost:3000';
+
+    // static const String baseUrl = 'http://localhost:3000';
+      static const String baseUrl = 'https://getmypair-api.onrender.com';
+
   static const String apiPrefix = '/api/auth';
   
   // Auth endpoints (matching backend routes)

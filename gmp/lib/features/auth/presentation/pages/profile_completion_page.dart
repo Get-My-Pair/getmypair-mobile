@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -24,7 +25,11 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
   DateTime? _selectedDate;
   String? _selectedGender;
 
-  final List<String> _genders = ['male', 'female', 'other'];
+  final List<Map<String, dynamic>> _genders = [
+    {'value': 'male', 'label': 'Male', 'icon': Icons.male},
+    {'value': 'female', 'label': 'Female', 'icon': Icons.female},
+    {'value': 'other', 'label': 'Other', 'icon': Icons.transgender},
+  ];
 
   @override
   void dispose() {
@@ -46,11 +51,11 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Theme.of(context).colorScheme.primary,
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
               onPrimary: Colors.white,
               surface: Colors.white,
-              onSurface: Colors.black,
+              onSurface: AppColors.textPrimary,
             ),
           ),
           child: child!,
@@ -65,6 +70,12 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
     }
   }
 
+  bool get _isFormValid {
+    return _nameController.text.trim().length >= 2 &&
+        _selectedDate != null &&
+        _selectedGender != null;
+  }
+
   void _completeProfile() {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -72,9 +83,11 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
     if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select your date of birth'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please select your date of birth'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
       return;
@@ -82,9 +95,11 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
     if (_selectedGender == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select your gender'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('Please select your gender'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
       return;
@@ -116,7 +131,6 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthProfileCompleted || state is AuthAuthenticated) {
-          // Navigate to dashboard
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (context) => const CustomerDashboardPage(),
@@ -127,7 +141,9 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           );
         }
@@ -137,198 +153,287 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
           final isLoading = state is AuthLoading;
           
           return Scaffold(
+            backgroundColor: AppColors.background,
             appBar: AppBar(
-              title: const Text('Complete Profile'),
+              backgroundColor: Colors.transparent,
               elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
             body: SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 16),
-                      
-                      // Icon
-                      Icon(
-                        Icons.person_add,
-                        size: 80,
-                        color: Theme.of(context).colorScheme.primary,
+                      // Logo
+                      Center(
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 100,
+                          height: 100,
+                        ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
                       
                       // Title
-                      Text(
-                        'Complete Your Profile',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                        textAlign: TextAlign.center,
+                      const Center(
+                        child: Text(
+                          'Complete Your Profile',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryDark,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       
-                      Text(
-                        'Please provide some information to get started',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 48),
-                      
-                      // Name Input
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Full Name',
-                          hintText: 'Enter your full name',
-                          prefixIcon: const Icon(Icons.person),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                        validator: _validateName,
-                        textCapitalization: TextCapitalization.words,
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Date of Birth
-                      InkWell(
-                        onTap: _selectDate,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[300]!),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Text(
-                                  _selectedDate == null
-                                      ? 'Date of Birth'
-                                      : DateFormat('yyyy-MM-dd').format(_selectedDate!),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: _selectedDate == null
-                                        ? Colors.grey[600]
-                                        : Colors.black87,
-                                  ),
-                                ),
-                              ),
-                              if (_selectedDate != null)
-                                Icon(
-                                  Icons.check_circle,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                            ],
+                      Center(
+                        child: Text(
+                          'Tell us a bit about yourself',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       
-                      // Gender Selection
-                      Text(
-                        'Gender',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
+                      // Form Card
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.shadow,
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
                             ),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      ..._genders.map((gender) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _selectedGender = gender;
-                                });
-                              },
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Name Input
+                            const Text(
+                              'Full Name',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _nameController,
+                              onChanged: (_) => setState(() {}),
+                              decoration: InputDecoration(
+                                hintText: 'Enter your full name',
+                                hintStyle: TextStyle(color: AppColors.textTertiary),
+                                prefixIcon: const Icon(Icons.person_outline, color: AppColors.textTertiary),
+                                filled: true,
+                                fillColor: AppColors.surfaceVariant,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: AppColors.error),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              ),
+                              validator: _validateName,
+                              textCapitalization: TextCapitalization.words,
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            // Date of Birth
+                            const Text(
+                              'Date of Birth',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: _selectDate,
+                              borderRadius: BorderRadius.circular(12),
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: _selectedGender == gender
-                                      ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                      : Colors.grey[50],
+                                  color: AppColors.surfaceVariant,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: _selectedGender == gender
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.grey[300]!,
-                                    width: _selectedGender == gender ? 2 : 1,
-                                  ),
+                                  border: _selectedDate != null
+                                      ? Border.all(color: AppColors.primary, width: 2)
+                                      : null,
                                 ),
                                 child: Row(
                                   children: [
                                     Icon(
-                                      _selectedGender == gender
-                                          ? Icons.radio_button_checked
-                                          : Icons.radio_button_unchecked,
-                                      color: _selectedGender == gender
-                                          ? Theme.of(context).colorScheme.primary
-                                          : Colors.grey[600],
+                                      Icons.calendar_today_outlined,
+                                      color: _selectedDate != null
+                                          ? AppColors.primary
+                                          : AppColors.textTertiary,
+                                      size: 22,
                                     ),
-                                    const SizedBox(width: 16),
-                                    Text(
-                                      gender[0].toUpperCase() + gender.substring(1),
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: _selectedGender == gender
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                        color: _selectedGender == gender
-                                            ? Theme.of(context).colorScheme.primary
-                                            : Colors.black87,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        _selectedDate == null
+                                            ? 'Select your date of birth'
+                                            : DateFormat('dd MMMM yyyy').format(_selectedDate!),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: _selectedDate != null ? FontWeight.w500 : FontWeight.w400,
+                                          color: _selectedDate == null
+                                              ? AppColors.textTertiary
+                                              : AppColors.textPrimary,
+                                        ),
                                       ),
                                     ),
+                                    if (_selectedDate != null)
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: AppColors.success,
+                                        size: 22,
+                                      ),
                                   ],
                                 ),
                               ),
                             ),
-                          )),
+                            const SizedBox(height: 24),
+                            
+                            // Gender Selection
+                            const Text(
+                              'Gender',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            Row(
+                              children: _genders.map((gender) {
+                                final isSelected = _selectedGender == gender['value'];
+                                return Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      right: gender != _genders.last ? 12 : 0,
+                                    ),
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedGender = gender['value'];
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? AppColors.primaryLight
+                                              : AppColors.surfaceVariant,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isSelected
+                                                ? AppColors.primary
+                                                : Colors.transparent,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Icon(
+                                              gender['icon'],
+                                              color: isSelected
+                                                  ? AppColors.primary
+                                                  : AppColors.textTertiary,
+                                              size: 28,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              gender['label'],
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w600
+                                                    : FontWeight.w500,
+                                                color: isSelected
+                                                    ? AppColors.primary
+                                                    : AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 32),
                       
                       // Complete Profile Button
                       SizedBox(
+                        width: double.infinity,
                         height: 56,
-                        child: ElevatedButton(
-                          onPressed: isLoading ? null : _completeProfile,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: isLoading
+                        child: ElevatedButton.icon(
+                          onPressed: _isFormValid ? _completeProfile : null,
+                          icon: isLoading
+                              ? const SizedBox.shrink()
+                              : const Icon(Icons.check_circle_outline, size: 20),
+                          label: isLoading
                               ? const SizedBox(
                                   height: 24,
                                   width: 24,
                                   child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                                    strokeWidth: 2.5,
                                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : Text(
+                              : const Text(
                                   'Complete Profile',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+                            disabledForegroundColor: Colors.white70,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: _isFormValid ? 2 : 0,
+                          ),
                         ),
                       ),
+                      
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),

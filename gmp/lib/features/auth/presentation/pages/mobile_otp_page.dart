@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../../data/models/country_code.dart';
+import '../widgets/custom_text_field.dart';
+import '../widgets/country_code_picker.dart';
 import 'otp_page.dart';
 
 class MobileOTPPage extends StatefulWidget {
@@ -14,28 +18,53 @@ class MobileOTPPage extends StatefulWidget {
 }
 
 class _MobileOTPPageState extends State<MobileOTPPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _mobileController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final FocusNode _phoneFocusNode = FocusNode();
+  CountryCode _selectedCountry = CountryCode.popularCountries[0]; // India default
+  bool _termsAccepted = false;
+  String? _phoneError;
+  bool _isSendingOTP = false;
 
   @override
   void dispose() {
-    _mobileController.dispose();
+    _phoneController.dispose();
+    _phoneFocusNode.dispose();
     super.dispose();
   }
 
+  bool get _isValid {
+    final phoneLength = _phoneController.text
+        .replaceAll(RegExp(r'[^0-9]'), '')
+        .length;
+    return phoneLength == 10 && _termsAccepted;
+  }
+
+  void _validatePhone(String value) {
+    setState(() {
+      final cleanPhone = value.replaceAll(RegExp(r'[^0-9]'), '');
+      if (cleanPhone.isEmpty) {
+        _phoneError = null;
+      } else if (cleanPhone.length < 10) {
+        _phoneError = 'Phone number must be 10 digits';
+      } else if (cleanPhone.length > 10) {
+        _phoneError = 'Phone number cannot exceed 10 digits';
+      } else {
+        _phoneError = null;
+      }
+    });
+  }
+
   void _sendOTP() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_isValid) return;
 
-    final mobile = _mobileController.text.trim();
-    // Ensure mobile has + prefix if it doesn't
-    String normalizedMobile = mobile;
-    if (mobile.isNotEmpty && !mobile.startsWith('+')) {
-      normalizedMobile = '+91$mobile';
-    }
+    setState(() {
+      _isSendingOTP = true;
+    });
 
-    context.read<AuthBloc>().add(AuthSendOTP(normalizedMobile));
+    final cleanPhone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final fullMobile = '${_selectedCountry.dialCode}$cleanPhone';
+
+    context.read<AuthBloc>().add(AuthSendOTP(fullMobile));
   }
 
   void _showOTPDialog(BuildContext context, String otp, String mobile) {
@@ -79,7 +108,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // Copy OTP to clipboard
               Clipboard.setData(ClipboardData(text: otp));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -87,10 +115,13 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                   duration: Duration(seconds: 2),
                 ),
               );
-              // Navigate to OTP verification screen after copying
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => OTPPage(mobile: mobile),
+                  builder: (context) => OTPPage(
+                    mobile: mobile,
+                    countryCode: _selectedCountry.dialCode,
+                    phoneNumber: _phoneController.text,
+                  ),
                 ),
               );
             },
@@ -99,10 +130,13 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // Navigate to OTP verification screen
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => OTPPage(mobile: mobile),
+                  builder: (context) => OTPPage(
+                    mobile: mobile,
+                    countryCode: _selectedCountry.dialCode,
+                    phoneNumber: _phoneController.text,
+                  ),
                 ),
               );
             },
@@ -113,169 +147,347 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     );
   }
 
-  String? _validateMobile(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your mobile number';
-    }
-    
-    // Remove any spaces, dashes, or parentheses
-    final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    
-    // Check if it starts with + or is a valid number
-    if (cleaned.startsWith('+')) {
-      if (cleaned.length < 10) {
-        return 'Please enter a valid mobile number';
-      }
-    } else {
-      if (cleaned.length < 10) {
-        return 'Please enter a valid mobile number';
-      }
-    }
-    
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthOTPSent) {
-          // Show OTP in dialog if available (development mode)
-          if (state.otp != null && state.otp!.isNotEmpty) {
-            _showOTPDialog(context, state.otp!, state.mobile);
-          } else {
-            // Navigate to OTP verification screen if no OTP dialog
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => OTPPage(mobile: state.mobile),
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(40),
+        child: AppBar(
+          leading: IconButton(
+            color: const Color.fromARGB(255, 48, 27, 11),
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      ),
+      backgroundColor: AppColors.background,
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthOTPSent) {
+            setState(() {
+              _isSendingOTP = false;
+            });
+            if (state.otp != null && state.otp!.isNotEmpty) {
+              _showOTPDialog(context, state.otp!, state.mobile);
+            } else {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => OTPPage(
+                    mobile: state.mobile,
+                    countryCode: _selectedCountry.dialCode,
+                    phoneNumber: _phoneController.text,
+                  ),
+                ),
+              );
+            }
+          } else if (state is AuthError) {
+            setState(() {
+              _isSendingOTP = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             );
           }
-        } else if (state is AuthError) {
-          // Show error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          final isLoading = state is AuthLoading;
-          
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Enter Mobile Number'),
-              elevation: 0,
-            ),
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 32),
-                      
-                      // Icon
-                      Icon(
-                        Icons.phone_android,
-                        size: 80,
-                        color: Theme.of(context).colorScheme.primary,
+        },
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Section
+                _buildHeader(),
+
+                const SizedBox(height: 10),
+
+                // Phone Input Card
+                _buildPhoneInputCard(),
+
+                const SizedBox(height: 10),
+
+                // Terms & Privacy
+                _buildTermsCheckbox(),
+
+                const SizedBox(height: 10),
+
+                // CTA Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: (_isValid && !_isSendingOTP) ? _sendOTP : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+                      disabledForegroundColor: Colors.white70,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      const SizedBox(height: 32),
-                      
-                      // Title
-                      Text(
-                        'Enter Your Mobile Number',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                      elevation: _isValid ? 2 : 0,
+                    ),
+                    child: _isSendingOTP
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      
-                      Text(
-                        'We\'ll send you a verification code',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
+                          )
+                        : const Text(
+                            'Send OTP',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 48),
-                      
-                      // Mobile Number Input
-                      TextFormField(
-                        controller: _mobileController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: 'Mobile Number',
-                          hintText: '+1234567890',
-                          prefixIcon: const Icon(Icons.phone),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
                           ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                        validator: _validateMobile,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[\d\+\-\(\)\s]')),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // Send OTP Button
-                      SizedBox(
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: isLoading ? null : _sendOTP,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : Text(
-                                  'Send OTP',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                        ),
-                      ),
-                      const Spacer(),
-                      
-                      // Terms and Privacy
-                      Text(
-                        'By continuing, you agree to our Terms of Service and Privacy Policy',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Footer
+                _buildFooter(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: Image.asset('assets/images/logo.png', width: 300, height: 300),
+        ),
+
+        // Title
+        Center(
+          child: const Text(
+            'Welcome to Get My Pair',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryDark,
+              height: 1.2,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Tagline
+        Center(
+          child: Text(
+            'Find shoes. Fix shoes. Everything you need, all in one place.',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhoneInputCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Enter your phone number',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            'We\'ll send you a verification code',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Country Code + Phone Input
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Country Code Picker
+              CountryCodePicker(
+                selectedCountry: _selectedCountry,
+                onChanged: (country) {
+                  setState(() {
+                    _selectedCountry = country;
+                  });
+                },
+              ),
+
+              const SizedBox(width: 12),
+
+              // Phone Input
+              Expanded(
+                child: CustomTextField(
+                  controller: _phoneController,
+                  // hintText: '9876543210',
+                  keyboardType: TextInputType.phone,
+                  autofocus: true,
+                  focusNode: _phoneFocusNode,
+                  maxLength: 10,
+                  errorText: _phoneError,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  onChanged: _validatePhone,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Info Text
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: AppColors.textTertiary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Enter your 10-digit mobile number',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textTertiary,
                   ),
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTermsCheckbox() {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _termsAccepted = !_termsAccepted;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _termsAccepted ? AppColors.primary : AppColors.surface,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _termsAccepted ? AppColors.primary : AppColors.border,
+                  width: 2,
+                ),
+              ),
+              child: _termsAccepted
+                  ? const Icon(
+                      Icons.check,
+                      size: 16,
+                      color: AppColors.textOnPrimary,
+                    )
+                  : null,
             ),
-          );
-        },
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                  children: [
+                    const TextSpan(text: 'I agree to the '),
+                    TextSpan(
+                      text: 'Terms of Service',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                    const TextSpan(text: ' and '),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Center(
+      child: Text(
+        'By continuing, you agree to receive SMS',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: AppColors.textTertiary,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }

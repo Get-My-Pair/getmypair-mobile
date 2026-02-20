@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/auth_bloc.dart';
-import '../bloc/auth_event.dart';
-import '../bloc/auth_state.dart';
+import 'dart:math' as math;
 import 'welcome_page.dart';
-import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -17,58 +13,129 @@ class _SplashPageState extends State<SplashPage>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
   late AnimationController _textController;
-  late Animation<double> _logoFade;
+  late AnimationController _shimmerController;
+  late AnimationController _floatController;
   late Animation<double> _logoScale;
+  late Animation<double> _logoFade;
+  late Animation<double> _textSlide;
   late Animation<double> _textFade;
+  late Animation<double> _taglineSlide;
+  late Animation<double> _taglineFade;
+  late Animation<double> _floatAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    // Logo animation controller (0-1.5 seconds)
+    // Logo animation controller
     _logoController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    // Text animation controller
+    _textController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    // Shimmer effect controller
+    _shimmerController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    // Text animation controller (starts after logo, 1.5-2.5 seconds)
-    _textController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+    // Floating animation controller
+    _floatController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
-    // Logo fade animation
+    // Logo animations - bounce scale effect
+    _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _logoController,
+        curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
+      ),
+    );
+
     _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeIn),
+      CurvedAnimation(
+        parent: _logoController,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+      ),
     );
 
-    // Logo scale animation
-    _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeInOutBack),
+    // Floating animation for logo
+    _floatAnimation = Tween<double>(begin: -8.0, end: 8.0).animate(
+      CurvedAnimation(
+        parent: _floatController,
+        curve: Curves.easeInOut,
+      ),
     );
 
-    // Text fade animation
+    // App name slide up animation
+    _textSlide = Tween<double>(begin: 30.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _textController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+      ),
+    );
+
     _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeIn),
+      CurvedAnimation(
+        parent: _textController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
     );
 
-    // Start animation sequence
+    // Tagline slide up animation
+    _taglineSlide = Tween<double>(begin: 20.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _textController,
+        curve: const Interval(0.3, 0.9, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _taglineFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _textController,
+        curve: const Interval(0.3, 0.8, curve: Curves.easeOut),
+      ),
+    );
+
     _startAnimationSequence();
   }
 
   void _startAnimationSequence() async {
-    // Play logo animation
-    await _logoController.forward();
+    // Start logo animation
+    _logoController.forward();
 
-    // Play text animation
-    await _textController.forward();
+    // Start floating animation (repeating)
+    _floatController.repeat(reverse: true);
 
-    // Wait 1 second, then check auth and navigate
-    await Future.delayed(const Duration(seconds: 1));
+    // Start text animation after a delay
+    await Future.delayed(const Duration(milliseconds: 600));
+    _textController.forward();
+
+    // Start shimmer effect
+    _shimmerController.repeat();
+
+    // Wait 2 seconds then navigate to welcome screen
+    await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
-      // Trigger auth check
-      context.read<AuthBloc>().add(const AuthCheckStatus());
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const WelcomePage(),
+          transitionsBuilder:
+              (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     }
   }
 
@@ -76,98 +143,324 @@ class _SplashPageState extends State<SplashPage>
   void dispose() {
     _logoController.dispose();
     _textController.dispose();
+    _shimmerController.dispose();
+    _floatController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          // User is authenticated, go to dashboard
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const CustomerDashboardPage(),
+    return Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFFFFFF),
+                Color(0xFFF8F5FF),
+                Color(0xFFEDE7F6),
+              ],
             ),
-          );
-        } else if (state is AuthUnauthenticated) {
-          // User is not authenticated, go to welcome screen
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const WelcomePage(),
-            ),
-          );
-        }
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFFDFDFD),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          ),
+          child: Stack(
             children: [
-              // GMP Logo with fade and scale animation
-              FadeTransition(
-                opacity: _logoFade,
-                child: ScaleTransition(
-                  scale: _logoScale,
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        'GMP',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 60,
-                            ),
-                      ),
-                    ),
+              // Decorative circles in background
+              Positioned(
+                top: -100,
+                right: -100,
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF6750A4).withOpacity(0.05),
                   ),
                 ),
               ),
-              const SizedBox(height: 50),
-              // GetMyPair Text with fade animation
-              FadeTransition(
-                opacity: _textFade,
+              Positioned(
+                bottom: -80,
+                left: -80,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF6750A4).withOpacity(0.08),
+                  ),
+                ),
+              ),
+
+              // Floating shoe icons in background
+              ..._buildFloatingShoes(),
+
+              // Main content
+              Center(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'GetMyPair',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: const Color(0xFF333333),
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                    // Animated Logo with floating effect
+                    AnimatedBuilder(
+                      animation: Listenable.merge([_logoController, _floatController]),
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _floatAnimation.value),
+                          child: Transform.scale(
+                            scale: _logoScale.value,
+                            child: Opacity(
+                              opacity: _logoFade.value,
+                              child: Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(40),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF6750A4)
+                                          .withOpacity(0.2),
+                                      blurRadius: 50,
+                                      spreadRadius: 5,
+                                      offset: const Offset(0, 15),
+                                    ),
+                                  ],
+                                ),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  width: 220,
+                                  height: 220,
+                                ),
+                              ),
+                            ),
                           ),
+                        );
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Find Your Perfect Match',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF999999),
-                            fontWeight: FontWeight.w400,
-                            letterSpacing: 0.3,
+
+                    const SizedBox(height: 48),
+
+                    // App Name with slide animation
+                    AnimatedBuilder(
+                      animation: _textController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _textSlide.value),
+                          child: Opacity(
+                            opacity: _textFade.value,
+                            child: ShaderMask(
+                              shaderCallback: (bounds) {
+                                return const LinearGradient(
+                                  colors: [
+                                    Color(0xFF21005D),
+                                    Color(0xFF6750A4),
+                                  ],
+                                ).createShader(bounds);
+                              },
+                              child: const Text(
+                                'Get My Pair',
+                                style: TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
                           ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Tagline with delayed slide animation
+                    AnimatedBuilder(
+                      animation: _textController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _taglineSlide.value),
+                          child: Opacity(
+                            opacity: _taglineFade.value,
+                            child: const Text(
+                              'Find shoes. Fix shoes. All in one place.',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w400,
+                                color: Color(0xFF79747E),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
+                ),
+              ),
+
+              // Bottom loading indicator
+              Positioned(
+                bottom: 80,
+                left: 0,
+                right: 0,
+                child: AnimatedBuilder(
+                  animation: _textController,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _textFade.value,
+                      child: Column(
+                        children: [
+                          // Animated dots loader
+                          _buildLoadingDots(),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ),
-      ),
     );
+  }
+
+  List<Widget> _buildFloatingShoes() {
+    return [
+      // Floating shoe icon 1
+      AnimatedBuilder(
+        animation: _floatController,
+        builder: (context, child) {
+          return Positioned(
+            top: 120,
+            left: 30,
+            child: Transform.translate(
+              offset: Offset(0, _floatAnimation.value * 0.8),
+              child: Transform.rotate(
+                angle: math.sin(_floatController.value * math.pi * 2) * 0.1,
+                child: Opacity(
+                  opacity: 0.15,
+                  child: Icon(
+                    Icons.settings_accessibility_rounded,
+                    size: 40,
+                    color: const Color(0xFF6750A4),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      // Floating shoe icon 2
+      AnimatedBuilder(
+        animation: _floatController,
+        builder: (context, child) {
+          return Positioned(
+            top: 180,
+            right: 40,
+            child: Transform.translate(
+              offset: Offset(0, -_floatAnimation.value * 0.6),
+              child: Transform.rotate(
+                angle: -math.sin(_floatController.value * math.pi * 2) * 0.15,
+                child: Opacity(
+                  opacity: 0.12,
+                  child: Icon(
+                    Icons.shopping_bag_outlined,
+                    size: 35,
+                    color: const Color(0xFF6750A4),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      // Floating shoe icon 3
+      AnimatedBuilder(
+        animation: _floatController,
+        builder: (context, child) {
+          return Positioned(
+            bottom: 200,
+            right: 50,
+            child: Transform.translate(
+              offset: Offset(_floatAnimation.value * 0.5, 0),
+              child: Transform.rotate(
+                angle: math.cos(_floatController.value * math.pi * 2) * 0.1,
+                child: Opacity(
+                  opacity: 0.1,
+                  child: Icon(
+                    Icons.star_outline_rounded,
+                    size: 30,
+                    color: const Color(0xFF6750A4),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      // Floating shoe icon 4
+      AnimatedBuilder(
+        animation: _floatController,
+        builder: (context, child) {
+          return Positioned(
+            bottom: 180,
+            left: 40,
+            child: Transform.translate(
+              offset: Offset(-_floatAnimation.value * 0.4, _floatAnimation.value * 0.3),
+              child: Opacity(
+                opacity: 0.12,
+                child: Icon(
+                  Icons.favorite_outline_rounded,
+                  size: 28,
+                  color: const Color(0xFF6750A4),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    ];
+  }
+
+  Widget _buildLoadingDots() {
+    return AnimatedBuilder(
+      animation: _shimmerController,
+      builder: (context, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (index) {
+            final delay = index * 0.2;
+            final progress = (_shimmerController.value + delay) % 1.0;
+            final scale = 0.5 + (0.5 * _calculatePulse(progress));
+            final opacity = 0.3 + (0.7 * _calculatePulse(progress));
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              child: Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF6750A4).withOpacity(opacity),
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  double _calculatePulse(double progress) {
+    // Creates a smooth pulse effect
+    if (progress < 0.5) {
+      return progress * 2;
+    } else {
+      return 2 - (progress * 2);
+    }
   }
 }
 

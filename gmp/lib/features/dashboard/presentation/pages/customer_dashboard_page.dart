@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_event.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_state.dart';
@@ -11,19 +12,7 @@ class CustomerDashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthBloc>().add(const AuthLogout());
-            },
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.background,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthUnauthenticated) {
@@ -40,122 +29,261 @@ class CustomerDashboardPage extends StatelessWidget {
             if (state is AuthAuthenticated) {
               final user = state.user;
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Welcome Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Theme.of(context).colorScheme.primary,
-                            Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
+              return CustomScrollView(
+                slivers: [
+                  // Custom App Bar
+                  SliverAppBar(
+                    expandedHeight: 150,
+                    floating: false,
+                    pinned: true,
+                    backgroundColor: AppColors.primary,
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primaryDark, AppColors.primary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
+                        ),
+                        child: SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          user.name.isNotEmpty
+                                              ? user.name[0].toUpperCase()
+                                              : 'U',
+                                          style: const TextStyle(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Welcome back,',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            user.name,
+                                            style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
+                    ),
+                    actions: [
+                      IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.logout, color: Colors.white, size: 20),
+                        ),
+                        onPressed: () {
+                          _showLogoutDialog(context);
+                        },
+                        tooltip: 'Logout',
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+
+                  // Content
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Welcome,',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: Colors.white70,
-                                ),
+                          // Quick Actions
+                          const Text(
+                            'Quick Actions',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            user.name,
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                          const SizedBox(height: 16),
+                          
+                          Row(
+                            children: [
+                              _buildQuickAction(
+                                icon: Icons.search,
+                                label: 'Browse',
+                                color: AppColors.primary,
+                                onTap: () {},
+                              ),
+                              const SizedBox(width: 12),
+                              _buildQuickAction(
+                                icon: Icons.build_outlined,
+                                label: 'Repair',
+                                color: AppColors.accent,
+                                onTap: () {},
+                              ),
+                              const SizedBox(width: 12),
+                              _buildQuickAction(
+                                icon: Icons.favorite_border,
+                                label: 'Wishlist',
+                                color: AppColors.error,
+                                onTap: () {},
+                              ),
+                              const SizedBox(width: 12),
+                              _buildQuickAction(
+                                icon: Icons.shopping_bag_outlined,
+                                label: 'Orders',
+                                color: AppColors.success,
+                                onTap: () {},
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Profile Information
+                          const Text(
+                            'Profile Information',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Profile Details Card
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.shadow,
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
                                 ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                _buildInfoTile(
+                                  icon: Icons.phone_outlined,
+                                  label: 'Mobile',
+                                  value: user.mobile,
+                                  showDivider: true,
+                                ),
+                                _buildInfoTile(
+                                  icon: Icons.email_outlined,
+                                  label: 'Email',
+                                  value: user.email ?? 'Not provided',
+                                  showDivider: true,
+                                ),
+                                _buildInfoTile(
+                                  icon: Icons.cake_outlined,
+                                  label: 'Date of Birth',
+                                  value: '${user.dateOfBirth.day}/${user.dateOfBirth.month}/${user.dateOfBirth.year}',
+                                  showDivider: true,
+                                ),
+                                _buildInfoTile(
+                                  icon: Icons.person_outline,
+                                  label: 'Gender',
+                                  value: user.gender[0].toUpperCase() + user.gender.substring(1),
+                                  showDivider: true,
+                                ),
+                                _buildInfoTile(
+                                  icon: Icons.verified_outlined,
+                                  label: 'Phone Verified',
+                                  value: user.isPhoneVerified ? 'Verified' : 'Not Verified',
+                                  valueColor: user.isPhoneVerified ? AppColors.success : AppColors.error,
+                                  showDivider: false,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Edit Profile Button
+                          InkWell(
+                            onTap: () {},
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.edit_outlined, color: AppColors.primary),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Edit Profile',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
-
-                    // User Info
-                    Text(
-                      'Profile Information',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Profile Details Card
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            _buildInfoRow(
-                              context,
-                              Icons.phone,
-                              'Mobile',
-                              user.mobile,
-                            ),
-                            const Divider(),
-                            _buildInfoRow(
-                              context,
-                              Icons.email,
-                              'Email',
-                              user.email ?? 'Not provided',
-                            ),
-                            const Divider(),
-                            _buildInfoRow(
-                              context,
-                              Icons.cake,
-                              'Date of Birth',
-                              '${user.dateOfBirth.day}/${user.dateOfBirth.month}/${user.dateOfBirth.year}',
-                            ),
-                            const Divider(),
-                            _buildInfoRow(
-                              context,
-                              Icons.person,
-                              'Gender',
-                              user.gender[0].toUpperCase() + user.gender.substring(1),
-                            ),
-                            const Divider(),
-                            _buildInfoRow(
-                              context,
-                              Icons.verified,
-                              'Phone Verified',
-                              user.isPhoneVerified ? 'Yes' : 'No',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               );
             } else if (state is AuthLoading) {
               return const Center(
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(color: AppColors.primary),
               );
             } else {
               return const Center(
-                child: Text('No user data available'),
+                child: Text(
+                  'No user data available',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
               );
             }
           },
@@ -164,40 +292,135 @@ class CustomerDashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: Theme.of(context).colorScheme.primary,
-            size: 24,
+  Widget _buildQuickAction({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: color,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+    required bool showDivider,
+  }) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
+                        color: valueColor ?? AppColors.textPrimary,
                       ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        if (showDivider)
+          const Divider(height: 1, indent: 76, color: AppColors.border),
+      ],
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Logout',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthBloc>().add(const AuthLogout());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
