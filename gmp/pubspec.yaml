@@ -69,6 +69,10 @@ dependencies:
   permission_handler: ^11.3.1
   geolocator: ^13.0.2
 
+  # Image picker for profile photo
+  image_picker: ^1.0.7
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

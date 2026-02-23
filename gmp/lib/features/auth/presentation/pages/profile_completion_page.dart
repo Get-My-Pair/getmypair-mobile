@@ -40,7 +40,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
   Future<void> _selectDate() async {
     final DateTime now = DateTime.now();
-    final DateTime firstDate = DateTime(now.year - 100);
+    final DateTime firstDate = DateTime(1900);
     final DateTime lastDate = DateTime(now.year - 18);
 
     final DateTime? picked = await showDatePicker(
