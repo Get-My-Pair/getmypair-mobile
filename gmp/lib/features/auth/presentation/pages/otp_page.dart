@@ -380,41 +380,34 @@ class _OTPPageState extends State<OTPPage> {
 
           const SizedBox(height: 24),
 
-          PinCodeTextField(
-            appContext: context,
+          MaterialPinField(
             length: 6,
-            obscureText: false,
-            animationType: AnimationType.fade,
-            pinTheme: PinTheme(
-              shape: PinCodeFieldShape.box,
+            onCompleted: (value) {
+              setState(() {
+                _otp = value;
+              });
+            },
+            onChanged: (value) {
+              setState(() {
+                _otp = value;
+              });
+            },
+            theme: MaterialPinTheme(
+              shape: MaterialPinShape.outlined,
+              cellSize: const Size(50, 60),
+              spacing: 8,
               borderRadius: BorderRadius.circular(8),
-              fieldHeight: 50,
-              fieldWidth: 42,
-              activeFillColor: AppColors.surface,
-              inactiveFillColor: AppColors.surfaceVariant,
-              selectedFillColor: AppColors.surface,
-              activeColor: AppColors.primary,
-              inactiveColor: AppColors.border,
-              selectedColor: AppColors.primary,
               borderWidth: 2,
-            ),
-            animationDuration: const Duration(milliseconds: 300),
-            enableActiveFill: true,
-            onChanged: (String value) {
-              setState(() {
-                _otp = value;
-              });
-            },
-            onCompleted: (String value) {
-              setState(() {
-                _otp = value;
-              });
-            },
-            beforeTextPaste: (text) => true,
-            textStyle: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              borderColor: AppColors.border,
+              focusedBorderColor: AppColors.primary,
+              textStyle: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              entryAnimation: MaterialPinAnimation.scale,
+              animationDuration: const Duration(milliseconds: 300),
+              animationCurve: Curves.easeOut,
             ),
           ),
 

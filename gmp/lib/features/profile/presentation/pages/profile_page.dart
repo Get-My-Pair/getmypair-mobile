@@ -26,15 +26,19 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _initAndLoad();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initAndLoad();
+    });
   }
 
   Future<void> _initAndLoad() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(AppConstants.accessTokenKey);
-    setState(() => _accessToken = token);
-    if (token != null && mounted) {
-      context.read<ProfileBloc>().add(ProfileLoadRequested(token));
+    if (mounted) {
+      setState(() => _accessToken = token);
+      if (token != null) {
+        context.read<ProfileBloc>().add(ProfileLoadRequested(token));
+      }
     }
   }
 

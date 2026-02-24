@@ -13,9 +13,8 @@ class ApiEndpoints {
   static String get baseUrl {
     // In debug mode, you can use local backend for testing
     if (kDebugMode) {
-      // Uncomment and set your local IP for testing on physical device:
-      // return 'http://192.168.1.100:3000';
-      // For emulator use: 'http://10.0.2.2:3000';
+      // For flutter web running locally:
+      return 'http://localhost:3000';
     }
     // Production backend (Render.com)
     return 'https://getmypair-api.onrender.com';

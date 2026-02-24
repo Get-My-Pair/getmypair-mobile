@@ -4,10 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
-import '../../../domain/entities/user_profile.dart';
-import '../../bloc/profile_bloc.dart';
-import '../../bloc/profile_event.dart';
-import '../../bloc/profile_state.dart';
+import '../../domain/entities/user_profile.dart';
+import '../bloc/profile_bloc.dart';
+import '../bloc/profile_event.dart';
+import '../bloc/profile_state.dart';
 
 class EditProfileWidget extends StatefulWidget {
   final UserProfile profile;

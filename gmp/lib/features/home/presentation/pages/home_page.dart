@@ -4,11 +4,72 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/welcome_page.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../routes.dart';
+import '../../../../injection_container.dart' as di;
+import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 /// Home Page — lives in the outer features layer.
 /// This is the landing tab shown to authenticated users on the main dashboard.
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String _currentAddress = '📍 Fetching location...';
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _currentAddress = '📍 Location services disabled');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() => _currentAddress = '📍 Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() => _currentAddress = '📍 Location permanently denied');
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        setState(() {
+          _currentAddress = '📍 ${place.subLocality ?? place.locality}, ${place.administrativeArea}';
+        });
+      }
+    } catch (e) {
+      setState(() => _currentAddress = '📍 Location unavailable');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +103,11 @@ class HomePage extends StatelessWidget {
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '📍 Pick Location',
-                        style: TextStyle(
+                      Text(
+                        _currentAddress,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
@@ -78,11 +141,23 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const CircleAvatar(
-                      radius: 18,
-                      backgroundColor: AppColors.primaryLight,
-                      child: Icon(Icons.person,
-                          color: AppColors.primary, size: 20),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider(
+                              create: (_) => di.sl<ProfileBloc>(),
+                              child: const ProfilePage(),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const CircleAvatar(
+                        radius: 18,
+                        backgroundColor: AppColors.primaryLight,
+                        child: Icon(Icons.person,
+                            color: AppColors.primary, size: 20),
+                      ),
                     ),
                     const SizedBox(width: 16),
                   ],
@@ -159,16 +234,17 @@ class HomePage extends StatelessWidget {
                               label: 'Donate',
                               color: Color(0xFFFF9800),
                             ),
+                            _ServiceCard(
+                              icon: Icons.local_offer_outlined,
+                              label: 'Resale',
+                              color: Color(0xFFE91E63),
+                            ),
+                            _ServiceCard(
+                              icon: Icons.storefront_outlined,
+                              label: 'Rent',
+                              color: Color(0xFF9C27B0),
+                            ),
                           ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // ── Rent (full width) ────────────────────
-                        _ServiceCardWide(
-                          icon: Icons.storefront_outlined,
-                          label: 'Rent',
-                          color: AppColors.secondary,
-                          onTap: () {},
                         ),
                         const SizedBox(height: 32),
                       ],
@@ -231,64 +307,6 @@ class _ServiceCard extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ServiceCardWide extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ServiceCardWide({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 72,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 26),
-            ),
-            const SizedBox(width: 14),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: color,
               ),
             ),
           ],
