@@ -4,6 +4,7 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'injection_container.dart' as di;
 import 'features/auth/presentation/pages/splash_page.dart';
+import 'routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: const SplashPage(),
+        onGenerateRoute: AppRoutes.generateRoute,
       ),
     );
   }

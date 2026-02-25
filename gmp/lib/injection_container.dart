@@ -12,6 +12,14 @@ import 'features/auth/domain/usecases/logout.dart';
 import 'features/auth/domain/usecases/send_otp.dart';
 import 'features/auth/domain/usecases/verify_otp.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/profile/data/datasources/profile_remote_datasource.dart';
+import 'features/profile/data/repositories/profile_repository_impl.dart';
+import 'features/profile/domain/repositories/profile_repository.dart';
+import 'features/profile/domain/usecases/get_user_profile.dart';
+import 'features/profile/domain/usecases/update_user_profile.dart';
+import 'features/profile/domain/usecases/upload_profile_image.dart';
+import 'features/profile/domain/usecases/address_usecases.dart';
+import 'features/profile/presentation/bloc/profile_bloc.dart';
 import 'core/network/dio_client.dart';
 import 'core/network/network_info.dart';
 
@@ -97,6 +105,48 @@ Future<void> init() async {
         getCurrentUser: sl(),
         logout: sl(),
         checkAuthStatus: sl(),
+      ),
+    );
+  }
+
+  //! Features - Profile
+  if (!sl.isRegistered<ProfileRemoteDataSource>()) {
+    sl.registerLazySingleton<ProfileRemoteDataSource>(
+      () => ProfileRemoteDataSourceImpl(),
+    );
+  }
+  if (!sl.isRegistered<ProfileRepository>()) {
+    sl.registerLazySingleton<ProfileRepository>(
+      () => ProfileRepositoryImpl(remoteDataSource: sl()),
+    );
+  }
+  if (!sl.isRegistered<GetUserProfile>()) {
+    sl.registerLazySingleton(() => GetUserProfile(sl()));
+  }
+  if (!sl.isRegistered<UpdateUserProfile>()) {
+    sl.registerLazySingleton(() => UpdateUserProfile(sl()));
+  }
+  if (!sl.isRegistered<UploadProfileImage>()) {
+    sl.registerLazySingleton(() => UploadProfileImage(sl()));
+  }
+  if (!sl.isRegistered<AddAddress>()) {
+    sl.registerLazySingleton(() => AddAddress(sl()));
+  }
+  if (!sl.isRegistered<UpdateAddress>()) {
+    sl.registerLazySingleton(() => UpdateAddress(sl()));
+  }
+  if (!sl.isRegistered<DeleteAddress>()) {
+    sl.registerLazySingleton(() => DeleteAddress(sl()));
+  }
+  if (!sl.isRegistered<ProfileBloc>()) {
+    sl.registerFactory(
+      () => ProfileBloc(
+        getUserProfile: sl(),
+        updateUserProfile: sl(),
+        uploadProfileImage: sl(),
+        addAddress: sl(),
+        updateAddress: sl(),
+        deleteAddress: sl(),
       ),
     );
   }

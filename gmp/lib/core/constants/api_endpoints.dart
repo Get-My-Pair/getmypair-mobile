@@ -13,9 +13,8 @@ class ApiEndpoints {
   static String get baseUrl {
     // In debug mode, you can use local backend for testing
     if (kDebugMode) {
-      // Uncomment and set your local IP for testing on physical device:
-      // return 'http://192.168.1.100:3000';
-      // For emulator use: 'http://10.0.2.2:3000';
+      // For flutter web running locally:
+      return 'http://localhost:3000';
     }
     // Production backend (Render.com)
     return 'https://getmypair-api.onrender.com';
@@ -33,6 +32,17 @@ class ApiEndpoints {
   static String get refreshToken => '$baseUrl$apiPrefix/refresh-token';
   static String get logout => '$baseUrl$apiPrefix/logout';
   static String get me => '$baseUrl$apiPrefix/me';
+
+  // User Profile endpoints (getmypair-api: server/src/routes/userProfile.routes.js)
+  static const String userProfilePrefix = '/api/user/profile';
+  static String get userProfileCreate => '$baseUrl$userProfilePrefix/create';
+  static String get userProfileMe => '$baseUrl$userProfilePrefix/me';
+  static String get userProfileUpdate => '$baseUrl$userProfilePrefix/update';
+  static String get userProfileUploadImage => '$baseUrl$userProfilePrefix/upload-image';
+  static String get userProfileAddAddress => '$baseUrl$userProfilePrefix/address/add';
+  static String get userProfileUpdateAddress => '$baseUrl$userProfilePrefix/address/update';
+  static String userProfileDeleteAddress(String addressId) =>
+      '$baseUrl$userProfilePrefix/address/delete/$addressId';
 
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {

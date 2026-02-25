@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/auth/presentation/pages/welcome_page.dart';
 import 'features/auth/presentation/pages/mobile_otp_page.dart';
@@ -6,6 +7,9 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/otp_page.dart';
 import 'features/auth/presentation/pages/profile_completion_page.dart';
 import 'features/dashboard/presentation/pages/customer_dashboard_page.dart';
+import 'features/profile/presentation/pages/profile_page.dart';
+import 'features/profile/presentation/bloc/profile_bloc.dart';
+import 'injection_container.dart' as di;
 
 class AppRoutes {
   static const String splash = '/';
@@ -15,6 +19,7 @@ class AppRoutes {
   static const String otp = '/otp';
   static const String profileCompletion = '/profile-completion';
   static const String customerDashboard = '/customer-dashboard';
+  static const String profile = '/profile';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -38,6 +43,13 @@ class AppRoutes {
         );
       case customerDashboard:
         return MaterialPageRoute(builder: (_) => const CustomerDashboardPage());
+      case profile:
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider(
+            create: (_) => di.sl<ProfileBloc>(),
+            child: const ProfilePage(),
+          ),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
