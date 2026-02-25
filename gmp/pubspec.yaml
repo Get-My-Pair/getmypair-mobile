@@ -72,6 +72,8 @@ dependencies:
 
   # Image picker for profile photo
   image_picker: ^1.0.7
+  # Image cropper for cropping camera/gallery images before upload
+  image_cropper: ^3.0.1
 
 
 dev_dependencies:

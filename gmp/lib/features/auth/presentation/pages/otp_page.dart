@@ -311,18 +311,23 @@ class _OTPPageState extends State<OTPPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Verify Phone',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.5,
+            Expanded(
+              child: const Text(
+                'Verify Phone',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
-            Image.asset('assets/images/logo.png', width: 100, height: 100),
+            const SizedBox(width: 12),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 72, maxHeight: 72),
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+            ),
           ],
         ),
 
@@ -368,6 +373,7 @@ class _OTPPageState extends State<OTPPage> {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
             'Enter 6-digit code',
@@ -380,7 +386,8 @@ class _OTPPageState extends State<OTPPage> {
 
           const SizedBox(height: 24),
 
-          MaterialPinField(
+          Center(
+            child: MaterialPinField(
             length: 6,
             onCompleted: (value) {
               setState(() {
@@ -394,7 +401,7 @@ class _OTPPageState extends State<OTPPage> {
             },
             theme: MaterialPinTheme(
               shape: MaterialPinShape.outlined,
-              cellSize: const Size(50, 60),
+              cellSize: const Size(56, 56),
               spacing: 8,
               borderRadius: BorderRadius.circular(8),
               borderWidth: 2,
@@ -408,6 +415,7 @@ class _OTPPageState extends State<OTPPage> {
               entryAnimation: MaterialPinAnimation.scale,
               animationDuration: const Duration(milliseconds: 300),
               animationCurve: Curves.easeOut,
+            ),
             ),
           ),
 

@@ -10,6 +10,7 @@ import 'features/dashboard/presentation/pages/customer_dashboard_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
 import 'features/profile/presentation/bloc/profile_bloc.dart';
 import 'injection_container.dart' as di;
+import 'features/shop/presentation/pages/product_list_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -20,6 +21,7 @@ class AppRoutes {
   static const String profileCompletion = '/profile-completion';
   static const String customerDashboard = '/customer-dashboard';
   static const String profile = '/profile';
+  static const String products = '/products';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -50,6 +52,8 @@ class AppRoutes {
             child: const ProfilePage(),
           ),
         );
+      case products:
+        return MaterialPageRoute(builder: (_) => const ProductListPage());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

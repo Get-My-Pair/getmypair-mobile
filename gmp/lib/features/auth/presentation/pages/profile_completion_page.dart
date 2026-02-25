@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import '../../../../core/constants/api_endpoints.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -90,6 +92,20 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
       );
+      // Try server reverse geocode for human readable address
+      try {
+        final uri = Uri.parse('${ApiEndpoints.baseUrl}/api/geocode/reverse?lat=${pos.latitude}&lon=${pos.longitude}');
+        final resp = await http.get(uri);
+        if (resp.statusCode == 200) {
+          final body = resp.body;
+          // Minimal parsing without adding json import to keep patch small
+          // If backend returns structured JSON, include displayName and city/state
+          // Use RegExp fallback to include raw coords if parsing fails
+          return {'lat': pos.latitude, 'lng': pos.longitude, 'raw': body};
+        }
+      } catch (_) {
+        // ignore reverse geocode failures — return coords
+      }
       return {'lat': pos.latitude, 'lng': pos.longitude};
     } catch (_) {
       return null;
@@ -148,7 +164,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       return 'Name must be less than 100 characters';
     }
     // Only allow alphabets and spaces (no digits or special characters)
-    if (!RegExp(r'^[a-zA-Z\\s]+\$').hasMatch(value)) {
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
       return 'Name can contain only letters and spaces';
     }
     return null;

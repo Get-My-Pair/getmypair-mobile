@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'dart:io';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../domain/entities/user_profile.dart';
@@ -44,22 +46,87 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
   }
 
   Future<void> _pickAndUploadImage() async {
+    // Show bottom sheet with options: choose from gallery or take a photo
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _handleImagePick(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _handleImagePick(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleImagePick(ImageSource source) async {
     try {
       setState(() => _isPickingImage = true);
       final picker = ImagePicker();
       final picked = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
+        source: source,
+        maxWidth: 2000,
+        maxHeight: 2000,
+        imageQuality: 90,
       );
       if (picked == null) return;
-      final bytes = await picked.readAsBytes();
+
+      // Crop the image if possible
+      CroppedFile? croppedFile;
+      try {
+        croppedFile = await ImageCropper().cropImage(
+          sourcePath: picked.path,
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Crop image',
+              toolbarColor: AppColors.primary,
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.square,
+              lockAspectRatio: false,
+            ),
+            IOSUiSettings(
+              title: 'Crop image',
+            ),
+          ],
+          compressQuality: 90,
+        );
+      } catch (_) {
+        croppedFile = null;
+      }
+
+      final filePath = croppedFile?.path ?? picked.path;
+      final file = File(filePath);
+      final bytes = await file.readAsBytes();
+      final fileName = file.path.split('/').last;
+
       if (!mounted) return;
       context.read<ProfileBloc>().add(ProfileImageUploadRequested(
             accessToken: widget.accessToken,
             imageBytes: bytes,
-            fileName: picked.name,
+            fileName: fileName,
           ));
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
