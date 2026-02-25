@@ -2,8 +2,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_cropper/image_cropper.dart';
+import 'package:crop_your_image/crop_your_image.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../domain/entities/user_profile.dart';
@@ -94,32 +95,48 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
       );
       if (picked == null) return;
 
-      // Crop the image if possible
-      CroppedFile? croppedFile;
-      try {
-        croppedFile = await ImageCropper().cropImage(
-          sourcePath: picked.path,
-          uiSettings: [
-            AndroidUiSettings(
-              toolbarTitle: 'Crop image',
-              toolbarColor: AppColors.primary,
-              toolbarWidgetColor: Colors.white,
-              initAspectRatio: CropAspectRatioPreset.square,
-              lockAspectRatio: false,
-            ),
-            IOSUiSettings(
-              title: 'Crop image',
-            ),
-          ],
-          compressQuality: 90,
-        );
-      } catch (_) {
-        croppedFile = null;
-      }
+      final file = File(picked.path);
+      final originalBytes = await file.readAsBytes();
 
-      final filePath = croppedFile?.path ?? picked.path;
-      final file = File(filePath);
-      final bytes = await file.readAsBytes();
+      // Show crop dialog using crop_your_image
+      Uint8List? croppedBytes;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          final controller = CropController();
+          return AlertDialog(
+            title: const Text('Crop image'),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: Crop(
+                image: originalBytes,
+                controller: controller,
+                onCropped: (bytes) {
+                  croppedBytes = bytes;
+                  Navigator.of(ctx).pop();
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  controller.crop();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                child: const Text('Crop'),
+              ),
+            ],
+          );
+        },
+      );
+
+      final bytes = croppedBytes ?? originalBytes;
       final fileName = file.path.split('/').last;
 
       if (!mounted) return;

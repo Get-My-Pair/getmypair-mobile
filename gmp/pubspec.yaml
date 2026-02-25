@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # HTTP client for API calls
-  http: ^1.1.0
+  http: ^0.13.4
   
   # State management
   flutter_bloc: ^9.1.1
@@ -52,7 +52,7 @@ dependencies:
   get_it: ^9.2.1
   
   # Fonts
-  google_fonts: ^8.0.2
+  google_fonts: ^4.0.4
   
   # Date picker
   intl: ^0.20.2
@@ -72,8 +72,8 @@ dependencies:
 
   # Image picker for profile photo
   image_picker: ^1.0.7
-  # Image cropper for cropping camera/gallery images before upload
-  image_cropper: ^3.0.1
+  # Image cropper replacement (pure Dart) for cropping camera/gallery images before upload
+  crop_your_image: ^0.7.0
 
 
 dev_dependencies:
