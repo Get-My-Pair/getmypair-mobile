@@ -41,7 +41,8 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
   Future<void> _selectDate() async {
     final DateTime now = DateTime.now();
     final DateTime firstDate = DateTime(now.year - 100);
-    final DateTime lastDate = DateTime(now.year - 18);
+    // Allow registration for newborns as well; only restrict future dates
+    final DateTime lastDate = now;
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -145,6 +146,10 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
     }
     if (value.length > 100) {
       return 'Name must be less than 100 characters';
+    }
+    // Only allow alphabets and spaces (no digits or special characters)
+    if (!RegExp(r'^[a-zA-Z\\s]+\$').hasMatch(value)) {
+      return 'Name can contain only letters and spaces';
     }
     return null;
   }

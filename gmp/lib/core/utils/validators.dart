@@ -3,21 +3,23 @@ class Validators {
     if (value == null || value.isEmpty) {
       return 'Please enter your mobile number';
     }
-    
-    // Remove any spaces, dashes, or parentheses
-    final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    
-    // Check if it starts with + or is a valid number
-    if (cleaned.startsWith('+')) {
-      if (cleaned.length < 10) {
-        return 'Please enter a valid mobile number';
-      }
-    } else {
-      if (cleaned.length < 10) {
-        return 'Please enter a valid mobile number';
-      }
+
+    // Normalize: keep only digits and optional leading +
+    final normalized = value.replaceAll(RegExp(r'[^0-9+]'), '');
+
+    // Must be digits only, with optional leading +
+    if (!RegExp(r'^\+?[0-9]+$').hasMatch(normalized)) {
+      return 'Mobile number can contain digits only';
     }
-    
+
+    // Strip country code when present and validate local part
+    String digitsOnly = normalized.replaceAll('+', '');
+
+    // Enforce exact 10-digit mobile numbers
+    if (digitsOnly.length != 10) {
+      return 'Mobile number must be 10 digits';
+    }
+
     return null;
   }
 
@@ -30,6 +32,10 @@ class Validators {
     }
     if (value.length > 100) {
       return 'Name must be less than 100 characters';
+    }
+    // Only allow alphabets and spaces (no digits or special characters)
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+      return 'Name can contain only letters and spaces';
     }
     return null;
   }
@@ -51,14 +57,18 @@ class Validators {
     if (value == null) {
       return 'Please select your date of birth';
     }
-    
+
     final now = DateTime.now();
-    final age = now.year - value.year;
-    
-    if (age < 18) {
-      return 'You must be at least 18 years old';
+    final today = DateTime(now.year, now.month, now.day);
+    final dob = DateTime(value.year, value.month, value.day);
+
+    // Future date is not allowed
+    if (dob.isAfter(today)) {
+      return 'Date of birth cannot be in the future';
     }
-    
+
+    // Optional sanity check: treat extremely old dates as invalid
+    int age = today.year - dob.year;
     if (age > 100) {
       return 'Please enter a valid date of birth';
     }
