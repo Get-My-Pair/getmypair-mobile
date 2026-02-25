@@ -40,14 +40,9 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
   Future<void> _selectDate() async {
     final DateTime now = DateTime.now();
-<<<<<<< HEAD
-    final DateTime firstDate = DateTime(now.year - 100);
-    // Allow registration for newborns as well; only restrict future dates
-    final DateTime lastDate = now;
-=======
+    // Users must be at least 18 years old
     final DateTime firstDate = DateTime(1900);
     final DateTime lastDate = DateTime(now.year - 18);
->>>>>>> 9b5ae877c9e8685543b37fdfb20f9b928b79c087
 
     final DateTime? picked = await showDatePicker(
       context: context,
