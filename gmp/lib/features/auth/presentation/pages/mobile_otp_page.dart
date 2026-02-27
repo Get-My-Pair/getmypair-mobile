@@ -121,6 +121,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                     mobile: mobile,
                     countryCode: _selectedCountry.dialCode,
                     phoneNumber: _phoneController.text,
+<<<<<<< HEAD
+=======
+                    prefilledOtp: otp,
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
                   ),
                 ),
               );
@@ -136,6 +140,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                     mobile: mobile,
                     countryCode: _selectedCountry.dialCode,
                     phoneNumber: _phoneController.text,
+<<<<<<< HEAD
+=======
+                    prefilledOtp: otp,
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
                   ),
                 ),
               );

@@ -14,12 +14,21 @@ class OTPPage extends StatefulWidget {
   final String mobile;
   final String? countryCode;
   final String? phoneNumber;
+<<<<<<< HEAD
+=======
+  /// Pre-filled OTP when coming from dev dialog (Continue / Copy & Continue).
+  final String? prefilledOtp;
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
 
   const OTPPage({
     super.key,
     required this.mobile,
     this.countryCode,
     this.phoneNumber,
+<<<<<<< HEAD
+=======
+    this.prefilledOtp,
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
   });
 
   @override
@@ -37,6 +46,13 @@ class _OTPPageState extends State<OTPPage> {
   void initState() {
     super.initState();
     _startResendTimer();
+<<<<<<< HEAD
+=======
+    final pre = widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    if (pre.length == 6) {
+      _otp = pre;
+    }
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
   }
 
   @override
@@ -45,6 +61,15 @@ class _OTPPageState extends State<OTPPage> {
     super.dispose();
   }
 
+<<<<<<< HEAD
+=======
+  /// Normalized 6-digit OTP for initial field value, or null if none.
+  String? get _initialOtpValue {
+    final pre = widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    return pre.length == 6 ? pre : null;
+  }
+
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
   void _startResendTimer() {
     setState(() {
       _resendCountdown = 60;
@@ -311,6 +336,7 @@ class _OTPPageState extends State<OTPPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+<<<<<<< HEAD
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
@@ -323,6 +349,25 @@ class _OTPPageState extends State<OTPPage> {
               ),
             ),
             Image.asset('assets/images/logo.png', width: 100, height: 100),
+=======
+          children: [
+            Expanded(
+              child: const Text(
+                'Verify Phone',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 72, maxHeight: 72),
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+            ),
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
           ],
         ),
 
@@ -368,6 +413,10 @@ class _OTPPageState extends State<OTPPage> {
         ],
       ),
       child: Column(
+<<<<<<< HEAD
+=======
+        crossAxisAlignment: CrossAxisAlignment.center,
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
         children: [
           const Text(
             'Enter 6-digit code',
@@ -380,6 +429,7 @@ class _OTPPageState extends State<OTPPage> {
 
           const SizedBox(height: 24),
 
+<<<<<<< HEAD
           PinCodeTextField(
             appContext: context,
             length: 6,
@@ -415,6 +465,39 @@ class _OTPPageState extends State<OTPPage> {
               fontSize: 20,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
+=======
+          Center(
+            child: MaterialPinField(
+            length: 6,
+            initialValue: _initialOtpValue,
+            onCompleted: (value) {
+              setState(() {
+                _otp = value;
+              });
+            },
+            onChanged: (value) {
+              setState(() {
+                _otp = value;
+              });
+            },
+            theme: MaterialPinTheme(
+              shape: MaterialPinShape.outlined,
+              cellSize: const Size(56, 56),
+              spacing: 8,
+              borderRadius: BorderRadius.circular(8),
+              borderWidth: 2,
+              borderColor: AppColors.border,
+              focusedBorderColor: AppColors.primary,
+              textStyle: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              entryAnimation: MaterialPinAnimation.scale,
+              animationDuration: const Duration(milliseconds: 300),
+              animationCurve: Curves.easeOut,
+            ),
+>>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
             ),
           ),
 
