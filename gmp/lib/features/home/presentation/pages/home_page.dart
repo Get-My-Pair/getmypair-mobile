@@ -27,6 +27,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+    // If we ever show coords (e.g. from map), convert to address on load
+    if (_looksLikeLatLong(_currentAddress)) {
+      _latLongToAddress(_currentAddress).then((address) {
+        if (mounted && address != _currentAddress) {
+          setState(() => _currentAddress = address);
+        }
+      });
+    }
   }
 
   /// Returns true if [text] looks like "lat, long" (e.g. "13.13210, 80.24567").
@@ -41,7 +49,9 @@ class _HomePageState extends State<HomePage> {
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
   }
 
-  /// Converts "lat, long" to a short address string. Returns [text] unchanged if not lat/long or geocoding fails.
+  /// Converts "lat, long" to a human-readable address. Never returns raw coordinates.
+  static const String _fallbackAddress = '📍 Your location';
+
   Future<String> _latLongToAddress(String text) async {
     if (!_looksLikeLatLong(text)) return text;
     final parts = text.split(',').map((s) => s.trim()).toList();
@@ -49,14 +59,14 @@ class _HomePageState extends State<HomePage> {
     final lng = double.tryParse(parts[1])!;
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
-      if (placemarks.isEmpty) return text;
+      if (placemarks.isEmpty) return _fallbackAddress;
       Placemark p = placemarks[0];
       final locality = p.subLocality ?? p.locality ?? p.administrativeArea ?? '';
       final area = p.administrativeArea ?? p.country ?? '';
-      if (locality.isEmpty && area.isEmpty) return text;
+      if (locality.isEmpty && area.isEmpty) return _fallbackAddress;
       return '📍 ${[locality, area].where((e) => e.isNotEmpty).join(', ')}';
     } catch (_) {
-      return text;
+      return _fallbackAddress;
     }
   }
 

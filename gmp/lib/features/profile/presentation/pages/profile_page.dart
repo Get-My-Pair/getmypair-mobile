@@ -181,18 +181,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       letterSpacing: 1,
                     ),
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => _openEditProfile(context, profile, token),
-                      child: const Text(
-                        'Edit',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
 
                 SliverToBoxAdapter(
@@ -261,23 +249,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                     ),
                                   ],
                                 ),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    _openEditProfile(context, profile, token),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    side: const BorderSide(
-                                        color: AppColors.primary),
-                                  ),
-                                ),
-                                child: const Text('Edit',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),

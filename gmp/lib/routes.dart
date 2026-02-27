@@ -36,7 +36,12 @@ class AppRoutes {
       case otp:
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (_) => OTPPage(mobile: args?['mobile'] ?? ''),
+          builder: (_) => OTPPage(
+            mobile: args?['mobile'] ?? '',
+            countryCode: args?['countryCode'],
+            phoneNumber: args?['phoneNumber'],
+            prefilledOtp: args?['prefilledOtp'],
+          ),
         );
       case profileCompletion:
         final args = settings.arguments as Map<String, dynamic>?;
