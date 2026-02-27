@@ -8,23 +8,14 @@ class ApiEndpoints {
   // Production: Render.com hosted backend
   // Local: 'http://localhost:3000' (Web/iOS) or 'http://10.0.2.2:3000' (Android emulator)
   // Physical device: 'http://YOUR_IP:3000' (same network as backend)
-<<<<<<< HEAD
-=======
   // Web: browser may block requests (CORS). Prefer device/emulator for auth, or configure backend CORS.
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
   
   /// Get base URL based on environment
   static String get baseUrl {
     // In debug mode, you can use local backend for testing
     if (kDebugMode) {
-<<<<<<< HEAD
-      // Uncomment and set your local IP for testing on physical device:
-      // return 'http://192.168.1.100:3000';
-      // For emulator use: 'http://10.0.2.2:3000';
-=======
       // For flutter web running locally:
       return 'https://getmypair-api.onrender.com';
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
     }
     // Production backend (Render.com)
     return 'https://getmypair-api.onrender.com';
@@ -43,8 +34,6 @@ class ApiEndpoints {
   static String get logout => '$baseUrl$apiPrefix/logout';
   static String get me => '$baseUrl$apiPrefix/me';
 
-<<<<<<< HEAD
-=======
   // User Profile endpoints (getmypair-api: server/src/routes/userProfile.routes.js)
   static const String userProfilePrefix = '/api/user/profile';
   static String get userProfileCreate => '$baseUrl$userProfilePrefix/create';
@@ -56,7 +45,6 @@ class ApiEndpoints {
   static String userProfileDeleteAddress(String addressId) =>
       '$baseUrl$userProfilePrefix/address/delete/$addressId';
 
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
     final headers = <String, String>{
