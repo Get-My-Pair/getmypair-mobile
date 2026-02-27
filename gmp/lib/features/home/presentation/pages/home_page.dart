@@ -4,12 +4,12 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/welcome_page.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../routes.dart';
-import '../../../../injection_container.dart' as di;
 import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'select_location_page.dart';
 
 /// Home Page — lives in the outer features layer.
 /// This is the landing tab shown to authenticated users on the main dashboard.
@@ -27,6 +27,37 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+  }
+
+  /// Returns true if [text] looks like "lat, long" (e.g. "13.13210, 80.24567").
+  bool _looksLikeLatLong(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+    final parts = trimmed.split(',').map((s) => s.trim()).toList();
+    if (parts.length != 2) return false;
+    final lat = double.tryParse(parts[0]);
+    final lng = double.tryParse(parts[1]);
+    return lat != null && lng != null &&
+        lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  }
+
+  /// Converts "lat, long" to a short address string. Returns [text] unchanged if not lat/long or geocoding fails.
+  Future<String> _latLongToAddress(String text) async {
+    if (!_looksLikeLatLong(text)) return text;
+    final parts = text.split(',').map((s) => s.trim()).toList();
+    final lat = double.tryParse(parts[0])!;
+    final lng = double.tryParse(parts[1])!;
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isEmpty) return text;
+      Placemark p = placemarks[0];
+      final locality = p.subLocality ?? p.locality ?? p.administrativeArea ?? '';
+      final area = p.administrativeArea ?? p.country ?? '';
+      if (locality.isEmpty && area.isEmpty) return text;
+      return '📍 ${[locality, area].where((e) => e.isNotEmpty).join(', ')}';
+    } catch (_) {
+      return text;
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -65,6 +96,8 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _currentAddress = '📍 ${place.subLocality ?? place.locality}, ${place.administrativeArea}';
         });
+      } else {
+        setState(() => _currentAddress = '📍 Location unavailable');
       }
     } catch (e) {
       setState(() => _currentAddress = '📍 Location unavailable');
@@ -101,49 +134,63 @@ class _HomePageState extends State<HomePage> {
                   backgroundColor: AppColors.background,
                   elevation: 0,
                   title: GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      final selected = await Navigator.of(context).push<String>(
                         MaterialPageRoute(
-                          builder: (_) => BlocProvider(
-                            create: (_) => di.sl<ProfileBloc>(),
-                            child: const ProfilePage(),
+                          builder: (_) => SelectLocationPage(
+                            initialAddress: _currentAddress,
                           ),
                         ),
                       );
+                      if (selected != null && mounted) {
+                        final addressText = _looksLikeLatLong(selected)
+                            ? await _latLongToAddress(selected)
+                            : selected.startsWith('📍') ? selected : '📍 $selected';
+                        if (mounted) {
+                          setState(() => _currentAddress = addressText);
+                        }
+                      }
                     },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          _currentAddress,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
+                        Icon(Icons.location_on,
+                            size: 18, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _currentAddress,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 2),
+                        Icon(Icons.keyboard_arrow_down,
+                            size: 18, color: AppColors.textSecondary),
                       ],
                     ),
                   ),
                   actions: [
-                    // Coin balance chip
+                    // Carbon chip only (Coin removed)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.primaryLight,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: AppColors.primary),
                       ),
-                      child: const Row(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.monetization_on,
-                              color: AppColors.primary, size: 16),
-                          SizedBox(width: 4),
+                          Icon(Icons.eco_outlined, color: AppColors.primary, size: 16),
+                          const SizedBox(width: 4),
                           Text(
-                            '0 Coin',
-                            style: TextStyle(
+                            '0 Carbon',
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primary,
@@ -155,76 +202,193 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 12),
                     GestureDetector(
                       onTap: () {
+                        final profileBloc = context.read<ProfileBloc>();
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => BlocProvider(
-                              create: (_) => di.sl<ProfileBloc>(),
+                            builder: (_) => BlocProvider.value(
+                              value: profileBloc,
                               child: const ProfilePage(),
                             ),
                           ),
                         );
                       },
-                      child: const CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppColors.primaryLight,
-                        child: Icon(Icons.person,
-                            color: AppColors.primary, size: 20),
+                      child: BlocBuilder<ProfileBloc, ProfileState>(
+                        buildWhen: (prev, curr) =>
+                            curr is ProfileLoaded ||
+                            curr is ProfileUpdating ||
+                            curr is ProfileImageUploading,
+                        builder: (context, profileState) {
+                          final profile = profileState is ProfileLoaded
+                              ? profileState.profile
+                              : profileState is ProfileUpdating
+                                  ? profileState.profile
+                                  : profileState is ProfileImageUploading
+                                      ? profileState.profile
+                                      : null;
+                          final imageUrl = profile?.profileImage;
+                          return CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppColors.primaryLight,
+                            backgroundImage: imageUrl != null && imageUrl.isNotEmpty
+                                ? NetworkImage(imageUrl)
+                                : null,
+                            child: imageUrl == null || imageUrl.isEmpty
+                                ? const Icon(Icons.person,
+                                    color: AppColors.primary, size: 20)
+                                : null,
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
                   ],
                 ),
 
+                // ── Footwear hero banner ─────────────────────────
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 8),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppColors.footwearHeroStart,
+                          AppColors.footwearHeroEnd,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Welcome ──────────────────────────────
-                        if (userName.isNotEmpty) ...[
+                        if (userName.isNotEmpty)
                           Text(
                             'Hello, $userName 👋',
                             style: const TextStyle(
-                              fontSize: 22,
+                              fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                              color: Colors.white,
+                              letterSpacing: -0.3,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'What would you like to do today?',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-
-                        // ── MAIN SERVICES label ──────────────────
-                        const Center(
-                          child: Text(
-                            'MAIN SERVICES',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textSecondary,
-                              letterSpacing: 1,
-                            ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Your feet deserve the best.',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white70,
+                            height: 1.35,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Icon(Icons.directions_walk, color: Colors.white.withOpacity(0.9), size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Shop • Repair • Recycle',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withOpacity(0.95),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
-                        // ── Services Grid ────────────────────────
+                // ── Discover bar (footwear theme) ─────────────────
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: AppColors.shadow,
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search_rounded, color: AppColors.textTertiary, size: 22),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Discover shoes & services',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Services section (footwear theme) ─────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              height: 4,
+                              width: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'What we offer',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Find, fix, and give shoes a second life.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
                         GridView.count(
                           crossAxisCount: 2,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           mainAxisSpacing: 14,
                           crossAxisSpacing: 14,
-                          childAspectRatio: 1.2,
+                          childAspectRatio: 1.12,
                           children: const [
                             _ServiceCard(
                               icon: Icons.shopping_bag_outlined,
@@ -258,7 +422,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 36),
                       ],
                     ),
                   ),
@@ -285,43 +449,50 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 12,
+                offset: Offset(0, 3),
               ),
-              child: Icon(icon, color: color, size: 30),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 30),
               ),
-            ),
-          ],
+              const SizedBox(height: 14),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  height: 1.28,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
