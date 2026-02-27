@@ -12,8 +12,6 @@ import 'features/auth/domain/usecases/logout.dart';
 import 'features/auth/domain/usecases/send_otp.dart';
 import 'features/auth/domain/usecases/verify_otp.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-<<<<<<< HEAD
-=======
 import 'features/profile/data/datasources/profile_remote_datasource.dart';
 import 'features/profile/data/repositories/profile_repository_impl.dart';
 import 'features/profile/domain/repositories/profile_repository.dart';
@@ -22,7 +20,6 @@ import 'features/profile/domain/usecases/update_user_profile.dart';
 import 'features/profile/domain/usecases/upload_profile_image.dart';
 import 'features/profile/domain/usecases/address_usecases.dart';
 import 'features/profile/presentation/bloc/profile_bloc.dart';
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
 import 'core/network/dio_client.dart';
 import 'core/network/network_info.dart';
 
@@ -112,8 +109,6 @@ Future<void> init() async {
     );
   }
 
-<<<<<<< HEAD
-=======
   //! Features - Profile
   if (!sl.isRegistered<ProfileRemoteDataSource>()) {
     sl.registerLazySingleton<ProfileRemoteDataSource>(
@@ -156,7 +151,6 @@ Future<void> init() async {
     );
   }
 
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
   _isInitialized = true;
 }
 
