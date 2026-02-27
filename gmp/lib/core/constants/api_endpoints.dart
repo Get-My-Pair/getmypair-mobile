@@ -8,13 +8,14 @@ class ApiEndpoints {
   // Production: Render.com hosted backend
   // Local: 'http://localhost:3000' (Web/iOS) or 'http://10.0.2.2:3000' (Android emulator)
   // Physical device: 'http://YOUR_IP:3000' (same network as backend)
+  // Web: browser may block requests (CORS). Prefer device/emulator for auth, or configure backend CORS.
   
   /// Get base URL based on environment
   static String get baseUrl {
     // In debug mode, you can use local backend for testing
     if (kDebugMode) {
       // For flutter web running locally:
-      return 'http://localhost:3000';
+      return 'https://getmypair-api.onrender.com';
     }
     // Production backend (Render.com)
     return 'https://getmypair-api.onrender.com';
