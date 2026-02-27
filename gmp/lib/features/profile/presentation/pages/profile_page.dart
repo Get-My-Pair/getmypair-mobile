@@ -12,6 +12,7 @@ import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../widgets/edit_profile_widget.dart';
 import '../widgets/saved_addresses_page.dart';
+import 'manage_devices_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -312,7 +313,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           _SettingTile(
                             icon: Icons.devices_outlined,
                             title: 'Manage Devices',
-                            onTap: () {},
+                            onTap: () => _openManageDevices(context),
                           ),
                           _SettingDivider(),
                           _SettingTile(
@@ -416,6 +417,15 @@ class _ProfilePageState extends State<ProfilePage> {
           value: context.read<ProfileBloc>(),
           child: SavedAddressesPage(profile: profile, accessToken: token),
         ),
+      ),
+    );
+  }
+
+  void _openManageDevices(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ManageDevicesPage(),
       ),
     );
   }
