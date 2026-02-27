@@ -53,12 +53,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       
       return data;
     } catch (e) {
-<<<<<<< HEAD
-=======
       if (e is NetworkException) {
         throw ServerException(e.message);
       }
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
       throw ServerException('Failed to send OTP: ${e.toString()}');
     }
   }
