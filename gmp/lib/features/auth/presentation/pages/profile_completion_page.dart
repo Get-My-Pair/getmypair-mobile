@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-<<<<<<< HEAD
-=======
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -45,15 +42,9 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
   Future<void> _selectDate() async {
     final DateTime now = DateTime.now();
-<<<<<<< HEAD
-    final DateTime firstDate = DateTime(now.year - 100);
-    // Allow registration for newborns as well; only restrict future dates
-    final DateTime lastDate = now;
-=======
     // Users must be at least 18 years old
     final DateTime firstDate = DateTime(1900);
     final DateTime lastDate = DateTime(now.year - 18);
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -101,23 +92,17 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
       );
-<<<<<<< HEAD
-=======
       // Try server reverse geocode for human readable address
       try {
         final uri = Uri.parse('${ApiEndpoints.baseUrl}/api/geocode/reverse?lat=${pos.latitude}&lon=${pos.longitude}');
         final resp = await http.get(uri);
         if (resp.statusCode == 200) {
           final body = resp.body;
-          // Minimal parsing without adding json import to keep patch small
-          // If backend returns structured JSON, include displayName and city/state
-          // Use RegExp fallback to include raw coords if parsing fails
           return {'lat': pos.latitude, 'lng': pos.longitude, 'raw': body};
         }
       } catch (_) {
         // ignore reverse geocode failures — return coords
       }
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
       return {'lat': pos.latitude, 'lng': pos.longitude};
     } catch (_) {
       return null;
@@ -176,11 +161,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       return 'Name must be less than 100 characters';
     }
     // Only allow alphabets and spaces (no digits or special characters)
-<<<<<<< HEAD
-    if (!RegExp(r'^[a-zA-Z\\s]+\$').hasMatch(value)) {
-=======
     if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
       return 'Name can contain only letters and spaces';
     }
     return null;

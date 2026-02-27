@@ -38,18 +38,7 @@ class DioClient {
       throw NetworkException('Invalid response format: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
-<<<<<<< HEAD
       throw NetworkException('Network error: ${e.toString()}');
-=======
-      final msg = e.toString();
-      if (msg.contains('XMLHttpRequest')) {
-        throw NetworkException(
-          'Request blocked (often in browser: CORS or mixed content). '
-          'Try running on a device/emulator or ensure the backend allows your origin.'
-        );
-      }
-      throw NetworkException('Network error: $msg');
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
     }
   }
 
@@ -84,9 +73,6 @@ class DioClient {
       throw NetworkException('Invalid response format: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
-<<<<<<< HEAD
-      throw NetworkException('Network error: ${e.toString()}');
-=======
       final msg = e.toString();
       if (msg.contains('XMLHttpRequest')) {
         throw NetworkException(
@@ -95,7 +81,6 @@ class DioClient {
         );
       }
       throw NetworkException('Network error: $msg');
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
     }
   }
 
@@ -128,9 +113,6 @@ class DioClient {
       throw NetworkException('HTTP error: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
-<<<<<<< HEAD
-      throw NetworkException('Network error: ${e.toString()}');
-=======
       final msg = e.toString();
       if (msg.contains('XMLHttpRequest')) {
         throw NetworkException(
@@ -139,7 +121,6 @@ class DioClient {
         );
       }
       throw NetworkException('Network error: $msg');
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
     }
   }
 
@@ -170,9 +151,6 @@ class DioClient {
       throw NetworkException('HTTP error: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
-<<<<<<< HEAD
-      throw NetworkException('Network error: ${e.toString()}');
-=======
       final msg = e.toString();
       if (msg.contains('XMLHttpRequest')) {
         throw NetworkException(
@@ -181,7 +159,6 @@ class DioClient {
         );
       }
       throw NetworkException('Network error: $msg');
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
     }
   }
 

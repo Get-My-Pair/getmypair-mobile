@@ -4,10 +4,7 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'injection_container.dart' as di;
 import 'features/auth/presentation/pages/splash_page.dart';
-<<<<<<< HEAD
-=======
 import 'routes.dart';
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,10 +50,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: const SplashPage(),
-<<<<<<< HEAD
-=======
         onGenerateRoute: AppRoutes.generateRoute,
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
       ),
     );
   }
