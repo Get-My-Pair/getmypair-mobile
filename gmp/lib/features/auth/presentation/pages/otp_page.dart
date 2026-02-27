@@ -14,12 +14,15 @@ class OTPPage extends StatefulWidget {
   final String mobile;
   final String? countryCode;
   final String? phoneNumber;
+  /// Pre-filled OTP when coming from dev dialog (Continue / Copy & Continue).
+  final String? prefilledOtp;
 
   const OTPPage({
     super.key,
     required this.mobile,
     this.countryCode,
     this.phoneNumber,
+    this.prefilledOtp,
   });
 
   @override
@@ -37,12 +40,22 @@ class _OTPPageState extends State<OTPPage> {
   void initState() {
     super.initState();
     _startResendTimer();
+    final pre = widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    if (pre.length == 6) {
+      _otp = pre;
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  /// Normalized 6-digit OTP for initial field value, or null if none.
+  String? get _initialOtpValue {
+    final pre = widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    return pre.length == 6 ? pre : null;
   }
 
   void _startResendTimer() {
@@ -389,6 +402,7 @@ class _OTPPageState extends State<OTPPage> {
           Center(
             child: MaterialPinField(
             length: 6,
+            initialValue: _initialOtpValue,
             onCompleted: (value) {
               setState(() {
                 _otp = value;
