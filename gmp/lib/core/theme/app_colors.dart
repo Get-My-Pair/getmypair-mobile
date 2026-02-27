@@ -44,12 +44,9 @@ class AppColors {
 
   // Disabled
   static const Color disabled = Color(0xFFBDBDBD);
-<<<<<<< HEAD
-=======
 
   // Footwear theme (hero, accents)
   static const Color footwearHeroStart = Color(0xFF6750A4);
   static const Color footwearHeroEnd = Color(0xFF7F67B8);
   static const Color footwearCardHighlight = Color(0xFFF8F6FC);
->>>>>>> bc228505e51176217cbf52c32eac7f3f24271590
 }
