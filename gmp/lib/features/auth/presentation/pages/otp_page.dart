@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -242,7 +243,7 @@ class _OTPPageState extends State<OTPPage> {
         },
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(Responsive.horizontalPaddingOf(context)),
             child: Form(
               key: _formKey,
               child: Column(
@@ -251,12 +252,12 @@ class _OTPPageState extends State<OTPPage> {
                   const SizedBox(height: 20),
 
                   // Header
-                  _buildHeader(),
+                  _buildHeader(context),
 
                   const SizedBox(height: 48),
 
                   // OTP Input Card
-                  _buildOtpInputCard(),
+                  _buildOtpInputCard(context),
 
                   const SizedBox(height: 32),
 
@@ -319,17 +320,18 @@ class _OTPPageState extends State<OTPPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final titleSize = Responsive.fontSize(context, 32);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Expanded(
-              child: const Text(
+              child: Text(
                 'Verify Phone',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: titleSize,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                   letterSpacing: -0.5,
@@ -338,7 +340,10 @@ class _OTPPageState extends State<OTPPage> {
             ),
             const SizedBox(width: 12),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 72, maxHeight: 72),
+              constraints: BoxConstraints(
+                maxWidth: Responsive.maxLogoSizeOf(context, 0.18),
+                maxHeight: Responsive.maxLogoSizeOf(context, 0.18),
+              ),
               child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
             ),
           ],
@@ -370,9 +375,11 @@ class _OTPPageState extends State<OTPPage> {
     );
   }
 
-  Widget _buildOtpInputCard() {
+  Widget _buildOtpInputCard(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width;
+    final cellSize = (w * 0.12).clamp(44.0, 56.0);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(Responsive.horizontalPaddingOf(context) * 0.85),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
@@ -415,8 +422,8 @@ class _OTPPageState extends State<OTPPage> {
               },
               theme: MaterialPinTheme(
                 shape: MaterialPinShape.outlined,
-                cellSize: const Size(56, 56),
-                spacing: 8,
+                cellSize: Size(cellSize, cellSize),
+                spacing: 6,
                 borderRadius: BorderRadius.circular(8),
                 borderWidth: 2,
                 borderColor: AppColors.border,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_state.dart';
@@ -171,6 +172,12 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final shortest = size.width < size.height ? size.width : size.height;
+    final logoSize = (shortest * 0.4).clamp(120.0, 220.0);
+    final titleFontSize = (Responsive.fontSize(context, 40)).clamp(24.0, 40.0);
+    final taglineFontSize = Responsive.fontSize(context, 17);
+    final bottomPadding = 48.0 + MediaQuery.paddingOf(context).bottom;
     return Scaffold(
         body: Container(
           width: double.infinity,
@@ -248,8 +255,9 @@ class _SplashPageState extends State<SplashPage>
                                 ),
                                 child: Image.asset(
                                   'assets/images/logo.png',
-                                  width: 220,
-                                  height: 220,
+                                  width: logoSize,
+                                  height: logoSize,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                             ),
@@ -277,10 +285,10 @@ class _SplashPageState extends State<SplashPage>
                                   ],
                                 ).createShader(bounds);
                               },
-                              child: const Text(
+                              child: Text(
                                 'Get My Pair',
                                 style: TextStyle(
-                                  fontSize: 40,
+                                  fontSize: titleFontSize,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                   letterSpacing: -0.5,
@@ -302,12 +310,12 @@ class _SplashPageState extends State<SplashPage>
                           offset: Offset(0, _taglineSlide.value),
                           child: Opacity(
                             opacity: _taglineFade.value,
-                            child: const Text(
+                            child: Text(
                               'Find shoes. Fix shoes. All in one place.',
                               style: TextStyle(
-                                fontSize: 17,
+                                fontSize: taglineFontSize,
                                 fontWeight: FontWeight.w400,
-                                color: Color(0xFF79747E),
+                                color: const Color(0xFF79747E),
                                 letterSpacing: 0.3,
                               ),
                             ),
@@ -321,7 +329,7 @@ class _SplashPageState extends State<SplashPage>
 
               // Bottom loading indicator + app version
               Positioned(
-                bottom: 80,
+                bottom: bottomPadding,
                 left: 0,
                 right: 0,
                 child: AnimatedBuilder(

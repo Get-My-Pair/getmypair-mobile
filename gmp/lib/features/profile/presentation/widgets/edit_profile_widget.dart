@@ -7,6 +7,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/utils/responsive.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
@@ -105,11 +106,12 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
         barrierDismissible: false,
         builder: (ctx) {
           final controller = CropController();
+          final cropHeight = (MediaQuery.sizeOf(ctx).height * 0.5).clamp(280.0, 400.0);
           return AlertDialog(
             title: const Text('Crop image'),
             content: SizedBox(
               width: double.maxFinite,
-              height: 400,
+              height: cropHeight,
               child: Crop(
                 image: originalBytes,
                 controller: controller,
@@ -216,7 +218,10 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
             centerTitle: true,
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.horizontalPaddingOf(context),
+              vertical: 16,
+            ),
             child: Form(
               key: _formKey,
               child: Column(

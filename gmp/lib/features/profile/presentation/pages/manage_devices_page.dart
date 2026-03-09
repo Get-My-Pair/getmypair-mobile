@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 
 /// Account Settings → Manage Devices: view and remove sessions on other devices.
 class ManageDevicesPage extends StatelessWidget {
@@ -45,7 +46,7 @@ class ManageDevicesPage extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPaddingOf(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

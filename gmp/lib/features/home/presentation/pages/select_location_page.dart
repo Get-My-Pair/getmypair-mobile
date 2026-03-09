@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 
 /// Metro-style select delivery location page: map with draggable pin,
 /// "Use my current location", and Confirm Location.
@@ -203,8 +204,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           // Overlay text
           Positioned(
             top: 16,
-            left: 20,
-            right: 20,
+            left: Responsive.horizontalPaddingOf(context),
+            right: Responsive.horizontalPaddingOf(context),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -219,8 +220,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           ),
           // Use current location button
           Positioned(
-            bottom: 200,
-            left: 20,
+            bottom: 180 + MediaQuery.of(context).padding.bottom,
+            left: Responsive.horizontalPaddingOf(context),
             child: Material(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -273,7 +274,12 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  padding: EdgeInsets.fromLTRB(
+                    Responsive.horizontalPaddingOf(context),
+                    20,
+                    Responsive.horizontalPaddingOf(context),
+                    16 + MediaQuery.of(context).padding.bottom,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import 'mobile_otp_page.dart';
 
 class WelcomePage extends StatelessWidget {
@@ -17,42 +18,51 @@ class WelcomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final padding = Responsive.horizontalPaddingOf(context);
+    final logoSize = Responsive.maxLogoSizeOf(context, 0.38);
+    final titleSize = Responsive.fontSize(context, 36);
+    final bodySize = Responsive.fontSize(context, 16);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            children: [
-              const Spacer(flex: 1),
-              
-              // Logo
-              Image.asset(
-                'assets/images/logo.png',
-                width: 180,
-                height: 180,
-              ),
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.sizeOf(context).height -
+                  MediaQuery.paddingOf(context).top -
+                  MediaQuery.paddingOf(context).bottom,
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: padding),
+              child: Column(
+                children: [
+                  const Spacer(flex: 1),
+                  // Logo
+                  Image.asset(
+                    'assets/images/logo.png',
+                    width: logoSize,
+                    height: logoSize,
+                    fit: BoxFit.contain,
+                  ),
               
               const SizedBox(height: 32),
               
               // Welcome Text
-              const Text(
+              Text(
                 'Welcome to',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: Responsive.fontSize(context, 18),
                   fontWeight: FontWeight.w400,
                   color: AppColors.textSecondary,
                   letterSpacing: 0.5,
                 ),
                 textAlign: TextAlign.center,
               ),
-              
               const SizedBox(height: 8),
-              
-              const Text(
+              Text(
                 'Get My Pair',
                 style: TextStyle(
-                  fontSize: 36,
+                  fontSize: titleSize,
                   fontWeight: FontWeight.w700,
                   color: AppColors.primaryDark,
                   letterSpacing: -0.5,
@@ -60,13 +70,11 @@ class WelcomePage extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              
               const SizedBox(height: 16),
-              
               Text(
                 'Find shoes. Fix shoes.\nEverything you need, all in one place.',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: bodySize,
                   fontWeight: FontWeight.w400,
                   color: AppColors.textSecondary,
                   height: 1.5,
@@ -170,12 +178,14 @@ class WelcomePage extends StatelessWidget {
                 ),
               ),
               
-              const SizedBox(height: 32),
+              SizedBox(height: 16 + MediaQuery.paddingOf(context).bottom),
             ],
           ),
         ),
       ),
-    );
+    ),
+  ),
+  );
   }
 
   Widget _buildFeatureRow({required IconData icon, required String text}) {

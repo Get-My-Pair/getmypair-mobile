@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
+import '../../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -200,17 +202,20 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
         },
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            padding: EdgeInsets.symmetric(
+              horizontal: Responsive.horizontalPaddingOf(context),
+              vertical: 8,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header Section
-                _buildHeader(),
+                _buildHeader(context),
 
                 const SizedBox(height: 10),
 
                 // Phone Input Card
-                _buildPhoneInputCard(),
+                _buildPhoneInputCard(context),
 
                 const SizedBox(height: 10),
 
@@ -266,20 +271,26 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final logoSize = Responsive.maxLogoSizeOf(context, 0.42);
+    final titleSize = Responsive.fontSize(context, 32);
+    final bodySize = Responsive.fontSize(context, 15);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Center(
-          child: Image.asset('assets/images/logo.png', width: 300, height: 300),
+          child: Image.asset(
+            'assets/images/logo.png',
+            width: logoSize,
+            height: logoSize,
+            fit: BoxFit.contain,
+          ),
         ),
-
-        // Title
         Center(
-          child: const Text(
+          child: Text(
             'Welcome to Get My Pair',
             style: TextStyle(
-              fontSize: 32,
+              fontSize: titleSize,
               fontWeight: FontWeight.w700,
               color: AppColors.primaryDark,
               height: 1.2,
@@ -287,15 +298,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             ),
           ),
         ),
-
         const SizedBox(height: 12),
-
-        // Tagline
         Center(
           child: Text(
             'Find shoes. Fix shoes. Everything you need, all in one place.',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: bodySize,
               fontWeight: FontWeight.w400,
               color: AppColors.textSecondary,
               height: 1.5,
@@ -307,9 +315,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     );
   }
 
-  Widget _buildPhoneInputCard() {
+  Widget _buildPhoneInputCard(BuildContext context) {
+    final padding = Responsive.horizontalPaddingOf(context);
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/utils/responsive.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -205,7 +206,10 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
             ),
             body: SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.horizontalPaddingOf(context),
+                  vertical: 12,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -215,18 +219,19 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                       Center(
                         child: Image.asset(
                           'assets/images/logo.png',
-                          width: 100,
-                          height: 100,
+                          width: Responsive.maxLogoSizeOf(context, 0.22),
+                          height: Responsive.maxLogoSizeOf(context, 0.22),
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: 24),
                       
                       // Title
-                      const Center(
+                      Center(
                         child: Text(
                           'Complete Your Profile',
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: Responsive.fontSize(context, 28),
                             fontWeight: FontWeight.w700,
                             color: AppColors.primaryDark,
                             letterSpacing: -0.5,
@@ -249,7 +254,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                       
                       // Form Card
                       Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(Responsive.horizontalPaddingOf(context)),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(20),

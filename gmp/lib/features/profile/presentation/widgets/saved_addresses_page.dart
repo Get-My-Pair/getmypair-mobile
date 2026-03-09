@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/utils/responsive.dart';
 import '../../domain/entities/address.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
@@ -66,8 +67,9 @@ class SavedAddressesPage extends StatelessWidget {
           body: currentProfile.addresses.isEmpty
               ? _buildEmpty(context)
               : ListView(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: Responsive.horizontalPaddingOf(context),
+                      vertical: 12),
                   children: [
                     ...currentProfile.addresses.map((address) =>
                         _AddressCard(

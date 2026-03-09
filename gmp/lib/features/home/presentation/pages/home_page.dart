@@ -4,6 +4,7 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/welcome_page.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
@@ -256,9 +257,12 @@ class _HomePageState extends State<HomePage> {
 
                 // ── Footwear hero banner ─────────────────────────
                 SliverToBoxAdapter(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final horizontal = Responsive.horizontalPaddingOf(context);
+                      return Container(
+                    margin: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 0),
+                    padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: 20),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [
@@ -317,14 +321,19 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
+                  );
+                    },
                   ),
                 ),
 
                 // ── Discover bar (footwear theme) ─────────────────
                 SliverToBoxAdapter(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Builder(
+                    builder: (context) {
+                      final horizontal = Responsive.horizontalPaddingOf(context);
+                      return Container(
+                    margin: EdgeInsets.fromLTRB(horizontal, 20, horizontal, 0),
+                    padding: EdgeInsets.symmetric(horizontal: horizontal * 0.8, vertical: 12),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(14),
@@ -350,13 +359,18 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
+                  );
+                    },
                   ),
                 ),
 
                 // ── Services section (footwear theme) ─────────────
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                  child: LayoutBuilder(
+                    builder: (context, _) {
+                      final horizontal = Responsive.horizontalPaddingOf(context);
+                      return Padding(
+                    padding: EdgeInsets.fromLTRB(horizontal, 28, horizontal, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -392,13 +406,17 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 20),
 
-                        GridView.count(
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final w = MediaQuery.sizeOf(context).width;
+                            final aspectRatio = w <= Responsive.breakpointSmall ? 1.0 : 1.12;
+                            return GridView.count(
                           crossAxisCount: 2,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           mainAxisSpacing: 14,
                           crossAxisSpacing: 14,
-                          childAspectRatio: 1.12,
+                          childAspectRatio: aspectRatio,
                           children: const [
                             _ServiceCard(
                               icon: Icons.shopping_bag_outlined,
@@ -431,10 +449,14 @@ class _HomePageState extends State<HomePage> {
                               color: Color(0xFF9C27B0),
                             ),
                           ],
+                        );
+                          },
                         ),
                         const SizedBox(height: 36),
                       ],
                     ),
+                  );
+                    },
                   ),
                 ),
               ],

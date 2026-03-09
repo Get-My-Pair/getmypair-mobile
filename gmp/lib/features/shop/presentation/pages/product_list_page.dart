@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../widgets/product_card.dart';
 import '../../data/mock_products.dart';
 
@@ -17,15 +18,19 @@ class ProductListPage extends StatelessWidget {
         backgroundColor: AppColors.background,
         elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final padding = Responsive.horizontalPaddingOf(context);
+          final aspectRatio = MediaQuery.sizeOf(context).width <= Responsive.breakpointSmall ? 0.68 : 0.72;
+          return Padding(
+        padding: EdgeInsets.symmetric(horizontal: padding, vertical: 12),
         child: GridView.builder(
           itemCount: items.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.72,
+            childAspectRatio: aspectRatio,
           ),
           itemBuilder: (context, index) {
             final product = items[index];
@@ -37,6 +42,8 @@ class ProductListPage extends StatelessWidget {
             );
           },
         ),
+      );
+        },
       ),
     );
   }
