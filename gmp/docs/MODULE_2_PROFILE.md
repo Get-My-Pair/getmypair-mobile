@@ -1,4 +1,4 @@
-# MODULE 2 – PROFILE DOCUMENTATION .
+# MODULE 2 – PROFILE DOCUMENTATION
 
 ## Table of Contents
 1. [Overview](#overview)
