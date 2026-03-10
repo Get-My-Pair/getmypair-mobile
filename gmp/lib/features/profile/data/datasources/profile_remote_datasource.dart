@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../models/address_model.dart';
 import '../models/user_profile_model.dart';
@@ -42,10 +43,13 @@ abstract class ProfileRemoteDataSource {
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   static const Duration _timeout = Duration(seconds: 30);
 
+  /// Headers for profile API. Include X-App-Source so backend assigns USER role when missing.
   Map<String, String> _headers(String accessToken) => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': 'Bearer $accessToken',
+        'X-App-Source': AppConstants.appSourceForApi,
+        'X-App-Version': AppConstants.appVersion,
       };
 
   Map<String, dynamic> _handleResponse(http.Response response) {
