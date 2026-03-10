@@ -5,8 +5,10 @@ import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/check_auth_status.dart';
+import 'features/auth/domain/usecases/clear_session_locally.dart';
 import 'features/auth/domain/usecases/complete_profile.dart';
 import 'features/auth/domain/usecases/get_current_user.dart';
+import 'features/auth/domain/usecases/get_valid_access_token.dart';
 import 'features/auth/domain/usecases/login_with_email.dart';
 import 'features/auth/domain/usecases/logout.dart';
 import 'features/auth/domain/usecases/send_otp.dart';
@@ -92,6 +94,12 @@ Future<void> init() async {
   if (!sl.isRegistered<CheckAuthStatus>()) {
     sl.registerLazySingleton(() => CheckAuthStatus(sl()));
   }
+  if (!sl.isRegistered<GetValidAccessToken>()) {
+    sl.registerLazySingleton(() => GetValidAccessToken(sl()));
+  }
+  if (!sl.isRegistered<ClearSessionLocally>()) {
+    sl.registerLazySingleton(() => ClearSessionLocally(sl()));
+  }
 
   // Bloc - Register last (depends on all use cases)
   // Use registerFactory which can be re-registered
@@ -105,6 +113,7 @@ Future<void> init() async {
         getCurrentUser: sl(),
         logout: sl(),
         checkAuthStatus: sl(),
+        clearSessionLocally: sl(),
       ),
     );
   }

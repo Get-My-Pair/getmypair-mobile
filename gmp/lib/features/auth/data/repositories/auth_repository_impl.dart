@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/network_info.dart';
+import '../../../../core/utils/jwt_helper.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
@@ -137,17 +138,36 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User>> getCurrentUser() async {
     try {
-      final accessToken = await localDataSource.getAccessToken();
+      var accessToken = await localDataSource.getAccessToken();
       if (accessToken == null) {
         return const Left(AuthenticationFailure('No access token found'));
       }
 
       if (await networkInfo.isConnected) {
         try {
-          final userModel = await remoteDataSource.getCurrentUser(accessToken);
+          var userModel = await remoteDataSource.getCurrentUser(accessToken);
           await localDataSource.saveUser(userModel);
           return Right(userModel);
         } on ServerException catch (e) {
+          // Access token expired (401) – refresh and retry once; keep user logged in until refresh token expires
+          if (e.statusCode == 401) {
+            final refreshResult = await refreshToken();
+            if (refreshResult.isRight()) {
+              accessToken = await localDataSource.getAccessToken();
+              if (accessToken != null) {
+                try {
+                  final userModel = await remoteDataSource.getCurrentUser(accessToken);
+                  await localDataSource.saveUser(userModel);
+                  return Right(userModel);
+                } on ServerException catch (e2) {
+                  return Left(ServerFailure(e2.message));
+                } on NetworkException catch (e2) {
+                  return Left(NetworkFailure(e2.message));
+                }
+              }
+            }
+            return refreshResult.fold((l) => Left(l), (_) => Left(ServerFailure(e.message)));
+          }
           return Left(ServerFailure(e.message));
         } on NetworkException catch (e) {
           return Left(NetworkFailure(e.message));
@@ -227,6 +247,47 @@ class AuthRepositoryImpl implements AuthRepository {
       } else {
         return const Left(NetworkFailure('No internet connection'));
       }
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
+    } catch (e) {
+      return Left(CacheFailure('Unexpected error: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> getValidAccessToken() async {
+    try {
+      var accessToken = await localDataSource.getAccessToken();
+      if (accessToken == null) {
+        return const Left(AuthenticationFailure('No access token found'));
+      }
+      // Refresh if expired or expiring within 60 seconds
+      final exp = JwtHelper.getTokenExpiration(accessToken);
+      final shouldRefresh = JwtHelper.isTokenExpired(accessToken) ||
+          (exp != null && exp.difference(DateTime.now()).inSeconds < 60);
+      if (shouldRefresh) {
+        final refreshResult = await refreshToken();
+        if (refreshResult.isLeft()) {
+          return refreshResult.fold((l) => Left(l), (_) => const Left(AuthenticationFailure('Refresh failed')));
+        }
+        accessToken = await localDataSource.getAccessToken();
+        if (accessToken == null) {
+          return const Left(AuthenticationFailure('No access token after refresh'));
+        }
+      }
+      return Right(accessToken);
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
+    } catch (e) {
+      return Left(CacheFailure('Unexpected error: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> clearSessionLocally() async {
+    try {
+      await localDataSource.clearAll();
+      return const Right(null);
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
     } catch (e) {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:gmp/core/constants/app_constants.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:gmp/features/auth/presentation/bloc/auth_event.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_state.dart';
 import 'package:gmp/features/auth/presentation/pages/welcome_page.dart';
 import 'package:gmp/features/home/presentation/pages/home_page.dart';
@@ -37,11 +37,12 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   }
 
   Future<void> _loadProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(AppConstants.accessTokenKey);
-    if (token != null && mounted) {
-      context.read<ProfileBloc>().add(ProfileLoadRequested(token));
-    }
+    final result = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    result.fold(
+      (_) => context.read<AuthBloc>().add(const AuthSessionExpired()),
+      (token) => context.read<ProfileBloc>().add(ProfileLoadRequested(token)),
+    );
   }
 
   @override

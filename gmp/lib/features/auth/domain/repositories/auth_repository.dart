@@ -20,5 +20,9 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> logout();
   Future<Either<Failure, bool>> isAuthenticated();
   Future<Either<Failure, void>> refreshToken();
+  /// Returns a valid access token, refreshing if expired. Use for API calls to maintain login until refresh token expires.
+  Future<Either<Failure, String>> getValidAccessToken();
+  /// Clear tokens and user data locally only (no API call). Use on session expired; logout button uses logout().
+  Future<Either<Failure, void>> clearSessionLocally();
 }
 

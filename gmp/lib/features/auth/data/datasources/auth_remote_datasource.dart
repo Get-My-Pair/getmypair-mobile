@@ -153,6 +153,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       } else {
         throw ServerException(response['message'] ?? 'Failed to get user');
       }
+    } on ServerException catch (e) {
+      rethrow;
     } catch (e) {
       throw ServerException('Failed to get user: ${e.toString()}');
     }

@@ -69,6 +69,11 @@ class AuthLogout extends AuthEvent {
   const AuthLogout();
 }
 
+/// Session expired (e.g. refresh token failed). Clear local data only and show login; do not call logout API.
+class AuthSessionExpired extends AuthEvent {
+  const AuthSessionExpired();
+}
+
 class AuthClearError extends AuthEvent {
   const AuthClearError();
 }

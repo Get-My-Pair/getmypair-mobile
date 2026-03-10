@@ -1,8 +1,10 @@
 class ServerException implements Exception {
   final String message;
-  
-  const ServerException(this.message);
-  
+  /// HTTP status code when exception is from an API response (e.g. 401, 403).
+  final int? statusCode;
+
+  const ServerException(this.message, {this.statusCode});
+
   @override
   String toString() => message;
 }

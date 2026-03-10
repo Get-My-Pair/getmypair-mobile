@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/usecases/check_auth_status.dart';
+import '../../domain/usecases/clear_session_locally.dart';
 import '../../domain/usecases/complete_profile.dart';
 import '../../domain/usecases/get_current_user.dart';
 import '../../domain/usecases/login_with_email.dart';
@@ -19,6 +20,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final GetCurrentUser getCurrentUser;
   final Logout logout;
   final CheckAuthStatus checkAuthStatus;
+  final ClearSessionLocally clearSessionLocally;
 
   AuthBloc({
     required this.sendOTP,
@@ -28,6 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.getCurrentUser,
     required this.logout,
     required this.checkAuthStatus,
+    required this.clearSessionLocally,
   }) : super(const AuthInitial()) {
     on<AuthCheckStatus>(_onCheckStatus);
     on<AuthSendOTP>(_onSendOTP);
@@ -35,6 +38,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginWithEmail>(_onLoginWithEmail);
     on<AuthCompleteProfile>(_onCompleteProfile);
     on<AuthLogout>(_onLogout);
+    on<AuthSessionExpired>(_onSessionExpired);
     on<AuthClearError>(_onClearError);
   }
 
@@ -174,6 +178,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
       (_) => emit(const AuthUnauthenticated()),
     );
+  }
+
+  Future<void> _onSessionExpired(
+    AuthSessionExpired event,
+    Emitter<AuthState> emit,
+  ) async {
+    await clearSessionLocally();
+    emit(const AuthUnauthenticated());
   }
 
   Future<void> _onClearError(

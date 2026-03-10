@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/welcome_page.dart';
+import '../../../../injection_container.dart' as di;
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -34,14 +34,17 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _initAndLoad() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(AppConstants.accessTokenKey);
-    if (mounted) {
-      setState(() => _accessToken = token);
-      if (token != null) {
+    final result = await di.sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    result.fold(
+      (_) {
+        context.read<AuthBloc>().add(const AuthSessionExpired());
+      },
+      (token) {
+        setState(() => _accessToken = token);
         context.read<ProfileBloc>().add(ProfileLoadRequested(token));
-      }
-    }
+      },
+    );
   }
 
   void _logout() {

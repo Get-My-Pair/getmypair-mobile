@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../constants/api_endpoints.dart';
 import '../errors/exceptions.dart';
@@ -199,9 +198,9 @@ class DioClient {
         }
         
         // Backend error format: { success: false, message: string, statusCode: number, errors?: array }
-        final message = jsonResponse['message'] as String? ?? 
+        final message = jsonResponse['message'] as String? ??
             'Server error: ${response.statusCode}';
-        
+
         // Include validation errors if present
         if (jsonResponse['errors'] != null && jsonResponse['errors'] is List) {
           final errors = jsonResponse['errors'] as List;
@@ -211,12 +210,12 @@ class DioClient {
             }
             return e.toString();
           }).join(', ');
-          throw ServerException('$message. Errors: $errorMessages');
+          throw ServerException('$message. Errors: $errorMessages', statusCode: response.statusCode);
         }
-        
-        throw ServerException(message);
+
+        throw ServerException(message, statusCode: response.statusCode);
       }
-    } on FormatException catch (e) {
+    } on FormatException {
       // If response body is not valid JSON
       throw ServerException(
         'Invalid response from server (${response.statusCode}). '
