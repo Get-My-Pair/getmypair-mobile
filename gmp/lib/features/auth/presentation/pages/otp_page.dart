@@ -80,6 +80,7 @@ class _OTPPageState extends State<OTPPage> {
 
   void _verifyOTP() {
     if (_otp.length != 6) return;
+    FocusScope.of(context).unfocus();
 
     context.read<AuthBloc>().add(
       AuthVerifyOTP(

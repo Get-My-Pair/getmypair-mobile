@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
-import '../../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -23,7 +22,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   final TextEditingController _phoneController = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
   CountryCode _selectedCountry = CountryCode.popularCountries[0]; // India default
-  bool _termsAccepted = false;
   String? _phoneError;
   bool _isSendingOTP = false;
 
@@ -38,7 +36,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     final phoneLength = _phoneController.text
         .replaceAll(RegExp(r'[^0-9]'), '')
         .length;
-    return phoneLength == 10 && _termsAccepted;
+    return phoneLength == 10;
   }
 
   void _validatePhone(String value) {
@@ -217,12 +215,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                 // Phone Input Card
                 _buildPhoneInputCard(context),
 
-                const SizedBox(height: 10),
-
-                // Terms & Privacy
-                _buildTermsCheckbox(),
-
-                const SizedBox(height: 10),
+                const SizedBox(height: 24),
 
                 // CTA Button
                 SizedBox(
@@ -412,79 +405,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTermsCheckbox() {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _termsAccepted = !_termsAccepted;
-        });
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: _termsAccepted ? AppColors.primary : AppColors.surface,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: _termsAccepted ? AppColors.primary : AppColors.border,
-                  width: 2,
-                ),
-              ),
-              child: _termsAccepted
-                  ? const Icon(
-                      Icons.check,
-                      size: 16,
-                      color: AppColors.textOnPrimary,
-                    )
-                  : null,
-            ),
-
-            const SizedBox(width: 12),
-
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                  children: [
-                    const TextSpan(text: 'I agree to the '),
-                    TextSpan(
-                      text: 'Terms of Service',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                    const TextSpan(text: ' and '),
-                    TextSpan(
-                      text: 'Privacy Policy',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

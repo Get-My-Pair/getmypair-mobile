@@ -8,6 +8,8 @@ import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
 
+/// Session: user stays logged in until they tap Logout or refresh token expires.
+/// Access token is refreshed automatically; only on refresh failure do we clear session and show login.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
