@@ -28,9 +28,10 @@ class ProfileUpdating extends ProfileState {
 class ProfileError extends ProfileState {
   final String message;
   final UserProfile? profile; // preserve old profile on error
-  const ProfileError(this.message, {this.profile});
+  final int? statusCode; // e.g. 403 access denied – app may treat as session expired
+  const ProfileError(this.message, {this.profile, this.statusCode});
   @override
-  List<Object?> get props => [message, profile];
+  List<Object?> get props => [message, profile, statusCode];
 }
 
 class ProfileImageUploading extends ProfileState {

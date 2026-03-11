@@ -50,7 +50,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final profile = await getUserProfile(event.accessToken);
       emit(ProfileLoaded(profile));
     } on ServerException catch (e) {
-      emit(ProfileError(e.message));
+      emit(ProfileError(e.message, statusCode: e.statusCode));
     } catch (e) {
       emit(ProfileError('Failed to load profile: $e'));
     }

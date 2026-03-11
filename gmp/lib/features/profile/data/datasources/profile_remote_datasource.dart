@@ -61,7 +61,8 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return json;
       }
-      throw ServerException(json['message'] ?? 'Server error: ${response.statusCode}');
+      final message = json['message'] ?? 'Server error: ${response.statusCode}';
+      throw ServerException(message, statusCode: response.statusCode);
     } on FormatException {
       throw ServerException('Invalid response from server');
     } catch (e) {

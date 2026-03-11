@@ -93,6 +93,10 @@ class _ProfilePageState extends State<ProfilePage> {
       child: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileError) {
+            if (state.statusCode == 403) {
+              context.read<AuthBloc>().add(const AuthSessionExpired());
+              return;
+            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
