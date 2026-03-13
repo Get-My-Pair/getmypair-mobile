@@ -45,6 +45,15 @@ class ApiEndpoints {
   static String userProfileDeleteAddress(String addressId) =>
       '$baseUrl$userProfilePrefix/address/delete/$addressId';
 
+  // Articles (Module 3 – Digital Shoe Passport)
+  static const String articlesPrefix = '/api/articles';
+  static String get articlesMy => '$baseUrl$articlesPrefix/my';
+  static String articleById(String id) => '$baseUrl$articlesPrefix/$id';
+  static String get articlesCreate => '$baseUrl$articlesPrefix/create';
+  static String articleUpdate(String id) => '$baseUrl$articlesPrefix/update/$id';
+  static String articleDelete(String id) => '$baseUrl$articlesPrefix/delete/$id';
+  static String get articlesUploadImage => '$baseUrl$articlesPrefix/upload-image';
+
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
     final headers = <String, String>{

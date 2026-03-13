@@ -22,6 +22,10 @@ import 'features/profile/domain/usecases/update_user_profile.dart';
 import 'features/profile/domain/usecases/upload_profile_image.dart';
 import 'features/profile/domain/usecases/address_usecases.dart';
 import 'features/profile/presentation/bloc/profile_bloc.dart';
+import 'features/articles/data/datasources/article_remote_datasource.dart';
+import 'features/articles/data/repositories/article_repository_impl.dart';
+import 'features/articles/domain/repositories/article_repository.dart';
+import 'features/articles/domain/usecases/get_my_articles.dart';
 import 'core/network/dio_client.dart';
 import 'core/network/network_info.dart';
 
@@ -158,6 +162,21 @@ Future<void> init() async {
         deleteAddress: sl(),
       ),
     );
+  }
+
+  //! Features - Articles (Module 3)
+  if (!sl.isRegistered<ArticleRemoteDataSource>()) {
+    sl.registerLazySingleton<ArticleRemoteDataSource>(
+      () => ArticleRemoteDataSourceImpl(),
+    );
+  }
+  if (!sl.isRegistered<ArticleRepository>()) {
+    sl.registerLazySingleton<ArticleRepository>(
+      () => ArticleRepositoryImpl(remoteDataSource: sl()),
+    );
+  }
+  if (!sl.isRegistered<GetMyArticles>()) {
+    sl.registerLazySingleton(() => GetMyArticles(sl()));
   }
 
   _isInitialized = true;
