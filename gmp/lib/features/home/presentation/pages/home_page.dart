@@ -8,6 +8,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import 'package:gmp/routes.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'select_location_page.dart';
@@ -326,6 +327,72 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
+                // ── My Shoes button ─────────────────────────────
+                SliverToBoxAdapter(
+                  child: Builder(
+                    builder: (context) {
+                      final horizontal = Responsive.horizontalPaddingOf(context);
+                      return Padding(
+                        padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 0),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: AppColors.primary),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: AppColors.shadow,
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.checkroom_outlined,
+                                      color: AppColors.primary,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Text(
+                                      'My Shoes',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    color: AppColors.primary,
+                                    size: 24,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
                 // ── Discover bar (footwear theme) ─────────────────
                 SliverToBoxAdapter(
                   child: Builder(
@@ -417,33 +484,34 @@ class _HomePageState extends State<HomePage> {
                           mainAxisSpacing: 14,
                           crossAxisSpacing: 14,
                           childAspectRatio: aspectRatio,
-                          children: const [
+                          children: [
                             _ServiceCard(
                               icon: Icons.shopping_bag_outlined,
-                              label: 'Shoe Inventory',
-                              color: Color(0xFF6750A4),
+                              label: 'My Shoes',
+                              color: const Color(0xFF6750A4),
+                              onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
                             ),
-                            _ServiceCard(
+                            const _ServiceCard(
                               icon: Icons.build_outlined,
                               label: 'Maintain & Repair',
                               color: Color(0xFF2196F3),
                             ),
-                            _ServiceCard(
+                            const _ServiceCard(
                               icon: Icons.recycling_outlined,
                               label: 'Recycle',
                               color: Color(0xFF4CAF50),
                             ),
-                            _ServiceCard(
+                            const _ServiceCard(
                               icon: Icons.card_giftcard_outlined,
                               label: 'Donate',
                               color: Color(0xFFFF9800),
                             ),
-                            _ServiceCard(
+                            const _ServiceCard(
                               icon: Icons.local_offer_outlined,
                               label: 'Resale',
                               color: Color(0xFFE91E63),
                             ),
-                            _ServiceCard(
+                            const _ServiceCard(
                               icon: Icons.storefront_outlined,
                               label: 'Rent',
                               color: Color(0xFF9C27B0),
@@ -472,11 +540,13 @@ class _ServiceCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   const _ServiceCard({
     required this.icon,
     required this.label,
     required this.color,
+    this.onTap,
   });
 
   @override
@@ -484,7 +554,7 @@ class _ServiceCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 14),
