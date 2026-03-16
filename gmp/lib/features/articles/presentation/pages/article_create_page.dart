@@ -37,6 +37,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     'New Balance',
     'Converse',
     'Reebok',
+    'Asics',
+    'Vans',
+    'Jordan',
+    'Skechers',
   ];
   static const List<String> _models = [
     'Air Max',
@@ -45,6 +49,22 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     'Runner',
     'Sneaker',
     'Chuck Taylor',
+    'Ultraboost',
+    'Gel-Kayano',
+    'Old Skool',
+    'Pegasus',
+  ];
+  static const List<String> _materialTypes = [
+    'Leather',
+    'Synthetic leather',
+    'Suede',
+    'Canvas',
+    'Mesh',
+    'Rubber',
+    'Foam',
+    'Textile',
+    'Knit',
+    'Gore-Tex',
   ];
   final List<Map<String, dynamic>> _materials = [];
   final List<File> _imageFiles = [];
@@ -159,7 +179,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
 
   void _addMaterialRow() {
     setState(() {
-      _materials.add({'type': '', 'percentage': 0});
+      _materials.add({'type': _materialTypes.first, 'percentage': 0});
     });
   }
 
@@ -504,16 +524,31 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: TextFormField(
-                      initialValue: _materials[i]['type'] as String? ?? '',
+                    child: DropdownButtonFormField<String>(
+                      value: (_materials[i]['type'] as String?)?.isNotEmpty == true
+                          ? _materials[i]['type'] as String
+                          : _materialTypes.first,
                       decoration: const InputDecoration(
-                        hintText: 'Type',
                         filled: true,
                         fillColor: AppColors.surfaceVariant,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10)), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                          borderSide: BorderSide.none,
+                        ),
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
-                      onChanged: (v) => _materials[i]['type'] = v,
+                      items: _materialTypes
+                          .map(
+                            (t) => DropdownMenuItem<String>(
+                              value: t,
+                              child: Text(t),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        _materials[i]['type'] = v;
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),
