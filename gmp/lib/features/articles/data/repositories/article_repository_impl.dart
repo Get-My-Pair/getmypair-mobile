@@ -42,10 +42,12 @@ class ArticleRepositoryImpl implements ArticleRepository {
 
   @override
   Future<String> uploadArticleImage(String accessToken, {
+    required String articleId,
     required List<int> imageBytes,
     required String fileName,
   }) async {
     return remoteDataSource.uploadArticleImage(accessToken,
+      articleId: articleId,
       imageBytes: imageBytes,
       fileName: fileName,
     );

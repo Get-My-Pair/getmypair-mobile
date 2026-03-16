@@ -20,6 +20,7 @@ abstract class ArticleRemoteDataSource {
     required List<String> imageUrls,
   });
   Future<String> uploadArticleImage(String accessToken, {
+    required String articleId,
     required List<int> imageBytes,
     required String fileName,
   });
@@ -111,9 +112,8 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final json = _handleResponse(response);
       final data = json['data'];
       if (data == null) throw ServerException('Article not found');
-      final article = data is Map
-          ? Map<String, dynamic>.from(data as Map)
-          : data['article'] as Map<String, dynamic>?;
+      final raw = data is Map ? data['article'] : null;
+      final article = raw is Map<String, dynamic> ? raw : null;
       if (article == null) throw ServerException('Article not found');
       return ArticleModel.fromJson(article);
     } catch (e) {
@@ -154,9 +154,8 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final json = _handleResponse(response);
       final data = json['data'];
       if (data == null) throw ServerException('Create article failed');
-      final article = data is Map
-          ? Map<String, dynamic>.from(data as Map)
-          : data['article'] as Map<String, dynamic>?;
+      final raw = data is Map ? data['article'] : null;
+      final article = raw is Map<String, dynamic> ? raw : null;
       if (article == null) throw ServerException('Create article failed');
       return ArticleModel.fromJson(article);
     } catch (e) {
@@ -167,6 +166,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
 
   @override
   Future<String> uploadArticleImage(String accessToken, {
+    required String articleId,
     required List<int> imageBytes,
     required String fileName,
   }) async {
@@ -178,6 +178,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       request.headers['Authorization'] = 'Bearer $accessToken';
       request.headers['X-App-Source'] = AppConstants.appSourceForApi;
       request.headers['X-App-Version'] = AppConstants.appVersion;
+      request.fields['articleId'] = articleId;
       request.files.add(http.MultipartFile.fromBytes(
         'file',
         imageBytes,
@@ -195,6 +196,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final data = json['data'];
       if (data is String) return data;
+      if (data is Map && data['imageUrl'] != null) return data['imageUrl'] as String;
       if (data is Map && data['url'] != null) return data['url'] as String;
       if (data is Map && data['image'] != null) return data['image'] as String;
       throw ServerException('Invalid upload response');
@@ -235,9 +237,8 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final json = _handleResponse(response);
       final data = json['data'];
       if (data == null) throw ServerException('Update article failed');
-      final article = data is Map
-          ? Map<String, dynamic>.from(data as Map)
-          : data['article'] as Map<String, dynamic>?;
+      final raw = data is Map ? data['article'] : null;
+      final article = raw is Map<String, dynamic> ? raw : null;
       if (article == null) throw ServerException('Update article failed');
       return ArticleModel.fromJson(article);
     } catch (e) {

@@ -14,6 +14,7 @@ abstract class ArticleRepository {
     required List<String> imageUrls,
   });
   Future<String> uploadArticleImage(String accessToken, {
+    required String articleId,
     required List<int> imageBytes,
     required String fileName,
   });
