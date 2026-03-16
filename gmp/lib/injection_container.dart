@@ -26,6 +26,11 @@ import 'features/articles/data/datasources/article_remote_datasource.dart';
 import 'features/articles/data/repositories/article_repository_impl.dart';
 import 'features/articles/domain/repositories/article_repository.dart';
 import 'features/articles/domain/usecases/get_my_articles.dart';
+import 'features/articles/domain/usecases/get_article_by_id.dart';
+import 'features/articles/domain/usecases/create_article.dart';
+import 'features/articles/domain/usecases/upload_article_image.dart';
+import 'features/articles/domain/usecases/update_article.dart';
+import 'features/articles/domain/usecases/delete_article.dart';
 import 'core/network/dio_client.dart';
 import 'core/network/network_info.dart';
 
@@ -177,6 +182,21 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<GetMyArticles>()) {
     sl.registerLazySingleton(() => GetMyArticles(sl()));
+  }
+  if (!sl.isRegistered<GetArticleById>()) {
+    sl.registerLazySingleton(() => GetArticleById(sl()));
+  }
+  if (!sl.isRegistered<CreateArticle>()) {
+    sl.registerLazySingleton(() => CreateArticle(sl()));
+  }
+  if (!sl.isRegistered<UploadArticleImage>()) {
+    sl.registerLazySingleton(() => UploadArticleImage(sl()));
+  }
+  if (!sl.isRegistered<UpdateArticle>()) {
+    sl.registerLazySingleton(() => UpdateArticle(sl()));
+  }
+  if (!sl.isRegistered<DeleteArticle>()) {
+    sl.registerLazySingleton(() => DeleteArticle(sl()));
   }
 
   _isInitialized = true;
