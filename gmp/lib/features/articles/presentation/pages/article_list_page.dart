@@ -10,8 +10,8 @@ import 'package:gmp/injection_container.dart';
 import 'article_create_page.dart';
 import 'article_details_page.dart';
 
-/// Module 3 – Article list. Shows all registered shoes for the current user.
-/// Entry: CustomerDashboardPage → Tap "My Shoes" → this page.
+/// Module 3 – Article list. Shows all registered shoes for the current user (Digital Shoes Rack).
+/// Entry: CustomerDashboardPage → Tap "Digital Shoes Rack" → this page.
 class ArticleListPage extends StatefulWidget {
   const ArticleListPage({super.key});
 
@@ -90,7 +90,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'My Shoes',
+          'Digital Shoes Rack',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -126,7 +126,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
           const CircularProgressIndicator(color: AppColors.primary),
           const SizedBox(height: 16),
           Text(
-            'Loading your shoes...',
+            'Loading your Digital Shoes Rack...',
             style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
           ),
         ],
@@ -199,7 +199,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'No shoes yet',
+              'Your Digital Shoes Rack is empty',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -209,7 +209,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your first pair to start your digital shoe passport',
+              'Add your first pair to your Digital Shoes Rack',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,

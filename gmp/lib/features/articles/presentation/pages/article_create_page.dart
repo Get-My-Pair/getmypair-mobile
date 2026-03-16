@@ -58,13 +58,14 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     {'value': 'formal', 'label': 'Formal'},
     {'value': 'sandal', 'label': 'Sandal'},
     {'value': 'boot', 'label': 'Boot'},
+    {'value': 'slipper', 'label': 'Slipper'},
     {'value': 'other', 'label': 'Other'},
   ];
   static const List<Map<String, String>> _conditions = [
     {'value': 'excellent', 'label': 'Excellent'},
     {'value': 'good', 'label': 'Good'},
     {'value': 'fair', 'label': 'Fair'},
-    {'value': 'poor', 'label': 'Poor'},
+    {'value': 'worn', 'label': 'Worn'},
   ];
 
   @override
@@ -107,18 +108,6 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
       (token) async {
         setState(() => _submitting = true);
         try {
-          final imageUrls = <String>[];
-          for (int i = 0; i < _imageFiles.length; i++) {
-            if (!mounted) return;
-            final bytes = await _imageFiles[i].readAsBytes();
-            final name = 'shoe_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
-            final url = await sl<UploadArticleImage>().call(token,
-              imageBytes: bytes,
-              fileName: name,
-            );
-            imageUrls.add(url);
-          }
-
           final materials = _materials
               .map((m) => {
                     'type': m['type'] as String? ?? '',
@@ -126,6 +115,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                   })
               .toList();
 
+          // Create article first (API requires article to exist before upload-image)
           final article = await sl<CreateArticle>().call(token,
             brand: _brand,
             model: _model,
@@ -134,8 +124,22 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             purchaseYear: _purchaseYear,
             condition: _condition,
             materials: materials,
-            imageUrls: imageUrls,
+            imageUrls: [], // Images added via upload-image after create
           );
+          if (!mounted) return;
+
+          // Upload each image to the new article
+          for (int i = 0; i < _imageFiles.length; i++) {
+            if (!mounted) return;
+            final bytes = await _imageFiles[i].readAsBytes();
+            final name = 'shoe_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+            await sl<UploadArticleImage>().call(token,
+              articleId: article.id,
+              imageBytes: bytes,
+              fileName: name,
+            );
+          }
+
           if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(

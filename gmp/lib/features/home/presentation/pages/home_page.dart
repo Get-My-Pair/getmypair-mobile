@@ -327,7 +327,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
-                // ── My Shoes button ─────────────────────────────
+                // ── Digital Shoes Rack button ─────────────────────────────
                 SliverToBoxAdapter(
                   child: Builder(
                     builder: (context) {
@@ -370,7 +370,7 @@ class _HomePageState extends State<HomePage> {
                                   const SizedBox(width: 14),
                                   const Expanded(
                                     child: Text(
-                                      'My Shoes',
+                                      'Digital Shoes Rack',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -487,7 +487,7 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             _ServiceCard(
                               icon: Icons.shopping_bag_outlined,
-                              label: 'My Shoes',
+                              label: 'Digital Shoes Rack',
                               color: const Color(0xFF6750A4),
                               onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
                             ),

@@ -73,6 +73,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
       'formal': 'Formal',
       'sandal': 'Sandal',
       'boot': 'Boot',
+      'slipper': 'Slipper',
       'other': 'Other',
     };
     return map[c] ?? c;
