@@ -10,8 +10,8 @@ import 'package:gmp/injection_container.dart';
 import 'article_create_page.dart';
 import 'article_details_page.dart';
 
-/// Module 3 – Article list. Shows all registered shoes for the current user (Digital Shoes Rack).
-/// Entry: CustomerDashboardPage → Tap "Digital Shoes Rack" → this page.
+/// Module 3 – Article list. Digital Shoes Rack UI with shelf layout and filter tabs.
+/// Tap a shoe → Shoe details (edit/delete).
 class ArticleListPage extends StatefulWidget {
   const ArticleListPage({super.key});
 
@@ -23,6 +23,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
   List<Article>? _articles;
   String? _error;
   bool _loading = true;
+  /// null = All, else category value (sports_shoe, casual, formal)
+  String? _filterCategory;
 
   @override
   void initState() {
@@ -77,6 +79,12 @@ class _ArticleListPageState extends State<ArticleListPage> {
     return '$base/uploads/$path';
   }
 
+  List<Article> get _filteredArticles {
+    final list = _articles ?? [];
+    if (_filterCategory == null || _filterCategory!.isEmpty) return list;
+    return list.where((a) => a.category == _filterCategory).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,6 +106,14 @@ class _ArticleListPageState extends State<ArticleListPage> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search, color: AppColors.textPrimary),
+            onPressed: () {
+              // Search / edit placeholder
+            },
+          ),
+        ],
       ),
       body: _loading
           ? _buildLoading()
@@ -105,7 +121,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
               ? _buildError(context)
               : _articles!.isEmpty
                   ? _buildEmpty(context)
-                  : _buildList(context),
+                  : _buildRackList(context),
       floatingActionButton: _loading
           ? null
           : FloatingActionButton.extended(
@@ -144,7 +160,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.08),
+                color: AppColors.error.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.error_outline, size: 48, color: AppColors.error),
@@ -153,10 +169,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                color: AppColors.textSecondary,
-              ),
+              style: const TextStyle(fontSize: 15, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -211,10 +224,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Text(
               'Add your first pair to your Digital Shoes Rack',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textTertiary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
             ),
             const SizedBox(height: 28),
             ElevatedButton.icon(
@@ -236,29 +246,55 @@ class _ArticleListPageState extends State<ArticleListPage> {
     );
   }
 
-  Widget _buildList(BuildContext context) {
-    final horizontal = Responsive.horizontalPaddingOf(context);
-    final list = _articles!;
+  static const List<Map<String, String>> _filterTabs = [
+    {'value': '', 'label': 'All'},
+    {'value': 'sports_shoe', 'label': 'Sports'},
+    {'value': 'casual', 'label': 'Casual'},
+    {'value': 'formal', 'label': 'Formal'},
+  ];
+
+  Widget _buildRackList(BuildContext context) {
+    final list = _filteredArticles;
     return RefreshIndicator(
       onRefresh: _loadArticles,
       color: AppColors.primary,
-      child: GridView.builder(
-        padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 100),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.72,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: list.length,
-        itemBuilder: (context, index) {
-          final article = list[index];
-          return _ArticleGridCard(
-            article: article,
-            imageUrl: _imageUrl(article.thumbnailImage),
-            onTap: () => _navigateToDetails(context, article),
-          );
-        },
+      backgroundColor: AppColors.surface,
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _RackHeader(
+              pairCount: _articles!.length,
+              filterCategory: _filterCategory,
+              filterTabs: _filterTabs,
+              onFilterChanged: (v) => setState(() => _filterCategory = v.isEmpty ? null : v),
+            ),
+          ),
+          if (list.isEmpty)
+            const SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  'No shoes in this category',
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 15),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final article = list[index];
+                  final imageUrl = _imageUrl(article.thumbnailImage);
+                  return _RackShelfItem(
+                    article: article,
+                    imageUrl: imageUrl,
+                    onTap: () => _navigateToDetails(context, article),
+                  );
+                },
+                childCount: list.length,
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
       ),
     );
   }
@@ -280,13 +316,105 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 }
 
-/// Compact vertical card for 2-column grid.
-class _ArticleGridCard extends StatelessWidget {
+/// Rack header: title, pair count, filter tabs (All, Sports, Casual, Formal).
+class _RackHeader extends StatelessWidget {
+  final int pairCount;
+  final String? filterCategory;
+  final List<Map<String, String>> filterTabs;
+  final ValueChanged<String> onFilterChanged;
+
+  const _RackHeader({
+    required this.pairCount,
+    required this.filterCategory,
+    required this.filterTabs,
+    required this.onFilterChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'MY SHOES',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(Icons.checkroom_outlined, size: 20, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                '$pairCount ${pairCount == 1 ? 'Pair' : 'Pairs'}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: filterTabs.map((tab) {
+                final value = tab['value']!;
+                final label = tab['label']!;
+                final isSelected = (filterCategory == null && value.isEmpty) ||
+                    (filterCategory != null && filterCategory == value);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => onFilterChanged(value),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? AppColors.onPrimary
+                                : AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Single shelf row: shoe image (illuminated) + dark info panel (brand/model, condition, QR placeholder).
+class _RackShelfItem extends StatelessWidget {
   final Article article;
   final String imageUrl;
   final VoidCallback onTap;
 
-  const _ArticleGridCard({
+  const _RackShelfItem({
     required this.article,
     required this.imageUrl,
     required this.onTap,
@@ -316,88 +444,125 @@ class _ArticleGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _placeholder(),
-                        )
-                      : _placeholder(),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadow,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${article.brand} ${article.model}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _categoryLabel(article.category),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primaryDark,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${article.color.isNotEmpty ? article.color : '—'} · ${_conditionLabel(article.condition)}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              ],
+            ),
+            child: Row(
+              children: [
+                // Illuminated shelf area – shoe image
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.12),
+                        blurRadius: 12,
+                        spreadRadius: -2,
                       ),
                     ],
                   ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _placeholder(),
+                          )
+                        : _placeholder(),
+                  ),
                 ),
-              ),
-            ],
+                // Info panel (brand/model, details, QR)
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(11)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '${article.brand} ${article.model}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${_categoryLabel(article.category)} · ${_conditionLabel(article.condition)}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (article.color.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  article.color,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        // QR placeholder
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Icon(
+                            Icons.qr_code_2_rounded,
+                            size: 28,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -411,149 +576,8 @@ class _ArticleGridCard extends StatelessWidget {
         child: Icon(
           Icons.checkroom_outlined,
           color: AppColors.textTertiary,
-          size: 36,
+          size: 40,
         ),
-      ),
-    );
-  }
-}
-
-class _ArticleCard extends StatelessWidget {
-  final Article article;
-  final String imageUrl;
-  final VoidCallback onTap;
-
-  const _ArticleCard({
-    required this.article,
-    required this.imageUrl,
-    required this.onTap,
-  });
-
-  static String _categoryLabel(String category) {
-    const map = {
-      'sports_shoe': 'Sports',
-      'casual': 'Casual',
-      'formal': 'Formal',
-      'sandal': 'Sandal',
-      'boot': 'Boot',
-      'other': 'Other',
-    };
-    return map[category] ?? category;
-  }
-
-  static String _conditionLabel(String condition) {
-    if (condition.isEmpty) return '—';
-    final c = condition.toLowerCase();
-    if (c == 'excellent') return 'Excellent';
-    if (c == 'good') return 'Good';
-    if (c == 'fair') return 'Fair';
-    if (c == 'poor') return 'Poor';
-    return condition[0].toUpperCase() + condition.substring(1).toLowerCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        width: 88,
-                        height: 88,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(),
-                      )
-                    : _placeholder(),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${article.brand} ${article.model}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _categoryLabel(article.category),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryDark,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${article.color.isNotEmpty ? article.color : '—'} · ${_conditionLabel(article.condition)}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textTertiary,
-                size: 24,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _placeholder() {
-    return Container(
-      width: 88,
-      height: 88,
-      color: AppColors.surfaceVariant,
-      child: const Icon(
-        Icons.checkroom_outlined,
-        color: AppColors.textTertiary,
-        size: 40,
       ),
     );
   }
