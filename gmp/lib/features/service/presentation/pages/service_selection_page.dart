@@ -8,6 +8,8 @@ import 'package:gmp/features/profile/domain/entities/address.dart';
 import 'package:gmp/features/profile/domain/usecases/get_user_profile.dart';
 import 'package:gmp/injection_container.dart';
 
+import 'select_address_page.dart';
+
 class ServiceSelectionPage extends StatefulWidget {
   final String articleId;
 
@@ -105,78 +107,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   }
 
   Future<void> _pickAddress() async {
-    if (_addresses.isEmpty) return;
-
-    final picked = await showModalBottomSheet<Address>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Pickup address',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ..._addresses.map(
-                (a) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.location_on_outlined, color: AppColors.primary),
-                  ),
-                  title: Text(
-                    a.addressLine1,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '${a.city}, ${a.state} - ${a.pincode}',
-                    style: const TextStyle(color: AppColors.textSecondary),
-                  ),
-                  trailing: (_selectedAddress?.id == a.id)
-                      ? const Icon(Icons.check_circle, color: AppColors.success)
-                      : const Icon(Icons.chevron_right, color: AppColors.textTertiary),
-                  onTap: () => Navigator.pop(ctx, a),
-                ),
-              ),
-            ],
-          ),
+    final picked = await Navigator.of(context).push<Address>(
+      MaterialPageRoute(
+        builder: (_) => SelectAddressPage(
+          selectedAddressId: _selectedAddress?.id,
         ),
       ),
     );
 
-    if (picked != null && mounted) {
-      setState(() => _selectedAddress = picked);
-    }
+    if (picked != null && mounted) setState(() => _selectedAddress = picked);
   }
 
   Future<void> _submit() async {
@@ -396,8 +335,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 ),
               ),
               TextButton(
-                onPressed: (!hasAddresses || _submitting) ? null : _pickAddress,
-                child: Text(hasAddresses ? 'Change' : 'Add', style: const TextStyle(fontWeight: FontWeight.w700)),
+                onPressed: _submitting ? null : _pickAddress,
+                child: Text(
+                  hasAddresses ? 'Change' : 'Select',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ),
