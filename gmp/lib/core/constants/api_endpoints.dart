@@ -54,6 +54,10 @@ class ApiEndpoints {
   static String articleDelete(String id) => '$baseUrl$articlesPrefix/delete/$id';
   static String get articlesUploadImage => '$baseUrl$articlesPrefix/upload-image';
 
+  // Module 4 – Service Requests
+  static const String servicePrefix = '/api/service';
+  static String get serviceCreate => '$baseUrl$servicePrefix/create';
+
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
     final headers = <String, String>{

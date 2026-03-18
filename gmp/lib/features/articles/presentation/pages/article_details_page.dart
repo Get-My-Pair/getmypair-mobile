@@ -9,6 +9,7 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
 import 'article_edit_page.dart';
+import '../../../service/presentation/pages/service_selection_page.dart';
 
 /// Module 3 – Article details. Displays shoe info, materials, repair history placeholder,
 /// service requests placeholder. Buttons: Edit, Delete, Request Service.
@@ -404,10 +405,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Request Service coming in Module 4'),
-                    backgroundColor: AppColors.info,
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ServiceSelectionPage(articleId: a.id),
                   ),
                 );
               },
