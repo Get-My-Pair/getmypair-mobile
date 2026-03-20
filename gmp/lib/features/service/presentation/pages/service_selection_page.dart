@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gmp/core/constants/api_endpoints.dart';
-import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -8,6 +6,7 @@ import 'package:gmp/features/profile/domain/entities/address.dart';
 import 'package:gmp/features/profile/domain/usecases/get_user_profile.dart';
 import 'package:gmp/injection_container.dart';
 
+import 'request_summary_page.dart';
 import 'select_address_page.dart';
 
 class ServiceSelectionPage extends StatefulWidget {
@@ -24,38 +23,37 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   bool _submitting = false;
   String? _error;
 
-  String? _token;
   List<Address> _addresses = const [];
   Address? _selectedAddress;
 
-  _ServiceOption? _selectedService;
+  ServiceOptionData? _selectedService;
 
-  static const List<_ServiceOption> _options = [
-    _ServiceOption(
+  static const List<ServiceOptionData> _options = [
+    ServiceOptionData(
       value: 'repair',
       title: 'Repair',
       subtitle: 'Fix soles, stitches, tears',
       icon: Icons.build_outlined,
     ),
-    _ServiceOption(
+    ServiceOptionData(
       value: 'maintenance',
       title: 'Maintenance',
       subtitle: 'Polish, protect, refresh',
       icon: Icons.handyman_outlined,
     ),
-    _ServiceOption(
+    ServiceOptionData(
       value: 'wash',
       title: 'Wash',
       subtitle: 'Deep clean and deodorize',
       icon: Icons.local_laundry_service_outlined,
     ),
-    _ServiceOption(
+    ServiceOptionData(
       value: 'donate',
       title: 'Donate',
       subtitle: 'Give your pair a second life',
       icon: Icons.volunteer_activism_outlined,
     ),
-    _ServiceOption(
+    ServiceOptionData(
       value: 'dispose',
       title: 'Dispose',
       subtitle: 'Responsible recycling',
@@ -90,7 +88,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           final profile = await sl<GetUserProfile>().call(token);
           if (!mounted) return;
           setState(() {
-            _token = token;
             _addresses = profile.addresses;
             _selectedAddress = profile.addresses.isNotEmpty ? profile.addresses.first : null;
             _loading = false;
@@ -120,10 +117,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
   Future<void> _submit() async {
     if (_submitting) return;
-    if (_token == null) {
-      setState(() => _error = 'Please sign in again');
-      return;
-    }
     if (_selectedService == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a service type')),
@@ -137,48 +130,18 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       return;
     }
 
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-
-    try {
-      final res = await sl<DioClient>().post(
-        ApiEndpoints.serviceCreate,
-        accessToken: _token,
-        body: {
-          'articleId': widget.articleId,
-          'serviceType': _selectedService!.value,
-          'addressId': _selectedAddress!.id,
-          'photos': <String>[],
-          'videos': <String>[],
-        },
-      );
-
-      final requestId = (res['data'] is Map && (res['data'] as Map)['request'] is Map)
-          ? ((res['data'] as Map)['request'] as Map)['_id']?.toString()
-          : null;
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(requestId != null ? 'Request created ($requestId)' : 'Request created'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => RequestSummaryPage(
+          articleId: widget.articleId,
+          service: _selectedService!,
+          address: _selectedAddress!,
         ),
-      );
+      ),
+    );
+    if (!mounted) return;
+    if (created == true) {
       Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _submitting = false);
-      }
     }
   }
 
@@ -301,7 +264,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                     )
                   : const Text(
-                      'Create Request',
+                      'Continue',
                       style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                     ),
             ),
@@ -375,13 +338,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   }
 }
 
-class _ServiceOption {
+class ServiceOptionData {
   final String value;
   final String title;
   final String subtitle;
   final IconData icon;
 
-  const _ServiceOption({
+  const ServiceOptionData({
     required this.value,
     required this.title,
     required this.subtitle,
@@ -390,7 +353,7 @@ class _ServiceOption {
 }
 
 class _ServiceCard extends StatelessWidget {
-  final _ServiceOption option;
+  final ServiceOptionData option;
   final bool selected;
   final VoidCallback? onTap;
 
