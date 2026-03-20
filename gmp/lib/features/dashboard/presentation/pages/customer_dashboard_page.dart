@@ -10,6 +10,7 @@ import 'package:gmp/features/home/presentation/pages/home_page.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_event.dart';
 import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
+import 'package:gmp/features/service/presentation/pages/service_request_list_page.dart';
 import 'package:gmp/injection_container.dart';
 
 class CustomerDashboardPage extends StatefulWidget {
@@ -24,7 +25,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
   final List<Widget> _pages = const [
     HomePage(),
-    _WishlistPlaceholder(),
+    ServiceRequestListPage(),
     _CatalogPlaceholder(),
     _CartPlaceholder(),
     _ProfilePageWrapper(),
@@ -96,7 +97,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         unselectedItemColor: AppColors.textTertiary,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Wishlist'),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Requests'),
           BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Catalog'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Cart'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Account'),
@@ -113,39 +114,6 @@ class _ProfilePageWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ProfilePage();
-  }
-}
-
-class _WishlistPlaceholder extends StatelessWidget {
-  const _WishlistPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.favorite_border, size: 64, color: AppColors.textTertiary),
-            SizedBox(height: 16),
-            Text(
-              'Wishlist',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Coming soon',
-              style: TextStyle(color: AppColors.textTertiary),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

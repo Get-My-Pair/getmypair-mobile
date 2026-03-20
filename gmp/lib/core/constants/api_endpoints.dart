@@ -57,6 +57,7 @@ class ApiEndpoints {
   // Module 4 – Service Requests
   static const String servicePrefix = '/api/service';
   static String get serviceCreate => '$baseUrl$servicePrefix/create';
+  static String get serviceMy => '$baseUrl$servicePrefix/my';
 
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
