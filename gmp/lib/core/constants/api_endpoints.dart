@@ -9,13 +9,14 @@ class ApiEndpoints {
   // Local: 'http://localhost:3000' (Web/iOS) or 'http://10.0.2.2:3000' (Android emulator)
   // Physical device: 'http://YOUR_IP:3000' (same network as backend)
   // Web: browser may block requests (CORS). Prefer device/emulator for auth, or configure backend CORS.
-  
+
   /// Get base URL based on environment
   static String get baseUrl {
     // In debug mode, you can use local backend for testing
     if (kDebugMode) {
+      // http://localhost:3000
       // For flutter web running locally:
-      return 'https://getmypair-api.onrender.com';
+      return 'http://localhost:3000';
     }
     // Production backend (Render.com)
     return 'https://getmypair-api.onrender.com';
@@ -39,9 +40,12 @@ class ApiEndpoints {
   static String get userProfileCreate => '$baseUrl$userProfilePrefix/create';
   static String get userProfileMe => '$baseUrl$userProfilePrefix/me';
   static String get userProfileUpdate => '$baseUrl$userProfilePrefix/update';
-  static String get userProfileUploadImage => '$baseUrl$userProfilePrefix/upload-image';
-  static String get userProfileAddAddress => '$baseUrl$userProfilePrefix/address/add';
-  static String get userProfileUpdateAddress => '$baseUrl$userProfilePrefix/address/update';
+  static String get userProfileUploadImage =>
+      '$baseUrl$userProfilePrefix/upload-image';
+  static String get userProfileAddAddress =>
+      '$baseUrl$userProfilePrefix/address/add';
+  static String get userProfileUpdateAddress =>
+      '$baseUrl$userProfilePrefix/address/update';
   static String userProfileDeleteAddress(String addressId) =>
       '$baseUrl$userProfilePrefix/address/delete/$addressId';
 
@@ -50,14 +54,21 @@ class ApiEndpoints {
   static String get articlesMy => '$baseUrl$articlesPrefix/my';
   static String articleById(String id) => '$baseUrl$articlesPrefix/$id';
   static String get articlesCreate => '$baseUrl$articlesPrefix/create';
-  static String articleUpdate(String id) => '$baseUrl$articlesPrefix/update/$id';
-  static String articleDelete(String id) => '$baseUrl$articlesPrefix/delete/$id';
-  static String get articlesUploadImage => '$baseUrl$articlesPrefix/upload-image';
+  static String articleUpdate(String id) =>
+      '$baseUrl$articlesPrefix/update/$id';
+  static String articleDelete(String id) =>
+      '$baseUrl$articlesPrefix/delete/$id';
+  static String get articlesUploadImage =>
+      '$baseUrl$articlesPrefix/upload-image';
 
   // Module 4 – Service Requests
   static const String servicePrefix = '/api/service';
   static String get serviceCreate => '$baseUrl$servicePrefix/create';
   static String get serviceMy => '$baseUrl$servicePrefix/my';
+  static String serviceById(String requestId) =>
+      '$baseUrl$servicePrefix/$requestId';
+  static String get serviceUpdateStatus =>
+      '$baseUrl$servicePrefix/update-status';
 
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
@@ -75,4 +86,3 @@ class ApiEndpoints {
     return headers;
   }
 }
-
