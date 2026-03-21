@@ -103,14 +103,19 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
             },
           );
 
-          final requestId = (res['data'] is Map && (res['data'] as Map)['request'] is Map)
+          final requestId =
+              (res['data'] is Map && (res['data'] as Map)['request'] is Map)
               ? ((res['data'] as Map)['request'] as Map)['_id']?.toString()
               : null;
 
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(requestId != null ? 'Request created ($requestId)' : 'Request created'),
+              content: Text(
+                requestId != null
+                    ? 'Request created ($requestId)'
+                    : 'Request created',
+              ),
               backgroundColor: AppColors.success,
             ),
           );
@@ -144,12 +149,18 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         ),
         title: const Text(
           'Request Summary',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
         ),
         centerTitle: true,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
               children: [
@@ -162,7 +173,13 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.error),
                     ),
-                    child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 ],
                 _card(
@@ -175,8 +192,19 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(widget.service.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            Text(widget.service.subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                            Text(
+                              widget.service.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              widget.service.subtitle,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -188,7 +216,10 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   title: 'Pickup Address',
                   child: Text(
                     '${widget.address.addressLine1}\n${widget.address.city}, ${widget.address.state} - ${widget.address.pincode}',
-                    style: const TextStyle(color: AppColors.textPrimary, height: 1.3),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      height: 1.3,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -198,28 +229,48 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     _article == null
                         ? 'Article details unavailable'
                         : '${_article!.brand} ${_article!.model}\n${_article!.category}',
-                    style: const TextStyle(color: AppColors.textPrimary, height: 1.3),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      height: 1.3,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _submitting ? null : _confirmRequest,
+                    onPressed: _submitting || _article == null
+                        ? null
+                        : _confirmRequest,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: _submitting
                         ? const SizedBox(
                             height: 22,
                             width: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
-                        : const Text('Confirm Request', style: TextStyle(fontWeight: FontWeight.w700)),
+                        : const Text(
+                            'Confirm Request',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                   ),
                 ),
+                if (_article == null) ...[
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: _loadArticle,
+                    child: const Text('Retry loading article'),
+                  ),
+                ],
               ],
             ),
     );
@@ -239,7 +290,10 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 10),
           child,
@@ -248,4 +302,3 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 }
-

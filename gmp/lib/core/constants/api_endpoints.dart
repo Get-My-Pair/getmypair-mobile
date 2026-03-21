@@ -69,6 +69,9 @@ class ApiEndpoints {
       '$baseUrl$servicePrefix/$requestId';
   static String get serviceUpdateStatus =>
       '$baseUrl$servicePrefix/update-status';
+  static String serviceCancel(String requestId) =>
+      '$baseUrl$servicePrefix/cancel/$requestId';
+  static String get serviceUploadMedia => '$baseUrl$servicePrefix/upload-media';
 
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {

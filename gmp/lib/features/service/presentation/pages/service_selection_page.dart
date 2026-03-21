@@ -89,7 +89,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           if (!mounted) return;
           setState(() {
             _addresses = profile.addresses;
-            _selectedAddress = profile.addresses.isNotEmpty ? profile.addresses.first : null;
+            _selectedAddress = profile.addresses.isNotEmpty
+                ? profile.addresses.first
+                : null;
             _loading = false;
           });
         } catch (e) {
@@ -106,9 +108,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   Future<void> _pickAddress() async {
     final picked = await Navigator.of(context).push<Address>(
       MaterialPageRoute(
-        builder: (_) => SelectAddressPage(
-          selectedAddressId: _selectedAddress?.id,
-        ),
+        builder: (_) =>
+            SelectAddressPage(selectedAddressId: _selectedAddress?.id),
       ),
     );
 
@@ -130,6 +131,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       return;
     }
 
+    setState(() => _submitting = true);
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => RequestSummaryPage(
@@ -139,6 +141,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         ),
       ),
     );
+    if (mounted) setState(() => _submitting = false);
     if (!mounted) return;
     if (created == true) {
       Navigator.pop(context, true);
@@ -161,7 +164,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           ),
           title: const Text(
             'Select Service',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
           ),
           centerTitle: true,
         ),
@@ -182,7 +189,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         ),
         title: const Text(
           'Select Service',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -241,7 +252,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               return _ServiceCard(
                 option: opt,
                 selected: selected,
-                onTap: _submitting ? null : () => setState(() => _selectedService = opt),
+                onTap: _submitting
+                    ? null
+                    : () => setState(() => _selectedService = opt),
               );
             },
           ),
@@ -255,17 +268,25 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: _submitting
                   ? const SizedBox(
                       height: 24,
                       width: 24,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
                   : const Text(
                       'Continue',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
             ),
           ),
@@ -282,7 +303,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
-        boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,7 +321,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               const Expanded(
                 child: Text(
                   'Pickup address',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
               TextButton(
@@ -323,7 +353,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               children: [
                 Text(
                   _selectedAddress!.addressLine1,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -366,7 +399,9 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final border = selected ? AppColors.primary : AppColors.border;
-    final bg = selected ? AppColors.primary.withOpacity(0.08) : AppColors.surface;
+    final bg = selected
+        ? AppColors.primary.withOpacity(0.08)
+        : AppColors.surface;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -376,7 +411,13 @@ class _ServiceCard extends StatelessWidget {
           color: bg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: border, width: selected ? 2 : 1),
-          boxShadow: const [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 2))],
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,27 +427,43 @@ class _ServiceCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.primary : AppColors.surfaceVariant,
+                    color: selected
+                        ? AppColors.primary
+                        : AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(option.icon, color: selected ? Colors.white : AppColors.textPrimary),
+                  child: Icon(
+                    option.icon,
+                    color: selected ? Colors.white : AppColors.textPrimary,
+                  ),
                 ),
                 const Spacer(),
                 if (selected)
                   const Icon(Icons.check_circle, color: AppColors.success)
                 else
-                  const Icon(Icons.radio_button_unchecked, color: AppColors.textTertiary),
+                  const Icon(
+                    Icons.radio_button_unchecked,
+                    color: AppColors.textTertiary,
+                  ),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               option.title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               option.subtitle,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.25),
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textSecondary,
+                height: 1.25,
+              ),
             ),
           ],
         ),
@@ -414,4 +471,3 @@ class _ServiceCard extends StatelessWidget {
     );
   }
 }
-

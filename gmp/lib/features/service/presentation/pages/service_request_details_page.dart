@@ -18,8 +18,21 @@ class ServiceRequestDetailsPage extends StatefulWidget {
 
 class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   bool _loading = true;
+  bool _cancelling = false;
   String? _error;
   Map<String, dynamic>? _request;
+  static const List<String> _workflowStages = [
+    'request_created',
+    'pickup_scheduled',
+    'item_picked',
+    'dark_store_received',
+    'inspection_started',
+    'repair_in_progress',
+    'repair_completed',
+    'dispatch_ready',
+    'out_for_delivery',
+    'delivered',
+  ];
 
   @override
   void initState() {
@@ -63,6 +76,60 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
             _loading = false;
             _error = e.toString().replaceFirst('Exception: ', '');
           });
+        }
+      },
+    );
+  }
+
+  Future<void> _cancelRequest() async {
+    if (_cancelling || _request == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel request'),
+        content: const Text('Do you want to cancel this service request?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes, cancel'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        if (!mounted) return;
+        setState(() {
+          _cancelling = false;
+          _error = 'Please sign in again';
+        });
+      },
+      (token) async {
+        try {
+          await sl<DioClient>().put(
+            ApiEndpoints.serviceCancel((_request!['_id'] ?? '').toString()),
+            accessToken: token,
+          );
+          if (!mounted) return;
+          await _load();
+          if (!mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Request cancelled')));
+        } catch (e) {
+          if (!mounted) return;
+          setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+        } finally {
+          if (mounted) setState(() => _cancelling = false);
         }
       },
     );
@@ -114,60 +181,135 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                 style: TextStyle(color: AppColors.textSecondary),
               ),
             )
-          : ListView(
-              padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-              children: [
-                _card(
-                  title: 'Overview',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _row('Request ID', (_request!['_id'] ?? '').toString()),
-                      _row(
-                        'Service Type',
-                        (_request!['serviceType'] ?? '')
-                            .toString()
-                            .toUpperCase(),
-                      ),
-                      _row(
-                        'Status',
-                        _label((_request!['status'] ?? '').toString()),
-                      ),
-                      _row(
-                        'Tracking',
-                        _label((_request!['trackingState'] ?? '').toString()),
-                      ),
-                    ],
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
+                children: [
+                  _card(
+                    title: 'Overview',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _row('Request ID', (_request!['_id'] ?? '').toString()),
+                        _row(
+                          'Service Type',
+                          (_request!['serviceType'] ?? '')
+                              .toString()
+                              .toUpperCase(),
+                        ),
+                        _row(
+                          'Status',
+                          _label((_request!['status'] ?? '').toString()),
+                        ),
+                        _row(
+                          'Tracking',
+                          _label((_request!['trackingState'] ?? '').toString()),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _card(
-                  title: 'Assignment',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _row(
-                        'Delivery Partner',
-                        _request!['deliveryPartnerId']?.toString() ??
-                            'Not assigned',
-                      ),
-                      _row(
-                        'Cobbler',
-                        _request!['cobblerId']?.toString() ?? 'Not assigned',
-                      ),
-                      _row(
-                        'Dark Store',
-                        _request!['darkStoreName']?.toString() ??
-                            _request!['darkStoreId']?.toString() ??
-                            'Not assigned',
-                      ),
-                    ],
+                  const SizedBox(height: 12),
+                  _card(
+                    title: 'Assignment',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _row(
+                          'Delivery Partner',
+                          _request!['deliveryPartnerId']?.toString() ??
+                              'Not assigned',
+                        ),
+                        _row(
+                          'Cobbler',
+                          _request!['cobblerId']?.toString() ?? 'Not assigned',
+                        ),
+                        _row(
+                          'Dark Store',
+                          _request!['darkStoreName']?.toString() ??
+                              _request!['darkStoreId']?.toString() ??
+                              'Not assigned',
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _card(title: 'Status Timeline', child: _timeline()),
-              ],
+                  const SizedBox(height: 12),
+                  _card(title: 'Workflow Progress', child: _workflowProgress()),
+                  const SizedBox(height: 12),
+                  _card(title: 'Status Timeline', child: _timeline()),
+                  const SizedBox(height: 16),
+                  if (_canCancel())
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: _cancelling ? null : _cancelRequest,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.error),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _cancelling
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Cancel Request',
+                                style: TextStyle(
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                ],
+              ),
             ),
+    );
+  }
+
+  bool _canCancel() {
+    final status = (_request?['status'] ?? '').toString();
+    return status != 'completed' && status != 'cancelled';
+  }
+
+  Widget _workflowProgress() {
+    final currentState = (_request?['trackingState'] ?? 'request_created')
+        .toString();
+    final currentIndex = _workflowStages.indexOf(currentState);
+    return Column(
+      children: _workflowStages.map((stage) {
+        final idx = _workflowStages.indexOf(stage);
+        final done = currentIndex >= idx;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Icon(
+                done ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 18,
+                color: done ? AppColors.success : AppColors.textTertiary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _label(stage),
+                  style: TextStyle(
+                    color: done
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                    fontWeight: done ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
