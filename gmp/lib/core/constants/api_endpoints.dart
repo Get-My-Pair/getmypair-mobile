@@ -16,7 +16,7 @@ class ApiEndpoints {
     if (kDebugMode) {
       // http://localhost:3000
       // For flutter web running locally:
-      return 'http://localhost:3000';
+      return 'https://getmypair-api.onrender.com';
     }
     // Production backend (Render.com)
     return 'https://getmypair-api.onrender.com';
@@ -72,6 +72,10 @@ class ApiEndpoints {
   static String serviceCancel(String requestId) =>
       '$baseUrl$servicePrefix/cancel/$requestId';
   static String get serviceUploadMedia => '$baseUrl$servicePrefix/upload-media';
+  static String get serviceUploadProofImage =>
+      '$baseUrl$servicePrefix/upload-proof/image';
+  static String get serviceUploadProofVideo =>
+      '$baseUrl$servicePrefix/upload-proof/video';
 
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {

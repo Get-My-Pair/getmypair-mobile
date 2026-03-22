@@ -7,7 +7,9 @@ import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
+import 'package:gmp/features/service/data/service_proof_upload.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'service_selection_page.dart';
 
@@ -15,12 +17,20 @@ class RequestSummaryPage extends StatefulWidget {
   final String articleId;
   final ServiceOptionData service;
   final Address address;
+  final List<XFile> proofImages;
+  final List<XFile> proofVideos;
+  final int estimatedCostRupees;
+  final MaintenancePlanData? maintenancePlan;
 
   const RequestSummaryPage({
     super.key,
     required this.articleId,
     required this.service,
     required this.address,
+    required this.proofImages,
+    required this.proofVideos,
+    required this.estimatedCostRupees,
+    this.maintenancePlan,
   });
 
   @override
@@ -91,6 +101,17 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       },
       (token) async {
         try {
+          final photoUrls = <String>[];
+          for (final f in widget.proofImages) {
+            final url = await ServiceProofUpload.uploadImage(f, token);
+            photoUrls.add(url);
+          }
+          final videoUrls = <String>[];
+          for (final f in widget.proofVideos) {
+            final url = await ServiceProofUpload.uploadVideo(f, token);
+            videoUrls.add(url);
+          }
+
           final res = await sl<DioClient>().post(
             ApiEndpoints.serviceCreate,
             accessToken: token,
@@ -98,8 +119,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
               'articleId': widget.articleId,
               'serviceType': widget.service.value,
               'addressId': widget.address.id,
-              'photos': <String>[],
-              'videos': <String>[],
+              'photos': photoUrls,
+              'videos': videoUrls,
+              'estimatedCost': widget.estimatedCostRupees,
             },
           );
 
@@ -211,6 +233,122 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     ],
                   ),
                 ),
+                if (widget.maintenancePlan != null) ...[
+                  const SizedBox(height: 12),
+                  _card(
+                    title: 'Maintenance plan',
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          widget.maintenancePlan!.label,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '₹${widget.maintenancePlan!.priceRupees}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _card(
+                  title: 'Estimated cost',
+                  child: Text(
+                    widget.estimatedCostRupees == 0
+                        ? '₹0 (no charge)'
+                        : '₹${widget.estimatedCostRupees}',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _card(
+                  title: 'Request proof',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${widget.proofImages.length} photo(s), ${widget.proofVideos.length} video(s)',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (widget.proofImages.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 72,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: widget.proofImages.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (_, i) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: 72,
+                                  height: 72,
+                                  child: FutureBuilder(
+                                    future: widget.proofImages[i].readAsBytes(),
+                                    builder: (context, snap) {
+                                      if (!snap.hasData) {
+                                        return Container(
+                                          color: AppColors.surfaceVariant,
+                                        );
+                                      }
+                                      return Image.memory(
+                                        snap.data!,
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                      if (widget.proofVideos.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ...widget.proofVideos.map(
+                          (v) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.videocam_outlined,
+                                  size: 18,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    v.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 _card(
                   title: 'Pickup Address',
@@ -236,6 +374,18 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                if (_submitting)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Uploading proof and creating request…',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
