@@ -7,7 +7,9 @@ import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
+import 'package:gmp/features/service/data/service_proof_upload.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'service_selection_page.dart';
 
@@ -15,12 +17,20 @@ class RequestSummaryPage extends StatefulWidget {
   final String articleId;
   final ServiceOptionData service;
   final Address address;
+  final List<XFile> proofImages;
+  final List<XFile> proofVideos;
+  final int estimatedCostRupees;
+  final MaintenancePlanData? maintenancePlan;
 
   const RequestSummaryPage({
     super.key,
     required this.articleId,
     required this.service,
     required this.address,
+    required this.proofImages,
+    required this.proofVideos,
+    required this.estimatedCostRupees,
+    this.maintenancePlan,
   });
 
   @override
@@ -109,6 +119,17 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       },
       (token) async {
         try {
+          final photoUrls = <String>[];
+          for (final f in widget.proofImages) {
+            final url = await ServiceProofUpload.uploadImage(f, token);
+            photoUrls.add(url);
+          }
+          final videoUrls = <String>[];
+          for (final f in widget.proofVideos) {
+            final url = await ServiceProofUpload.uploadVideo(f, token);
+            videoUrls.add(url);
+          }
+
           final res = await sl<DioClient>().post(
             ApiEndpoints.serviceCreate,
             accessToken: token,
@@ -116,19 +137,25 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
               'articleId': widget.articleId,
               'serviceType': widget.service.value,
               'addressId': widget.address.id,
-              'photos': <String>[],
-              'videos': <String>[],
+              'photos': photoUrls,
+              'videos': videoUrls,
+              'estimatedCost': widget.estimatedCostRupees,
             },
           );
 
-          final requestId = (res['data'] is Map && (res['data'] as Map)['request'] is Map)
+          final requestId =
+              (res['data'] is Map && (res['data'] as Map)['request'] is Map)
               ? ((res['data'] as Map)['request'] as Map)['_id']?.toString()
               : null;
 
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(requestId != null ? 'Request created ($requestId)' : 'Request created'),
+              content: Text(
+                requestId != null
+                    ? 'Request created ($requestId)'
+                    : 'Request created',
+              ),
               backgroundColor: AppColors.success,
             ),
           );
@@ -162,12 +189,18 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         ),
         title: const Text(
           'Request Summary',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
         ),
         centerTitle: true,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
               children: [
@@ -180,7 +213,13 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.error),
                     ),
-                    child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 ],
                 _card(
@@ -188,11 +227,34 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+<<<<<<< HEAD
                       Text(
                         'Actual cost: ${_formatCost(_serviceCost)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
+=======
+                      Icon(widget.service.icon, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.service.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              widget.service.subtitle,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+>>>>>>> 0b8d32ec99fc21585487128b62e8488b86516527
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -243,6 +305,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     ],
                   ),
                 ),
+<<<<<<< HEAD
                 if (_costDecision == _CostDecision.rejected) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -315,6 +378,194 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                             )
                           : const Text('Confirm Request', style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
+=======
+                if (widget.maintenancePlan != null) ...[
+                  const SizedBox(height: 12),
+                  _card(
+                    title: 'Maintenance plan',
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          widget.maintenancePlan!.label,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '₹${widget.maintenancePlan!.priceRupees}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _card(
+                  title: 'Estimated cost',
+                  child: Text(
+                    widget.estimatedCostRupees == 0
+                        ? '₹0 (no charge)'
+                        : '₹${widget.estimatedCostRupees}',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _card(
+                  title: 'Request proof',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${widget.proofImages.length} photo(s), ${widget.proofVideos.length} video(s)',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (widget.proofImages.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 72,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: widget.proofImages.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (_, i) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: 72,
+                                  height: 72,
+                                  child: FutureBuilder(
+                                    future: widget.proofImages[i].readAsBytes(),
+                                    builder: (context, snap) {
+                                      if (!snap.hasData) {
+                                        return Container(
+                                          color: AppColors.surfaceVariant,
+                                        );
+                                      }
+                                      return Image.memory(
+                                        snap.data!,
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                      if (widget.proofVideos.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ...widget.proofVideos.map(
+                          (v) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.videocam_outlined,
+                                  size: 18,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    v.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _card(
+                  title: 'Pickup Address',
+                  child: Text(
+                    '${widget.address.addressLine1}\n${widget.address.city}, ${widget.address.state} - ${widget.address.pincode}',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _card(
+                  title: 'Article',
+                  child: Text(
+                    _article == null
+                        ? 'Article details unavailable'
+                        : '${_article!.brand} ${_article!.model}\n${_article!.category}',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (_submitting)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Uploading proof and creating request…',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitting || _article == null
+                        ? null
+                        : _confirmRequest,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Confirm Request',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                  ),
+                ),
+                if (_article == null) ...[
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: _loadArticle,
+                    child: const Text('Retry loading article'),
+>>>>>>> 0b8d32ec99fc21585487128b62e8488b86516527
                   ),
                 ],
               ],
@@ -336,7 +587,10 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 10),
           child,
@@ -345,6 +599,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 }
+<<<<<<< HEAD
 
 enum _CostDecision { pending, accepted, rejected }
 
+=======
+>>>>>>> 0b8d32ec99fc21585487128b62e8488b86516527
