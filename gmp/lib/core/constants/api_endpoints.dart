@@ -65,9 +65,7 @@ class ApiEndpoints {
   static const String servicePrefix = '/api/service';
   static String get serviceCreate => '$baseUrl$servicePrefix/create';
   static String get serviceMy => '$baseUrl$servicePrefix/my';
-<<<<<<< HEAD
   static String get serviceEstimationDefaults => '$baseUrl$servicePrefix/estimation-defaults';
-=======
   static String serviceById(String requestId) =>
       '$baseUrl$servicePrefix/$requestId';
   static String get serviceUpdateStatus =>
@@ -79,7 +77,6 @@ class ApiEndpoints {
       '$baseUrl$servicePrefix/upload-proof/image';
   static String get serviceUploadProofVideo =>
       '$baseUrl$servicePrefix/upload-proof/video';
->>>>>>> 0b8d32ec99fc21585487128b62e8488b86516527
 
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {

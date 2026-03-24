@@ -227,34 +227,11 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-<<<<<<< HEAD
                       Text(
                         'Actual cost: ${_formatCost(_serviceCost)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
-=======
-                      Icon(widget.service.icon, color: AppColors.primary),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.service.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              widget.service.subtitle,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
->>>>>>> 0b8d32ec99fc21585487128b62e8488b86516527
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -305,7 +282,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     ],
                   ),
                 ),
-<<<<<<< HEAD
                 if (_costDecision == _CostDecision.rejected) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -323,62 +299,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   ),
                 ],
                 if (_costDecision == _CostDecision.accepted) ...[
-                  const SizedBox(height: 12),
-                  _card(
-                    title: 'Service',
-                    child: Row(
-                      children: [
-                        Icon(widget.service.icon, color: AppColors.primary),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(widget.service.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                              Text(widget.service.subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _card(
-                    title: 'Pickup Address',
-                    child: Text(
-                      '${widget.address.addressLine1}\n${widget.address.city}, ${widget.address.state} - ${widget.address.pincode}',
-                      style: const TextStyle(color: AppColors.textPrimary, height: 1.3),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _card(
-                    title: 'Article',
-                    child: Text(
-                      _article == null
-                          ? 'Article details unavailable'
-                          : '${_article!.brand} ${_article!.model}\n${_article!.category}',
-                      style: const TextStyle(color: AppColors.textPrimary, height: 1.3),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _submitting ? null : _confirmRequest,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: _submitting
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text('Confirm Request', style: TextStyle(fontWeight: FontWeight.w700)),
-                    ),
-=======
                 if (widget.maintenancePlan != null) ...[
                   const SizedBox(height: 12),
                   _card(
@@ -565,8 +485,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   TextButton(
                     onPressed: _loadArticle,
                     child: const Text('Retry loading article'),
->>>>>>> 0b8d32ec99fc21585487128b62e8488b86516527
                   ),
+                ],
                 ],
               ],
             ),
@@ -599,9 +519,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 }
-<<<<<<< HEAD
 
 enum _CostDecision { pending, accepted, rejected }
 
-=======
->>>>>>> 0b8d32ec99fc21585487128b62e8488b86516527
