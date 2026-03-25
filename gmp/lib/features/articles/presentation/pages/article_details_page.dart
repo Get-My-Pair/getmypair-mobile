@@ -9,6 +9,7 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
 import 'article_edit_page.dart';
+import '../../../service/presentation/pages/service_request_list_page.dart';
 import '../../../service/presentation/pages/service_selection_page.dart';
 
 /// Module 3 – Article details. Displays shoe info, materials, repair history placeholder,
@@ -404,12 +405,20 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
+              onPressed: () async {
+                final created = await Navigator.of(context).push<bool>(
                   MaterialPageRoute(
                     builder: (_) => ServiceSelectionPage(articleId: a.id),
                   ),
                 );
+                if (!context.mounted) return;
+                if (created == true) {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ServiceRequestListPage(),
+                    ),
+                  );
+                }
               },
               icon: const Icon(Icons.build_outlined, size: 20),
               label: const Text('Request Service'),

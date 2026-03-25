@@ -19,6 +19,7 @@ class ServiceRequestDetailsPage extends StatefulWidget {
 class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   bool _loading = true;
   bool _cancelling = false;
+  bool _responding = false;
   String? _error;
   Map<String, dynamic>? _request;
   static const List<String> _workflowStages = [
@@ -76,6 +77,88 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
             _loading = false;
             _error = e.toString().replaceFirst('Exception: ', '');
           });
+        }
+      },
+    );
+  }
+
+  String _str(dynamic v) => v?.toString() ?? '';
+
+  bool _hasActualCost(Map<String, dynamic> r) {
+    final v = r['actualCost'];
+    if (v == null) return false;
+    return _str(v).trim().isNotEmpty;
+  }
+
+  String _decisionStr(Map<String, dynamic> r) =>
+      _str(r['actualCostUserDecision']).trim().toLowerCase();
+
+  bool _pendingUserCost(Map<String, dynamic> r) =>
+      _hasActualCost(r) && _decisionStr(r) == 'pending';
+
+  bool _acceptedUserCost(Map<String, dynamic> r) =>
+      _hasActualCost(r) && _decisionStr(r) == 'accepted';
+
+  bool _rejectedUserCost(Map<String, dynamic> r) =>
+      _hasActualCost(r) && _decisionStr(r) == 'rejected';
+
+  String _fmtAmount(dynamic v) {
+    if (v == null) return '—';
+    if (v is num) {
+      if (v % 1 == 0) return v.toInt().toString();
+      return v.toString();
+    }
+    final s = v.toString();
+    return s.isEmpty ? '—' : s;
+  }
+
+  Future<void> _respondActualCost(String decision) async {
+    if (_responding || _request == null) return;
+    setState(() {
+      _responding = true;
+      _error = null;
+    });
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        if (!mounted) return;
+        setState(() {
+          _responding = false;
+          _error = 'Please sign in again';
+        });
+      },
+      (token) async {
+        try {
+          await sl<DioClient>().post(
+            ApiEndpoints.serviceRespondActualCost,
+            accessToken: token,
+            body: {
+              'requestId': widget.requestId,
+              'decision': decision,
+            },
+          );
+          if (!mounted) return;
+          await _load();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                decision == 'accept'
+                    ? 'You accepted the final service cost'
+                    : 'You rejected the final service cost — request cancelled',
+              ),
+              backgroundColor:
+                  decision == 'accept' ? AppColors.success : AppColors.error,
+            ),
+          );
+        } catch (e) {
+          if (!mounted) return;
+          setState(() {
+            _error = e.toString().replaceFirst('Exception: ', '');
+          });
+        } finally {
+          if (mounted) setState(() => _responding = false);
         }
       },
     );
@@ -210,39 +293,189 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _card(
-                    title: 'Assignment',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _row(
-                          'Delivery Partner',
-                          _request!['deliveryPartnerId']?.toString() ??
-                              'Not assigned',
+                  if (_pendingUserCost(_request!)) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: const Text(
+                        'Review the final service cost from the team. Accept to continue the workflow, or reject to cancel this request.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                          height: 1.35,
                         ),
-                        _row(
-                          'Cobbler',
-                          _request!['cobblerId']?.toString() ?? 'Not assigned',
-                        ),
-                        _row(
-                          'Dark Store',
-                          _request!['darkStoreName']?.toString() ??
-                              _request!['darkStoreId']?.toString() ??
-                              'Not assigned',
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _card(title: 'Workflow Progress', child: _workflowProgress()),
-                  const SizedBox(height: 12),
-                  _card(title: 'Status Timeline', child: _timeline()),
+                    _card(
+                      title: 'Final service cost',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Proposed amount: ${_fmtAmount(_request!['actualCost'])}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Same units as shown in your estimate (e.g. rupees / minor units).',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _responding
+                                      ? null
+                                      : () => _respondActualCost('reject'),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(
+                                      color: AppColors.error,
+                                    ),
+                                    foregroundColor: AppColors.error,
+                                  ),
+                                  child: const Text('Reject'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: _responding
+                                      ? null
+                                      : () => _respondActualCost('accept'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.success,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: _responding
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text('Accept'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    if (_rejectedUserCost(_request!)) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.error.withOpacity(0.35)),
+                        ),
+                        child: const Text(
+                          'You rejected the final service cost. This service request has been cancelled.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.error,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                    _card(
+                      title: 'Costs',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _row(
+                            'Estimated',
+                            _fmtAmount(_request!['estimatedCost']),
+                          ),
+                          if (_hasActualCost(_request!)) ...[
+                            _row(
+                              'Actual (quoted)',
+                              _fmtAmount(_request!['actualCost']),
+                            ),
+                          ],
+                          if (_acceptedUserCost(_request!)) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              'Final Service Cost: ${_fmtAmount(_request!['actualCost'])} (accepted)',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            if (_request!['actualCostAcceptedAt'] != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  'Accepted at: ${_str(_request!['actualCostAcceptedAt'])}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _card(
+                      title: 'Assignment',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _row(
+                            'Delivery Partner',
+                            _request!['deliveryPartnerId']?.toString() ??
+                                'Not assigned',
+                          ),
+                          _row(
+                            'Cobbler',
+                            _request!['cobblerId']?.toString() ?? 'Not assigned',
+                          ),
+                          _row(
+                            'Dark Store',
+                            _request!['darkStoreName']?.toString() ??
+                                _request!['darkStoreId']?.toString() ??
+                                'Not assigned',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _card(title: 'Workflow Progress', child: _workflowProgress()),
+                    const SizedBox(height: 12),
+                    _card(title: 'Status Timeline', child: _timeline()),
+                  ],
                   const SizedBox(height: 16),
                   if (_canCancel())
                     SizedBox(
                       height: 48,
                       child: OutlinedButton(
-                        onPressed: _cancelling ? null : _cancelRequest,
+                        onPressed: (_cancelling || _pendingUserCost(_request!))
+                            ? null
+                            : _cancelRequest,
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: AppColors.error),
                           shape: RoundedRectangleBorder(

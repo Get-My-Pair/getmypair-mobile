@@ -77,6 +77,8 @@ class ApiEndpoints {
       '$baseUrl$servicePrefix/upload-proof/image';
   static String get serviceUploadProofVideo =>
       '$baseUrl$servicePrefix/upload-proof/video';
+  static String get serviceRespondActualCost =>
+      '$baseUrl$servicePrefix/respond-actual-cost';
 
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
