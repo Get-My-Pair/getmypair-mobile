@@ -13,18 +13,18 @@ class AppTheme {
       fontFamily: GoogleFonts.poppins().fontFamily,
       colorScheme: ColorScheme.light(
         primary: AppColors.primary,
-        secondary: AppColors.accent,
+        secondary: AppColors.secondary,
         surface: AppColors.surface,
         error: AppColors.error,
         onPrimary: AppColors.textOnPrimary,
-        onSecondary: AppColors.textOnPrimary,
+        onSecondary: AppColors.primaryDark,
         onSurface: AppColors.textPrimary,
         onError: AppColors.textOnPrimary,
       ),
       scaffoldBackgroundColor: AppColors.background,
       appBarTheme: AppBarTheme(
         elevation: 0,
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.surface,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         titleTextStyle: const TextStyle(
@@ -145,7 +145,7 @@ class AppTheme {
   static InputDecorationTheme get _inputDecorationTheme {
     return InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: AppColors.background,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -210,7 +210,7 @@ class AppTheme {
   static TextButtonThemeData get _textButtonTheme {
     return TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: AppColors.primary,
+        foregroundColor: AppColors.primaryDark,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         textStyle: const TextStyle(
           fontSize: 14,
