@@ -12,6 +12,7 @@ import 'package:gmp/routes.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'select_location_page.dart';
+import 'chatbot_page.dart';
 
 /// Home Page — lives in the outer features layer.
 /// This is the landing tab shown to authenticated users on the main dashboard.
@@ -137,394 +138,434 @@ class _HomePageState extends State<HomePage> {
 
           return Scaffold(
             backgroundColor: AppColors.background,
-            body: CustomScrollView(
-              slivers: [
-                // ── App Bar ──────────────────────────────────
-                SliverAppBar(
-                  pinned: true,
-                  floating: false,
-                  backgroundColor: AppColors.background,
-                  elevation: 0,
-                  title: GestureDetector(
-                    onTap: () async {
-                      final selected = await Navigator.of(context).push<String>(
-                        MaterialPageRoute(
-                          builder: (_) => SelectLocationPage(
-                            initialAddress: _currentAddress,
-                          ),
-                        ),
-                      );
-                      if (selected != null && mounted) {
-                        final addressText = _looksLikeLatLong(selected)
-                            ? await _latLongToAddress(selected)
-                            : selected.startsWith('📍') ? selected : '📍 $selected';
-                        if (mounted) {
-                          setState(() => _currentAddress = addressText);
-                        }
-                      }
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.location_on,
-                            size: 18, color: AppColors.primary),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            _currentAddress,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
+            body: Stack(
+              children: [
+                CustomScrollView(
+                  slivers: [
+                    // ── App Bar ──────────────────────────────────
+                    SliverAppBar(
+                      pinned: true,
+                      floating: false,
+                      backgroundColor: AppColors.background,
+                      elevation: 0,
+                      title: GestureDetector(
+                        onTap: () async {
+                          final selected =
+                              await Navigator.of(context).push<String>(
+                            MaterialPageRoute(
+                              builder: (_) => SelectLocationPage(
+                                initialAddress: _currentAddress,
+                              ),
                             ),
+                          );
+                          if (selected != null && mounted) {
+                            final addressText = _looksLikeLatLong(selected)
+                                ? await _latLongToAddress(selected)
+                                : selected.startsWith('📍')
+                                    ? selected
+                                    : '📍 $selected';
+                            if (mounted) {
+                              setState(() => _currentAddress = addressText);
+                            }
+                          }
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.location_on,
+                                size: 18, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                _currentAddress,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(Icons.keyboard_arrow_down,
+                                size: 18, color: AppColors.textSecondary),
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        // Carbon chip only (Coin removed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.primary),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.eco_outlined,
+                                  color: AppColors.primary, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                '0 Carbon',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 2),
-                        Icon(Icons.keyboard_arrow_down,
-                            size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () {
+                            final profileBloc = context.read<ProfileBloc>();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider.value(
+                                  value: profileBloc,
+                                  child: const ProfilePage(),
+                                ),
+                              ),
+                            );
+                          },
+                          child: BlocBuilder<ProfileBloc, ProfileState>(
+                            buildWhen: (prev, curr) =>
+                                curr is ProfileLoaded ||
+                                curr is ProfileUpdating ||
+                                curr is ProfileImageUploading,
+                            builder: (context, profileState) {
+                              final profile = profileState is ProfileLoaded
+                                  ? profileState.profile
+                                  : profileState is ProfileUpdating
+                                      ? profileState.profile
+                                      : profileState is ProfileImageUploading
+                                          ? profileState.profile
+                                          : null;
+                              final imageUrl = profile?.profileImage;
+                              return CircleAvatar(
+                                radius: 18,
+                                backgroundColor: AppColors.primaryLight,
+                                backgroundImage: imageUrl != null &&
+                                        imageUrl.isNotEmpty
+                                    ? NetworkImage(imageUrl)
+                                    : null,
+                                child: imageUrl == null || imageUrl.isEmpty
+                                    ? const Icon(Icons.person,
+                                        color: AppColors.primary, size: 20)
+                                    : null,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
                       ],
                     ),
-                  ),
-                  actions: [
-                    // Carbon chip only (Coin removed)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.primary),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.eco_outlined, color: AppColors.primary, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '0 Carbon',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
+                    // ── Footwear hero banner ─────────────────────────
+                    SliverToBoxAdapter(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final horizontal = Responsive.horizontalPaddingOf(context);
+                          return Container(
+                            margin: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 0),
+                            padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: 20),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  AppColors.footwearHeroStart,
+                                  AppColors.footwearHeroEnd,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.25),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () {
-                        final profileBloc = context.read<ProfileBloc>();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider.value(
-                              value: profileBloc,
-                              child: const ProfilePage(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (userName.isNotEmpty)
+                                  Text(
+                                    'Hello, $userName 👋',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Your feet deserve the best.',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white70,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.directions_walk,
+                                      color: Colors.white.withOpacity(0.9),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Shop • Repair • Recycle',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white.withOpacity(0.95),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ),
-                        );
-                      },
-                      child: BlocBuilder<ProfileBloc, ProfileState>(
-                        buildWhen: (prev, curr) =>
-                            curr is ProfileLoaded ||
-                            curr is ProfileUpdating ||
-                            curr is ProfileImageUploading,
-                        builder: (context, profileState) {
-                          final profile = profileState is ProfileLoaded
-                              ? profileState.profile
-                              : profileState is ProfileUpdating
-                                  ? profileState.profile
-                                  : profileState is ProfileImageUploading
-                                      ? profileState.profile
-                                      : null;
-                          final imageUrl = profile?.profileImage;
-                          return CircleAvatar(
-                            radius: 18,
-                            backgroundColor: AppColors.primaryLight,
-                            backgroundImage: imageUrl != null && imageUrl.isNotEmpty
-                                ? NetworkImage(imageUrl)
-                                : null,
-                            child: imageUrl == null || imageUrl.isEmpty
-                                ? const Icon(Icons.person,
-                                    color: AppColors.primary, size: 20)
-                                : null,
                           );
                         },
                       ),
                     ),
-                    const SizedBox(width: 16),
-                  ],
-                ),
 
-                // ── Footwear hero banner ─────────────────────────
-                SliverToBoxAdapter(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final horizontal = Responsive.horizontalPaddingOf(context);
-                      return Container(
-                    margin: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 0),
-                    padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: 20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          AppColors.footwearHeroStart,
-                          AppColors.footwearHeroEnd,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.25),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (userName.isNotEmpty)
-                          Text(
-                            'Hello, $userName 👋',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Your feet deserve the best.',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white70,
-                            height: 1.35,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Icon(Icons.directions_walk, color: Colors.white.withOpacity(0.9), size: 20),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Shop • Repair • Recycle',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withOpacity(0.95),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                    },
-                  ),
-                ),
-
-                // ── Digital Shoes Rack button ─────────────────────────────
-                SliverToBoxAdapter(
-                  child: Builder(
-                    builder: (context) {
-                      final horizontal = Responsive.horizontalPaddingOf(context);
-                      return Padding(
-                        padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 0),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryLight,
+                    // ── Digital Shoes Rack button ─────────────────────────────
+                    SliverToBoxAdapter(
+                      child: Builder(
+                        builder: (context) {
+                          final horizontal = Responsive.horizontalPaddingOf(context);
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 0),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: AppColors.primary),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: AppColors.shadow,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryLight,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppColors.primary),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: AppColors.shadow,
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: const Icon(
+                                          Icons.checkroom_outlined,
+                                          color: AppColors.primary,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      const Expanded(
+                                        child: Text(
+                                          'Digital Shoes Rack',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.chevron_right,
+                                        color: AppColors.primary,
+                                        size: 24,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(
-                                      Icons.checkroom_outlined,
-                                      color: AppColors.primary,
-                                      size: 24,
-                                    ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    // ── Discover bar (footwear theme) ─────────────────
+                    SliverToBoxAdapter(
+                      child: Builder(
+                        builder: (context) {
+                          final horizontal = Responsive.horizontalPaddingOf(context);
+                          return Container(
+                            margin: EdgeInsets.fromLTRB(horizontal, 20, horizontal, 0),
+                            padding: EdgeInsets.symmetric(horizontal: horizontal * 0.8, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.border),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.shadow,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.search_rounded, color: AppColors.textTertiary, size: 22),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Discover shoes & services',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: AppColors.textTertiary,
                                   ),
-                                  const SizedBox(width: 14),
-                                  const Expanded(
-                                    child: Text(
-                                      'Digital Shoes Rack',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    // ── Services section (footwear theme) ─────────────
+                    SliverToBoxAdapter(
+                      child: LayoutBuilder(
+                        builder: (context, _) {
+                          final horizontal = Responsive.horizontalPaddingOf(context);
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(horizontal, 28, horizontal, 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      height: 4,
+                                      width: 36,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(2),
                                       ),
                                     ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'What we offer',
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Find, fix, and give shoes a second life.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
                                   ),
-                                  const Icon(
-                                    Icons.chevron_right,
-                                    color: AppColors.primary,
-                                    size: 24,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                                ),
+                                const SizedBox(height: 20),
 
-                // ── Discover bar (footwear theme) ─────────────────
-                SliverToBoxAdapter(
-                  child: Builder(
-                    builder: (context) {
-                      final horizontal = Responsive.horizontalPaddingOf(context);
-                      return Container(
-                    margin: EdgeInsets.fromLTRB(horizontal, 20, horizontal, 0),
-                    padding: EdgeInsets.symmetric(horizontal: horizontal * 0.8, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: AppColors.shadow,
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final w = MediaQuery.sizeOf(context).width;
+                                    final aspectRatio =
+                                        w <= Responsive.breakpointSmall ? 1.0 : 1.12;
+                                    return GridView.count(
+                                      crossAxisCount: 2,
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      mainAxisSpacing: 14,
+                                      crossAxisSpacing: 14,
+                                      childAspectRatio: aspectRatio,
+                                      children: [
+                                        _ServiceCard(
+                                          icon: Icons.shopping_bag_outlined,
+                                          label: 'Digital Shoes Rack',
+                                          color: const Color(0xFF6750A4),
+                                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
+                                        ),
+                                        const _ServiceCard(
+                                          icon: Icons.build_outlined,
+                                          label: 'Maintain & Repair',
+                                          color: Color(0xFF2196F3),
+                                        ),
+                                        const _ServiceCard(
+                                          icon: Icons.recycling_outlined,
+                                          label: 'Recycle',
+                                          color: Color(0xFF4CAF50),
+                                        ),
+                                        const _ServiceCard(
+                                          icon: Icons.card_giftcard_outlined,
+                                          label: 'Donate',
+                                          color: Color(0xFFFF9800),
+                                        ),
+                                        const _ServiceCard(
+                                          icon: Icons.local_offer_outlined,
+                                          label: 'Resale',
+                                          color: Color(0xFFE91E63),
+                                        ),
+                                        const _ServiceCard(
+                                          icon: Icons.storefront_outlined,
+                                          label: 'Rent',
+                                          color: Color(0xFF9C27B0),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 36),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.search_rounded, color: AppColors.textTertiary, size: 22),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Discover shoes & services',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                    },
-                  ),
+                  ],
                 ),
-
-                // ── Services section (footwear theme) ─────────────
-                SliverToBoxAdapter(
-                  child: LayoutBuilder(
-                    builder: (context, _) {
-                      final horizontal = Responsive.horizontalPaddingOf(context);
-                      return Padding(
-                    padding: EdgeInsets.fromLTRB(horizontal, 28, horizontal, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              height: 4,
-                              width: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'What we offer',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Find, fix, and give shoes a second life.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
+                Positioned(
+                  right: 16,
+                  bottom: 86,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ChatbotPage(),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final w = MediaQuery.sizeOf(context).width;
-                            final aspectRatio = w <= Responsive.breakpointSmall ? 1.0 : 1.12;
-                            return GridView.count(
-                          crossAxisCount: 2,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 14,
-                          crossAxisSpacing: 14,
-                          childAspectRatio: aspectRatio,
-                          children: [
-                            _ServiceCard(
-                              icon: Icons.shopping_bag_outlined,
-                              label: 'Digital Shoes Rack',
-                              color: const Color(0xFF6750A4),
-                              onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
-                            ),
-                            const _ServiceCard(
-                              icon: Icons.build_outlined,
-                              label: 'Maintain & Repair',
-                              color: Color(0xFF2196F3),
-                            ),
-                            const _ServiceCard(
-                              icon: Icons.recycling_outlined,
-                              label: 'Recycle',
-                              color: Color(0xFF4CAF50),
-                            ),
-                            const _ServiceCard(
-                              icon: Icons.card_giftcard_outlined,
-                              label: 'Donate',
-                              color: Color(0xFFFF9800),
-                            ),
-                            const _ServiceCard(
-                              icon: Icons.local_offer_outlined,
-                              label: 'Resale',
-                              color: Color(0xFFE91E63),
-                            ),
-                            const _ServiceCard(
-                              icon: Icons.storefront_outlined,
-                              label: 'Rent',
-                              color: Color(0xFF9C27B0),
-                            ),
-                          ],
                         );
-                          },
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/images/Live chatbot.gif',
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
                         ),
-                        const SizedBox(height: 36),
-                      ],
+                      ),
                     ),
-                  );
-                    },
                   ),
                 ),
               ],
