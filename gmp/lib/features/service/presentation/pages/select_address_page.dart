@@ -179,7 +179,7 @@ class _SelectAddressPageState extends State<SelectAddressPage> {
                                 ),
                                 child: Icon(Icons.location_on_outlined,
                                     color: selected
-                                        ? Colors.white
+                                        ? AppColors.textOnPrimary
                                         : AppColors.textPrimary),
                               ),
                               title: Text(

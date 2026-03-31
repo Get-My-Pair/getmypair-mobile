@@ -58,8 +58,8 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
               primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
+              onPrimary: AppColors.textOnPrimary,
+              surface: AppColors.surface,
               onSurface: AppColors.textPrimary,
             ),
           ),
@@ -456,7 +456,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                                   width: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
                                   ),
                                 )
                               : const Text(
@@ -468,9 +468,9 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                                 ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.textOnPrimary,
                             disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
-                            disabledForegroundColor: Colors.white70,
+                            disabledForegroundColor: AppColors.textOnPrimary.withOpacity(0.65),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),

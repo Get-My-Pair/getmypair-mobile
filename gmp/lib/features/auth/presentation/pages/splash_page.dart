@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:math' as math;
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_state.dart';
-import 'welcome_page.dart';
+import 'onboarding/onboarding_flow_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -150,7 +153,7 @@ class _SplashPageState extends State<SplashPage>
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const WelcomePage(),
+              const OnboardingFlowPage(),
           transitionsBuilder:
               (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
@@ -183,15 +186,7 @@ class _SplashPageState extends State<SplashPage>
           width: double.infinity,
           height: double.infinity,
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFFFFFF),
-                Color(0xFFF8F5FF),
-                Color(0xFFEDE7F6),
-              ],
-            ),
+            gradient: AppGradients.heroVertical,
           ),
           child: Stack(
             children: [
@@ -204,7 +199,7 @@ class _SplashPageState extends State<SplashPage>
                   height: 250,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF6750A4).withOpacity(0.05),
+                    color: AppColors.secondary.withOpacity(0.08),
                   ),
                 ),
               ),
@@ -216,7 +211,7 @@ class _SplashPageState extends State<SplashPage>
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF6750A4).withOpacity(0.08),
+                    color: AppColors.primaryLight.withOpacity(0.12),
                   ),
                 ),
               ),
@@ -245,8 +240,7 @@ class _SplashPageState extends State<SplashPage>
                                   borderRadius: BorderRadius.circular(40),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF6750A4)
-                                          .withOpacity(0.2),
+                                      color: AppColors.primaryDark.withOpacity(0.35),
                                       blurRadius: 50,
                                       spreadRadius: 5,
                                       offset: const Offset(0, 15),
@@ -280,16 +274,16 @@ class _SplashPageState extends State<SplashPage>
                               shaderCallback: (bounds) {
                                 return const LinearGradient(
                                   colors: [
-                                    Color(0xFF21005D),
-                                    Color(0xFF6750A4),
+                                    AppColors.onGradientDisplay,
+                                    AppColors.textOnPrimary,
                                   ],
                                 ).createShader(bounds);
                               },
                               child: Text(
                                 'Get My Pair',
-                                style: TextStyle(
+                                style: GoogleFonts.oswald(
                                   fontSize: titleFontSize,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                   letterSpacing: -0.5,
                                 ),
@@ -315,7 +309,7 @@ class _SplashPageState extends State<SplashPage>
                               style: TextStyle(
                                 fontSize: taglineFontSize,
                                 fontWeight: FontWeight.w400,
-                                color: const Color(0xFF79747E),
+                                color: AppColors.onGradientMuted,
                                 letterSpacing: 0.3,
                               ),
                             ),
@@ -345,7 +339,7 @@ class _SplashPageState extends State<SplashPage>
                             '${AppConstants.appName} v${AppConstants.appVersion}',
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF79747E),
+                              color: AppColors.onGradientMuted,
                             ),
                           ),
                         ],
@@ -378,7 +372,7 @@ class _SplashPageState extends State<SplashPage>
                   child: Icon(
                     Icons.settings_accessibility_rounded,
                     size: 40,
-                    color: const Color(0xFF6750A4),
+                    color: AppColors.secondary,
                   ),
                 ),
               ),
@@ -402,7 +396,7 @@ class _SplashPageState extends State<SplashPage>
                   child: Icon(
                     Icons.shopping_bag_outlined,
                     size: 35,
-                    color: const Color(0xFF6750A4),
+                    color: AppColors.secondary,
                   ),
                 ),
               ),
@@ -426,7 +420,7 @@ class _SplashPageState extends State<SplashPage>
                   child: Icon(
                     Icons.star_outline_rounded,
                     size: 30,
-                    color: const Color(0xFF6750A4),
+                    color: AppColors.secondary,
                   ),
                 ),
               ),
@@ -448,7 +442,7 @@ class _SplashPageState extends State<SplashPage>
                 child: Icon(
                   Icons.favorite_outline_rounded,
                   size: 28,
-                  color: const Color(0xFF6750A4),
+                  color: AppColors.secondary,
                 ),
               ),
             ),
@@ -479,7 +473,7 @@ class _SplashPageState extends State<SplashPage>
                   height: 10,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF6750A4).withOpacity(opacity),
+                    color: AppColors.textOnPrimary.withOpacity(opacity),
                   ),
                 ),
               ),

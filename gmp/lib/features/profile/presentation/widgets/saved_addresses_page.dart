@@ -88,7 +88,7 @@ class SavedAddressesPage extends StatelessWidget {
                 ? null
                 : () => _showAddressDialog(context),
             backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.textOnPrimary,
             icon: const Icon(Icons.add),
             label: const Text('Add Address'),
           ),
@@ -125,7 +125,7 @@ class SavedAddressesPage extends StatelessWidget {
             label: const Text('Add Address'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textOnPrimary,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
@@ -158,7 +158,7 @@ class SavedAddressesPage extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textOnPrimary,
             ),
             child: const Text('Delete'),
           ),
@@ -375,7 +375,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                 onPressed: _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textOnPrimary,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),

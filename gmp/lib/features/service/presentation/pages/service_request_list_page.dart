@@ -197,8 +197,8 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
       bg = AppColors.error.withOpacity(0.12);
       fg = AppColors.error;
     } else if (v == 'in_service') {
-      bg = Colors.deepPurple.withOpacity(0.12);
-      fg = Colors.deepPurple;
+      bg = AppColors.primary.withOpacity(0.12);
+      fg = AppColors.primary;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

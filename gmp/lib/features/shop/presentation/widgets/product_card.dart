@@ -33,8 +33,8 @@ class ProductCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 child: image != null
                     ? Image.network(image, fit: BoxFit.cover, width: double.infinity,
-                        errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]))
-                    : Container(color: Colors.grey[200]),
+                        errorBuilder: (_, __, ___) => Container(color: AppColors.surfaceVariant))
+                    : Container(color: AppColors.surfaceVariant),
               ),
             ),
             Padding(

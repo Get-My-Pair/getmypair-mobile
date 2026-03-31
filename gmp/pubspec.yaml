@@ -52,7 +52,7 @@ dependencies:
   get_it: ^9.2.1
 
   # Fonts
-  google_fonts: ^4.0.4
+  google_fonts: ^6.3.2
   
   # Date picker
   intl: ^0.20.2

@@ -404,7 +404,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                   : _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textOnPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -414,7 +414,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                       height: 24,
                       width: 24,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: AppColors.textOnPrimary,
                         strokeWidth: 2,
                       ),
                     )
@@ -687,7 +687,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                               child: Icon(
                                 Icons.close,
                                 size: 16,
-                                color: Colors.white,
+                                color: AppColors.textOnPrimary,
                               ),
                             ),
                           ),
@@ -925,7 +925,7 @@ class _ServiceCard extends StatelessWidget {
                   ),
                   child: Icon(
                     option.icon,
-                    color: selected ? Colors.white : AppColors.textPrimary,
+                    color: selected ? AppColors.textOnPrimary : AppColors.textPrimary,
                   ),
                 ),
                 const Spacer(),

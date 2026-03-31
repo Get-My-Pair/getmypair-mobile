@@ -22,6 +22,7 @@ class CustomerDashboardPage extends StatefulWidget {
 
 class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   int _currentIndex = 0;
+  bool _profileLoadScheduled = false;
 
   final List<Widget> _pages = const [
     HomePage(),
@@ -31,15 +32,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     _ProfilePageWrapper(),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-  }
-
-  Future<void> _loadProfile() async {
+  /// Must use a [BuildContext] that sits *below* [BlocProvider<ProfileBloc>],
+  /// not [State.context] (which is above the provider created in [build]).
+  Future<void> _loadProfile(BuildContext context) async {
     final result = await sl<GetValidAccessToken>().call();
-    if (!mounted) return;
+    if (!context.mounted) return;
     result.fold(
       (_) => context.read<AuthBloc>().add(const AuthSessionExpired()),
       (token) => context.read<ProfileBloc>().add(ProfileLoadRequested(token)),
@@ -61,13 +58,24 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
       },
       child: BlocProvider<ProfileBloc>(
         create: (_) => sl<ProfileBloc>(),
-        child: Scaffold(
-          backgroundColor: AppColors.background,
-          body: IndexedStack(
-            index: _currentIndex.clamp(0, _pages.length - 1),
-            children: _pages,
-          ),
-          bottomNavigationBar: _buildBottomNav(),
+        child: Builder(
+          builder: (innerContext) {
+            if (!_profileLoadScheduled) {
+              _profileLoadScheduled = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!innerContext.mounted) return;
+                _loadProfile(innerContext);
+              });
+            }
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: IndexedStack(
+                index: _currentIndex.clamp(0, _pages.length - 1),
+                children: _pages,
+              ),
+              bottomNavigationBar: _buildBottomNav(),
+            );
+          },
         ),
       ),
     );

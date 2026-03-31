@@ -37,6 +37,7 @@ class _WelcomePageState extends State<WelcomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     final padding = Responsive.horizontalPaddingOf(context);
     final logoSize = Responsive.maxLogoSizeOf(context, 0.38);
     final titleSize = Responsive.fontSize(context, 36);
@@ -71,7 +72,7 @@ class _WelcomePageState extends State<WelcomePage> {
                       // Welcome Text
                       Text(
                         'Welcome to',
-                        style: TextStyle(
+                        style: textTheme.titleMedium?.copyWith(
                           fontSize: Responsive.fontSize(context, 18),
                           fontWeight: FontWeight.w400,
                           color: AppColors.textSecondary,
@@ -82,9 +83,8 @@ class _WelcomePageState extends State<WelcomePage> {
                       const SizedBox(height: 8),
                       Text(
                         'Get My Pair',
-                        style: TextStyle(
+                        style: textTheme.displaySmall?.copyWith(
                           fontSize: titleSize,
-                          fontWeight: FontWeight.w700,
                           color: AppColors.primaryDark,
                           letterSpacing: -0.5,
                           height: 1.2,
@@ -94,9 +94,8 @@ class _WelcomePageState extends State<WelcomePage> {
                       const SizedBox(height: 16),
                       Text(
                         'Find shoes. Fix shoes.\nEverything you need, all in one place.',
-                        style: TextStyle(
+                        style: textTheme.bodyLarge?.copyWith(
                           fontSize: bodySize,
-                          fontWeight: FontWeight.w400,
                           color: AppColors.textSecondary,
                           height: 1.5,
                         ),
@@ -145,7 +144,6 @@ class _WelcomePageState extends State<WelcomePage> {
                                       value: _agreedToTerms,
                                       onChanged: (v) => setState(
                                           () => _agreedToTerms = v ?? false),
-                                      activeColor: AppColors.primary,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(4),
                                       ),
@@ -161,9 +159,8 @@ class _WelcomePageState extends State<WelcomePage> {
                                 child: RichText(
                                   textAlign: TextAlign.left,
                                   text: TextSpan(
-                                    style: TextStyle(
+                                    style: textTheme.bodySmall!.copyWith(
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w400,
                                       color: AppColors.textSecondary,
                                       height: 1.4,
                                     ),
@@ -229,28 +226,27 @@ class _WelcomePageState extends State<WelcomePage> {
                           child: ElevatedButton(
                             onPressed: _agreedToTerms ? _goToLogin : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
                               disabledBackgroundColor:
                                   AppColors.textTertiary.withOpacity(0.3),
-                              foregroundColor: Colors.white,
-                              disabledForegroundColor: Colors.white70,
+                              disabledForegroundColor:
+                                  AppColors.textOnPrimary.withOpacity(0.6),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               elevation: _agreedToTerms ? 2 : 0,
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   'Get Started',
-                                  style: TextStyle(
+                                  style: textTheme.titleLarge?.copyWith(
                                     fontSize: 18,
-                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textOnPrimary,
                                   ),
                                 ),
-                                SizedBox(width: 8),
-                                Icon(Icons.arrow_forward_rounded, size: 20),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.arrow_forward_rounded, size: 20),
                               ],
                             ),
                           ),
@@ -287,11 +283,10 @@ class _WelcomePageState extends State<WelcomePage> {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
-            ),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
         ),
       ],

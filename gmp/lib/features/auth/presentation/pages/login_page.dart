@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import 'mobile_otp_page.dart';
 
@@ -46,7 +47,7 @@ class LoginPage extends StatelessWidget {
               Text(
                 'Email login is not supported yet. Please use mobile OTP authentication to continue.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                      color: AppColors.textSecondary,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -67,7 +68,7 @@ class LoginPage extends StatelessWidget {
                   icon: const Icon(Icons.phone_android),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.textOnPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -76,7 +77,7 @@ class LoginPage extends StatelessWidget {
                   label: Text(
                     'Login with Mobile',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
+                          color: AppColors.textOnPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                   ),

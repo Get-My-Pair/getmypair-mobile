@@ -209,12 +209,12 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.black87,
+                color: AppColors.primaryDark.withOpacity(0.92),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
                 'Order will be delivered here. Move the pin to change location.',
-                style: TextStyle(color: Colors.white, fontSize: 13),
+                style: TextStyle(color: AppColors.textOnPrimary, fontSize: 13),
               ),
             ),
           ),
@@ -223,7 +223,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
             bottom: 180 + MediaQuery.of(context).padding.bottom,
             left: Responsive.horizontalPaddingOf(context),
             child: Material(
-              color: Colors.white,
+              color: AppColors.textOnPrimary,
               borderRadius: BorderRadius.circular(12),
               elevation: 4,
               child: InkWell(
@@ -236,7 +236,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                     children: [
                       Icon(
                         Icons.my_location,
-                        color: _isLoadingCurrent ? Colors.grey : Colors.red,
+                        color: _isLoadingCurrent ? AppColors.textTertiary : AppColors.error,
                         size: 22,
                       ),
                       const SizedBox(width: 8),
@@ -318,7 +318,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                           onPressed: _confirmLocation,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.textOnPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),

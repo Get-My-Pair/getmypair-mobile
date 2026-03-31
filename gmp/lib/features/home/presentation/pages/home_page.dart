@@ -4,6 +4,7 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/welcome_page.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
@@ -265,14 +266,7 @@ class _HomePageState extends State<HomePage> {
                     margin: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 0),
                     padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: 20),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          AppColors.footwearHeroStart,
-                          AppColors.footwearHeroEnd,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: AppGradients.heroDiagonal,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -291,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: AppColors.onGradientDisplay,
                               letterSpacing: -0.3,
                             ),
                           ),
@@ -301,21 +295,21 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white70,
+                            color: AppColors.onGradientMuted,
                             height: 1.35,
                           ),
                         ),
                         const SizedBox(height: 14),
                         Row(
                           children: [
-                            Icon(Icons.directions_walk, color: Colors.white.withOpacity(0.9), size: 20),
+                            Icon(Icons.directions_walk, color: AppColors.onGradientBody, size: 20),
                             const SizedBox(width: 6),
                             Text(
                               'Shop • Repair • Recycle',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white.withOpacity(0.95),
+                                color: AppColors.onGradientBody.withOpacity(0.95),
                               ),
                             ),
                           ],
@@ -488,33 +482,33 @@ class _HomePageState extends State<HomePage> {
                             _ServiceCard(
                               icon: Icons.shopping_bag_outlined,
                               label: 'Digital Shoes Rack',
-                              color: const Color(0xFF6750A4),
+                              color: AppColors.primary,
                               onTap: () => Navigator.of(context).pushNamed(AppRoutes.articleList),
                             ),
                             const _ServiceCard(
                               icon: Icons.build_outlined,
                               label: 'Maintain & Repair',
-                              color: Color(0xFF2196F3),
+                              color: AppColors.primaryDark,
                             ),
                             const _ServiceCard(
                               icon: Icons.recycling_outlined,
                               label: 'Recycle',
-                              color: Color(0xFF4CAF50),
+                              color: AppColors.success,
                             ),
                             const _ServiceCard(
                               icon: Icons.card_giftcard_outlined,
                               label: 'Donate',
-                              color: Color(0xFFFF9800),
+                              color: AppColors.warning,
                             ),
                             const _ServiceCard(
                               icon: Icons.local_offer_outlined,
                               label: 'Resale',
-                              color: Color(0xFFE91E63),
+                              color: AppColors.secondary,
                             ),
                             const _ServiceCard(
                               icon: Icons.storefront_outlined,
                               label: 'Rent',
-                              color: Color(0xFF9C27B0),
+                              color: AppColors.info,
                             ),
                           ],
                         );

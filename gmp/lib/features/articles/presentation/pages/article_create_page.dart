@@ -251,7 +251,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 onPressed: _submitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textOnPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -261,7 +261,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                         height: 24,
                         width: 24,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: AppColors.textOnPrimary,
                           strokeWidth: 2,
                         ),
                       )
@@ -632,7 +632,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                           child: const CircleAvatar(
                             radius: 12,
                             backgroundColor: AppColors.error,
-                            child: Icon(Icons.close, color: Colors.white, size: 16),
+                            child: Icon(Icons.close, color: AppColors.textOnPrimary, size: 16),
                           ),
                         ),
                       ),

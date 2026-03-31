@@ -127,7 +127,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
           : FloatingActionButton.extended(
               onPressed: () => _navigateToCreate(context),
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textOnPrimary,
               icon: const Icon(Icons.add, size: 22),
               label: const Text('Add Shoe', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
@@ -178,7 +178,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textOnPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -233,7 +233,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
               label: const Text('Add Shoe'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textOnPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

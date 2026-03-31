@@ -130,7 +130,7 @@ class _OTPPageState extends State<OTPPage> {
             const SizedBox(height: 16),
             const Text(
               'This is shown only in development mode.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
           ],
         ),
@@ -274,9 +274,9 @@ class _OTPPageState extends State<OTPPage> {
                           onPressed: isEnabled ? _verifyOTP : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.textOnPrimary,
                             disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
-                            disabledForegroundColor: Colors.white70,
+                            disabledForegroundColor: AppColors.textOnPrimary.withOpacity(0.65),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -288,7 +288,7 @@ class _OTPPageState extends State<OTPPage> {
                                   width: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
                                   ),
                                 )
                               : const Text(

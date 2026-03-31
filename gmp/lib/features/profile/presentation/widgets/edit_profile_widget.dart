@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:crop_your_image/crop_your_image.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive.dart';
@@ -253,9 +252,9 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                         const Positioned.fill(
                           child: CircleAvatar(
                             radius: 52,
-                            backgroundColor: Colors.black38,
+                            backgroundColor: AppColors.overlayOnGradient,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: AppColors.textOnPrimary,
                               strokeWidth: 2.5,
                             ),
                           ),
@@ -269,7 +268,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                           ),
                           padding: const EdgeInsets.all(8),
                           child: const Icon(Icons.camera_alt,
-                              color: Colors.white, size: 18),
+                              color: AppColors.textOnPrimary, size: 18),
                         ),
                       ),
                     ],
@@ -397,7 +396,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                       onPressed: isLoading ? null : _save,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.textOnPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -408,7 +407,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                               height: 22,
                               width: 22,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: AppColors.textOnPrimary,
                                 strokeWidth: 2.5,
                               ),
                             )

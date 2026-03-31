@@ -299,9 +299,9 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
+                        color: AppColors.warning.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange.shade200),
+                        border: Border.all(color: AppColors.warning.withOpacity(0.45)),
                       ),
                       child: const Text(
                         'Review the final service cost from the team. Accept to continue the workflow, or reject to cancel this request.',
@@ -358,7 +358,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                                       : () => _respondActualCost('accept'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.success,
-                                    foregroundColor: Colors.white,
+                                    foregroundColor: AppColors.textOnPrimary,
                                   ),
                                   child: _responding
                                       ? const SizedBox(
@@ -366,7 +366,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                                           width: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            color: Colors.white,
+                                            color: AppColors.textOnPrimary,
                                           ),
                                         )
                                       : const Text('Accept'),

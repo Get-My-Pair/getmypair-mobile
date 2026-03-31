@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
+import 'features/auth/presentation/pages/onboarding/onboarding_flow_page.dart';
 import 'features/auth/presentation/pages/welcome_page.dart';
 import 'features/auth/presentation/pages/mobile_otp_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
@@ -15,6 +16,7 @@ import 'features/articles/presentation/pages/article_list_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
+  static const String onboarding = '/onboarding';
   static const String welcome = '/welcome';
   static const String mobileOTP = '/mobile-otp';
   static const String login = '/login';
@@ -29,6 +31,8 @@ class AppRoutes {
     switch (settings.name) {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashPage());
+      case onboarding:
+        return MaterialPageRoute(builder: (_) => const OnboardingFlowPage());
       case welcome:
         return MaterialPageRoute(builder: (_) => const WelcomePage());
       case mobileOTP:

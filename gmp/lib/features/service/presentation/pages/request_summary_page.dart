@@ -272,7 +272,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                 backgroundColor: _costDecision == _CostDecision.accepted
                                     ? AppColors.success
                                     : AppColors.primary,
-                                foregroundColor: Colors.white,
+                                foregroundColor: AppColors.textOnPrimary,
                               ),
                               child: const Text('Accept'),
                             ),
@@ -460,7 +460,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                         : _confirmRequest,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.textOnPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -470,7 +470,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                             height: 22,
                             width: 22,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: AppColors.textOnPrimary,
                               strokeWidth: 2,
                             ),
                           )

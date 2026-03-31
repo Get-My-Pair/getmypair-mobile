@@ -1,40 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// App color palette for GetMyPair
+/// App color palette for GetMyPair (2026 brand guidelines — logo colours)
 class AppColors {
   AppColors._();
 
-  // Primary Colors (synced with admin.css teal palette)
-  static const Color primary = Color(0xFF137C84); // --primary / --teal-mid
-  static const Color primaryDark = Color(0xFF0F5C63); // --primary-dark / --teal-dark
-  static const Color primaryLight = Color(0xFF1FB5C1); // --teal-light
+  // Primary — medium teal (logo on teal, UI actions)
+  static const Color primary = Color(0xFF15808D);
+  static const Color primaryDark = Color(0xFF0A2429); // wordmark / dark teal
+  static const Color primaryLight = Color(0xFF3DB9C8); // lighter teal for gradients / highlights
   static const Color onPrimary = Color(0xFFFFFFFF);
 
-  // Secondary / Accent Colors
-  static const Color secondary = Color(0xFF3ED6C4); // --accent
-  static const Color secondaryLight = Color(0xFFCCF5F1);
+  // Secondary / accent — bright cyan (logo accent)
+  static const Color secondary = Color(0xFF00E5FF);
+  static const Color secondaryLight = Color(0xFFE0FBFF);
 
-  // Accent
-  static const Color accent = Color(0xFF3ED6C4); // --accent
+  static const Color accent = Color(0xFF00E5FF);
 
-  // Background Colors
-  static const Color background = Color(0xFFF4F6F7); // --bg
+  // Background / surfaces (light gray from guidelines + white)
+  static const Color background = Color(0xFFF0F2F3);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFFBFCFC); // --surface-elevated
+  static const Color surfaceVariant = Color(0xFFF0F0F0);
 
-  // Text Colors
-  static const Color textPrimary = Color(0xFF1E2A2F); // --text
-  static const Color textSecondary = Color(0xFF7A8A8F); // --muted
-  static const Color textTertiary = Color(0xFF94A3A8);
+  // Text — dark teal for primary copy (wordmark colour)
+  static const Color textPrimary = Color(0xFF0A2429);
+  static const Color textSecondary = Color(0xFF5C6E73);
+  static const Color textTertiary = Color(0xFF8A9A9F);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
 
   // Border Colors
-  static const Color border = Color(0xFFD5E0E3); // --border
-  static const Color borderFocus = Color(0xFF137C84); // --teal-mid
-  static const Color divider = Color(0xFFD5E0E3);
+  static const Color border = Color(0xFFC8D8DC);
+  static const Color borderFocus = Color(0xFF15808D);
+  static const Color divider = Color(0xFFC8D8DC);
 
-  // Shadow
-  static const Color shadow = Color(0x26115C63);
+  // Shadow (tinted to dark teal)
+  static const Color shadow = Color(0x260A2429);
 
   // Status Colors
   static const Color success = Color(0xFF0D9488); // --success
@@ -45,8 +44,27 @@ class AppColors {
   // Disabled
   static const Color disabled = Color(0xFFBDBDBD);
 
-  // Footwear theme (hero, accents) mapped to new gradient
-  static const Color footwearHeroStart = Color(0xFF0F5C63);
-  static const Color footwearHeroEnd = Color(0xFF1FB5C1);
-  static const Color footwearCardHighlight = Color(0xFFFBFCFC);
+  // Hero gradient (splash / onboarding: dark teal → mid teal → bright cyan)
+  static const Color footwearHeroStart = Color(0xFF062F35);
+  static const Color footwearHeroMid = Color(0xFF0F6876);
+  static const Color footwearHeroEnd = Color(0xFF09E0FF);
+  static const Color footwearCardHighlight = Color(0xFFF0F0F0);
+
+  /// Large display / emphasis on teal/cyan gradients (onboarding mint).
+  static const Color onGradientDisplay = Color(0xFFA7F3D0);
+
+  /// Body / secondary copy on gradients.
+  static const Color onGradientBody = Color(0xFFF0FFFF);
+
+  /// Muted line / hint on gradients (~70% white).
+  static const Color onGradientMuted = Color(0xB3FFFFFF);
+
+  /// Circular control fill on gradient screens (~45% dark teal).
+  static const Color overlayOnGradient = Color(0x730A2429);
+
+  /// Circular “next” / light control on gradients (mint fill).
+  static const Color surfaceOnGradient = Color(0xFFD8F8F2);
+
+  /// Icon on [surfaceOnGradient] (dark teal).
+  static const Color onSurfaceOnGradient = Color(0xFF0A2429);
 }

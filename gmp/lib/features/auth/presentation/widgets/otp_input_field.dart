@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class OTPInputField extends StatelessWidget {
   final TextEditingController controller;
@@ -33,7 +34,7 @@ class OTPInputField extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           filled: true,
-          fillColor: Colors.grey[50],
+          fillColor: AppColors.background,
         ),
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
