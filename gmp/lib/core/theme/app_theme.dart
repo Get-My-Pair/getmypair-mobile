@@ -12,7 +12,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      fontFamily: GoogleFonts.poppins().fontFamily,
+      fontFamily: GoogleFonts.montserrat().fontFamily,
       colorScheme: ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
@@ -146,11 +146,11 @@ class AppTheme {
       ),
     );
 
-    final poppins = GoogleFonts.poppinsTextTheme(base);
-    return poppins.copyWith(
-      displayLarge: GoogleFonts.oswald(textStyle: poppins.displayLarge),
-      displayMedium: GoogleFonts.oswald(textStyle: poppins.displayMedium),
-      displaySmall: GoogleFonts.oswald(textStyle: poppins.displaySmall),
+    final montserrat = GoogleFonts.montserratTextTheme(base);
+    return montserrat.copyWith(
+      displayLarge: GoogleFonts.boldonse(textStyle: montserrat.displayLarge),
+      displayMedium: GoogleFonts.boldonse(textStyle: montserrat.displayMedium),
+      displaySmall: GoogleFonts.boldonse(textStyle: montserrat.displaySmall),
     );
   }
 

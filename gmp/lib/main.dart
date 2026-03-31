@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
+import 'features/auth/presentation/pages/onboarding/onboarding_flow_page.dart';
 import 'injection_container.dart' as di;
-import 'features/auth/presentation/pages/splash_page.dart';
 import 'routes.dart';
 
 void main() async {
@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
         title: 'GetMyPair',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const SplashPage(),
+        home: const OnboardingFlowPage(),
         onGenerateRoute: AppRoutes.generateRoute,
       ),
     );

@@ -53,6 +53,9 @@ class AppColors {
   /// Large display / emphasis on teal/cyan gradients (onboarding mint).
   static const Color onGradientDisplay = Color(0xFFA7F3D0);
 
+  /// “Truly fits!” / mint CTA on onboarding (Figma).
+  static const Color onboardingTrulyFits = Color(0xFFAFEDD6);
+
   /// Body / secondary copy on gradients.
   static const Color onGradientBody = Color(0xFFF0FFFF);
 

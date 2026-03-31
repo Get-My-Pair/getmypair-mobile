@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/auth/presentation/pages/onboarding/onboarding_flow_page.dart';
 import 'features/auth/presentation/pages/welcome_page.dart';
 import 'features/auth/presentation/pages/mobile_otp_page.dart';
@@ -30,7 +29,7 @@ class AppRoutes {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case splash:
-        return MaterialPageRoute(builder: (_) => const SplashPage());
+        return MaterialPageRoute(builder: (_) => const OnboardingFlowPage());
       case onboarding:
         return MaterialPageRoute(builder: (_) => const OnboardingFlowPage());
       case welcome:

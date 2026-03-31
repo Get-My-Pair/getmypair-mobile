@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// Responsive layout utilities so UI works on all mobile phone screen sizes.
-/// Use [Responsive] of(context) or [MediaQuery] for padding, font sizes, and image sizes.
+/// Responsive layout for **all** phone sizes.
+///
+/// **Whenever you add or change UI, follow this:**
+/// 1. **Horizontal padding** — always [horizontalPaddingOf] (or [Responsive.of] `.horizontalPadding`), never hard-coded `16/20/24`.
+/// 2. **Font sizes from design (Figma)** — always [fontSize] with the design’s **logical px** as [base] (e.g. 32, 48), then [.clamp] if you need min/max caps.
+/// 3. **Fixed widths from design** (e.g. 234, 368) — use `min(designPx, availableWidth)` or [scaleDesignWidth] from a reference frame (default 390).
+/// 4. **Bottom / safe areas** — use [bottomInsetOf] when placing controls above the home indicator.
+/// 5. **Onboarding slides** — use that feature’s shared typography / max-width helpers so copy stays consistent.
 class Responsive {
   Responsive._();
+
+  /// Default Figma iPhone frame width used for scaling (logical px).
+  static const double designFrameWidth = 390;
 
   /// Breakpoints (logical pixels).
   static const double breakpointSmall = 360;
@@ -78,13 +87,36 @@ class Responsive {
     return 24;
   }
 
-  /// Scaled font size (base * scale).
+  /// Scaled font size (base * scale). Pass Figma **font size in px** as [base].
   static double fontSize(BuildContext context, double base) {
     final w = MediaQuery.sizeOf(context).width;
     double scale = 1.0;
-    if (w <= breakpointSmall) scale = 0.88;
-    else if (w <= breakpointMedium) scale = 0.94;
+    if (w <= breakpointSmall) {
+      scale = 0.88;
+    } else if (w <= breakpointMedium) {
+      scale = 0.94;
+    }
     return (base * scale).roundToDouble();
+  }
+
+  /// Scales a horizontal size from a design frame (e.g. Figma at [designFrameWidth]) to the current screen width.
+  static double scaleDesignWidth(
+    BuildContext context,
+    double valueAtDesignFrame, {
+    double designFrameWidth = Responsive.designFrameWidth,
+  }) {
+    final w = MediaQuery.sizeOf(context).width;
+    return valueAtDesignFrame * (w / designFrameWidth);
+  }
+
+  /// [fontSize] then clamp — use for every text style that must stay within min/max bounds.
+  static double fontSizeClamped(
+    BuildContext context,
+    double base, {
+    required double min,
+    required double max,
+  }) {
+    return fontSize(context, base).clamp(min, max);
   }
 
   /// Max logo dimension (square) for current screen.
