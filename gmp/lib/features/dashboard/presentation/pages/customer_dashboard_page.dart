@@ -5,7 +5,7 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_event.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_state.dart';
-import 'package:gmp/features/auth/presentation/pages/welcome_page.dart';
+import 'package:gmp/features/auth/presentation/pages/mobile_otp_page.dart';
 import 'package:gmp/features/home/presentation/pages/home_page.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_event.dart';
@@ -50,7 +50,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         if (state is AuthUnauthenticated) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (context) => const WelcomePage(),
+              builder: (context) => const MobileOTPPage(),
             ),
             (route) => false,
           );

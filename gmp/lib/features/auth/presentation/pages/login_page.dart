@@ -94,6 +94,12 @@ class LoginPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.footwearCardHighlight,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                border: const Border(
+                  top: BorderSide(
+                    color: Color(0xFF1A9CFF),
+                    width: 2,
+                  ),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.shadow,
@@ -112,14 +118,14 @@ class LoginPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Log in',
+                          'Sign Up',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: AppColors.textPrimary,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: -0.5,
                               ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
                         const Text(
                           'Enter your phone number',
                           style: TextStyle(
@@ -136,15 +142,15 @@ class LoginPage extends StatelessWidget {
                             color: AppColors.textSecondary,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                   color: AppColors.border.withValues(alpha: 0.45),
                                 ),
@@ -152,20 +158,20 @@ class LoginPage extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(india.flag, style: const TextStyle(fontSize: 20)),
-                                  const SizedBox(width: 6),
+                                  Text(india.flag, style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 4),
                                   Text(
                                     india.dialCode,
                                     style: const TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
-                                  const SizedBox(width: 2),
+                                  const SizedBox(width: 1),
                                   Icon(
                                     Icons.keyboard_arrow_down,
-                                    size: 20,
+                                    size: 16,
                                     color: AppColors.textTertiary,
                                   ),
                                 ],
@@ -174,10 +180,10 @@ class LoginPage extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(28),
+                                  borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
                                     color: AppColors.border.withValues(alpha: 0.45),
                                   ),
@@ -187,13 +193,13 @@ class LoginPage extends StatelessWidget {
                                     Icon(
                                       Icons.phone_outlined,
                                       color: AppColors.textTertiary,
-                                      size: 22,
+                                      size: 20,
                                     ),
                                     const SizedBox(width: 10),
                                     Text(
                                       'Phone',
                                       style: TextStyle(
-                                        fontSize: 15,
+                                        fontSize: 14,
                                         color: AppColors.textTertiary,
                                       ),
                                     ),
@@ -203,10 +209,10 @@ class LoginPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
-                          height: 52,
+                          height: 46,
                           child: ElevatedButton(
                             onPressed: () => _goToMobileOtp(context),
                             style: ElevatedButton.styleFrom(
@@ -215,14 +221,14 @@ class LoginPage extends StatelessWidget {
                               elevation: 4,
                               shadowColor: AppColors.primary.withValues(alpha: 0.45),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: BorderRadius.circular(24),
                               ),
                             ),
                             child: const Text(
-                              'SEND OTP',
+                              'Send OTP',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
                               ),
                             ),
                           ),
@@ -239,7 +245,7 @@ class LoginPage extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                               child: Text(
-                                'or continue with',
+                                'or Sign Up with',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textTertiary,
@@ -310,12 +316,12 @@ class LoginPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              width: 22,
-                              height: 22,
+                              width: 16,
+                              height: 16,
                               margin: const EdgeInsets.only(top: 2),
                               decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.textPrimary, width: 2),
-                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: AppColors.textPrimary, width: 1.4),
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -323,7 +329,7 @@ class LoginPage extends StatelessWidget {
                               child: Text.rich(
                                 TextSpan(
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     color: AppColors.textSecondary,
                                     height: 1.35,
                                   ),

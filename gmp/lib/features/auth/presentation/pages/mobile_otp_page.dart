@@ -7,9 +7,10 @@ import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/country_code.dart';
-import '../widgets/custom_text_field.dart';
-import '../widgets/country_code_picker.dart';
+import '../widgets/onboarding_surface.dart';
 import 'otp_page.dart';
+import 'privacy_policy_page.dart';
+import 'terms_of_service_page.dart';
 
 class MobileOTPPage extends StatefulWidget {
   const MobileOTPPage({super.key});
@@ -21,9 +22,10 @@ class MobileOTPPage extends StatefulWidget {
 class _MobileOTPPageState extends State<MobileOTPPage> {
   final TextEditingController _phoneController = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
-  CountryCode _selectedCountry = CountryCode.popularCountries[0]; // India default
+  CountryCode _selectedCountry = CountryCode.popularCountries[0];
   String? _phoneError;
   bool _isSendingOTP = false;
+  bool _agreedToTerms = false;
 
   @override
   void dispose() {
@@ -32,12 +34,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     super.dispose();
   }
 
-  bool get _isValid {
-    final phoneLength = _phoneController.text
-        .replaceAll(RegExp(r'[^0-9]'), '')
-        .length;
-    return phoneLength == 10;
-  }
+  bool get _isValid => _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '').length == 10;
 
   void _validatePhone(String value) {
     setState(() {
@@ -56,14 +53,19 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
 
   void _sendOTP() {
     if (!_isValid) return;
-
-    setState(() {
-      _isSendingOTP = true;
-    });
-
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to Terms of Service and Privacy Policy'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    setState(() => _isSendingOTP = true);
     final cleanPhone = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final fullMobile = '${_selectedCountry.dialCode}$cleanPhone';
-
     context.read<AuthBloc>().add(AuthSendOTP(fullMobile));
   }
 
@@ -76,10 +78,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Your OTP code is:',
-              style: TextStyle(fontSize: 16),
-            ),
+            const Text('Your OTP code is:', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
@@ -110,10 +109,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               Navigator.of(context).pop();
               Clipboard.setData(ClipboardData(text: otp));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('OTP copied to clipboard'),
-                  duration: Duration(seconds: 2),
-                ),
+                const SnackBar(content: Text('OTP copied to clipboard'), duration: Duration(seconds: 2)),
               );
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -149,26 +145,53 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     );
   }
 
+  void _pickCountryCode() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: CountryCode.popularCountries.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final country = CountryCode.popularCountries[index];
+              final isSelected = country.code == _selectedCountry.code;
+              return ListTile(
+                leading: Text(country.flag, style: const TextStyle(fontSize: 20)),
+                title: Text(country.name),
+                trailing: Text(
+                  country.dialCode,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                selected: isSelected,
+                onTap: () {
+                  setState(() {
+                    _selectedCountry = country;
+                  });
+                  Navigator.of(sheetContext).pop();
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final horizontal = Responsive.horizontalPaddingOf(context);
+    final topInset = MediaQuery.paddingOf(context).top;
+    final cardTop = topInset + MediaQuery.sizeOf(context).height * 0.27;
+
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(40),
-        child: AppBar(
-          leading: IconButton(
-            color: const Color.fromARGB(255, 48, 27, 11),
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ),
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.footwearHeroStart,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthOTPSent) {
-            setState(() {
-              _isSendingOTP = false;
-            });
+            setState(() => _isSendingOTP = false);
             if (state.otp != null && state.otp!.isNotEmpty) {
               _showOTPDialog(context, state.otp!, state.mobile);
             } else {
@@ -183,242 +206,495 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               );
             }
           } else if (state is AuthError) {
-            setState(() {
-              _isSendingOTP = false;
-            });
+            setState(() => _isSendingOTP = false);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: AppColors.error,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             );
           }
         },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: Responsive.horizontalPaddingOf(context),
-              vertical: 8,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: SweepGradient(
+                    center: Alignment(0.22, -1.07),
+                    startAngle: -0.55,
+                    endAngle: 5.73,
+                    colors: [
+                      Color(0xFF09E0FF),
+                      Color(0xFF0F6876),
+                      Color(0xFF062F35),
+                      Color(0xFF062F35),
+                    ],
+                    stops: [0.05, 0.44, 0.57, 1],
+                    transform: GradientRotation(-0.55),
+                  ),
+                ),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Section
-                _buildHeader(context),
-
-                const SizedBox(height: 10),
-
-                // Phone Input Card
-                _buildPhoneInputCard(context),
-
-                const SizedBox(height: 24),
-
-                // CTA Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: (_isValid && !_isSendingOTP) ? _sendOTP : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.textOnPrimary,
-                      disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
-                      disabledForegroundColor: AppColors.textOnPrimary.withOpacity(0.65),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10),
+                    Text(
+                      'Hello!',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFDFE7E9),
+                        fontSize: 34,
+                        fontFamily: 'Boldonse',
+                        fontWeight: FontWeight.w400,
                       ),
-                      elevation: _isValid ? 2 : 0,
                     ),
-                    child: _isSendingOTP
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
-                            ),
-                          )
-                        : const Text(
-                            'Send OTP',
+                    const SizedBox(height: 10),
+                    Text.rich(
+                      TextSpan(
+                        style: TextStyle(
+                          color: const Color(0xFFDFE7E9),
+                          fontSize: 24,
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w400,
+                          height: 1.35,
+                        ),
+                        children: [
+                          const TextSpan(text: 'Welcome to your '),
+                          const TextSpan(
+                            text: 'solecial hub',
                             style: TextStyle(
-                              fontSize: 16,
+                              color: Color(0xFFDFE7E9),
+                              fontSize: 24,
+                              fontStyle: FontStyle.italic,
+                              fontFamily: 'Montserrat',
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Footer
-                _buildFooter(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    final logoSize = Responsive.maxLogoSizeOf(context, 0.42);
-    final titleSize = Responsive.fontSize(context, 32);
-    final bodySize = Responsive.fontSize(context, 15);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Center(
-          child: Image.asset(
-            'assets/images/logo.png',
-            width: logoSize,
-            height: logoSize,
-            fit: BoxFit.contain,
-          ),
-        ),
-        Center(
-          child: Text(
-            'Welcome to Get My Pair',
-            style: TextStyle(
-              fontSize: titleSize,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDark,
-              height: 1.2,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Center(
-          child: Text(
-            'Find shoes. Fix shoes. Everything you need, all in one place.',
-            style: TextStyle(
-              fontSize: bodySize,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPhoneInputCard(BuildContext context) {
-    final padding = Responsive.horizontalPaddingOf(context);
-    return Container(
-      padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Enter your phone number',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            'We\'ll send you a verification code',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textSecondary,
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Country Code + Phone Input
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Country Code Picker
-              CountryCodePicker(
-                selectedCountry: _selectedCountry,
-                onChanged: (country) {
-                  setState(() {
-                    _selectedCountry = country;
-                  });
-                },
-              ),
-
-              const SizedBox(width: 12),
-
-              // Phone Input
-              Expanded(
-                child: CustomTextField(
-                  controller: _phoneController,
-                  // hintText: '9876543210',
-                  keyboardType: TextInputType.phone,
-                  autofocus: true,
-                  focusNode: _phoneFocusNode,
-                  maxLength: 10,
-                  errorText: _phoneError,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
+                        ],
+                      ),
+                    ),
                   ],
-                  onChanged: _validatePhone,
                 ),
               ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Info Text
-          Row(
-            children: [
-              Icon(Icons.info_outline, size: 16, color: AppColors.textTertiary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Enter your 10-digit mobile number',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textTertiary,
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: cardTop,
+              bottom: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9D9D9),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(10, 0)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: SafeArea(
+                    top: false,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(44, 60, 38, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              color: Color(0xFF062F35),
+                              fontSize: 24,
+                              fontFamily: 'Boldonse',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Enter your phone number',
+                            style: TextStyle(
+                              color: Color(0xFF062F35),
+                              fontSize: 20,
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            "We'll text you a quick verification code",
+                            style: TextStyle(
+                              color: Color(0xFF062F35),
+                              fontSize: 20,
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              SizedBox(width: 110, child: _buildCountryCodeChip()),
+                              const SizedBox(width: 5),
+                              Expanded(child: _buildPhoneField()),
+                            ],
+                          ),
+                          if (_phoneError != null) ...[
+                            const SizedBox(height: 8),
+                            Text(_phoneError!, style: const TextStyle(color: AppColors.error, fontSize: 12)),
+                          ],
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: (_isValid && !_isSendingOTP) ? _sendOTP : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.textOnPrimary,
+                                disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.65),
+                                disabledForegroundColor: AppColors.textOnPrimary.withValues(alpha: 0.95),
+                                elevation: 4,
+                                shadowColor: AppColors.primary.withValues(alpha: 0.45),
+                                side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                              ),
+                              child: _isSendingOTP
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Send OTP',
+                                      style: TextStyle(
+                                        color: Color(0xFFDFE7E9),
+                                        fontSize: 14,
+                                        fontFamily: 'Boldonse',
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: AppColors.textTertiary.withValues(alpha: 0.35), thickness: 1)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'or Sign Up with ',
+                                  style: TextStyle(
+                                    color: Colors.black26,
+                                    fontSize: 16,
+                                    fontFamily: 'Montserrat',
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                              Expanded(child: Divider(color: AppColors.textTertiary.withValues(alpha: 0.35), thickness: 1)),
+                            ],
+                          ),
+                          const SizedBox(height: 22),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _SocialTile(
+                                backgroundColor: Color(0xFF1877F2),
+                                child: Center(
+                                  child: Text('f', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              const SizedBox(width: 40),
+                              _SocialTile(
+                                backgroundColor: Colors.white,
+                                child: Center(
+                                  child: ShaderMask(
+                                    blendMode: BlendMode.srcIn,
+                                    shaderCallback: (bounds) => const LinearGradient(
+                                      colors: [
+                                        Color(0xFF4285F4),
+                                        Color(0xFFEA4335),
+                                        Color(0xFFFBBC05),
+                                        Color(0xFF34A853),
+                                      ],
+                                    ).createShader(bounds),
+                                    child: const Text(
+                                      'G',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 40),
+                              _SocialTile(
+                                backgroundColor: Colors.white,
+                                child: Center(child: Icon(Icons.apple, size: 28, color: Colors.black)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 30),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  margin: const EdgeInsets.only(top: 0),
+                                  decoration: BoxDecoration(
+                                    color: _agreedToTerms ? AppColors.primary : Colors.transparent,
+                                    border: Border.all(color: AppColors.textPrimary, width: 1.8),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  child: _agreedToTerms ? const Icon(Icons.check, size: 11, color: Colors.white) : null,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: AppColors.textSecondary,
+                                      height: 1.35,
+                                    ),
+                                    children: [
+                                      const TextSpan(
+                                        text: 'I agree to the',
+                                        style: TextStyle(
+                                          color: Color(0xFF898989),
+                                          fontSize: 12,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text: ' ',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 12,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      WidgetSpan(
+                                        alignment: PlaceholderAlignment.baseline,
+                                        baseline: TextBaseline.alphabetic,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => const TermsOfServicePage(),
+                                              ),
+                                            );
+                                          },
+                                          child: const Text(
+                                            'Terms of Service',
+                                            style: TextStyle(
+                                              color: Color(0xFF062F35),
+                                              fontSize: 12,
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text: ' ',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 12,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text: 'and',
+                                        style: TextStyle(
+                                          color: Color(0xFF898989),
+                                          fontSize: 12,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text: ' ',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 12,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      WidgetSpan(
+                                        alignment: PlaceholderAlignment.baseline,
+                                        baseline: TextBaseline.alphabetic,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => const PrivacyPolicyPage(),
+                                              ),
+                                            );
+                                          },
+                                          child: const Text(
+                                            'Privacy Policy',
+                                            style: TextStyle(
+                                              color: Color(0xFF062F35),
+                                              fontSize: 12,
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCountryCodeChip() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(100),
+      onTap: _pickCountryCode,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(100),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_selectedCountry.flag, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 4),
+            Text(
+              _selectedCountry.dialCode,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0x57000000),
+                fontSize: 16,
+                fontFamily: 'Montserrat',
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0x57000000)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(Icons.phone_outlined, color: Color(0x57000000), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _phoneController,
+              focusNode: _phoneFocusNode,
+              keyboardType: TextInputType.phone,
+              autofocus: true,
+              maxLength: 10,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
+              onChanged: _validatePhone,
+              decoration: const InputDecoration(
+                counterText: '',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                filled: false,
+                fillColor: Colors.transparent,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+                hintText: 'Phone',
+                hintStyle: TextStyle(
+                  color: Color(0x57000000),
+                  fontSize: 16,
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              textAlignVertical: TextAlignVertical.center,
+              style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFooter() {
-    return Center(
-      child: Text(
-        'By continuing, you agree to receive SMS',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w400,
-          color: AppColors.textTertiary,
+class _SocialTile extends StatelessWidget {
+  const _SocialTile({required this.child, required this.backgroundColor});
+
+  final Widget child;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: 49,
+        height: 49,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
-        textAlign: TextAlign.center,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: child,
+        ),
       ),
     );
   }

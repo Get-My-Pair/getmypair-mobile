@@ -172,18 +172,13 @@ class _OTPPageState extends State<OTPPage> {
 
   @override
   Widget build(BuildContext context) {
+    final horizontal = Responsive.horizontalPaddingOf(context);
+    final screen = MediaQuery.sizeOf(context);
+    final cardTop = screen.height * 0.277;
+    final panelHeight = (screen.height - cardTop).clamp(460.0, 674.0);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(40),
-        child: AppBar(
-          leading: IconButton(
-            color: const Color.fromARGB(255, 48, 27, 11),
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ),
+      backgroundColor: AppColors.footwearHeroStart,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthOTPVerified) {
@@ -242,80 +237,188 @@ class _OTPPageState extends State<OTPPage> {
             );
           }
         },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(Responsive.horizontalPaddingOf(context)),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-
-                  // Header
-                  _buildHeader(context),
-
-                  const SizedBox(height: 48),
-
-                  // OTP Input Card
-                  _buildOtpInputCard(context),
-
-                  const SizedBox(height: 32),
-
-                  // Verify Button
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      final isLoading = state is AuthLoading;
-                      final isEnabled = _otp.length == 6;
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: isEnabled ? _verifyOTP : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.textOnPrimary,
-                            disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
-                            disabledForegroundColor: AppColors.textOnPrimary.withOpacity(0.65),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: isEnabled ? 2 : 0,
-                          ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
-                                  ),
-                                )
-                              : const Text(
-                                  'Verify OTP',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                      );
-                    },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: SweepGradient(
+                    center: Alignment(0.22, -1.07),
+                    startAngle: -0.55,
+                    endAngle: 5.73,
+                    colors: [
+                      Color(0xFF09E0FF),
+                      Color(0xFF0F6876),
+                      Color(0xFF062F35),
+                      Color(0xFF062F35),
+                    ],
+                    stops: [0.05, 0.44, 0.57, 1],
+                    transform: GradientRotation(-0.55),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Resend OTP
-                  _buildResendSection(),
-
-                  const SizedBox(height: 24),
-
-                  // Help Text
-                  _buildHelpText(),
-                ],
+                ),
               ),
             ),
-          ),
+            const Positioned(
+              left: 20,
+              top: 86,
+              child: Text(
+                'Hello!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFDFE7E9),
+                  fontSize: 34,
+                  fontFamily: 'Boldonse',
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+            const Positioned(
+              left: 23,
+              top: 161,
+              right: 23,
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Welcome to your ',
+                      style: TextStyle(
+                        color: Color(0xFFDFE7E9),
+                        fontSize: 24,
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'solecial hub',
+                      style: TextStyle(
+                        color: Color(0xFFDFE7E9),
+                        fontSize: 24,
+                        fontStyle: FontStyle.italic,
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: cardTop,
+              bottom: 0,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  width: screen.width < 430 ? screen.width : 430,
+                  height: panelHeight,
+                  decoration: const ShapeDecoration(
+                    color: Color(0xFFD9D9D9),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    shadows: [
+                      BoxShadow(
+                        color: Color(0x3F000000),
+                        blurRadius: 4,
+                        offset: Offset(10, 0),
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(44, 60, 38, 24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Verify Phone',
+                                style: TextStyle(
+                                  color: Color(0xFF062F35),
+                                  fontSize: 24,
+                                  fontFamily: 'Boldonse',
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Code sent to $_displayPhoneNumber',
+                                style: const TextStyle(
+                                  color: Color(0xFF062F35),
+                                  fontSize: 20,
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildOtpInputCard(context),
+                              const SizedBox(height: 26),
+                              BlocBuilder<AuthBloc, AuthState>(
+                                builder: (context, state) {
+                                  final isLoading = state is AuthLoading;
+                                  final isEnabled = _otp.length == 6;
+                                  return SizedBox(
+                                    width: double.infinity,
+                                    height: 48,
+                                    child: ElevatedButton(
+                                      onPressed: isEnabled ? _verifyOTP : null,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF0F6876),
+                                        foregroundColor: AppColors.textOnPrimary,
+                                        disabledBackgroundColor: const Color(0xFF0F6876).withValues(alpha: 0.65),
+                                        disabledForegroundColor: AppColors.textOnPrimary.withValues(alpha: 0.95),
+                                        elevation: 4,
+                                        shadowColor: const Color(0x19000000),
+                                        side: const BorderSide(width: 1, color: Color(0xFF09DFFF)),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                      ),
+                                      child: isLoading
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Verify OTP',
+                                              style: TextStyle(
+                                                color: Color(0xFFDFE7E9),
+                                                fontSize: 14,
+                                                fontFamily: 'Boldonse',
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -377,31 +480,24 @@ class _OTPPageState extends State<OTPPage> {
   }
 
   Widget _buildOtpInputCard(BuildContext context) {
-    final w = MediaQuery.sizeOf(context).width;
-    final cellSize = (w * 0.12).clamp(44.0, 56.0);
+    const cellSize = 36.0;
     return Container(
-      padding: EdgeInsets.all(Responsive.horizontalPaddingOf(context) * 0.85),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
-            'Enter 6-digit code',
+            'Enter 6 digit code',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: Color(0xFF062F35),
+              fontSize: 20,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w400,
             ),
           ),
 
@@ -423,11 +519,11 @@ class _OTPPageState extends State<OTPPage> {
               },
               theme: MaterialPinTheme(
                 shape: MaterialPinShape.outlined,
-                cellSize: Size(cellSize, cellSize),
-                spacing: 6,
-                borderRadius: BorderRadius.circular(8),
-                borderWidth: 2,
-                borderColor: AppColors.border,
+                cellSize: const Size(cellSize, 48),
+                spacing: 20,
+                borderRadius: BorderRadius.circular(5),
+                borderWidth: 1,
+                borderColor: const Color(0x56062F35),
                 focusedBorderColor: AppColors.primary,
                 textStyle: const TextStyle(
                   fontSize: 20,
@@ -441,35 +537,30 @@ class _OTPPageState extends State<OTPPage> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 50),
 
           // Timer
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(20),
+              color: const Color(0x66DFE7E9),
+              borderRadius: BorderRadius.circular(100),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.timer_outlined,
-                  size: 16,
-                  color: _resendCountdown > 0
-                      ? AppColors.accent
-                      : AppColors.textTertiary,
-                ),
-                const SizedBox(width: 8),
+                Icon(Icons.access_time_outlined, size: 16, color: Colors.black.withValues(alpha: 0.34)),
+                const SizedBox(width: 14),
                 Text(
                   _resendCountdown > 0
                       ? 'Code expires in ${_formatTime(_resendCountdown)}'
                       : 'Code expired',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w400,
                     color: _resendCountdown > 0
-                        ? AppColors.textSecondary
+                        ? Colors.black.withValues(alpha: 0.34)
                         : AppColors.error,
                   ),
                 ),

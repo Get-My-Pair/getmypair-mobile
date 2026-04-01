@@ -6,7 +6,7 @@ import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../auth/presentation/pages/welcome_page.dart';
+import '../../../auth/presentation/pages/mobile_otp_page.dart';
 import '../../../../injection_container.dart' as di;
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
@@ -85,7 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const WelcomePage()),
+            MaterialPageRoute(builder: (_) => const MobileOTPPage()),
             (route) => false,
           );
         }

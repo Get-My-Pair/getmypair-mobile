@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/auth/presentation/pages/onboarding/onboarding_flow_page.dart';
-import 'features/auth/presentation/pages/welcome_page.dart';
 import 'features/auth/presentation/pages/mobile_otp_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/otp_page.dart';
@@ -33,7 +32,7 @@ class AppRoutes {
       case onboarding:
         return MaterialPageRoute(builder: (_) => const OnboardingFlowPage());
       case welcome:
-        return MaterialPageRoute(builder: (_) => const WelcomePage());
+        return MaterialPageRoute(builder: (_) => const MobileOTPPage());
       case mobileOTP:
         return MaterialPageRoute(builder: (_) => const MobileOTPPage());
       case login:
