@@ -69,11 +69,12 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
             }
             return Scaffold(
               backgroundColor: AppColors.background,
+              extendBody: true,
               body: IndexedStack(
                 index: _currentIndex.clamp(0, _pages.length - 1),
                 children: _pages,
               ),
-              bottomNavigationBar: _buildBottomNav(),
+              bottomNavigationBar: _buildBottomNav(context),
             );
           },
         ),
@@ -81,35 +82,125 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     );
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
+  Widget _buildBottomNav(BuildContext context) {
+    final index = _currentIndex.clamp(0, _pages.length - 1);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: _FloatingGradientBottomNav(
+          currentIndex: index,
+          onChanged: (i) => setState(() => _currentIndex = i.clamp(0, _pages.length - 1)),
+        ),
       ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex.clamp(0, _pages.length - 1),
-        onTap: (index) {
-          final safeIndex = index.clamp(0, _pages.length - 1);
-          setState(() => _currentIndex = safeIndex);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textTertiary,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Requests'),
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Catalog'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Cart'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Account'),
-        ],
+    );
+  }
+}
+
+/// Pill-shaped floating bar: dark teal → cyan gradient, white outline icons,
+/// selected tab on a solid white circle (icon in dark teal).
+class _FloatingGradientBottomNav extends StatelessWidget {
+  const _FloatingGradientBottomNav({
+    required this.currentIndex,
+    required this.onChanged,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+
+  static const double _barHeight = 56;
+  static const double _hitSize = 44;
+  static const Color _selectedIconColor = Color(0xFF08343A);
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <({IconData outlined, IconData filled})>[
+      (outlined: Icons.home_outlined, filled: Icons.home_rounded),
+      (outlined: Icons.favorite_border_rounded, filled: Icons.favorite_rounded),
+      (outlined: Icons.checkroom_outlined, filled: Icons.checkroom_rounded),
+      (outlined: Icons.shopping_cart_outlined, filled: Icons.shopping_cart_rounded),
+      (outlined: Icons.person_outline_rounded, filled: Icons.person_rounded),
+    ];
+
+    return Material(
+      color: Colors.transparent,
+      elevation: 0,
+      child: Container(
+        height: _barHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_barHeight / 2),
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Color(0xFF08343A),
+              Color(0xFF0F6876),
+              Color(0xFF00E0FF),
+            ],
+            stops: [0.0, 0.42, 1.0],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+              spreadRadius: -4,
+            ),
+            BoxShadow(
+              color: const Color(0xFF0A6C78).withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(items.length, (i) {
+              final selected = i == currentIndex;
+              final pair = items[i];
+              return Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => onChanged(i),
+                    customBorder: const CircleBorder(),
+                    splashColor: Colors.white24,
+                    highlightColor: Colors.white10,
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutCubic,
+                        width: _hitSize,
+                        height: _hitSize,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected ? Colors.white : Colors.transparent,
+                          boxShadow: selected
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.12),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Icon(
+                          selected ? pair.filled : pair.outlined,
+                          size: 24,
+                          color: selected ? _selectedIconColor : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
