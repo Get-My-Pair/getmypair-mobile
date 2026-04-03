@@ -70,77 +70,146 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   }
 
   void _showOTPDialog(BuildContext context, String otp, String mobile) {
+    const actionStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('OTP Code (Development)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Your OTP code is:', style: TextStyle(fontSize: 16)),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                otp,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                  letterSpacing: 8,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'OTP Code (Development)',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    height: 1.2,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 10),
+                Text(
+                  'Your OTP code is:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          otp.isEmpty ? '—' : otp,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This is shown only in development mode.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          Clipboard.setData(ClipboardData(text: otp));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('OTP copied to clipboard'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => OTPPage(
+                                mobile: mobile,
+                                countryCode: _selectedCountry.dialCode,
+                                phoneNumber: _phoneController.text,
+                                prefilledOtp: otp,
+                              ),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                          textStyle: actionStyle,
+                        ),
+                        child: const Text(
+                          'Copy & Continue',
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => OTPPage(
+                                mobile: mobile,
+                                countryCode: _selectedCountry.dialCode,
+                                phoneNumber: _phoneController.text,
+                                prefilledOtp: otp,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.textOnPrimary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          textStyle: actionStyle,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text('Continue'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'This is shown only in development mode.',
-              style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-            ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Clipboard.setData(ClipboardData(text: otp));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('OTP copied to clipboard'), duration: Duration(seconds: 2)),
-              );
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => OTPPage(
-                    mobile: mobile,
-                    countryCode: _selectedCountry.dialCode,
-                    phoneNumber: _phoneController.text,
-                    prefilledOtp: otp,
-                  ),
-                ),
-              );
-            },
-            child: const Text('Copy & Continue'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => OTPPage(
-                    mobile: mobile,
-                    countryCode: _selectedCountry.dialCode,
-                    phoneNumber: _phoneController.text,
-                    prefilledOtp: otp,
-                  ),
-                ),
-              );
-            },
-            child: const Text('Continue'),
-          ),
-        ],
       ),
     );
   }

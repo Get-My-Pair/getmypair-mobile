@@ -8,13 +8,13 @@ import '../../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import 'profile_completion_page.dart';
-import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_page.dart';
+import 'ai_onboarding_page.dart';
 
 class OTPPage extends StatefulWidget {
   final String mobile;
   final String? countryCode;
   final String? phoneNumber;
+
   /// Pre-filled OTP when coming from dev dialog (Continue / Copy & Continue).
   final String? prefilledOtp;
 
@@ -41,7 +41,8 @@ class _OTPPageState extends State<OTPPage> {
   void initState() {
     super.initState();
     _startResendTimer();
-    final pre = widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    final pre =
+        widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
     if (pre.length == 6) {
       _otp = pre;
     }
@@ -55,7 +56,8 @@ class _OTPPageState extends State<OTPPage> {
 
   /// Normalized 6-digit OTP for initial field value, or null if none.
   String? get _initialOtpValue {
-    final pre = widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    final pre =
+        widget.prefilledOtp?.trim().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
     return pre.length == 6 ? pre : null;
   }
 
@@ -83,10 +85,7 @@ class _OTPPageState extends State<OTPPage> {
     FocusScope.of(context).unfocus();
 
     context.read<AuthBloc>().add(
-      AuthVerifyOTP(
-        mobile: widget.mobile,
-        otp: _otp,
-      ),
+      AuthVerifyOTP(mobile: widget.mobile, otp: _otp),
     );
   }
 
@@ -106,10 +105,7 @@ class _OTPPageState extends State<OTPPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Your OTP code is:',
-              style: TextStyle(fontSize: 16),
-            ),
+            const Text('Your OTP code is:', style: TextStyle(fontSize: 16)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
@@ -172,10 +168,9 @@ class _OTPPageState extends State<OTPPage> {
 
   @override
   Widget build(BuildContext context) {
-    final horizontal = Responsive.horizontalPaddingOf(context);
     final screen = MediaQuery.sizeOf(context);
     final cardTop = screen.height * 0.277;
-    final panelHeight = (screen.height - cardTop).clamp(460.0, 674.0);
+    final horizontal = Responsive.horizontalPaddingOf(context);
 
     return Scaffold(
       backgroundColor: AppColors.footwearHeroStart,
@@ -193,22 +188,14 @@ class _OTPPageState extends State<OTPPage> {
               ),
             );
 
-            if (state.requiresProfileCompletion) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => ProfileCompletionPage(
-                    mobile: widget.mobile,
-                  ),
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => AiOnboardingPage(
+                  mobile: widget.mobile,
+                  requiresProfileCompletion: state.requiresProfileCompletion,
                 ),
-              );
-            } else {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const CustomerDashboardPage(),
-                ),
-                (route) => false,
-              );
-            }
+              ),
+            );
           } else if (state is AuthOTPSent) {
             if (state.otp != null && state.otp!.isNotEmpty) {
               _showOTPDialog(context, state.otp!);
@@ -308,114 +295,164 @@ class _OTPPageState extends State<OTPPage> {
               right: 0,
               top: cardTop,
               bottom: 0,
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  width: screen.width < 430 ? screen.width : 430,
-                  height: panelHeight,
-                  decoration: const ShapeDecoration(
-                    color: Color(0xFFD9D9D9),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                    ),
-                    shadows: [
-                      BoxShadow(
-                        color: Color(0x3F000000),
-                        blurRadius: 4,
-                        offset: Offset(10, 0),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                    child: SafeArea(
-                      top: false,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(44, 60, 38, 24),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                'Verify Phone',
-                                style: TextStyle(
-                                  color: Color(0xFF062F35),
-                                  fontSize: 24,
-                                  fontFamily: 'Boldonse',
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'Code sent to $_displayPhoneNumber',
-                                style: const TextStyle(
-                                  color: Color(0xFF062F35),
-                                  fontSize: 20,
-                                  fontFamily: 'Montserrat',
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              _buildOtpInputCard(context),
-                              const SizedBox(height: 26),
-                              BlocBuilder<AuthBloc, AuthState>(
-                                builder: (context, state) {
-                                  final isLoading = state is AuthLoading;
-                                  final isEnabled = _otp.length == 6;
-                                  return SizedBox(
-                                    width: double.infinity,
-                                    height: 48,
-                                    child: ElevatedButton(
-                                      onPressed: isEnabled ? _verifyOTP : null,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF0F6876),
-                                        foregroundColor: AppColors.textOnPrimary,
-                                        disabledBackgroundColor: const Color(0xFF0F6876).withValues(alpha: 0.65),
-                                        disabledForegroundColor: AppColors.textOnPrimary.withValues(alpha: 0.95),
-                                        elevation: 4,
-                                        shadowColor: const Color(0x19000000),
-                                        side: const BorderSide(width: 1, color: Color(0xFF09DFFF)),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(100),
-                                        ),
-                                      ),
-                                      child: isLoading
-                                          ? const SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2.2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.textOnPrimary),
-                                              ),
-                                            )
-                                          : const Text(
-                                              'Verify OTP',
-                                              style: TextStyle(
-                                                color: Color(0xFFDFE7E9),
-                                                fontSize: 14,
-                                                fontFamily: 'Boldonse',
-                                                fontWeight: FontWeight.w400,
-                                              ),
-                                            ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final cardW = constraints.maxWidth;
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: cardW,
+                      height: constraints.maxHeight,
+                      child: Container(
+                        decoration: const ShapeDecoration(
+                          color: Color(0xFFD9D9D9),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                          ),
+                          shadows: [
+                            BoxShadow(
+                              color: Color(0x3F000000),
+                              blurRadius: 4,
+                              offset: Offset(10, 0),
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                          ),
+                          child: SafeArea(
+                            top: false,
+                            bottom: true,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    padding: EdgeInsets.fromLTRB(
+                                      horizontal,
+                                      60,
+                                      horizontal,
+                                      16,
                                     ),
-                                  );
-                                },
-                              ),
-                            ],
+                                    child: Form(
+                                      key: _formKey,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          const Text(
+                                            'Verify Phone',
+                                            style: TextStyle(
+                                              color: Color(0xFF062F35),
+                                              fontSize: 24,
+                                              fontFamily: 'Boldonse',
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Text(
+                                            'Code sent to $_displayPhoneNumber',
+                                            style: const TextStyle(
+                                              color: Color(0xFF062F35),
+                                              fontSize: 20,
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          _buildOtpInputCard(context),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    horizontal,
+                                    0,
+                                    horizontal,
+                                    16,
+                                  ),
+                                  child: BlocBuilder<AuthBloc, AuthState>(
+                                    builder: (context, state) {
+                                      final isLoading = state is AuthLoading;
+                                      final isEnabled = _otp.length == 6;
+                                      return SizedBox(
+                                        width: double.infinity,
+                                        height: 48,
+                                        child: ElevatedButton(
+                                          onPressed: isEnabled
+                                              ? _verifyOTP
+                                              : null,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF0F6876,
+                                            ),
+                                            foregroundColor:
+                                                AppColors.textOnPrimary,
+                                            disabledBackgroundColor:
+                                                const Color(
+                                                  0xFF0F6876,
+                                                ).withValues(alpha: 0.65),
+                                            disabledForegroundColor: AppColors
+                                                .textOnPrimary
+                                                .withValues(alpha: 0.95),
+                                            elevation: 4,
+                                            shadowColor: const Color(
+                                              0x19000000,
+                                            ),
+                                            side: const BorderSide(
+                                              width: 1,
+                                              color: Color(0xFF09DFFF),
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(100),
+                                            ),
+                                          ),
+                                          child: isLoading
+                                              ? const SizedBox(
+                                                  height: 20,
+                                                  width: 20,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2.2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                          Color
+                                                        >(
+                                                          AppColors
+                                                              .textOnPrimary,
+                                                        ),
+                                                  ),
+                                                )
+                                              : const Text(
+                                                  'Verify OTP',
+                                                  style: TextStyle(
+                                                    color: Color(0xFFDFE7E9),
+                                                    fontSize: 14,
+                                                    fontFamily: 'Boldonse',
+                                                    fontWeight: FontWeight.w400,
+                                                  ),
+                                                ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           ],
@@ -549,7 +586,11 @@ class _OTPPageState extends State<OTPPage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.access_time_outlined, size: 16, color: Colors.black.withValues(alpha: 0.34)),
+                Icon(
+                  Icons.access_time_outlined,
+                  size: 16,
+                  color: Colors.black.withValues(alpha: 0.34),
+                ),
                 const SizedBox(width: 14),
                 Text(
                   _resendCountdown > 0
@@ -631,10 +672,8 @@ class _OTPPageState extends State<OTPPage> {
               ),
             ),
           ),
-      
-        ]
-      )
+        ],
+      ),
     );
   }
 }
-

@@ -5,13 +5,119 @@ import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/home/presentation/pages/chatbot_page.dart';
 import 'package:gmp/injection_container.dart';
 
 import 'article_create_page.dart';
 import 'article_details_page.dart';
 
-/// Module 3 – Article list. Digital Shoes Rack UI with shelf layout and filter tabs.
-/// Tap a shoe → Shoe details (edit/delete).
+/// Single rack row: teal border card, thumbnail + Boldonse labels (color / brand / model).
+class _RackShelfItem extends StatelessWidget {
+  final Article article;
+  final String imageUrl;
+  final VoidCallback onTap;
+
+  const _RackShelfItem({
+    required this.article,
+    required this.imageUrl,
+    required this.onTap,
+  });
+
+  static const Color _labelColor = Color(0xFF11899B);
+  static const Color _borderTeal = Color(0xFF0F6876);
+
+  @override
+  Widget build(BuildContext context) {
+    final labelStyle = TextStyle(
+      color: _labelColor,
+      fontSize: Responsive.fontSize(context, 14),
+      fontFamily: 'Boldonse',
+      fontWeight: FontWeight.w400,
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 104),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: ShapeDecoration(
+            color: const Color(0xFFF0F0F0),
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(width: 3, color: _borderTeal),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 96,
+                height: 60,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _rackThumbPlaceholder(),
+                        )
+                      : _rackThumbPlaceholder(),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (article.color.isNotEmpty)
+                      Text(
+                        article.color,
+                        style: labelStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (article.brand.isNotEmpty)
+                      Text(
+                        article.brand,
+                        style: labelStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (article.model.isNotEmpty)
+                      Text(
+                        article.model,
+                        style: labelStyle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (article.color.isEmpty && article.brand.isEmpty && article.model.isEmpty)
+                      Text('Tap for details', style: labelStyle),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _rackThumbPlaceholder() {
+    return ColoredBox(
+      color: AppColors.surfaceVariant,
+      child: const Center(
+        child: Icon(Icons.checkroom_outlined, color: AppColors.textTertiary, size: 32),
+      ),
+    );
+  }
+}
+
+/// Module 3 – Article list. “My Rack” UI (gradient shell, filter chips, shelf rows).
 class ArticleListPage extends StatefulWidget {
   const ArticleListPage({super.key});
 
@@ -23,8 +129,27 @@ class _ArticleListPageState extends State<ArticleListPage> {
   List<Article>? _articles;
   String? _error;
   bool _loading = true;
-  /// null = All, else category value (sports_shoe, casual, formal)
   String? _filterCategory;
+  String _searchQuery = '';
+
+  static const Color _rackTeal = Color(0xFF0F6876);
+  static const Color _rackTealAccent = Color(0xFF11899B);
+  static const Color _rackDark = Color(0xFF062F35);
+  static const Color _panelBg = Color(0xFFF0F0F0);
+
+  static const SweepGradient _shellSweep = SweepGradient(
+    center: Alignment(0.22, -1.07),
+    startAngle: -0.55,
+    endAngle: 5.73,
+    colors: [
+      Color(0xFF09E0FF),
+      Color(0xFF0F6876),
+      Color(0xFF062F35),
+      Color(0xFF062F35),
+    ],
+    stops: [0.05, 0.44, 0.57, 1],
+    transform: GradientRotation(-0.55),
+  );
 
   @override
   void initState() {
@@ -70,7 +195,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
     );
   }
 
-  /// Build full URL for image. Handles both full URLs and relative paths.
   static String _imageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
@@ -81,69 +205,117 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
   List<Article> get _filteredArticles {
     final list = _articles ?? [];
-    if (_filterCategory == null || _filterCategory!.isEmpty) return list;
-    return list.where((a) => a.category == _filterCategory).toList();
+    Iterable<Article> out = list;
+    if (_filterCategory != null && _filterCategory!.isNotEmpty) {
+      out = out.where((a) => a.category == _filterCategory);
+    }
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      out = out.where((a) {
+        return a.brand.toLowerCase().contains(q) ||
+            a.model.toLowerCase().contains(q) ||
+            a.color.toLowerCase().contains(q);
+      });
+    }
+    return out.toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomSafe = Responsive.bottomInsetOf(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Digital Shoes Rack',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+      backgroundColor: const Color(0xFFFAFAFA),
+      extendBody: true,
+      body: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(gradient: _shellSweep),
+            ),
           ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppColors.textPrimary),
-            onPressed: () {
-              // Search / edit placeholder
-            },
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                    child: DecoratedBox(
+                      decoration: ShapeDecoration(
+                        color: _panelBg,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                            bottomLeft: Radius.circular(50),
+                            bottomRight: Radius.circular(50),
+                          ),
+                        ),
+                        shadows: const [
+                          BoxShadow(
+                            color: Color(0x19000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                          bottomLeft: Radius.circular(50),
+                          bottomRight: Radius.circular(50),
+                        ),
+                        child: _loading
+                            ? _buildLoading(context)
+                            : _error != null
+                                ? _buildError(context)
+                                : _articles!.isEmpty
+                                    ? _buildEmpty(context)
+                                    : _buildRackBody(context),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 72 + bottomSafe),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: _RackBottomBar(
+                  onCenterTap: () => _navigateToCreate(context),
+                ),
+              ),
+            ),
           ),
         ],
       ),
-      body: _loading
-          ? _buildLoading()
-          : _error != null
-              ? _buildError(context)
-              : _articles!.isEmpty
-                  ? _buildEmpty(context)
-                  : _buildRackList(context),
-      floatingActionButton: _loading
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _navigateToCreate(context),
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.textOnPrimary,
-              icon: const Icon(Icons.add, size: 22),
-              label: const Text('Add Shoe', style: TextStyle(fontWeight: FontWeight.w600)),
-            ),
     );
   }
 
-  Widget _buildLoading() {
+  Widget _buildLoading(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
+          const CircularProgressIndicator(color: _rackTealAccent),
           const SizedBox(height: 16),
           Text(
-            'Loading your Digital Shoes Rack...',
-            style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+            'Loading your rack…',
+            style: TextStyle(
+              fontSize: Responsive.fontSize(context, 14),
+              fontFamily: 'Montserrat',
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -151,38 +323,32 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildError(BuildContext context) {
+    final h = Responsive.horizontalPaddingOf(context);
     return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPaddingOf(context)),
+        padding: EdgeInsets.symmetric(horizontal: h),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            ),
-            const SizedBox(height: 20),
+            Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: 16),
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: Responsive.fontSize(context, 15),
+                fontFamily: 'Montserrat',
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
+            FilledButton.icon(
               onPressed: _loadArticles,
               icon: const Icon(Icons.refresh, size: 20),
               label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textOnPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              style: FilledButton.styleFrom(
+                backgroundColor: _rackTeal,
+                foregroundColor: Colors.white,
               ),
             ),
           ],
@@ -192,52 +358,43 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildEmpty(BuildContext context) {
+    final h = Responsive.horizontalPaddingOf(context);
     return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPaddingOf(context)),
+        padding: EdgeInsets.symmetric(horizontal: h),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.checkroom_outlined,
-                size: 64,
-                color: AppColors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Your Digital Shoes Rack is empty',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+            Icon(Icons.checkroom_outlined, size: 64, color: AppColors.textTertiary),
+            const SizedBox(height: 20),
+            Text(
+              'Your rack is empty',
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: Responsive.fontSize(context, 20),
+                fontFamily: 'Boldonse',
+                fontWeight: FontWeight.w400,
+                color: _rackDark,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Add your first pair to your Digital Shoes Rack',
+              'Add your first pair',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+              style: TextStyle(
+                fontSize: Responsive.fontSize(context, 14),
+                fontFamily: 'Montserrat',
+                color: AppColors.textTertiary,
+              ),
             ),
             const SizedBox(height: 28),
-            ElevatedButton.icon(
+            FilledButton.icon(
               onPressed: () => _navigateToCreate(context),
               icon: const Icon(Icons.add, size: 20),
-              label: const Text('Add Shoe'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textOnPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              label: const Text('Add shoe'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _rackTeal,
+                foregroundColor: Colors.white,
               ),
             ),
           ],
@@ -248,336 +405,361 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
   static const List<Map<String, String>> _filterTabs = [
     {'value': '', 'label': 'All'},
-    {'value': 'sports_shoe', 'label': 'Sports'},
-    {'value': 'casual', 'label': 'Casual'},
-    {'value': 'formal', 'label': 'Formal'},
+    {'value': 'formal', 'label': 'Formals'},
+    {'value': 'sports_shoe', 'label': 'Nike'},
+    {'value': 'casual', 'label': 'Casuals'},
+    {'value': 'boot', 'label': 'Heels'},
+    {'value': 'sandal', 'label': 'Converse'},
   ];
 
-  Widget _buildRackList(BuildContext context) {
+  Widget _buildRackBody(BuildContext context) {
     final list = _filteredArticles;
-    return RefreshIndicator(
-      onRefresh: _loadArticles,
-      color: AppColors.primary,
-      backgroundColor: AppColors.surface,
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: _RackHeader(
-              pairCount: _articles!.length,
-              filterCategory: _filterCategory,
-              filterTabs: _filterTabs,
-              onFilterChanged: (v) => setState(() => _filterCategory = v.isEmpty ? null : v),
-            ),
-          ),
-          if (list.isEmpty)
-            const SliverFillRemaining(
-              child: Center(
-                child: Text(
-                  'No shoes in this category',
-                  style: TextStyle(color: AppColors.textTertiary, fontSize: 15),
-                ),
-              ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final article = list[index];
-                  final imageUrl = _imageUrl(article.thumbnailImage);
-                  return _RackShelfItem(
-                    article: article,
-                    imageUrl: imageUrl,
-                    onTap: () => _navigateToDetails(context, article),
-                  );
-                },
-                childCount: list.length,
-              ),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
+    final hPad = Responsive.horizontalPaddingOf(context).clamp(12.0, 20.0);
 
-  void _navigateToDetails(BuildContext context, Article article) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ArticleDetailsPage(articleId: article.id),
-      ),
-    ).then((_) => _loadArticles());
-  }
-
-  void _navigateToCreate(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ArticleCreatePage(),
-      ),
-    ).then((_) => _loadArticles());
-  }
-}
-
-/// Rack header: title, pair count, filter tabs (All, Sports, Casual, Formal).
-class _RackHeader extends StatelessWidget {
-  final int pairCount;
-  final String? filterCategory;
-  final List<Map<String, String>> filterTabs;
-  final ValueChanged<String> onFilterChanged;
-
-  const _RackHeader({
-    required this.pairCount,
-    required this.filterCategory,
-    required this.filterTabs,
-    required this.onFilterChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
+          child: Row(
             children: [
-              const Text(
-                'MY SHOES',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  letterSpacing: 0.5,
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _rackDark),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'My Rack',
+                  style: TextStyle(
+                    color: _rackDark,
+                    fontSize: Responsive.fontSize(context, 24),
+                    fontFamily: 'Boldonse',
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Icon(Icons.checkroom_outlined, size: 20, color: AppColors.textSecondary),
-              const SizedBox(width: 6),
-              Text(
-                '$pairCount ${pairCount == 1 ? 'Pair' : 'Pairs'}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _navigateToCreate(context),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(12),
+                    decoration: ShapeDecoration(
+                      color: const Color(0x33DFE7E9),
+                      shape: RoundedRectangleBorder(
+                        side: const BorderSide(width: 1, color: _rackTealAccent),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      shadows: const [
+                        BoxShadow(
+                          color: Color(0x2D000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(Icons.add_rounded, color: _rackDark, size: 22),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          SingleChildScrollView(
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: hPad),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ChatbotPage()),
+                );
+              },
+              borderRadius: BorderRadius.circular(100),
+              child: Ink(
+                height: 46,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                decoration: ShapeDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment(1, 0.5),
+                    end: Alignment(0, 0.5),
+                    colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.auto_awesome_outlined, color: Colors.white, size: 22),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Style Me',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: Responsive.fontSize(context, 16),
+                        fontFamily: 'Boldonse',
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: hPad),
+          child: Container(
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: ShapeDecoration(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(width: 1, color: _rackDark),
+                borderRadius: BorderRadius.circular(100),
+              ),
+            ),
+            child: TextField(
+              onChanged: (v) => setState(() => _searchQuery = v),
+              style: TextStyle(
+                fontSize: Responsive.fontSize(context, 16),
+                fontFamily: 'Montserrat',
+                color: Colors.black87,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'Search',
+                hintStyle: TextStyle(
+                  color: Colors.black.withValues(alpha: 0.34),
+                  fontSize: Responsive.fontSize(context, 16),
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: Icon(Icons.search_rounded, color: Colors.black.withValues(alpha: 0.34), size: 22),
+                suffixIcon: Icon(Icons.mic_none_rounded, color: Colors.black.withValues(alpha: 0.34), size: 22),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 36,
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: filterTabs.map((tab) {
-                final value = tab['value']!;
-                final label = tab['label']!;
-                final isSelected = (filterCategory == null && value.isEmpty) ||
-                    (filterCategory != null && filterCategory == value);
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => onFilterChanged(value),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.surfaceVariant,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+            padding: EdgeInsets.symmetric(horizontal: hPad),
+            itemCount: _filterTabs.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 7),
+            itemBuilder: (context, i) {
+              final tab = _filterTabs[i];
+              final value = tab['value']!;
+              final label = tab['label']!;
+              final isSelected = (value.isEmpty && (_filterCategory == null || _filterCategory!.isEmpty)) ||
+                  (_filterCategory == value);
+              return _FilterChipPill(
+                label: label,
+                selected: isSelected,
+                onTap: () => setState(() => _filterCategory = value.isEmpty ? null : value),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadArticles,
+            color: _rackTealAccent,
+            backgroundColor: Colors.white,
+            child: list.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.sizeOf(context).height * 0.15),
+                      Center(
                         child: Text(
-                          label,
+                          'No shoes match',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? AppColors.onPrimary
-                                : AppColors.textPrimary,
+                            fontSize: Responsive.fontSize(context, 15),
+                            fontFamily: 'Montserrat',
+                            color: AppColors.textTertiary,
                           ),
                         ),
                       ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.fromLTRB(hPad - 2, 0, hPad - 2, 24),
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
                     ),
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      final article = list[index];
+                      final imageUrl = _imageUrl(article.thumbnailImage);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _RackShelfItem(
+                          article: article,
+                          imageUrl: imageUrl,
+                          onTap: () => _navigateToDetails(context, article),
+                        ),
+                      );
+                    },
                   ),
-                );
-              }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToDetails(BuildContext context, Article article) {
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (_) => ArticleDetailsPage(articleId: article.id),
+      ),
+    )
+        .then((_) => _loadArticles());
+  }
+
+  void _navigateToCreate(BuildContext context) {
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (_) => const ArticleCreatePage(),
+      ),
+    )
+        .then((_) => _loadArticles());
+  }
+}
+
+class _FilterChipPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChipPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  static const Color _border = Color(0xFFC6C6C6);
+  static const Color _teal = Color(0xFF0F6876);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(100),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(width: selected ? 2 : 1, color: selected ? _teal : _border),
+              borderRadius: BorderRadius.circular(100),
             ),
           ),
-        ],
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: Responsive.fontSize(context, 16),
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Single shelf row: shoe image (illuminated) + dark info panel (brand/model, condition, QR placeholder).
-class _RackShelfItem extends StatelessWidget {
-  final Article article;
-  final String imageUrl;
-  final VoidCallback onTap;
+class _RackBottomBar extends StatelessWidget {
+  final VoidCallback onCenterTap;
 
-  const _RackShelfItem({
-    required this.article,
-    required this.imageUrl,
-    required this.onTap,
-  });
+  const _RackBottomBar({required this.onCenterTap});
 
-  static String _categoryLabel(String category) {
-    const map = {
-      'sports_shoe': 'Sports',
-      'casual': 'Casual',
-      'formal': 'Formal',
-      'sandal': 'Sandal',
-      'boot': 'Boot',
-      'other': 'Other',
-    };
-    return map[category] ?? category;
-  }
-
-  static String _conditionLabel(String condition) {
-    if (condition.isEmpty) return '—';
-    final c = condition.toLowerCase();
-    if (c == 'excellent') return 'Excellent';
-    if (c == 'good') return 'Good';
-    if (c == 'fair') return 'Fair';
-    if (c == 'poor') return 'Poor';
-    return condition[0].toUpperCase() + condition.substring(1).toLowerCase();
-  }
+  static const SweepGradient _barGradient = SweepGradient(
+    center: Alignment(0.22, -1.07),
+    startAngle: -0.55,
+    endAngle: 5.73,
+    colors: [
+      Color(0xFF09E0FF),
+      Color(0xFF0F6876),
+      Color(0xFF062F35),
+      Color(0xFF062F35),
+    ],
+    stops: [0.05, 0.44, 0.57, 1],
+    transform: GradientRotation(-0.55),
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            height: 120,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadow,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return Container(
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: ShapeDecoration(
+        gradient: _barGradient,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+        shadows: const [
+          BoxShadow(
+            color: Color(0xFFABABAB),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Material(
+            color: Colors.white,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onCenterTap,
+              child: const SizedBox(
+                width: 45,
+                height: 45,
+                child: Icon(Icons.add_rounded, color: Color(0xFF062F35), size: 28),
+              ),
             ),
+          ),
+          Expanded(
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Illuminated shelf area – shoe image
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.12),
-                        blurRadius: 12,
-                        spreadRadius: -2,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
-                    child: imageUrl.isNotEmpty
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholder(),
-                          )
-                        : _placeholder(),
-                  ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
                 ),
-                // Info panel (brand/model, details, QR)
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(11)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '${article.brand} ${article.model}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${_categoryLabel(article.category)} · ${_conditionLabel(article.condition)}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (article.color.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  article.color,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppColors.textTertiary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        // QR placeholder
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Icon(
-                            Icons.qr_code_2_rounded,
-                            size: 28,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.grid_view_rounded, color: Colors.white, size: 24),
+                ),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 24),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _placeholder() {
-    return Container(
-      color: AppColors.surfaceVariant,
-      child: const Center(
-        child: Icon(
-          Icons.checkroom_outlined,
-          color: AppColors.textTertiary,
-          size: 40,
-        ),
+        ],
       ),
     );
   }

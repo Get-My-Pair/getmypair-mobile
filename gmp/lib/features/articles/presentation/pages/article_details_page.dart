@@ -8,12 +8,12 @@ import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
+import 'article_create_page.dart';
 import 'article_edit_page.dart';
 import '../../../service/presentation/pages/service_request_list_page.dart';
 import '../../../service/presentation/pages/service_selection_page.dart';
 
-/// Module 3 – Article details. Displays shoe info, materials, repair history placeholder,
-/// service requests placeholder. Buttons: Edit, Delete, Request Service.
+/// Module 3 – Article details. Figma rack-detail layout: gradient shell, panel, stats, actions.
 class ArticleDetailsPage extends StatefulWidget {
   final String articleId;
 
@@ -28,6 +28,25 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   bool _loading = true;
   String? _error;
 
+  static const Color _rackTeal = Color(0xFF0F6876);
+  static const Color _rackTealAccent = Color(0xFF11899B);
+  static const Color _rackDark = Color(0xFF062F35);
+  static const Color _panelBg = Color(0xFFF0F0F0);
+
+  static const SweepGradient _shellSweep = SweepGradient(
+    center: Alignment(0.22, -1.07),
+    startAngle: -0.55,
+    endAngle: 5.73,
+    colors: [
+      Color(0xFF09E0FF),
+      Color(0xFF0F6876),
+      Color(0xFF062F35),
+      Color(0xFF062F35),
+    ],
+    stops: [0.05, 0.44, 0.57, 1],
+    transform: GradientRotation(-0.55),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -38,12 +57,19 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
     tokenResult.fold(
-      (_) => setState(() { _error = 'Please sign in again'; _loading = false; }),
+      (_) => setState(() {
+        _error = 'Please sign in again';
+        _loading = false;
+      }),
       (token) async {
         try {
           final article = await sl<GetArticleById>().call(token, widget.articleId);
           if (!mounted) return;
-          setState(() { _article = article; _loading = false; _error = null; });
+          setState(() {
+            _article = article;
+            _loading = false;
+            _error = null;
+          });
         } catch (e) {
           if (!mounted) return;
           setState(() {
@@ -78,7 +104,13 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
       'slipper': 'Slipper',
       'other': 'Other',
     };
-    return map[c] ?? c;
+    return map[c] ?? (c.isEmpty ? '—' : c);
+  }
+
+  static Color? _parseColorHex(String s) {
+    final hex = RegExp(r'#?([0-9A-Fa-f]{6})').firstMatch(s.trim())?.group(1);
+    if (hex == null) return null;
+    return Color(int.parse(hex, radix: 16) + 0xFF000000);
   }
 
   Future<void> _deleteArticle() async {
@@ -97,7 +129,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: AppColors.textOnPrimary),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.textOnPrimary,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -107,402 +142,714 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
     tokenResult.fold(
-      (_) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in again'), backgroundColor: AppColors.error)),
+      (_) => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in again'), backgroundColor: AppColors.error),
+      ),
       (token) async {
         try {
           await sl<DeleteArticle>().call(token, _article!.id);
           if (!mounted) return;
           Navigator.of(context).pop(true);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Shoe removed'), backgroundColor: AppColors.success));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Shoe removed'), backgroundColor: AppColors.success),
+          );
         } catch (e) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AppColors.error),
+            SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+              backgroundColor: AppColors.error,
+            ),
           );
         }
       },
     );
   }
 
+  Future<void> _openRequestService() async {
+    final a = _article;
+    if (a == null) return;
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ServiceSelectionPage(articleId: a.id)),
+    );
+    if (!mounted) return;
+    if (created == true) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const ServiceRequestListPage()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bottomSafe = Responsive.bottomInsetOf(context);
+
     if (_loading) {
       return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            'Shoe Details',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-          ),
-          centerTitle: true,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: AppColors.primary),
-              const SizedBox(height: 16),
-              Text(
-                'Loading...',
-                style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+        backgroundColor: const Color(0xFFFAFAFA),
+        extendBody: true,
+        body: Stack(
+          children: [
+            const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: _shellSweep))),
+            SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                      child: DecoratedBox(
+                        decoration: ShapeDecoration(
+                          color: _panelBg,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                              bottomLeft: Radius.circular(50),
+                              bottomRight: Radius.circular(50),
+                            ),
+                          ),
+                          shadows: const [
+                            BoxShadow(
+                              color: Color(0x19000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(color: _rackTealAccent),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 72 + bottomSafe),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
+
     if (_error != null || _article == null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: const Text(
-            'Shoe Details',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-          ),
-          centerTitle: true,
-        ),
-        body: Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPaddingOf(context)),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.08),
-                    shape: BoxShape.circle,
+        backgroundColor: const Color(0xFFFAFAFA),
+        extendBody: true,
+        body: Stack(
+          children: [
+            const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: _shellSweep))),
+            SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                      child: DecoratedBox(
+                        decoration: ShapeDecoration(
+                          color: _panelBg,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                              bottomLeft: Radius.circular(50),
+                              bottomRight: Radius.circular(50),
+                            ),
+                          ),
+                          shadows: const [
+                            BoxShadow(
+                              color: Color(0x19000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPaddingOf(context)),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _error ?? 'Shoe not found',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: Responsive.fontSize(context, 15),
+                                    fontFamily: 'Montserrat',
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Go back'),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    FilledButton(
+                                      onPressed: _load,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: _rackTeal,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Icon(Icons.error_outline, size: 48, color: AppColors.error),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _error ?? 'Shoe not found',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _load,
-                  icon: const Icon(Icons.refresh, size: 20),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textOnPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-              ],
+                  SizedBox(height: 72 + bottomSafe),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       );
     }
 
     final a = _article!;
-    final horizontal = Responsive.horizontalPaddingOf(context);
     final imageUrl = _imageUrl(a.thumbnailImage);
+    final hPad = Responsive.horizontalPaddingOf(context);
+    final swatchColor = _parseColorHex(a.color) ?? const Color(0xFF11253F);
+
+    TextStyle boldonse(double base) => TextStyle(
+          fontFamily: 'Boldonse',
+          fontWeight: FontWeight.w400,
+          fontSize: Responsive.fontSize(context, base),
+          color: Colors.black,
+        );
+
+    TextStyle montserrat(double base, {Color? color}) => TextStyle(
+          fontFamily: 'Montserrat',
+          fontWeight: FontWeight.w400,
+          fontSize: Responsive.fontSize(context, base),
+          color: color ?? Colors.black,
+        );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Shoe Details',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-        ),
-        centerTitle: true,
-      ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
+      backgroundColor: const Color(0xFFFAFAFA),
+      extendBody: true,
+      body: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Hero image card
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadow,
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
-                      height: 260,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(260),
-                    )
-                  : _placeholder(260),
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Title: Brand & Model
-          Text(
-            '${a.brand} ${a.model}',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Details card
-          _sectionCard(
+          const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: _shellSweep))),
+          SafeArea(
+            bottom: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _detailRow('Category', _categoryLabel(a.category)),
-                _divider(),
-                _detailRow('Color', a.color.isNotEmpty ? a.color : '—'),
-                if (a.purchaseYear != null) ...[
-                  _divider(),
-                  _detailRow('Purchase year', a.purchaseYear.toString()),
-                ],
-                _divider(),
-                _detailRow('Condition', _conditionLabel(a.condition)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Materials card
-          _sectionCard(
-            title: 'Materials',
-            child: a.materials.isEmpty
-                ? Text(
-                    'No materials added',
-                    style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: a.materials
-                        .map(
-                          (m) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                    child: DecoratedBox(
+                      decoration: ShapeDecoration(
+                        color: _panelBg,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                            bottomLeft: Radius.circular(50),
+                            bottomRight: Radius.circular(50),
+                          ),
+                        ),
+                        shadows: const [
+                          BoxShadow(
+                            color: Color(0x19000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                          bottomLeft: Radius.circular(50),
+                          bottomRight: Radius.circular(50),
+                        ),
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                                    onPressed: () => Navigator.pop(context),
+                                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22, color: _rackDark),
                                   ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                                        onPressed: () {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Share coming soon')),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.ios_share_rounded, size: 24, color: _rackDark),
+                                      ),
+                                      PopupMenuButton<String>(
+                                        icon: const Icon(Icons.more_horiz_rounded, size: 26, color: _rackDark),
+                                        onSelected: (v) async {
+                                          if (v == 'edit') {
+                                            await Navigator.of(context).push(
+                                              MaterialPageRoute(builder: (_) => ArticleEditPage(articleId: a.id)),
+                                            );
+                                            if (mounted) _load();
+                                          } else if (v == 'service') {
+                                            await _openRequestService();
+                                          } else if (v == 'delete') {
+                                            await _deleteArticle();
+                                          }
+                                        },
+                                        itemBuilder: (ctx) => [
+                                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                          const PopupMenuItem(value: 'service', child: Text('Request service')),
+                                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                a.brand.isNotEmpty ? a.brand : 'Shoe',
+                                style: TextStyle(
+                                  color: _rackTealAccent,
+                                  fontSize: Responsive.fontSize(context, 24),
+                                  fontFamily: 'Boldonse',
+                                  fontWeight: FontWeight.w400,
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    '${m.type} ${m.percentage}%',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.textPrimary,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                a.model.isNotEmpty ? a.model : '—',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: Responsive.fontSize(context, 20),
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Center(
+                                child: Transform.rotate(
+                                  angle: -0.48,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: SizedBox(
+                                      width: Responsive.scaleDesignWidth(context, 165).clamp(210.0, 310.0),
+                                      height: Responsive.scaleDesignWidth(context, 135).clamp(100.0, 165.0),
+                                      child: imageUrl.isNotEmpty
+                                          ? Image.network(
+                                              imageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => _placeholder(),
+                                            )
+                                          : _placeholder(),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              SizedBox(height: Responsive.scaleDesignWidth(context, 30)),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.only(bottom: 14),
+                                decoration: ShapeDecoration(
+                                  shape: RoundedRectangleBorder(
+                                    side: BorderSide(
+                                      width: 1,
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: _statPair(
+                                        context,
+                                        value: '—',
+                                        label: 'Size',
+                                        valueStyle: boldonse(16),
+                                        labelStyle: montserrat(16),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _statColorColumn(
+                                        context,
+                                        swatchColor: swatchColor,
+                                        colorName: a.color.isNotEmpty ? a.color : '—',
+                                        labelStyle: montserrat(16),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _statPair(
+                                        context,
+                                        value: a.purchaseYear?.toString() ?? '—',
+                                        label: 'Purchased',
+                                        valueStyle: boldonse(16),
+                                        labelStyle: montserrat(16),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: _statPair(
+                                      context,
+                                      value: _categoryLabel(a.category),
+                                      label: 'Category',
+                                      valueStyle: boldonse(16),
+                                      labelStyle: montserrat(16),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _statPair(
+                                      context,
+                                      value: '—',
+                                      label: 'Last wear',
+                                      valueStyle: boldonse(16),
+                                      labelStyle: montserrat(16),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              Material(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  onTap: _openRequestService,
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFF09DFFF)),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x19000000),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Last sent to shoe care',
+                                            style: montserrat(16),
+                                          ),
+                                        ),
+                                        Text(
+                                          '—',
+                                          textAlign: TextAlign.right,
+                                          style: boldonse(16),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Transform.rotate(
+                                          angle: -3.14159,
+                                          child: const Icon(Icons.keyboard_arrow_down_rounded, size: 24),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _gradientPillButton(
+                                      label: 'Rehome',
+                                      onTap: () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Rehome coming soon')),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _outlinedPillButton(
+                                      label: 'Rent',
+                                      onTap: () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Rent coming soon')),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Condition: ${_conditionLabel(a.condition)}',
+                                style: montserrat(14, color: AppColors.textSecondary),
+                              ),
+                            ],
                           ),
-                        )
-                        .toList(),
-                  ),
-          ),
-          const SizedBox(height: 16),
-          // Repair history card
-          _sectionCard(
-            title: 'Repair history',
-            child: Row(
-              children: [
-                Icon(Icons.history, size: 20, color: AppColors.textTertiary),
-                const SizedBox(width: 10),
-                Text(
-                  'No repairs yet',
-                  style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Service requests card
-          _sectionCard(
-            title: 'Service requests',
-            child: Row(
-              children: [
-                Icon(Icons.build_outlined, size: 20, color: AppColors.textTertiary),
-                const SizedBox(width: 10),
-                Text(
-                  'No service requests yet',
-                  style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ArticleEditPage(articleId: a.id),
+                        ),
+                      ),
                     ),
-                  ).then((_) => _load()),
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  label: const Text('Edit'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
+                ),
+                SizedBox(height: 72 + bottomSafe),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: _ArticleDetailBottomBar(
+                  onCenterTap: () {
+                    Navigator.of(context)
+                        .push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ArticleCreatePage(),
+                      ),
+                    )
+                        .then((_) => _load());
+                  },
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _deleteArticle,
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  label: const Text('Delete'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statPair(
+    BuildContext context, {
+    required String value,
+    required String label,
+    required TextStyle valueStyle,
+    required TextStyle labelStyle,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(value, textAlign: TextAlign.center, style: valueStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
+        Text(label, textAlign: TextAlign.center, style: labelStyle),
+      ],
+    );
+  }
+
+  Widget _statColorColumn(
+    BuildContext context, {
+    required Color swatchColor,
+    required String colorName,
+    required TextStyle labelStyle,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: ShapeDecoration(
+            color: swatchColor,
+            shape: const OvalBorder(),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          colorName,
+          textAlign: TextAlign.center,
+          style: labelStyle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _gradientPillButton({required String label, required VoidCallback onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Ink(
+          height: 59,
+          decoration: ShapeDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment(1, 0.5),
+              end: Alignment(0, 0.5),
+              colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shadows: const [
+              BoxShadow(
+                color: Color(0x19000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                final created = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(
-                    builder: (_) => ServiceSelectionPage(articleId: a.id),
-                  ),
-                );
-                if (!context.mounted) return;
-                if (created == true) {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ServiceRequestListPage(),
-                    ),
-                  );
-                }
-              },
-              icon: const Icon(Icons.build_outlined, size: 20),
-              label: const Text('Request Service'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textOnPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontFamily: 'Boldonse',
+                fontWeight: FontWeight.w400,
               ),
             ),
           ),
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _sectionCard({String? title, required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+  Widget _outlinedPillButton({required String label, required VoidCallback onTap}) {
+    return Material(
+      color: const Color(0xFFDFE7E9),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 59,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF0F6876)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x19000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
               ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF062F35),
+              fontSize: 16,
+              fontFamily: 'Boldonse',
+              fontWeight: FontWeight.w400,
             ),
-            const SizedBox(height: 12),
-          ],
-          child,
-        ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+  Widget _placeholder() {
+    return ColoredBox(
+      color: AppColors.surfaceVariant,
+      child: const Center(
+        child: Icon(Icons.checkroom_outlined, color: AppColors.textTertiary, size: 56),
+      ),
+    );
+  }
+}
+
+class _ArticleDetailBottomBar extends StatelessWidget {
+  final VoidCallback onCenterTap;
+
+  const _ArticleDetailBottomBar({required this.onCenterTap});
+
+  static const SweepGradient _barGradient = SweepGradient(
+    center: Alignment(0.22, -1.07),
+    startAngle: -0.55,
+    endAngle: 5.73,
+    colors: [
+      Color(0xFF09E0FF),
+      Color(0xFF0F6876),
+      Color(0xFF062F35),
+      Color(0xFF062F35),
+    ],
+    stops: [0.05, 0.44, 0.57, 1],
+    transform: GradientRotation(-0.55),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: ShapeDecoration(
+        gradient: _barGradient,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+        shadows: const [
+          BoxShadow(
+            color: Color(0xFFABABAB),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
+          Material(
+            color: Colors.white,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onCenterTap,
+              child: const SizedBox(
+                width: 45,
+                height: 45,
+                child: Icon(Icons.add_rounded, color: Color(0xFF062F35), size: 28),
+              ),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
+                ),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.grid_view_rounded, color: Colors.white, size: 24),
+                ),
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 24),
+                ),
+              ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _divider() {
-    return Divider(height: 1, color: AppColors.divider);
-  }
-
-  Widget _placeholder(double height) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      color: AppColors.surfaceVariant,
-      child: const Icon(Icons.checkroom_outlined, color: AppColors.textTertiary, size: 56),
     );
   }
 }
