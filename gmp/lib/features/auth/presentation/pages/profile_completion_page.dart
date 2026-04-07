@@ -6,6 +6,7 @@ import '../../../../core/utils/responsive.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/gradient_page_shell.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -194,15 +195,9 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
         builder: (context, state) {
           final isLoading = state is AuthLoading;
           
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                onPressed: () => Navigator.pop(context),
-              ),
+          return GradientPageShell(
+            appBar: buildGradientBackOnlyAppBar(
+              onBack: () => Navigator.pop(context),
             ),
             body: SafeArea(
               child: SingleChildScrollView(
@@ -233,7 +228,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                           style: TextStyle(
                             fontSize: Responsive.fontSize(context, 28),
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDark,
+                            color: Colors.white,
                             letterSpacing: -0.5,
                           ),
                         ),
@@ -246,7 +241,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w400,
-                            color: AppColors.textSecondary,
+                            color: AppColors.onGradientBody,
                           ),
                         ),
                       ),

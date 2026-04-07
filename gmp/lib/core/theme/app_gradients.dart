@@ -2,31 +2,43 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Brand gradients (onboarding, splash, hero surfaces).
-class AppGradients {
+/// Shared marketing / profile gradients (dark teal → cyan).
+abstract class AppGradients {
   AppGradients._();
 
-  /// Full-screen vertical: dark teal → mid teal → cyan (onboarding / splash).
+  /// Splash / onboarding: bright cyan → mid teal → dark teal (top → bottom).
   static const LinearGradient heroVertical = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [
-      AppColors.footwearHeroStart,
-      AppColors.footwearHeroMid,
       AppColors.footwearHeroEnd,
+      AppColors.footwearHeroMid,
+      AppColors.footwearHeroStart,
     ],
-    stops: const [0.0, 0.48, 1.0],
+    stops: [0.0, 0.52, 1.0],
   );
 
-  /// Hero cards / banners (slightly diagonal).
+  /// Login / hero screens: same palette on a diagonal.
   static const LinearGradient heroDiagonal = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      AppColors.footwearHeroStart,
-      AppColors.footwearHeroMid,
       AppColors.footwearHeroEnd,
+      AppColors.footwearHeroMid,
+      AppColors.footwearHeroStart,
     ],
-    stops: const [0.0, 0.5, 1.0],
+    stops: [0.0, 0.48, 1.0],
+  );
+
+  /// Bottom-left dark teal → top-right luminous cyan (profile / settings shell).
+  static const LinearGradient screenTealCyan = LinearGradient(
+    begin: Alignment.bottomLeft,
+    end: Alignment.topRight,
+    colors: [
+      Color(0xFF004D40),
+      Color(0xFF0F6876),
+      Color(0xFF00BCD4),
+    ],
+    stops: [0.0, 0.45, 1.0],
   );
 }

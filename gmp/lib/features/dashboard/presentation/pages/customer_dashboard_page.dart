@@ -99,6 +99,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
 /// Pill-shaped floating bar: dark teal → cyan gradient, white outline icons,
 /// selected tab on a solid white circle (icon in dark teal).
+/// Tabs: Home · Discover (sparkles) · Favorites · Cart · Profile.
 class _FloatingGradientBottomNav extends StatelessWidget {
   const _FloatingGradientBottomNav({
     required this.currentIndex,
@@ -116,8 +117,8 @@ class _FloatingGradientBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <({IconData outlined, IconData filled})>[
       (outlined: Icons.home_outlined, filled: Icons.home_rounded),
+      (outlined: Icons.auto_awesome_outlined, filled: Icons.auto_awesome),
       (outlined: Icons.favorite_border_rounded, filled: Icons.favorite_rounded),
-      (outlined: Icons.checkroom_outlined, filled: Icons.checkroom_rounded),
       (outlined: Icons.shopping_cart_outlined, filled: Icons.shopping_cart_rounded),
       (outlined: Icons.person_outline_rounded, filled: Icons.person_rounded),
     ];

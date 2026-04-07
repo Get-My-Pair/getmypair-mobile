@@ -3,6 +3,7 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 import 'service_request_details_page.dart';
@@ -72,30 +73,19 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
   @override
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'My Requests',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        centerTitle: true,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'My Requests',
         actions: [
           IconButton(
             onPressed: _load,
-            icon: const Icon(Icons.refresh, color: AppColors.textPrimary),
+            icon: const Icon(Icons.refresh, color: Colors.white),
           ),
         ],
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CircularProgressIndicator(color: Colors.white),
             )
           : _error != null
           ? Center(
@@ -112,7 +102,7 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
           ? const Center(
               child: Text(
                 'No service requests yet',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: AppColors.onGradientBody),
               ),
             )
           : ListView.builder(

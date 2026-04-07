@@ -335,11 +335,19 @@ class _HomePageState extends State<HomePage> {
                           currentAddress: _currentAddress,
                           pairsInRackDisplay: _pairsInRackDisplay,
                           onLocationTap: () async {
+                            final profile = userProfileFromProfileState(
+                              context.read<ProfileBloc>().state,
+                            );
+                            final authState = context.read<AuthBloc>().state;
                             final selected = await Navigator.of(context)
                                 .push<String>(
                                   MaterialPageRoute(
                                     builder: (_) => SelectLocationPage(
+                                      profileBloc: context.read<ProfileBloc>(),
                                       initialAddress: _currentAddress,
+                                      mapPinDisplayName:
+                                          mapPinDisplayNameFrom(profile, authState),
+                                      mapPinProfileImageRef: profile?.profileImage,
                                     ),
                                   ),
                                 );

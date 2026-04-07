@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -190,30 +191,26 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   @override
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'Add Shoe',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _submitting ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Add Shoe',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        automaticallyImplyLeading: false,
         centerTitle: true,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-          children: [
+      body: SafeArea(
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: ColoredBox(
+            color: AppColors.surface,
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
+                children: [
             if (_errorMessage != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -269,6 +266,9 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
               ),
             ),
           ],
+              ),
+            ),
+          ),
         ),
       ),
     );

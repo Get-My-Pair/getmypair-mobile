@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/articles/domain/usecases/update_article.dart';
@@ -220,30 +221,25 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+      return GradientPageShell(
+        appBar: buildGradientAppBar(
+          title: 'Edit Shoe',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            'Edit Shoe',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-          ),
+          automaticallyImplyLeading: false,
           centerTitle: true,
         ),
-        body: Center(
+        body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: AppColors.primary),
-              const SizedBox(height: 16),
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
               Text(
                 'Loading shoe...',
-                style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+                style: TextStyle(fontSize: 14, color: AppColors.onGradientBody),
               ),
             ],
           ),
@@ -252,19 +248,14 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     }
 
     if (_error != null || _article == null) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+      return GradientPageShell(
+        appBar: buildGradientAppBar(
+          title: 'Edit Shoe',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            'Edit Shoe',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-          ),
+          automaticallyImplyLeading: false,
           centerTitle: true,
         ),
         body: Center(
@@ -279,7 +270,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                     color: AppColors.error.withOpacity(0.08),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                  child: const Icon(Icons.error_outline, size: 48, color: AppColors.error),
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -287,7 +278,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 15,
-                    color: AppColors.textSecondary,
+                    color: AppColors.onGradientBody,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -313,30 +304,26 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
     final horizontal = Responsive.horizontalPaddingOf(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'Edit Shoe',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _submitting ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Edit Shoe',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        automaticallyImplyLeading: false,
         centerTitle: true,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-          children: [
+      body: SafeArea(
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: ColoredBox(
+            color: AppColors.surface,
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
+                children: [
             if (_error != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -390,6 +377,9 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
               ),
             ),
           ],
+              ),
+            ),
+          ),
         ),
       ),
     );

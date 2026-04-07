@@ -11,95 +11,101 @@ import 'package:gmp/injection_container.dart';
 import 'article_create_page.dart';
 import 'article_details_page.dart';
 
-/// Single rack row: teal border card, thumbnail + Boldonse labels (color / brand / model).
-class _RackShelfItem extends StatelessWidget {
+/// Rack cell: product image (contain) + single centered teal label (mockup: no card frame).
+class _RackGridItem extends StatelessWidget {
   final Article article;
   final String imageUrl;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool selectionMode;
+  final bool selected;
 
-  const _RackShelfItem({
+  const _RackGridItem({
     required this.article,
     required this.imageUrl,
     required this.onTap,
+    this.onLongPress,
+    this.selectionMode = false,
+    this.selected = false,
   });
 
-  static const Color _labelColor = Color(0xFF11899B);
-  static const Color _borderTeal = Color(0xFF0F6876);
+  static const Color _labelColor = Color(0xFF11999E);
+  static const Color _ringTeal = Color(0xFF11999E);
+
+  static String _displayLabel(Article a) {
+    if (a.color.trim().isNotEmpty) return a.color.trim();
+    if (a.brand.trim().isNotEmpty) return a.brand.trim();
+    if (a.model.trim().isNotEmpty) return a.model.trim();
+    return 'Shoe';
+  }
 
   @override
   Widget build(BuildContext context) {
     final labelStyle = TextStyle(
       color: _labelColor,
-      fontSize: Responsive.fontSize(context, 14),
+      fontSize: Responsive.fontSize(context, 11),
       fontFamily: 'Boldonse',
       fontWeight: FontWeight.w400,
+      height: 1.15,
     );
+    final label = _displayLabel(article);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 104),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: ShapeDecoration(
-            color: const Color(0xFFF0F0F0),
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(width: 3, color: _borderTeal),
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              SizedBox(
-                width: 96,
-                height: 60,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => _rackThumbPlaceholder(),
-                        )
-                      : _rackThumbPlaceholder(),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: selectionMode ? 8 : 0),
+                      child: imageUrl.isNotEmpty
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, _, _) => _rackThumbPlaceholder(),
+                            )
+                          : _rackThumbPlaceholder(),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: labelStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (article.color.isNotEmpty)
-                      Text(
-                        article.color,
-                        style: labelStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              if (selectionMode)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  child: GestureDetector(
+                    onTap: onTap,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected ? _ringTeal : Colors.white,
+                        border: Border.all(color: _ringTeal, width: 2),
                       ),
-                    if (article.brand.isNotEmpty)
-                      Text(
-                        article.brand,
-                        style: labelStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    if (article.model.isNotEmpty)
-                      Text(
-                        article.model,
-                        style: labelStyle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    if (article.color.isEmpty && article.brand.isEmpty && article.model.isEmpty)
-                      Text('Tap for details', style: labelStyle),
-                  ],
+                      child: selected
+                          ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                          : null,
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -109,9 +115,9 @@ class _RackShelfItem extends StatelessWidget {
 
   static Widget _rackThumbPlaceholder() {
     return ColoredBox(
-      color: AppColors.surfaceVariant,
-      child: const Center(
-        child: Icon(Icons.checkroom_outlined, color: AppColors.textTertiary, size: 32),
+      color: Colors.transparent,
+      child: Center(
+        child: Icon(Icons.checkroom_outlined, color: AppColors.textTertiary.withValues(alpha: 0.5), size: 32),
       ),
     );
   }
@@ -131,11 +137,14 @@ class _ArticleListPageState extends State<ArticleListPage> {
   bool _loading = true;
   String? _filterCategory;
   String _searchQuery = '';
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = {};
 
   static const Color _rackTeal = Color(0xFF0F6876);
-  static const Color _rackTealAccent = Color(0xFF11899B);
+  /// Primary UI teal from mockup (#11999E).
+  static const Color _rackTealPrimary = Color(0xFF11999E);
   static const Color _rackDark = Color(0xFF062F35);
-  static const Color _panelBg = Color(0xFFF0F0F0);
+  static const Color _panelBg = Color(0xFFF5F5F5);
 
   static const SweepGradient _shellSweep = SweepGradient(
     center: Alignment(0.22, -1.07),
@@ -291,9 +300,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: _RackBottomBar(
-                  onCenterTap: () => _navigateToCreate(context),
-                ),
+                child: const _RackBottomBar(),
               ),
             ),
           ),
@@ -307,7 +314,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: _rackTealAccent),
+          const CircularProgressIndicator(color: _rackTealPrimary),
           const SizedBox(height: 16),
           Text(
             'Loading your rack…',
@@ -412,174 +419,226 @@ class _ArticleListPageState extends State<ArticleListPage> {
     {'value': 'sandal', 'label': 'Converse'},
   ];
 
+  Widget _buildTealRowDivider() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Container(
+          height: 2,
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: _rackTealPrimary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRackBody(BuildContext context) {
     final list = _filteredArticles;
     final hPad = Responsive.horizontalPaddingOf(context).clamp(12.0, 20.0);
+    final canPop = Navigator.canPop(context);
+    final rowCount = list.isEmpty ? 0 : (list.length + 2) ~/ 3;
+    final selectedCount = _selectedIds.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
-          child: Row(
-            children: [
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _rackDark),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  'My Rack',
-                  style: TextStyle(
-                    color: _rackDark,
-                    fontSize: Responsive.fontSize(context, 24),
-                    fontFamily: 'Boldonse',
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _navigateToCreate(context),
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(12),
-                    decoration: ShapeDecoration(
-                      color: const Color(0x33DFE7E9),
-                      shape: RoundedRectangleBorder(
-                        side: const BorderSide(width: 1, color: _rackTealAccent),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      shadows: const [
-                        BoxShadow(
-                          color: Color(0x2D000000),
-                          blurRadius: 4,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(Icons.add_rounded, color: _rackDark, size: 22),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: hPad),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ChatbotPage()),
-                );
-              },
-              borderRadius: BorderRadius.circular(100),
-              child: Ink(
-                height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                decoration: ShapeDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment(1, 0.5),
-                    end: Alignment(0, 0.5),
-                    colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+          child: _selectionMode
+              ? Row(
                   children: [
-                    Icon(Icons.auto_awesome_outlined, color: Colors.white, size: 22),
-                    const SizedBox(width: 10),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      onPressed: () => setState(() {
+                        _selectionMode = false;
+                        _selectedIds.clear();
+                      }),
+                      icon: Icon(Icons.close_rounded, size: 24, color: _rackDark),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'My Rack',
+                        style: TextStyle(
+                          color: _rackDark,
+                          fontSize: Responsive.fontSize(context, 22),
+                          fontFamily: 'Boldonse',
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
                     Text(
-                      'Style Me',
+                      '$selectedCount Selected',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: Responsive.fontSize(context, 16),
-                        fontFamily: 'Boldonse',
-                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF5C5C5C),
+                        fontSize: Responsive.fontSize(context, 14),
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    if (canPop)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _rackDark),
+                      ),
+                    if (canPop) const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'My Rack',
+                        style: TextStyle(
+                          color: _rackDark,
+                          fontSize: Responsive.fontSize(context, 24),
+                          fontFamily: 'Boldonse',
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _navigateToCreate(context),
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: ShapeDecoration(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              side: const BorderSide(width: 1.5, color: _rackTealPrimary),
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                          ),
+                          child: Icon(Icons.add_rounded, color: _rackDark, size: 22),
+                        ),
                       ),
                     ),
                   ],
                 ),
+        ),
+        if (!_selectionMode) ...[
+          const SizedBox(height: 14),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: hPad),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ChatbotPage()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(100),
+                child: Ink(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: ShapeDecoration(
+                    color: _rackTealPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.star_outline_rounded, color: Colors.white, size: 24),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Style Me',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: Responsive.fontSize(context, 17),
+                          fontFamily: 'Boldonse',
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: hPad),
-          child: Container(
-            height: 42,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: ShapeDecoration(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(width: 1, color: _rackDark),
-                borderRadius: BorderRadius.circular(100),
+          const SizedBox(height: 14),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: hPad),
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: ShapeDecoration(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(width: 1.5, color: _rackTealPrimary),
+                  borderRadius: BorderRadius.circular(100),
+                ),
               ),
-            ),
-            child: TextField(
-              onChanged: (v) => setState(() => _searchQuery = v),
-              style: TextStyle(
-                fontSize: Responsive.fontSize(context, 16),
-                fontFamily: 'Montserrat',
-                color: Colors.black87,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: 'Search',
-                hintStyle: TextStyle(
-                  color: Colors.black.withValues(alpha: 0.34),
+              child: TextField(
+                onChanged: (v) => setState(() => _searchQuery = v),
+                style: TextStyle(
                   fontSize: Responsive.fontSize(context, 16),
                   fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w400,
+                  color: Colors.black87,
                 ),
-                prefixIcon: Icon(Icons.search_rounded, color: Colors.black.withValues(alpha: 0.34), size: 22),
-                suffixIcon: Icon(Icons.mic_none_rounded, color: Colors.black.withValues(alpha: 0.34), size: 22),
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  hintText: 'Search',
+                  hintStyle: TextStyle(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    fontSize: Responsive.fontSize(context, 16),
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w400,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: Colors.black.withValues(alpha: 0.35),
+                    size: 22,
+                  ),
+                  suffixIcon: Icon(
+                    Icons.tune_rounded,
+                    color: _rackTealPrimary.withValues(alpha: 0.85),
+                    size: 22,
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 36,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: hPad),
-            itemCount: _filterTabs.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 7),
-            itemBuilder: (context, i) {
-              final tab = _filterTabs[i];
-              final value = tab['value']!;
-              final label = tab['label']!;
-              final isSelected = (value.isEmpty && (_filterCategory == null || _filterCategory!.isEmpty)) ||
-                  (_filterCategory == value);
-              return _FilterChipPill(
-                label: label,
-                selected: isSelected,
-                onTap: () => setState(() => _filterCategory = value.isEmpty ? null : value),
-              );
-            },
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: hPad),
+              itemCount: _filterTabs.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final tab = _filterTabs[i];
+                final value = tab['value']!;
+                final label = tab['label']!;
+                final isSelected = (value.isEmpty && (_filterCategory == null || _filterCategory!.isEmpty)) ||
+                    (_filterCategory == value);
+                return _FilterChipPill(
+                  label: label,
+                  selected: isSelected,
+                  onTap: () => setState(() => _filterCategory = value.isEmpty ? null : value),
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+        ],
+        const SizedBox(height: 8),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadArticles,
-            color: _rackTealAccent,
+            color: _rackTealPrimary,
             backgroundColor: Colors.white,
             child: list.isEmpty
                 ? ListView(
@@ -598,24 +657,58 @@ class _ArticleListPageState extends State<ArticleListPage> {
                       ),
                     ],
                   )
-                : ListView.builder(
-                    padding: EdgeInsets.fromLTRB(hPad - 2, 0, hPad - 2, 24),
+                : ListView(
+                    padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 24),
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
-                    itemCount: list.length,
-                    itemBuilder: (context, index) {
-                      final article = list[index];
-                      final imageUrl = _imageUrl(article.thumbnailImage);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _RackShelfItem(
-                          article: article,
-                          imageUrl: imageUrl,
-                          onTap: () => _navigateToDetails(context, article),
+                    children: [
+                      for (int r = 0; r < rowCount; r++) ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: List.generate(3, (c) {
+                            final idx = r * 3 + c;
+                            if (idx >= list.length) {
+                              return const Expanded(child: SizedBox.shrink());
+                            }
+                            final article = list[idx];
+                            final imageUrl = _imageUrl(article.thumbnailImage);
+                            return Expanded(
+                              child: AspectRatio(
+                                aspectRatio: 0.72,
+                                child: _RackGridItem(
+                                  article: article,
+                                  imageUrl: imageUrl,
+                                  selectionMode: _selectionMode,
+                                  selected: _selectedIds.contains(article.id),
+                                  onLongPress: () => setState(() {
+                                    _selectionMode = true;
+                                    _selectedIds.add(article.id);
+                                  }),
+                                  onTap: () {
+                                    if (_selectionMode) {
+                                      setState(() {
+                                        if (_selectedIds.contains(article.id)) {
+                                          _selectedIds.remove(article.id);
+                                          if (_selectedIds.isEmpty) {
+                                            _selectionMode = false;
+                                          }
+                                        } else {
+                                          _selectedIds.add(article.id);
+                                        }
+                                      });
+                                    } else {
+                                      _navigateToDetails(context, article);
+                                    }
+                                  },
+                                ),
+                              ),
+                            );
+                          }),
                         ),
-                      );
-                    },
+                        if (r < rowCount - 1) _buildTealRowDivider(),
+                      ],
+                    ],
                   ),
           ),
         ),
@@ -655,8 +748,7 @@ class _FilterChipPill extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _border = Color(0xFFC6C6C6);
-  static const Color _teal = Color(0xFF0F6876);
+  static const Color _teal = Color(0xFF11999E);
 
   @override
   Widget build(BuildContext context) {
@@ -666,11 +758,11 @@ class _FilterChipPill extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(100),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: ShapeDecoration(
             color: Colors.white,
             shape: RoundedRectangleBorder(
-              side: BorderSide(width: selected ? 2 : 1, color: selected ? _teal : _border),
+              side: BorderSide(width: selected ? 2 : 1.2, color: _teal),
               borderRadius: BorderRadius.circular(100),
             ),
           ),
@@ -678,10 +770,10 @@ class _FilterChipPill extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: Colors.black,
-              fontSize: Responsive.fontSize(context, 16),
+              color: const Color(0xFF1A1A1A),
+              fontSize: Responsive.fontSize(context, 14),
               fontFamily: 'Montserrat',
-              fontWeight: FontWeight.w400,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
         ),
@@ -690,76 +782,131 @@ class _FilterChipPill extends StatelessWidget {
   }
 }
 
+/// Mockup: Home · Favorites · Rack (shoe) · Cart · Profile — white circle on active tab.
 class _RackBottomBar extends StatelessWidget {
-  final VoidCallback onCenterTap;
+  const _RackBottomBar();
 
-  const _RackBottomBar({required this.onCenterTap});
+  static const double _barHeight = 56;
+  static const double _hitSize = 44;
+  static const Color _selectedIconColor = Color(0xFF08343A);
 
-  static const SweepGradient _barGradient = SweepGradient(
-    center: Alignment(0.22, -1.07),
-    startAngle: -0.55,
-    endAngle: 5.73,
-    colors: [
-      Color(0xFF09E0FF),
-      Color(0xFF0F6876),
-      Color(0xFF062F35),
-      Color(0xFF062F35),
-    ],
-    stops: [0.05, 0.44, 0.57, 1],
-    transform: GradientRotation(-0.55),
-  );
+  /// Rack tab is index 2 while on this page.
+  static const int _rackTabIndex = 2;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: ShapeDecoration(
-        gradient: _barGradient,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-        shadows: const [
-          BoxShadow(
-            color: Color(0xFFABABAB),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
+    final items = <({IconData outlined, IconData filled, VoidCallback onTap})>[
+      (
+        outlined: Icons.home_outlined,
+        filled: Icons.home_rounded,
+        onTap: () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        },
       ),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.white,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onCenterTap,
-              child: const SizedBox(
-                width: 45,
-                height: 45,
-                child: Icon(Icons.add_rounded, color: Color(0xFF062F35), size: 28),
-              ),
-            ),
+      (
+        outlined: Icons.favorite_border_rounded,
+        filled: Icons.favorite_rounded,
+        onTap: () {},
+      ),
+      (
+        outlined: Icons.checkroom_outlined,
+        filled: Icons.checkroom,
+        onTap: () {},
+      ),
+      (
+        outlined: Icons.shopping_cart_outlined,
+        filled: Icons.shopping_cart_rounded,
+        onTap: () {},
+      ),
+      (
+        outlined: Icons.person_outline_rounded,
+        filled: Icons.person_rounded,
+        onTap: () {},
+      ),
+    ];
+
+    return Material(
+      color: Colors.transparent,
+      elevation: 0,
+      child: Container(
+        height: _barHeight,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_barHeight / 2),
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Color(0xFF08343A),
+              Color(0xFF0F6876),
+              Color(0xFF11999E),
+              Color(0xFF00D4E0),
+            ],
+            stops: [0.0, 0.35, 0.65, 1.0],
           ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.grid_view_rounded, color: Colors.white, size: 24),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 24),
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+              spreadRadius: -4,
             ),
+            BoxShadow(
+              color: const Color(0xFF0A6C78).withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(items.length, (i) {
+              final selected = i == _rackTabIndex;
+              final item = items[i];
+              return Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: item.onTap,
+                    customBorder: const CircleBorder(),
+                    splashColor: Colors.white24,
+                    highlightColor: Colors.white10,
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutCubic,
+                        width: _hitSize,
+                        height: _hitSize,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected ? Colors.white : Colors.transparent,
+                          boxShadow: selected
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.12),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Icon(
+                          selected ? item.filled : item.outlined,
+                          size: 24,
+                          color: selected ? _selectedIconColor : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
-        ],
+        ),
       ),
     );
   }

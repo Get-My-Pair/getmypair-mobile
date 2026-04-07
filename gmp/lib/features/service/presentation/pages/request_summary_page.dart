@@ -3,6 +3,7 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -178,28 +179,19 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   @override
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'Request Summary',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _submitting ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Request Summary',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        automaticallyImplyLeading: false,
         centerTitle: true,
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CircularProgressIndicator(color: Colors.white),
             )
           : ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),

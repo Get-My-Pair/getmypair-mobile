@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/widgets/gradient_page_shell.dart';
 
 /// Sample Terms of Service page – replace content with your legal text.
 class TermsOfServicePage extends StatelessWidget {
@@ -9,13 +10,9 @@ class TermsOfServicePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final padding = Responsive.horizontalPaddingOf(context);
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Terms of Service'),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'Terms of Service',
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -27,7 +24,7 @@ class TermsOfServicePage extends StatelessWidget {
                 'Last updated: March 2026',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textTertiary,
+                  color: AppColors.onGradientMuted,
                 ),
               ),
               const SizedBox(height: 24),
@@ -59,7 +56,7 @@ class TermsOfServicePage extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 8),
@@ -68,7 +65,7 @@ class TermsOfServicePage extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               height: 1.5,
-              color: AppColors.textSecondary,
+              color: AppColors.onGradientBody,
             ),
           ),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
 import 'package:gmp/features/profile/domain/usecases/get_user_profile.dart';
@@ -277,53 +278,35 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     final horizontal = Responsive.horizontalPaddingOf(context);
 
     if (_loading) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+      return GradientPageShell(
+        appBar: buildGradientAppBar(
+          title: 'Select Service',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            'Select Service',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          automaticallyImplyLeading: false,
           centerTitle: true,
         ),
         body: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: Colors.white),
         ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'Select Service',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _submitting ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Select Service',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        automaticallyImplyLeading: false,
         centerTitle: true,
         actions: [
           IconButton(
             onPressed: _submitting ? null : _load,
-            icon: const Icon(Icons.refresh, color: AppColors.textPrimary),
+            icon: const Icon(Icons.refresh, color: Colors.white),
           ),
         ],
       ),
@@ -350,14 +333,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: Colors.white,
               letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'Choose one service to create a request.',
-            style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+            style: TextStyle(color: AppColors.onGradientBody, fontSize: 13),
           ),
           const SizedBox(height: 16),
           GridView.builder(
@@ -441,13 +424,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: Colors.white,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 13, color: AppColors.onGradientBody),
         ),
       ],
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
 import 'package:gmp/features/profile/domain/usecases/get_user_profile.dart';
@@ -65,34 +66,25 @@ class _SelectAddressPageState extends State<SelectAddressPage> {
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'Select Address',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Select Address',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        automaticallyImplyLeading: false,
         centerTitle: true,
         actions: [
           IconButton(
             onPressed: _load,
-            icon: const Icon(Icons.refresh, color: AppColors.textPrimary),
+            icon: const Icon(Icons.refresh, color: Colors.white),
           ),
         ],
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CircularProgressIndicator(color: Colors.white),
             )
           : Padding(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
@@ -122,21 +114,21 @@ class _SelectAddressPageState extends State<SelectAddressPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.location_off_outlined,
-                                size: 72, color: AppColors.textTertiary),
+                                size: 72, color: AppColors.onGradientMuted),
                             const SizedBox(height: 16),
                             const Text(
                               'No saved addresses',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
+                                color: Colors.white,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Add an address in Profile → Saved Addresses',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: AppColors.textTertiary),
+                              style: TextStyle(color: AppColors.onGradientBody),
                             ),
                           ],
                         ),

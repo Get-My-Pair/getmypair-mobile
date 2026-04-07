@@ -1,3 +1,10 @@
+// When TEMP/TMP points at a removed path (e.g. D:\Temp), Gradle can fail before pluginManagement runs.
+run {
+    val target = java.io.File(System.getProperty("user.home"), ".gradle/android-jvm-tmp")
+    target.mkdirs()
+    System.setProperty("java.io.tmpdir", target.absolutePath)
+}
+
 pluginManagement {
     val flutterSdkPath =
         run {

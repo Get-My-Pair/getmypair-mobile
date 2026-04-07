@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/widgets/gradient_page_shell.dart';
 
 /// Account Settings → Manage Devices: view and remove sessions on other devices.
 class ManageDevicesPage extends StatelessWidget {
@@ -27,23 +28,14 @@ class ManageDevicesPage extends StatelessWidget {
     final deviceLabel = _deviceLabel();
     final isPhone = _isPhone();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
+    return GradientPageShell(
+      appBar: buildGradientAppBar(
+        title: 'Manage Devices',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Manage Devices',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPaddingOf(context)),
@@ -55,19 +47,19 @@ class ManageDevicesPage extends StatelessWidget {
               'Devices where you\'re logged in. Remove a device to sign out there.',
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: AppColors.onGradientBody,
                 height: 1.4,
               ),
             ),
             const SizedBox(height: 24),
 
             // This device (current session)
-            const Text(
+            Text(
               'This device',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+                color: AppColors.onGradientMuted,
               ),
             ),
             const SizedBox(height: 10),
@@ -139,12 +131,12 @@ class ManageDevicesPage extends StatelessWidget {
             const SizedBox(height: 28),
 
             // Other sessions
-            const Text(
+            Text(
               'Other sessions',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+                color: AppColors.onGradientMuted,
               ),
             ),
             const SizedBox(height: 10),

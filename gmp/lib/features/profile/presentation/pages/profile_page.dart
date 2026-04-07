@@ -8,12 +8,25 @@ import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/mobile_otp_page.dart';
 import '../../../../injection_container.dart' as di;
+import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../widgets/edit_profile_widget.dart';
 import '../widgets/saved_addresses_page.dart';
 import 'manage_devices_page.dart';
+
+/// Teal → cyan profile shell (matches marketing / dashboard gradient).
+const LinearGradient _kProfileCardGradient = LinearGradient(
+  begin: Alignment.topRight,
+  end: Alignment.bottomLeft,
+  colors: [
+    Color(0xFF00E5FF),
+    Color(0xFF0F6876),
+    Color(0xFF004D4D),
+  ],
+  stops: [0.0, 0.42, 1.0],
+);
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -77,6 +90,12 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  String _subtitleLine(UserProfile profile) {
+    final e = profile.email?.trim();
+    if (e != null && e.isNotEmpty) return e;
+    return profile.phone;
   }
 
   @override
@@ -169,236 +188,142 @@ class _ProfilePageState extends State<ProfilePage> {
             );
           }
 
+          final hp = Responsive.horizontalPaddingOf(context);
+
           return Scaffold(
             backgroundColor: AppColors.background,
-            body: CustomScrollView(
-              slivers: [
-                // ── App Bar ──────────────────────────────────────
-                SliverAppBar(
-                  expandedHeight: 0,
-                  floating: true,
-                  pinned: true,
-                  backgroundColor: AppColors.background,
-                  elevation: 0,
-                  centerTitle: true,
-                  title: const Text(
-                    'PROFILE',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                      letterSpacing: 1,
-                    ),
+            body: SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(hp, 12, hp, 32),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: _kProfileCardGradient,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                        spreadRadius: -4,
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFF0A6C78).withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                ),
-
-                SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.horizontalPaddingOf(context),
-                    ),
+                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 16),
-
-                        // ── Profile Header ────────────────────────
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: AppColors.shadow,
-                                blurRadius: 12,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 32,
-                                backgroundColor: AppColors.primaryLight,
-                                backgroundImage: profile.profileImage != null
-                                    ? NetworkImage(profile.profileImage!)
-                                    : null,
-                                child: profile.profileImage == null
-                                    ? Text(
-                                        profile.name.isNotEmpty
-                                            ? profile.name[0].toUpperCase()
-                                            : 'U',
-                                        style: const TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _OverlappingAvatarCluster(profile: profile),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 8),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       profile.name,
                                       style: const TextStyle(
-                                        fontSize: 17,
+                                        fontSize: 20,
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
+                                        color: Colors.white,
+                                        height: 1.2,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 6),
                                     Text(
-                                      profile.phone,
-                                      style: const TextStyle(
+                                      _subtitleLine(profile),
+                                      style: TextStyle(
                                         fontSize: 14,
-                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w400,
+                                        color: Colors.white.withValues(
+                                            alpha: 0.92),
+                                        height: 1.35,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // ── Quick Actions ─────────────────────────
-                        Row(
-                          children: [
-                            _QuickActionChip(
-                              icon: Icons.receipt_long_outlined,
-                              label: 'My Orders',
-                              onTap: () {},
-                            ),
-                            const SizedBox(width: 12),
-                            _QuickActionChip(
-                              icon: Icons.favorite_border,
-                              label: 'Wishlist',
-                              onTap: () {},
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            _QuickActionChip(
-                              icon: Icons.eco_outlined,
-                              label: 'Carbon Credits',
-                              onTap: () {},
-                            ),
-                            const SizedBox(width: 12),
-                            _QuickActionChip(
-                              icon: Icons.help_outline,
-                              label: 'Help Center',
-                              onTap: () {},
-                            ),
-                          ],
+                        const SizedBox(height: 28),
+
+                        _GradientMenuTile(
+                          icon: Icons.account_circle_outlined,
+                          title: 'Profile',
+                          onTap: () =>
+                              _openEditProfile(context, profile, token),
                         ),
-                        const SizedBox(height: 24),
-
-                        // ── Account Settings ──────────────────────
-                        _SectionHeader(title: 'Account Settings'),
-                        const SizedBox(height: 8),
-                        _SettingsCard(children: [
-                          _SettingTile(
-                            icon: Icons.person_outline,
-                            title: 'Edit Profile',
-                            onTap: () =>
-                                _openEditProfile(context, profile, token),
-                          ),
-                          _SettingDivider(),
-                          _SettingTile(
-                            icon: Icons.location_on_outlined,
-                            title: 'Saved Addresses',
-                            subtitle:
-                                '${profile.addresses.length} address${profile.addresses.length != 1 ? 'es' : ''}',
-                            onTap: () => _openSavedAddresses(
-                                context, profile, token),
-                          ),
-                          _SettingDivider(),
-                          _SettingTile(
-                            icon: Icons.devices_outlined,
-                            title: 'Manage Devices',
-                            onTap: () => _openManageDevices(context),
-                          ),
-                          _SettingDivider(),
-                          _SettingTile(
-                            icon: Icons.language_outlined,
-                            title: 'Select Language',
-                            onTap: () {},
-                          ),
-                          _SettingDivider(),
-                          _SettingTile(
-                            icon: Icons.credit_card_outlined,
-                            title: 'Saved Cards / Debit Cards',
-                            onTap: () {},
-                          ),
-                          _SettingDivider(),
-                          _SettingTile(
-                            icon: Icons.notifications_outlined,
-                            title: 'Notification Settings',
-                            onTap: () {},
-                          ),
-                        ]),
-                        const SizedBox(height: 20),
-
-                        // ── Feedback & Information ────────────────
-                        _SectionHeader(title: 'Feedback & Information'),
-                        const SizedBox(height: 8),
-                        _SettingsCard(children: [
-                          _SettingTile(
-                            icon: Icons.policy_outlined,
-                            title: 'Terms & Policies',
-                            onTap: () {},
-                          ),
-                          _SettingDivider(),
-                          _SettingTile(
-                            icon: Icons.info_outline,
-                            title: 'Licenses',
-                            onTap: () {},
-                          ),
-                          _SettingDivider(),
-                          _SettingTile(
-                            icon: Icons.quiz_outlined,
-                            title: 'Browse FAQs',
-                            onTap: () {},
-                          ),
-                        ]),
-                        const SizedBox(height: 20),
-
-                        // ── Logout ────────────────────────────────
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: OutlinedButton.icon(
-                            onPressed: _logout,
-                            icon: const Icon(Icons.logout,
-                                color: AppColors.error),
-                            label: const Text(
-                              'LOG OUT',
-                              style: TextStyle(
-                                color: AppColors.error,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppColors.error),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
-                            ),
-                          ),
+                        _GradientMenuTile(
+                          icon: Icons.notifications_outlined,
+                          title: 'Notifications',
+                          onTap: () {},
                         ),
-                        const SizedBox(height: 32),
+                        _GradientMenuTile(
+                          icon: Icons.location_on_outlined,
+                          title: 'Location',
+                          onTap: () =>
+                              _openSavedAddresses(context, profile, token),
+                        ),
+                        _GradientMenuTile(
+                          icon: Icons.credit_card_outlined,
+                          title: 'Payment',
+                          onTap: () {},
+                        ),
+                        _GradientMenuTile(
+                          icon: Icons.devices_other,
+                          title: 'Manage Devices',
+                          onTap: () => _openManageDevices(context),
+                        ),
+
+                        _GradientSectionDivider(),
+
+                        _GradientMenuTile(
+                          icon: Icons.contact_support_outlined,
+                          title: 'FAQ',
+                          onTap: () {},
+                        ),
+                        _GradientMenuTile(
+                          icon: Icons.info_outline,
+                          title: 'Terms & Conditions',
+                          onTap: () {},
+                        ),
+                        _GradientMenuTile(
+                          icon: Icons.workspace_premium_outlined,
+                          title: 'License',
+                          onTap: () {},
+                        ),
+
+                        _GradientSectionDivider(),
+
+                        _GradientMenuTile(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Privacy Policy',
+                          onTap: () {},
+                        ),
+
+                        _GradientSectionDivider(),
+
+                        _GradientMenuTile(
+                          icon: Icons.logout,
+                          title: 'Log Out',
+                          onTap: _logout,
+                          showChevron: false,
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -406,7 +331,8 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _openEditProfile(BuildContext context, dynamic profile, String token) {
+  void _openEditProfile(
+      BuildContext context, UserProfile profile, String token) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -419,7 +345,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _openSavedAddresses(
-      BuildContext context, dynamic profile, String token) {
+      BuildContext context, UserProfile profile, String token) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -441,155 +367,181 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-// ── Sub-widgets ─────────────────────────────────────────────────────
+/// Decorative cluster: main photo + two smaller circles (placeholder icons).
+class _OverlappingAvatarCluster extends StatelessWidget {
+  const _OverlappingAvatarCluster({required this.profile});
 
-class _QuickActionChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final UserProfile profile;
 
-  const _QuickActionChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
+  static const _border = BorderSide(color: Colors.white, width: 2);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 118,
+      height: 100,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 62,
+            top: 2,
+            child: _RingAvatar(
+              radius: 16,
+              border: _border,
+              child: _smallFill(Icons.person, 14),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            top: 10,
+            child: _RingAvatar(
+              radius: 38,
+              border: _border,
+              child: profile.profileImage != null
+                  ? ClipOval(
+                      child: Image.network(
+                        profile.profileImage!,
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            _initialsAvatar(profile, 38),
+                      ),
+                    )
+                  : _initialsAvatar(profile, 38),
+            ),
+          ),
+          Positioned(
+            left: 46,
+            top: 54,
+            child: _RingAvatar(
+              radius: 21,
+              border: _border,
+              child: _smallFill(Icons.child_care_outlined, 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _initialsAvatar(UserProfile profile, double radius) {
+    final letter = profile.name.isNotEmpty
+        ? profile.name[0].toUpperCase()
+        : 'U';
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      color: Colors.white.withValues(alpha: 0.25),
+      alignment: Alignment.center,
+      child: Text(
+        letter,
+        style: TextStyle(
+          fontSize: radius * 0.85,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _smallFill(IconData icon, double size) {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.22),
+      alignment: Alignment.center,
+      child: Icon(icon, color: Colors.white, size: size),
+    );
+  }
+}
+
+class _RingAvatar extends StatelessWidget {
+  const _RingAvatar({
+    required this.radius,
+    required this.border,
+    required this.child,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 6,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: AppColors.primary, size: 20),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  final List<Widget> children;
-  const _SettingsCard({required this.children});
+  final double radius;
+  final BorderSide border;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: radius * 2,
+      height: radius * 2,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        shape: BoxShape.circle,
+        border: Border.fromBorderSide(border),
       ),
-      child: Column(children: children),
+      child: ClipOval(child: child),
     );
   }
 }
 
-class _SettingTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final VoidCallback onTap;
-
-  const _SettingTile({
+class _GradientMenuTile extends StatelessWidget {
+  const _GradientMenuTile({
     required this.icon,
     required this.title,
-    this.subtitle,
     required this.onTap,
+    this.showChevron = true,
   });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(icon, color: AppColors.primary, size: 22),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: Colors.white24,
+        highlightColor: Colors.white10,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 24),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    letterSpacing: 0.15,
+                  ),
+                ),
+              ),
+              if (showChevron)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withValues(alpha: 0.95),
+                  size: 26,
+                ),
+            ],
+          ),
         ),
       ),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle!,
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textTertiary),
-            )
-          : null,
-      trailing: const Icon(Icons.chevron_right,
-          color: AppColors.textTertiary, size: 20),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
     );
   }
 }
 
-class _SettingDivider extends StatelessWidget {
+class _GradientSectionDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(
-      height: 1,
-      thickness: 1,
-      color: AppColors.border,
-      indent: 52,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Container(
+        height: 1,
+        color: Colors.white.withValues(alpha: 0.35),
+      ),
     );
   }
 }
