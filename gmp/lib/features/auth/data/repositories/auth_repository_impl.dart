@@ -229,6 +229,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final refreshToken = await localDataSource.getRefreshToken();
       if (refreshToken == null) {
+        await localDataSource.clearAll();
         return const Left(AuthenticationFailure('No refresh token found'));
       }
 
@@ -242,6 +243,18 @@ class AuthRepositoryImpl implements AuthRepository {
           
           return const Right(null);
         } on ServerException catch (e) {
+          final message = e.message.toLowerCase();
+          final isRefreshAuthFailure = e.statusCode == 401 ||
+              e.statusCode == 403 ||
+              message.contains('refresh token') ||
+              message.contains('invalid token') ||
+              message.contains('token expired') ||
+              message.contains('jwt expired') ||
+              message.contains('unauthorized');
+          if (isRefreshAuthFailure) {
+            await localDataSource.clearAll();
+            return Left(AuthenticationFailure(e.message));
+          }
           return Left(ServerFailure(e.message));
         } on NetworkException catch (e) {
           return Left(NetworkFailure(e.message));

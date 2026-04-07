@@ -153,7 +153,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       } else {
         throw ServerException(response['message'] ?? 'Failed to get user');
       }
-    } on ServerException catch (e) {
+    } on ServerException {
       rethrow;
     } catch (e) {
       throw ServerException('Failed to get user: ${e.toString()}');
@@ -194,6 +194,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       
       return data['accessToken'] as String;
     } catch (e) {
+      if (e is ServerException) {
+        rethrow;
+      }
       throw ServerException('Failed to refresh token: ${e.toString()}');
     }
   }

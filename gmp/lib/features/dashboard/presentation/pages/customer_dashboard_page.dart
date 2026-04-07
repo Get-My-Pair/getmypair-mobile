@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gmp/core/errors/failures.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_bloc.dart';
@@ -38,7 +39,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     final result = await sl<GetValidAccessToken>().call();
     if (!context.mounted) return;
     result.fold(
-      (_) => context.read<AuthBloc>().add(const AuthSessionExpired()),
+      (failure) {
+        if (failure is AuthenticationFailure) {
+          context.read<AuthBloc>().add(const AuthSessionExpired());
+        }
+      },
       (token) => context.read<ProfileBloc>().add(ProfileLoadRequested(token)),
     );
   }

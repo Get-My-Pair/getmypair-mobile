@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/errors/failures.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
@@ -50,8 +51,19 @@ class _ProfilePageState extends State<ProfilePage> {
     final result = await di.sl<GetValidAccessToken>().call();
     if (!mounted) return;
     result.fold(
-      (_) {
-        context.read<AuthBloc>().add(const AuthSessionExpired());
+      (failure) {
+        if (failure is AuthenticationFailure) {
+          context.read<AuthBloc>().add(const AuthSessionExpired());
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failure.message),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
       },
       (token) {
         setState(() => _accessToken = token);
@@ -112,10 +124,6 @@ class _ProfilePageState extends State<ProfilePage> {
       child: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {
           if (state is ProfileError) {
-            if (state.statusCode == 403) {
-              context.read<AuthBloc>().add(const AuthSessionExpired());
-              return;
-            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
