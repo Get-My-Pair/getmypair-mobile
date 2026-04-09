@@ -21,6 +21,24 @@ class AuthRepositoryImpl implements AuthRepository {
     required this.networkInfo,
   });
 
+  Future<bool> _hasUsableRefreshToken() async {
+    final refreshToken = await localDataSource.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return false;
+    }
+
+    // If refresh token is a JWT and expired, session must end.
+    if (JwtHelper.isTokenExpired(refreshToken)) {
+      final exp = JwtHelper.getTokenExpiration(refreshToken);
+      if (exp != null) {
+        await localDataSource.clearAll();
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   @override
   Future<Either<Failure, Map<String, dynamic>>> sendOTP(String mobile) async {
     if (await networkInfo.isConnected) {
@@ -141,8 +159,23 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, User>> getCurrentUser() async {
     try {
       var accessToken = await localDataSource.getAccessToken();
-      if (accessToken == null) {
-        return const Left(AuthenticationFailure('No access token found'));
+      if (accessToken == null || accessToken.isEmpty) {
+        final hasRefreshToken = await _hasUsableRefreshToken();
+        if (!hasRefreshToken) {
+          return const Left(AuthenticationFailure('No valid refresh token found'));
+        }
+
+        final refreshResult = await refreshToken();
+        if (refreshResult.isLeft()) {
+          return refreshResult.fold(
+            (l) => Left(l),
+            (_) => const Left(AuthenticationFailure('Refresh failed')),
+          );
+        }
+        accessToken = await localDataSource.getAccessToken();
+        if (accessToken == null || accessToken.isEmpty) {
+          return const Left(AuthenticationFailure('No access token after refresh'));
+        }
       }
 
       if (await networkInfo.isConnected) {
@@ -215,8 +248,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, bool>> isAuthenticated() async {
     try {
-      final accessToken = await localDataSource.getAccessToken();
-      return Right(accessToken != null);
+      final hasRefreshToken = await _hasUsableRefreshToken();
+      return Right(hasRefreshToken);
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
     } catch (e) {

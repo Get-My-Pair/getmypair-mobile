@@ -26,8 +26,13 @@ class MaintenancePlanData {
 
 class ServiceSelectionPage extends StatefulWidget {
   final String articleId;
+  final List<String>? allowedServiceTypes;
 
-  const ServiceSelectionPage({super.key, required this.articleId});
+  const ServiceSelectionPage({
+    super.key,
+    required this.articleId,
+    this.allowedServiceTypes,
+  });
 
   @override
   State<ServiceSelectionPage> createState() => _ServiceSelectionPageState();
@@ -91,6 +96,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       icon: Icons.delete_outline,
     ),
   ];
+
+  List<ServiceOptionData> get _visibleOptions {
+    final allowed = widget.allowedServiceTypes;
+    if (allowed == null || allowed.isEmpty) return _options;
+    final allowedSet = allowed.map((e) => e.trim().toLowerCase()).toSet();
+    return _options.where((o) => allowedSet.contains(o.value)).toList();
+  }
 
   @override
   void initState() {
@@ -346,7 +358,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _options.length,
+            itemCount: _visibleOptions.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 12,
@@ -354,7 +366,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               childAspectRatio: 1.05,
             ),
             itemBuilder: (_, i) {
-              final opt = _options[i];
+              final opt = _visibleOptions[i];
               final selected = _selectedService?.value == opt.value;
               return _ServiceCard(
                 option: opt,
@@ -516,13 +528,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       ];
     }
     if (s == 'donate' || s == 'dispose') {
-      return [
-        _estimationCard(
-          title: 'Estimated cost',
-          amountRupees: 0,
-          subtitle: 'No charge for this service type',
-        ),
-      ];
+      return [];
     }
     return [];
   }

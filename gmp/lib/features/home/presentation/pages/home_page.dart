@@ -19,6 +19,7 @@ import '../../../articles/domain/entities/article.dart';
 import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
+import '../../../articles/presentation/pages/article_create_page.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 
@@ -298,6 +299,37 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
+  Future<void> _openServiceFlow({
+    required String title,
+    required List<String> allowedServiceTypes,
+  }) async {
+    final hasArticles = (_rackArticles?.isNotEmpty ?? false);
+    if (!hasArticles) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add article first to continue')),
+      );
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(builder: (_) => const ArticleCreatePage()),
+      );
+      if (mounted) {
+        await _loadRackPreview();
+      }
+      return;
+    }
+
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => ArticleListPage(
+          serviceFlowAllowedTypes: allowedServiceTypes,
+          serviceFlowTitle: title,
+        ),
+      ),
+    );
+    if (mounted) {
+      _loadRackPreview();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -497,22 +529,39 @@ class _HomePageState extends State<HomePage> {
                                     childAspectRatio: _quickActionAspectRatio(
                                       constraints.maxWidth,
                                     ),
-                                    children: const [
+                                    children: [
                                       _QuickActionCard(
                                         label: 'Shoe\nCare',
                                         icon: Icons.design_services_outlined,
                                         highlight: true,
                                         leading: _kShoeCareLeadingIcons,
+                                        onTap: () => _openServiceFlow(
+                                          title:
+                                              'Select article for Shoe Care (Repair, Maintenance, Wash)',
+                                          allowedServiceTypes: const [
+                                            'repair',
+                                            'maintenance',
+                                            'wash',
+                                          ],
+                                        ),
                                       ),
                                       _QuickActionCard(
                                         label: 'Rehome',
                                         icon: Icons.home_work_outlined,
+                                        onTap: () => _openServiceFlow(
+                                          title:
+                                              'Select article for Rehome (Donate, Dispose)',
+                                          allowedServiceTypes: const [
+                                            'donate',
+                                            'dispose',
+                                          ],
+                                        ),
                                       ),
-                                      _QuickActionCard(
+                                      const _QuickActionCard(
                                         label: 'Rent',
                                         icon: Icons.repeat_rounded,
                                       ),
-                                      _QuickActionCard(
+                                      const _QuickActionCard(
                                         label: 'Style Me',
                                         icon: Icons.auto_awesome_outlined,
                                       ),
@@ -1026,12 +1075,14 @@ class _QuickActionCard extends StatelessWidget {
   final IconData icon;
   final bool highlight;
   final Widget? leading;
+  final VoidCallback? onTap;
 
   const _QuickActionCard({
     required this.label,
     required this.icon,
     this.highlight = false,
     this.leading,
+    this.onTap,
   });
 
   @override
@@ -1040,33 +1091,40 @@ class _QuickActionCard extends StatelessWidget {
     final padding = highlight
         ? const EdgeInsets.fromLTRB(14, 12, 12, 12)
         : const EdgeInsets.symmetric(horizontal: 16, vertical: 10);
-    return Container(
-      height: _kQuickActionCellHeight,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: highlight ? null : _kQuickActionMutedBg,
-        gradient: highlight
-            ? const LinearGradient(
-                begin: Alignment(1, 0.5),
-                end: Alignment(0, 0.5),
-                colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-              )
-            : null,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(highlight ? 20 : 14),
-      ),
-      alignment: Alignment.centerLeft,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          leading ?? Icon(icon, size: 24, color: textColor),
-          SizedBox(width: highlight ? 10 : 14),
-          Expanded(
-            child: _QuickActionLabel(
-              label: label,
-              textColor: textColor,
-            ),
+        child: Container(
+          height: _kQuickActionCellHeight,
+          padding: padding,
+          decoration: BoxDecoration(
+            color: highlight ? null : _kQuickActionMutedBg,
+            gradient: highlight
+                ? const LinearGradient(
+                    begin: Alignment(1, 0.5),
+                    end: Alignment(0, 0.5),
+                    colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(highlight ? 20 : 14),
           ),
-        ],
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              leading ?? Icon(icon, size: 24, color: textColor),
+              SizedBox(width: highlight ? 10 : 14),
+              Expanded(
+                child: _QuickActionLabel(
+                  label: label,
+                  textColor: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

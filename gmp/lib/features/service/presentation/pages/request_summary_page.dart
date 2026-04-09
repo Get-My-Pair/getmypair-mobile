@@ -43,8 +43,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   bool _submitting = false;
   String? _error;
   Article? _article;
-  num? _serviceCost;
-  _CostDecision _costDecision = _CostDecision.pending;
 
   @override
   void initState() {
@@ -68,14 +66,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       (token) async {
         try {
           final a = await sl<GetArticleById>().call(token, widget.articleId);
-          final defaultsRes =
-              await sl<DioClient>().get(ApiEndpoints.serviceEstimationDefaults, accessToken: token);
-          final defaults = ((defaultsRes['data'] as Map?)?['estimationDefaults'] as Map?) ?? const {};
-          final currentServiceCost = defaults[widget.service.value];
           if (!mounted) return;
           setState(() {
             _article = a;
-            _serviceCost = currentServiceCost is num ? currentServiceCost : null;
             _loading = false;
           });
         } catch (e) {
@@ -89,19 +82,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 
-  String _formatCost(num? value) {
-    if (value == null) return 'Not available';
-    return value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
-  }
-
   Future<void> _confirmRequest() async {
     if (_submitting) return;
-    if (_costDecision != _CostDecision.accepted) {
-      setState(() {
-        _error = 'Please accept the cost before continuing';
-      });
-      return;
-    }
     setState(() {
       _submitting = true;
       _error = null;
@@ -214,83 +196,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     ),
                   ),
                 ],
-                _card(
-                  title: 'Cost Approval',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Actual cost: ${_formatCost(_serviceCost)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Please accept to continue workflow details.',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _submitting
-                                  ? null
-                                  : () => setState(() {
-                                        _costDecision = _CostDecision.rejected;
-                                      }),
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                  color: _costDecision == _CostDecision.rejected
-                                      ? AppColors.error
-                                      : AppColors.border,
-                                ),
-                                foregroundColor: AppColors.error,
-                              ),
-                              child: const Text('Reject'),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _submitting
-                                  ? null
-                                  : () => setState(() {
-                                        _costDecision = _CostDecision.accepted;
-                                      }),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _costDecision == _CostDecision.accepted
-                                    ? AppColors.success
-                                    : AppColors.primary,
-                                foregroundColor: AppColors.textOnPrimary,
-                              ),
-                              child: const Text('Accept'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (_costDecision == _CostDecision.rejected) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.error.withOpacity(0.4)),
-                    ),
-                    child: const Text(
-                      'You rejected this article request.',
-                      style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-                if (_costDecision == _CostDecision.accepted) ...[
                 if (widget.maintenancePlan != null) ...[
                   const SizedBox(height: 12),
                   _card(
@@ -316,20 +221,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                _card(
-                  title: 'Estimated cost',
-                  child: Text(
-                    widget.estimatedCostRupees == 0
-                        ? '₹0 (no charge)'
-                        : '₹${widget.estimatedCostRupees}',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 12),
                 _card(
                   title: 'Request proof',
@@ -479,7 +370,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     child: const Text('Retry loading article'),
                   ),
                 ],
-                ],
               ],
             ),
     );
@@ -511,6 +401,4 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 }
-
-enum _CostDecision { pending, accepted, rejected }
 

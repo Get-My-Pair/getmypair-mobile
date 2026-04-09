@@ -10,6 +10,7 @@ import 'package:gmp/injection_container.dart';
 
 import 'article_create_page.dart';
 import 'article_details_page.dart';
+import '../../../service/presentation/pages/service_selection_page.dart';
 
 /// Rack cell: product image (contain) + single centered teal label (mockup: no card frame).
 class _RackGridItem extends StatelessWidget {
@@ -125,13 +126,24 @@ class _RackGridItem extends StatelessWidget {
 
 /// Module 3 – Article list. “My Rack” UI (gradient shell, filter chips, shelf rows).
 class ArticleListPage extends StatefulWidget {
-  const ArticleListPage({super.key});
+  final List<String>? serviceFlowAllowedTypes;
+  final String? serviceFlowTitle;
+
+  const ArticleListPage({
+    super.key,
+    this.serviceFlowAllowedTypes,
+    this.serviceFlowTitle,
+  });
 
   @override
   State<ArticleListPage> createState() => _ArticleListPageState();
 }
 
 class _ArticleListPageState extends State<ArticleListPage> {
+  bool get _isServiceFlowMode =>
+      widget.serviceFlowAllowedTypes != null &&
+      widget.serviceFlowAllowedTypes!.isNotEmpty;
+
   List<Article>? _articles;
   String? _error;
   bool _loading = true;
@@ -525,6 +537,21 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 ),
         ),
         if (!_selectionMode) ...[
+          if (_isServiceFlowMode) ...[
+            Padding(
+              padding: EdgeInsets.fromLTRB(hPad, 6, hPad, 2),
+              child: Text(
+                widget.serviceFlowTitle ?? 'Select an article to continue',
+                style: TextStyle(
+                  fontSize: Responsive.fontSize(context, 13),
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
           const SizedBox(height: 14),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: hPad),
@@ -698,7 +725,14 @@ class _ArticleListPageState extends State<ArticleListPage> {
                                         }
                                       });
                                     } else {
-                                      _navigateToDetails(context, article);
+                                      if (_isServiceFlowMode) {
+                                        _navigateToServiceSelection(
+                                          context,
+                                          article,
+                                        );
+                                      } else {
+                                        _navigateToDetails(context, article);
+                                      }
                                     }
                                   },
                                 ),
@@ -734,6 +768,23 @@ class _ArticleListPageState extends State<ArticleListPage> {
       ),
     )
         .then((_) => _loadArticles());
+  }
+
+  void _navigateToServiceSelection(BuildContext context, Article article) {
+    Navigator.of(context)
+        .push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ServiceSelectionPage(
+          articleId: article.id,
+          allowedServiceTypes: widget.serviceFlowAllowedTypes,
+        ),
+      ),
+    )
+        .then((created) {
+      if (created == true && mounted) {
+        Navigator.of(context).pop(true);
+      }
+    });
   }
 }
 

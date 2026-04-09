@@ -10,8 +10,6 @@ import 'package:gmp/injection_container.dart';
 
 import 'article_create_page.dart';
 import 'article_edit_page.dart';
-import '../../../service/presentation/pages/service_request_list_page.dart';
-import '../../../service/presentation/pages/service_selection_page.dart';
 
 /// Module 3 – Article details. Figma rack-detail layout: gradient shell, panel, stats, actions.
 class ArticleDetailsPage extends StatefulWidget {
@@ -164,20 +162,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         }
       },
     );
-  }
-
-  Future<void> _openRequestService() async {
-    final a = _article;
-    if (a == null) return;
-    final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => ServiceSelectionPage(articleId: a.id)),
-    );
-    if (!mounted) return;
-    if (created == true) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ServiceRequestListPage()),
-      );
-    }
   }
 
   @override
@@ -411,15 +395,12 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                               MaterialPageRoute(builder: (_) => ArticleEditPage(articleId: a.id)),
                                             );
                                             if (mounted) _load();
-                                          } else if (v == 'service') {
-                                            await _openRequestService();
                                           } else if (v == 'delete') {
                                             await _deleteArticle();
                                           }
                                         },
                                         itemBuilder: (ctx) => [
                                           const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                          const PopupMenuItem(value: 'service', child: Text('Request service')),
                                           const PopupMenuItem(value: 'delete', child: Text('Delete')),
                                         ],
                                       ),
@@ -536,47 +517,35 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                 ],
                               ),
                               const SizedBox(height: 24),
-                              Material(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                clipBehavior: Clip.antiAlias,
-                                child: InkWell(
-                                  onTap: _openRequestService,
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: const Color(0xFF09DFFF)),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0x19000000),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 4),
-                                        ),
-                                      ],
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFF09DFFF)),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x19000000),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 4),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            'Last sent to shoe care',
-                                            style: montserrat(16),
-                                          ),
-                                        ),
-                                        Text(
-                                          '—',
-                                          textAlign: TextAlign.right,
-                                          style: boldonse(16),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Transform.rotate(
-                                          angle: -3.14159,
-                                          child: const Icon(Icons.keyboard_arrow_down_rounded, size: 24),
-                                        ),
-                                      ],
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Last sent to shoe care',
+                                        style: montserrat(16),
+                                      ),
                                     ),
-                                  ),
+                                    Text(
+                                      '—',
+                                      textAlign: TextAlign.right,
+                                      style: boldonse(16),
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(height: 24),
