@@ -7,11 +7,11 @@ import 'package:gmp/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_event.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_state.dart';
 import 'package:gmp/features/auth/presentation/pages/mobile_otp_page.dart';
+import 'package:gmp/features/articles/presentation/pages/article_list_page.dart';
 import 'package:gmp/features/home/presentation/pages/home_page.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_event.dart';
 import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
-import 'package:gmp/features/service/presentation/pages/service_request_list_page.dart';
 import 'package:gmp/injection_container.dart';
 
 class CustomerDashboardPage extends StatefulWidget {
@@ -27,9 +27,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
   final List<Widget> _pages = const [
     HomePage(),
-    ServiceRequestListPage(),
-    _CatalogPlaceholder(),
-    _CartPlaceholder(),
+    ArticleListPage(showBottomBar: false),
     _ProfilePageWrapper(),
   ];
 
@@ -104,7 +102,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
 /// Pill-shaped floating bar: dark teal → cyan gradient, white outline icons,
 /// selected tab on a solid white circle (icon in dark teal).
-/// Tabs: Home · Discover (sparkles) · Favorites · Cart · Profile.
+/// Tabs: Home · Services · Profile.
 class _FloatingGradientBottomNav extends StatelessWidget {
   const _FloatingGradientBottomNav({
     required this.currentIndex,
@@ -122,9 +120,7 @@ class _FloatingGradientBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <({IconData outlined, IconData filled})>[
       (outlined: Icons.home_outlined, filled: Icons.home_rounded),
-      (outlined: Icons.auto_awesome_outlined, filled: Icons.auto_awesome),
-      (outlined: Icons.favorite_border_rounded, filled: Icons.favorite_rounded),
-      (outlined: Icons.shopping_cart_outlined, filled: Icons.shopping_cart_rounded),
+      (outlined: Icons.hiking_outlined, filled: Icons.hiking_rounded),
       (outlined: Icons.person_outline_rounded, filled: Icons.person_rounded),
     ];
 
@@ -219,71 +215,5 @@ class _ProfilePageWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ProfilePage();
-  }
-}
-
-class _CatalogPlaceholder extends StatelessWidget {
-  const _CatalogPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.grid_view_outlined, size: 64, color: AppColors.textTertiary),
-            SizedBox(height: 16),
-            Text(
-              'Catalog',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Coming soon',
-              style: TextStyle(color: AppColors.textTertiary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CartPlaceholder extends StatelessWidget {
-  const _CartPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.shopping_cart_outlined, size: 64, color: AppColors.textTertiary),
-            SizedBox(height: 16),
-            Text(
-              'Cart',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Your cart is empty',
-              style: TextStyle(color: AppColors.textTertiary),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -306,8 +306,21 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, String>> getValidAccessToken() async {
     try {
       var accessToken = await localDataSource.getAccessToken();
-      if (accessToken == null) {
-        return const Left(AuthenticationFailure('No access token found'));
+      if (accessToken == null || accessToken.isEmpty) {
+        // If access token is missing, attempt refresh before treating
+        // the session as expired. This keeps users logged in until
+        // refresh token is no longer valid.
+        final refreshResult = await refreshToken();
+        if (refreshResult.isLeft()) {
+          return refreshResult.fold(
+            (l) => Left(l),
+            (_) => const Left(AuthenticationFailure('Refresh failed')),
+          );
+        }
+        accessToken = await localDataSource.getAccessToken();
+        if (accessToken == null || accessToken.isEmpty) {
+          return const Left(AuthenticationFailure('No access token after refresh'));
+        }
       }
       // Refresh if expired or expiring within 60 seconds
       final exp = JwtHelper.getTokenExpiration(accessToken);

@@ -43,35 +43,22 @@ const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
 const Color _kRackCardBorder = Color(0xFF0F6876);
 const Color _kRackCardBg = Color(0xFFF0F0F0);
-
-/// Padding below the status bar / notch inside the home hero header.
-const double _kHomeHeaderTopInset = 70;
-
-/// Bottom padding of the hero block (space before “My Rack” and scroll content).
-const double _kHomeHeaderBottomPadding = 20;
+const Color _kSearchHintColor = Color(0x57000000);
 
 /// Vertical gaps inside the hero (greeting → location → search → stats → carbon).
 const double _kHomeHeaderGreetingToLocation = 14;
-const double _kHomeHeaderRowToSearch = 18;
 const double _kHomeHeaderSearchToStats = 18;
 const double _kHomeHeaderStatsToCarbon = 12;
-const double _kCarbonButtonVerticalMargin = 4;
 
 /// Section spacing below hero / between blocks (12–16px).
-const double _kSectionGap = 40;
+const double _kSectionGap = 28;
 const double _kRackThumbGap = 12;
 
 /// Extra breathing room between "My Rack" and quick action tiles.
-const double _kAfterRackToActionsGap = 20;
+const double _kAfterRackToActionsGap = 22;
 
-/// Grid cell height for 2×2 quick actions (consistent tap targets).
-const double _kQuickActionCellHeight = 100;
-
-double _quickActionAspectRatio(double gridWidth) {
-  final cellW = (gridWidth - 12) / 2;
-  if (cellW <= 0) return 2.2;
-  return cellW / _kQuickActionCellHeight;
-}
+/// Tile height for quick actions.
+const double _kQuickActionCellHeight = 86;
 
 /// Stacked tool + bag icons (matches Shoe Care tile spacing in design).
 const Widget _kShoeCareLeadingIcons = Column(
@@ -413,7 +400,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: _kRackCardBg,
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(10),
                                   border: const Border(
                                     bottom: BorderSide(
                                       color: _kRackCardBorder,
@@ -517,57 +504,47 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                               SizedBox(height: _kAfterRackToActionsGap),
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  return GridView.count(
-                                    crossAxisCount: 2,
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    mainAxisSpacing: 12,
-                                    crossAxisSpacing: 12,
-                                    childAspectRatio: _quickActionAspectRatio(
-                                      constraints.maxWidth,
+                              _QuickActionCard(
+                                label: 'Shoe Care',
+                                icon: Icons.design_services_outlined,
+                                highlight: true,
+                                leading: _kShoeCareLeadingIcons,
+                                fullWidth: true,
+                                onTap: () => _openServiceFlow(
+                                  title:
+                                      'Select article for Shoe Care (Repair, Maintenance, Wash)',
+                                  allowedServiceTypes: const [
+                                    'repair',
+                                    'maintenance',
+                                    'wash',
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 22),
+                              Row(
+                                children: [
+                                  const Expanded(
+                                    child: _QuickActionCard(
+                                      label: 'Rent',
+                                      icon: Icons.repeat_rounded,
                                     ),
-                                    children: [
-                                      _QuickActionCard(
-                                        label: 'Shoe\nCare',
-                                        icon: Icons.design_services_outlined,
-                                        highlight: true,
-                                        leading: _kShoeCareLeadingIcons,
-                                        onTap: () => _openServiceFlow(
-                                          title:
-                                              'Select article for Shoe Care (Repair, Maintenance, Wash)',
-                                          allowedServiceTypes: const [
-                                            'repair',
-                                            'maintenance',
-                                            'wash',
-                                          ],
-                                        ),
+                                  ),
+                                  const SizedBox(width: 28),
+                                  Expanded(
+                                    child: _QuickActionCard(
+                                      label: 'Rehome',
+                                      icon: Icons.home_work_outlined,
+                                      onTap: () => _openServiceFlow(
+                                        title:
+                                            'Select article for Rehome (Donate, Dispose)',
+                                        allowedServiceTypes: const [
+                                          'donate',
+                                          'dispose',
+                                        ],
                                       ),
-                                      _QuickActionCard(
-                                        label: 'Rehome',
-                                        icon: Icons.home_work_outlined,
-                                        onTap: () => _openServiceFlow(
-                                          title:
-                                              'Select article for Rehome (Donate, Dispose)',
-                                          allowedServiceTypes: const [
-                                            'donate',
-                                            'dispose',
-                                          ],
-                                        ),
-                                      ),
-                                      const _QuickActionCard(
-                                        label: 'Rent',
-                                        icon: Icons.repeat_rounded,
-                                      ),
-                                      const _QuickActionCard(
-                                        label: 'Style Me',
-                                        icon: Icons.auto_awesome_outlined,
-                                      ),
-                                    ],
-                                  );
-                                },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -577,11 +554,11 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Positioned(
                     right: 14,
-                    bottom: 100,
+                    bottom: 104,
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(40),
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -589,13 +566,30 @@ class _HomePageState extends State<HomePage> {
                             ),
                           );
                         },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.asset(
-                            'assets/images/Live chatbot.gif',
-                            width: 64,
-                            height: 64,
-                            fit: BoxFit.cover,
+                        child: Container(
+                          width: 72,
+                          height: 72,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment(1, 0.2),
+                              end: Alignment(-0.4, 1),
+                              colors: [Color(0xFF12899B), Color(0xFF09E0FF)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0x1A000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.waves_rounded,
+                              color: Color(0xFFB8FEFF),
+                              size: 32,
+                            ),
                           ),
                         ),
                       ),
@@ -624,25 +618,50 @@ class _ProfileAvatarCluster extends StatelessWidget {
       onTap: onTap,
       child: SizedBox(
         width: 96,
-        height: 72,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.centerRight,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Positioned(
-              left: 0,
-              top: 10,
-              child: _avatarRing(radius: 28, imageUrl: imageUrl),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0x55D7EEF2),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: const Color(0xFFDFE7E9),
+                size: 23,
+              ),
             ),
-            Positioned(
-              right: 0,
-              top: 2,
-              child: _avatarRing(radius: 15, imageUrl: null, isSmall: true),
-            ),
-            Positioned(
-              right: 0,
-              bottom: 2,
-              child: _avatarRing(radius: 15, imageUrl: null, isSmall: true),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 96,
+              height: 52,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.centerRight,
+                children: [
+                  Positioned(
+                    left: 0,
+                    top: 2,
+                    child: _avatarRing(radius: 24, imageUrl: imageUrl),
+                  ),
+                  Positioned(
+                    right: 4,
+                    top: 0,
+                    child: _avatarRing(radius: 11, imageUrl: null, isSmall: true),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: _avatarRing(radius: 11, imageUrl: null, isSmall: true),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -677,7 +696,7 @@ class _ProfileAvatarCluster extends StatelessWidget {
             ? null
             : Icon(
                 Icons.person_rounded,
-                size: isSmall ? 14 : 26,
+                size: isSmall ? 12 : 24,
                 color: Colors.white,
               ),
       ),
@@ -700,7 +719,7 @@ class _HomeTopCard extends StatelessWidget {
 
   static String _addressLineForHome(String raw) {
     final s = raw.replaceFirst(RegExp(r'^📍\s*'), '').trim();
-    if (s.isEmpty) return 'Tap to choose';
+    if (s.isEmpty) return 'HSR Layout, Bangalore';
     return s;
   }
 
@@ -714,9 +733,9 @@ class _HomeTopCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
         horizontal,
-        topSafe + _kHomeHeaderTopInset,
+        topSafe + 34,
         horizontal,
-        _kHomeHeaderBottomPadding,
+        26,
       ),
       decoration: BoxDecoration(
         gradient: _kHomeHeaderSweep,
@@ -773,14 +792,25 @@ class _HomeTopCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Your Location',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: _kOnHeaderText,
-                                    height: 1.2,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Home',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: _kOnHeaderText,
+                                        height: 1.15,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 16,
+                                      color: _kOnHeaderText,
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -836,11 +866,11 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: _kHomeHeaderRowToSearch),
+          const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Container(
-              height: 46,
+              height: 42,
               padding: const EdgeInsets.symmetric(horizontal: 18),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -860,7 +890,7 @@ class _HomeTopCard extends StatelessWidget {
                   Icon(
                     Icons.search,
                     size: 24,
-                    color: Colors.black.withValues(alpha: 0.34),
+                    color: _kSearchHintColor,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -869,7 +899,7 @@ class _HomeTopCard extends StatelessWidget {
                       style: GoogleFonts.montserrat(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
-                        color: Colors.black.withValues(alpha: 0.34),
+                        color: _kSearchHintColor,
                       ),
                     ),
                   ),
@@ -898,65 +928,7 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: _kHomeHeaderStatsToCarbon + _kCarbonButtonVerticalMargin),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(100),
-                gradient: const LinearGradient(
-                  begin: Alignment(0.85, 0.41),
-                  end: Alignment(-0.30, 1.29),
-                  colors: [
-                    AppColors.onboardingTrulyFits,
-                    Color(0xFF09DFFF),
-                  ],
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.eco_outlined,
-                    size: 18,
-                    color: Colors.black.withValues(alpha: 0.9),
-                  ),
-                  const SizedBox(width: 8),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '50',
-                          style: GoogleFonts.boldonse(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.black,
-                          ),
-                        ),
-                        TextSpan(
-                          text: ' ',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    'Carbon Credits ',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: _kCarbonButtonVerticalMargin),
+          const SizedBox(height: _kHomeHeaderStatsToCarbon),
         ],
       ),
     );
@@ -1076,6 +1048,7 @@ class _QuickActionCard extends StatelessWidget {
   final bool highlight;
   final Widget? leading;
   final VoidCallback? onTap;
+  final bool fullWidth;
 
   const _QuickActionCard({
     required this.label,
@@ -1083,19 +1056,20 @@ class _QuickActionCard extends StatelessWidget {
     this.highlight = false,
     this.leading,
     this.onTap,
+    this.fullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final textColor = highlight ? Colors.white : _kQuickActionMutedText;
     final padding = highlight
-        ? const EdgeInsets.fromLTRB(14, 12, 12, 12)
-        : const EdgeInsets.symmetric(horizontal: 16, vertical: 10);
+        ? const EdgeInsets.fromLTRB(18, 8, 18, 8)
+        : const EdgeInsets.symmetric(horizontal: 14, vertical: 8);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(highlight ? 20 : 14),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
           height: _kQuickActionCellHeight,
           padding: padding,
@@ -1103,84 +1077,36 @@ class _QuickActionCard extends StatelessWidget {
             color: highlight ? null : _kQuickActionMutedBg,
             gradient: highlight
                 ? const LinearGradient(
-                    begin: Alignment(1, 0.5),
-                    end: Alignment(0, 0.5),
-                    colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFF063239), Color(0xFF0CADC5)],
                   )
                 : null,
-            borderRadius: BorderRadius.circular(highlight ? 20 : 14),
+            borderRadius: BorderRadius.circular(10),
           ),
-          alignment: Alignment.centerLeft,
+          alignment: Alignment.center,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               leading ?? Icon(icon, size: 24, color: textColor),
-              SizedBox(width: highlight ? 10 : 14),
-              Expanded(
-                child: _QuickActionLabel(
-                  label: label,
-                  textColor: textColor,
+              SizedBox(width: fullWidth ? 20 : 14),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  textAlign: TextAlign.left,
+                  style: GoogleFonts.boldonse(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: textColor,
+                    height: 1.05,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _QuickActionLabel extends StatelessWidget {
-  final String label;
-  final Color textColor;
-
-  const _QuickActionLabel({
-    required this.label,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final parts = label.split('\n');
-    if (parts.length >= 2) {
-      final style = GoogleFonts.boldonse(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: textColor,
-        height: 1.0,
-      );
-      const behavior = TextHeightBehavior(
-        applyHeightToFirstAscent: false,
-        applyHeightToLastDescent: false,
-      );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            parts[0],
-            textAlign: TextAlign.left,
-            style: style,
-            textHeightBehavior: behavior,
-          ),
-          Text(
-            parts.sublist(1).join('\n'),
-            textAlign: TextAlign.left,
-            style: style,
-            textHeightBehavior: behavior,
-          ),
-        ],
-      );
-    }
-    return Text(
-      label,
-      maxLines: 2,
-      textAlign: TextAlign.left,
-      style: GoogleFonts.boldonse(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: textColor,
-        height: 1.05,
       ),
     );
   }

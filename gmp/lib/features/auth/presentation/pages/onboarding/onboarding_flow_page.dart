@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/utils/responsive.dart';
 import '../../widgets/onboarding_surface.dart';
 import '../mobile_otp_page.dart';
-import 'splash_intro_screen_1.dart';
-import 'splash_intro_screen_2.dart';
-import 'splash_intro_screen_3.dart';
-import 'splash_intro_screen_4.dart';
 
-/// Four-step splash / onboarding using the shared teal → cyan theme.
+/// Three-step onboarding matching Figma nodes:
+/// 335:1135, 335:1162, 335:1189.
 class OnboardingFlowPage extends StatefulWidget {
   const OnboardingFlowPage({super.key});
 
@@ -22,7 +19,34 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
   final PageController _pageController = PageController();
   int _index = 0;
 
-  static const int _total = 4;
+  static const int _total = 3;
+  static const List<_OnboardingSlide> _slides = [
+    _OnboardingSlide(
+      body: 'Scan your feet to find your perfect size and discover footwear that',
+      accent: 'truly fits!',
+      textTop: 506,
+      textLeft: 37,
+      textWidth: 318,
+      textAlign: TextAlign.left,
+    ),
+    _OnboardingSlide(
+      body: 'Try your footwear',
+      accent: 'virtually!',
+      textTop: 491,
+      textLeft: 37,
+      textWidth: 328,
+      textAlign: TextAlign.end,
+      accentAlign: TextAlign.center,
+    ),
+    _OnboardingSlide(
+      body: 'Extend the life of every pair',
+      stacked: ['repair', 'maintain', 'donate', 'sell!'],
+      textTop: 419,
+      textLeft: 35,
+      textWidth: 264,
+      textAlign: TextAlign.start,
+    ),
+  ];
 
   @override
   void dispose() {
@@ -57,9 +81,8 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final horizontalPad = Responsive.horizontalPaddingOf(context);
-    final progressFraction = (_index + 1) / _total;
-    final isLastPage = _index == _total - 1;
+    final scale = _scale(context);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
@@ -68,58 +91,47 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
       child: Scaffold(
         body: Stack(
           fit: StackFit.expand,
-          clipBehavior: Clip.none,
           children: [
             const OnboardingGradientBackdrop(),
-            const Positioned.fill(child: OnboardingDotLayer()),
+            Positioned.fill(child: const OnboardingBrandWatermark()),
             Padding(
-              padding: EdgeInsets.only(bottom: 128 + bottomInset),
+              padding: EdgeInsets.only(bottom: 120 + bottomInset),
               child: SafeArea(
                 bottom: false,
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (i) => setState(() => _index = i),
-                  children: const [
-                    SplashIntroScreen1(),
-                    SplashIntroScreen2(),
-                    SplashIntroScreen3(),
-                    SplashIntroScreen4(),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final sx = constraints.maxWidth / _figmaW;
+                    final sy = constraints.maxHeight / _figmaH;
+                    return PageView(
+                      controller: _pageController,
+                      onPageChanged: (i) => setState(() => _index = i),
+                      children: _slides
+                          .map((s) => _OnboardingSlideView(slide: s, sx: sx, sy: sy))
+                          .toList(growable: false),
+                    );
+                  },
                 ),
               ),
             ),
-            // Watermark only on intro slides 2–4; welcome (page 0) stays clean behind centered title.
-            if (_index != 0)
-              Positioned.fill(child: const OnboardingBrandWatermark()),
             SafeArea(
               child: Align(
                 alignment: Alignment.topRight,
                 child: Padding(
-                  padding: EdgeInsets.only(right: horizontalPad, top: 8),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
+                  padding: const EdgeInsets.only(right: 18, top: 8),
+                  child: TextButton(
+                    onPressed: _goWelcome,
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: TextButton(
-                      onPressed: _goWelcome,
-                      style: TextButton.styleFrom(
-                        shape: const StadiumBorder(),
-                        minimumSize: const Size(0, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'Skip',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.96),
-                          fontWeight: FontWeight.w700,
-                          fontSize: Responsive.fontSize(context, 14),
-                          letterSpacing: 0.2,
-                        ),
+                    child: Text(
+                      'Skip',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white,
+                        fontSize: 18 * scale.clamp(0.86, 1.1),
+                        fontWeight: FontWeight.w400,
+                        height: 1.0,
                       ),
                     ),
                   ),
@@ -127,108 +139,17 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
               ),
             ),
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: 12 + bottomInset,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPad,
-                ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.16),
-                        blurRadius: 16,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _ProgressBar(fraction: progressFraction),
-                        const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: _PageTicks(
-                                current: _index,
-                                total: _total,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 240),
-                              curve: Curves.easeOutCubic,
-                              decoration: BoxDecoration(
-                                color: AppColors.textOnPrimary,
-                                borderRadius: BorderRadius.circular(999),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(999),
-                                onTap: _next,
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: isLastPage ? 16 : 12,
-                                    vertical: 12,
-                                  ),
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 220),
-                                    switchInCurve: Curves.easeOut,
-                                    switchOutCurve: Curves.easeIn,
-                                    transitionBuilder: (child, animation) {
-                                      return FadeTransition(
-                                        opacity: animation,
-                                        child: ScaleTransition(
-                                          scale: animation,
-                                          child: child,
-                                        ),
-                                      );
-                                    },
-                                    child: isLastPage
-                                        ? Text(
-                                            'Start',
-                                            key: const ValueKey('start'),
-                                            style: TextStyle(
-                                              color: AppColors.primaryDark,
-                                              fontSize: Responsive.fontSize(context, 13),
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: 0.2,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.chevron_right_rounded,
-                                            key: ValueKey('next'),
-                                            color: AppColors.primaryDark,
-                                            size: 28,
-                                          ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              left: 37,
+              right: 21,
+              bottom: 26 + bottomInset,
+              child: Row(
+                children: [
+                  _PageTicks(current: _index),
+                  const SizedBox(width: 14),
+                  const Expanded(child: _BottomLine()),
+                  const SizedBox(width: 14),
+                  _NextButton(onTap: _next),
+                ],
               ),
             ),
           ],
@@ -238,82 +159,185 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
   }
 }
 
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.fraction});
+const double _figmaW = 390;
+const double _figmaH = 844;
 
-  final double fraction;
+double _scale(BuildContext context) {
+  final sz = MediaQuery.sizeOf(context);
+  final sw = sz.width / _figmaW;
+  final sh = sz.height / _figmaH;
+  return sw < sh ? sw : sh;
+}
+
+class _OnboardingSlide {
+  const _OnboardingSlide({
+    required this.body,
+    required this.textTop,
+    required this.textLeft,
+    required this.textWidth,
+    this.accent,
+    this.stacked,
+    required this.textAlign,
+    this.accentAlign,
+  });
+
+  final String body;
+  final String? accent;
+  final List<String>? stacked;
+  final double textTop;
+  final double textLeft;
+  final double textWidth;
+  final TextAlign textAlign;
+  final TextAlign? accentAlign;
+}
+
+class _OnboardingSlideView extends StatelessWidget {
+  const _OnboardingSlideView({
+    required this.slide,
+    required this.sx,
+    required this.sy,
+  });
+
+  final _OnboardingSlide slide;
+  final double sx;
+  final double sy;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: 4,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ColoredBox(
-              color: Colors.white.withValues(alpha: 0.18),
-            ),
-            AnimatedFractionallySizedBox(
-              duration: const Duration(milliseconds: 320),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.centerLeft,
-              widthFactor: fraction.clamp(0.0, 1.0),
-              child: const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.white, Color(0xFFD5FFF2)],
-                  ),
-                ),
+    final bodyStyle = GoogleFonts.montserrat(
+      fontSize: (24 * sy).clamp(20.0, 28.0),
+      fontWeight: FontWeight.w400,
+      color: Colors.white,
+      height: 1.0,
+      letterSpacing: 0,
+    );
+    final accentStyle = GoogleFonts.boldonse(
+      fontSize: (48 * sy).clamp(36.0, 52.0),
+      fontWeight: FontWeight.w400,
+      color: const Color(0xFFEDEEEF),
+      height: 1.0,
+      letterSpacing: 0,
+    );
+
+    return Stack(
+      children: [
+        Positioned(
+          top: slide.textTop * sy,
+          left: slide.textLeft * sx,
+          width: slide.textWidth * sx,
+          child: Column(
+            crossAxisAlignment: slide.textAlign == TextAlign.end
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
+            children: [
+              Text(
+                slide.body,
+                textAlign: slide.textAlign,
+                style: bodyStyle,
               ),
-            ),
-          ],
+              if (slide.accent != null) ...[
+                SizedBox(height: 8 * sy),
+                Text(
+                  slide.accent!,
+                  textAlign: slide.accentAlign ?? slide.textAlign,
+                  style: accentStyle,
+                ),
+              ],
+              if (slide.stacked != null) ...[
+                SizedBox(height: 12 * sy),
+                for (final word in slide.stacked!)
+                  Text(
+                    word,
+                    textAlign: TextAlign.start,
+                    style: accentStyle.copyWith(height: 1.12),
+                  ),
+              ],
+            ],
+          ),
         ),
-      ),
+      ],
+    );
+  }
+}
+
+class _BottomLine extends StatelessWidget {
+  const _BottomLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 1,
+      color: const Color(0xFFDDE6E9),
     );
   }
 }
 
 class _PageTicks extends StatelessWidget {
-  const _PageTicks({required this.current, required this.total});
+  const _PageTicks({required this.current});
 
   final int current;
-  final int total;
 
   @override
   Widget build(BuildContext context) {
-    final tickSize = Responsive.fontSize(context, 15).clamp(13.0, 17.0);
-    final sepSize = Responsive.fontSize(context, 13).clamp(11.0, 15.0);
-    final dim = TextStyle(
-      fontSize: tickSize,
-      fontWeight: FontWeight.w500,
-      color: Colors.white.withValues(alpha: 0.36),
+    final numStyle = GoogleFonts.boldonse(
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+      color: const Color(0xFFDDE6E9),
+      height: 1.0,
     );
-    final active = TextStyle(
-      fontSize: tickSize,
-      fontWeight: FontWeight.w800,
-      color: Colors.white,
-      letterSpacing: 0.5,
+    const dotStyle = TextStyle(
+      fontSize: 14,
+      color: Color(0xFFDDE6E9),
+      height: 0.8,
     );
-    final sep = TextStyle(
-      fontSize: sepSize,
-      color: Colors.white.withValues(alpha: 0.35),
+
+    List<Widget> childrenFor(int i) {
+      final label = Text((i + 1).toString().padLeft(2, '0'), style: numStyle);
+      const dot = Text('•', style: dotStyle);
+      if (i == 0) {
+        return [label, const SizedBox(width: 12), dot, const SizedBox(width: 12), dot];
+      }
+      if (i == 1) {
+        return [dot, const SizedBox(width: 12), label, const SizedBox(width: 12), dot];
+      }
+      return [dot, const SizedBox(width: 12), dot, const SizedBox(width: 12), label];
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      child: Row(
+        key: ValueKey(current),
+        mainAxisSize: MainAxisSize.min,
+        children: childrenFor(current),
+      ),
     );
-    return Row(
-      children: [
-        for (int i = 0; i < total; i++) ...[
-          if (i > 0) Text(' • ', style: sep),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            style: i == current ? active : dim,
-            child: Text(
-              i == current ? (i + 1).toString().padLeft(2, '0') : '•',
-            ),
-                          ),
-        ],
-      ],
+  }
+}
+
+class _NextButton extends StatelessWidget {
+  const _NextButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFDDE6E9),
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const SizedBox(
+          width: 48,
+          height: 48,
+          child: Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.primaryDark,
+            size: 28,
+          ),
+        ),
+      ),
     );
   }
 }

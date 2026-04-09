@@ -128,11 +128,13 @@ class _RackGridItem extends StatelessWidget {
 class ArticleListPage extends StatefulWidget {
   final List<String>? serviceFlowAllowedTypes;
   final String? serviceFlowTitle;
+  final bool showBottomBar;
 
   const ArticleListPage({
     super.key,
     this.serviceFlowAllowedTypes,
     this.serviceFlowTitle,
+    this.showBottomBar = true,
   });
 
   @override
@@ -300,22 +302,25 @@ class _ArticleListPageState extends State<ArticleListPage> {
                     ),
                   ),
                 ),
-                SizedBox(height: 72 + bottomSafe),
+                SizedBox(
+                  height: widget.showBottomBar ? (72 + bottomSafe) : bottomSafe,
+                ),
               ],
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: const _RackBottomBar(),
+          if (widget.showBottomBar)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: const _RackBottomBar(),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

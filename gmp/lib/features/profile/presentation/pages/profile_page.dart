@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/responsive.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
@@ -17,16 +16,11 @@ import '../widgets/edit_profile_widget.dart';
 import '../widgets/saved_addresses_page.dart';
 import 'manage_devices_page.dart';
 
-/// Teal → cyan profile shell (matches marketing / dashboard gradient).
 const LinearGradient _kProfileCardGradient = LinearGradient(
   begin: Alignment.topRight,
   end: Alignment.bottomLeft,
-  colors: [
-    Color(0xFF00E5FF),
-    Color(0xFF0F6876),
-    Color(0xFF004D4D),
-  ],
-  stops: [0.0, 0.42, 1.0],
+  colors: [Color(0xFF22D3EE), Color(0xFF0F6876), Color(0xFF062F35)],
+  stops: [0.0, 0.48, 1.0],
 );
 
 class ProfilePage extends StatefulWidget {
@@ -196,139 +190,128 @@ class _ProfilePageState extends State<ProfilePage> {
             );
           }
 
-          final hp = Responsive.horizontalPaddingOf(context);
-
           return Scaffold(
             backgroundColor: AppColors.background,
             body: SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(hp, 12, hp, 32),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    gradient: _kProfileCardGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                        spreadRadius: -4,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  borderRadius:
+                      const BorderRadius.vertical(bottom: Radius.circular(22)),
+                  gradient: _kProfileCardGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 30),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  profile.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontFamily: 'Boldonse',
+                                    fontSize: 24,
+                                    height: 1.02,
+                                    color: Color(0xFFDFE7E9),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _subtitleLine(profile),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontFamily: 'Montserrat',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFFDFE7E9),
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _OverlappingAvatarCluster(profile: profile),
+                        ],
                       ),
-                      BoxShadow(
-                        color: const Color(0xFF0A6C78).withValues(alpha: 0.35),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
+                      const SizedBox(height: 34),
+                      _MenuSection(
+                        children: [
+                          _GradientMenuTile(
+                            icon: Icons.account_circle_outlined,
+                            title: 'Family Profile',
+                            onTap: () =>
+                                _openEditProfile(context, profile, token),
+                          ),
+                          _GradientMenuTile(
+                            icon: Icons.notifications_none_rounded,
+                            title: 'Notifications',
+                            onTap: () {},
+                          ),
+                          _GradientMenuTile(
+                            icon: Icons.location_on_outlined,
+                            title: 'Location',
+                            onTap: () =>
+                                _openSavedAddresses(context, profile, token),
+                          ),
+                          _GradientMenuTile(
+                            icon: Icons.credit_card_outlined,
+                            title: 'Payment',
+                            onTap: () {},
+                          ),
+                          _GradientMenuTile(
+                            icon: Icons.devices_other_outlined,
+                            title: 'Manage Devices',
+                            onTap: () => _openManageDevices(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      _MenuSection(
+                        children: [
+                          _GradientMenuTile(
+                            icon: Icons.help_outline_rounded,
+                            title: 'FAQ',
+                            onTap: () {},
+                          ),
+                          _GradientMenuTile(
+                            icon: Icons.error_outline_rounded,
+                            title: 'Terms & Conditions',
+                            onTap: () {},
+                          ),
+                          _GradientMenuTile(
+                            icon: Icons.workspace_premium_outlined,
+                            title: 'License',
+                            onTap: () {},
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      _MenuSection(
+                        children: [
+                          _GradientMenuTile(
+                            icon: Icons.logout_rounded,
+                            title: 'Log Out',
+                            onTap: _logout,
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _OverlappingAvatarCluster(profile: profile),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      profile.name,
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      _subtitleLine(profile),
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: Colors.white.withValues(
-                                            alpha: 0.92),
-                                        height: 1.35,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 28),
-
-                        _GradientMenuTile(
-                          icon: Icons.account_circle_outlined,
-                          title: 'Profile',
-                          onTap: () =>
-                              _openEditProfile(context, profile, token),
-                        ),
-                        _GradientMenuTile(
-                          icon: Icons.notifications_outlined,
-                          title: 'Notifications',
-                          onTap: () {},
-                        ),
-                        _GradientMenuTile(
-                          icon: Icons.location_on_outlined,
-                          title: 'Location',
-                          onTap: () =>
-                              _openSavedAddresses(context, profile, token),
-                        ),
-                        _GradientMenuTile(
-                          icon: Icons.credit_card_outlined,
-                          title: 'Payment',
-                          onTap: () {},
-                        ),
-                        _GradientMenuTile(
-                          icon: Icons.devices_other,
-                          title: 'Manage Devices',
-                          onTap: () => _openManageDevices(context),
-                        ),
-
-                        _GradientSectionDivider(),
-
-                        _GradientMenuTile(
-                          icon: Icons.contact_support_outlined,
-                          title: 'FAQ',
-                          onTap: () {},
-                        ),
-                        _GradientMenuTile(
-                          icon: Icons.info_outline,
-                          title: 'Terms & Conditions',
-                          onTap: () {},
-                        ),
-                        _GradientMenuTile(
-                          icon: Icons.workspace_premium_outlined,
-                          title: 'License',
-                          onTap: () {},
-                        ),
-
-                        _GradientSectionDivider(),
-
-                        _GradientMenuTile(
-                          icon: Icons.privacy_tip_outlined,
-                          title: 'Privacy Policy',
-                          onTap: () {},
-                        ),
-
-                        _GradientSectionDivider(),
-
-                        _GradientMenuTile(
-                          icon: Icons.logout,
-                          title: 'Log Out',
-                          onTap: _logout,
-                          showChevron: false,
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ),
@@ -375,7 +358,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-/// Decorative cluster: main photo + two smaller circles (placeholder icons).
 class _OverlappingAvatarCluster extends StatelessWidget {
   const _OverlappingAvatarCluster({required this.profile});
 
@@ -386,45 +368,45 @@ class _OverlappingAvatarCluster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 118,
-      height: 100,
+      width: 156,
+      height: 92,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            left: 62,
-            top: 2,
+            right: 0,
+            top: 0,
             child: _RingAvatar(
-              radius: 16,
+              radius: 22,
               border: _border,
               child: _smallFill(Icons.person, 14),
             ),
           ),
           Positioned(
-            left: 0,
-            top: 10,
+            right: 31,
+            top: 6,
             child: _RingAvatar(
-              radius: 38,
+              radius: 39.5,
               border: _border,
               child: profile.profileImage != null
                   ? ClipOval(
                       child: Image.network(
                         profile.profileImage!,
-                        width: 76,
-                        height: 76,
+                        width: 79,
+                        height: 79,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
-                            _initialsAvatar(profile, 38),
+                            _initialsAvatar(profile, 39.5),
                       ),
                     )
-                  : _initialsAvatar(profile, 38),
+                  : _initialsAvatar(profile, 39.5),
             ),
           ),
           Positioned(
-            left: 46,
-            top: 54,
+            right: 0,
+            bottom: 0,
             child: _RingAvatar(
-              radius: 21,
+              radius: 22,
               border: _border,
               child: _smallFill(Icons.child_care_outlined, 18),
             ),
@@ -493,46 +475,42 @@ class _GradientMenuTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
-    this.showChevron = true,
   });
 
   final IconData icon;
   final String title;
   final VoidCallback onTap;
-  final bool showChevron;
-
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         splashColor: Colors.white24,
         highlightColor: Colors.white10,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
               Icon(icon, color: Colors.white, size: 24),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Montserrat',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
                     color: Colors.white,
-                    letterSpacing: 0.15,
                   ),
                 ),
               ),
-              if (showChevron)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.white.withValues(alpha: 0.95),
-                  size: 26,
-                ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: 0.96),
+                size: 26,
+              ),
             ],
           ),
         ),
@@ -542,14 +520,32 @@ class _GradientMenuTile extends StatelessWidget {
 }
 
 class _GradientSectionDivider extends StatelessWidget {
+  const _GradientSectionDivider();
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Container(
         height: 1,
-        color: Colors.white.withValues(alpha: 0.35),
+        color: Colors.white.withValues(alpha: 0.42),
       ),
+    );
+  }
+}
+
+class _MenuSection extends StatelessWidget {
+  const _MenuSection({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ...children,
+        const _GradientSectionDivider(),
+      ],
     );
   }
 }
