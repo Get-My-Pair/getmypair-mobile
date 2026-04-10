@@ -7,30 +7,37 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 
-class EditProfileWidget extends StatefulWidget {
+const LinearGradient _kProfileShellGradient = LinearGradient(
+  begin: Alignment.topRight,
+  end: Alignment.bottomLeft,
+  colors: [Color(0xFF22D3EE), Color(0xFF0F6876), Color(0xFF062F35)],
+  stops: [0.0, 0.48, 1.0],
+);
+
+class EditProfilePage extends StatefulWidget {
   final UserProfile profile;
   final String accessToken;
 
-  const EditProfileWidget({
+  const EditProfilePage({
     super.key,
     required this.profile,
     required this.accessToken,
   });
 
   @override
-  State<EditProfileWidget> createState() => _EditProfileWidgetState();
+  State<EditProfilePage> createState() => _EditProfilePageState();
 }
 
-class _EditProfileWidgetState extends State<EditProfileWidget> {
-  static const Color _formSurface = Color(0x1AFFFFFF);
+class _EditProfilePageState extends State<EditProfilePage> {
   static const Color _inputFill = Color(0x24FFFFFF);
-  static const Color _inputFillReadOnly = Color(0x14FFFFFF);
+  static const Color _inputFillReadOnly = Color(0x1FFFFFFF);
   static const Color _inputBorder = Color(0x40FFFFFF);
   static const Color _inputBorderFocused = Color(0x8CFFFFFF);
 
@@ -65,7 +72,6 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    // Show bottom sheet with options: choose from gallery or take a photo
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -115,8 +121,8 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
 
       final file = File(picked.path);
       final originalBytes = await file.readAsBytes();
+      if (!mounted) return;
 
-      // Show crop dialog using crop_your_image
       Uint8List? croppedBytes;
       await showDialog(
         context: context,
@@ -144,9 +150,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  controller.crop();
-                },
+                onPressed: () => controller.crop(),
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                 child: const Text('Crop'),
               ),
@@ -159,11 +163,13 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
       final fileName = file.path.split('/').last;
 
       if (!mounted) return;
-      context.read<ProfileBloc>().add(ProfileImageUploadRequested(
-            accessToken: widget.accessToken,
-            imageBytes: bytes,
-            fileName: fileName,
-          ));
+      context.read<ProfileBloc>().add(
+            ProfileImageUploadRequested(
+              accessToken: widget.accessToken,
+              imageBytes: bytes,
+              fileName: fileName,
+            ),
+          );
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
     }
@@ -209,137 +215,96 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 430),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 0),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF062F35),
-                                Color(0xFF0A5864),
-                                Color(0xFF09DBFA),
-                              ],
-                              stops: [0.0, 0.56, 1.0],
-                            ),
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(20),
-                              bottomRight: Radius.circular(20),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x38ABABAB),
-                                blurRadius: 12,
-                                offset: Offset(0, 4),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(22),
+                      ),
+                      gradient: _kProfileShellGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(profile, avatarImage, isLoading, state),
+                          const SizedBox(height: 26),
+                          _buildLabel('Full Name'),
+                          const SizedBox(height: 8),
+                          _profileField(controller: _nameController),
+                          const SizedBox(height: 18),
+                          _buildLabel('Nick Name'),
+                          const SizedBox(height: 8),
+                          _profileField(controller: _nickNameController, readOnly: true),
+                          const SizedBox(height: 18),
+                          _buildLabel('Phone Number'),
+                          const SizedBox(height: 8),
+                          _profileField(controller: _phoneController, readOnly: true),
+                          const SizedBox(height: 18),
+                          _buildLabel('E-Mail Address'),
+                          const SizedBox(height: 8),
+                          _profileField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 18),
+                          _buildLabel('Password'),
+                          const SizedBox(height: 8),
+                          _profileField(
+                            controller: _passwordController,
+                            readOnly: true,
+                            obscureText: !_showPassword,
+                            suffix: IconButton(
+                              onPressed: () => setState(() => _showPassword = !_showPassword),
+                              splashRadius: 18,
+                              icon: Icon(
+                                _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: const Color(0xCCFFFFFF),
+                                size: 22,
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          _buildLabel('Foot Size Chart'),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(child: _footMetricChip('US:10')),
+                              const SizedBox(width: 10),
+                              Expanded(child: _footMetricChip('UK:09')),
+                              const SizedBox(width: 10),
+                              Expanded(child: _footMetricChip('EURO:41')),
                             ],
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildHeader(profile, avatarImage, isLoading, state),
-                                const SizedBox(height: 20),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: _formSurface,
-                                    borderRadius: BorderRadius.circular(18),
-                                    border: Border.all(color: const Color(0x2EFFFFFF)),
-                                  ),
-                                  padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _buildLabel('Full Name'),
-                                      const SizedBox(height: 8),
-                                      _profileField(controller: _nameController),
-                                      const SizedBox(height: 18),
-                                      _buildLabel('Nick Name'),
-                                      const SizedBox(height: 8),
-                                      _profileField(controller: _nickNameController, readOnly: true),
-                                      const SizedBox(height: 18),
-                                      _buildLabel('Phone Number'),
-                                      const SizedBox(height: 8),
-                                      _profileField(controller: _phoneController, readOnly: true),
-                                      const SizedBox(height: 18),
-                                      _buildLabel('E-Mail Address'),
-                                      const SizedBox(height: 8),
-                                      _profileField(
-                                        controller: _emailController,
-                                        keyboardType: TextInputType.emailAddress,
-                                      ),
-                                      const SizedBox(height: 18),
-                                      _buildLabel('Password'),
-                                      const SizedBox(height: 8),
-                                      _profileField(
-                                        controller: _passwordController,
-                                        readOnly: true,
-                                        obscureText: !_showPassword,
-                                        suffix: IconButton(
-                                          onPressed: () => setState(() => _showPassword = !_showPassword),
-                                          splashRadius: 18,
-                                          icon: Icon(
-                                            _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                            color: const Color(0xCCFFFFFF),
-                                            size: 22,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 22),
-                                _buildLabel('Foot Size Chart'),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(child: _footMetricChip('US:10')),
-                                    const SizedBox(width: 10),
-                                    Expanded(child: _footMetricChip('UK:09')),
-                                    const SizedBox(width: 10),
-                                    Expanded(child: _footMetricChip('EURO:41')),
-                                  ],
-                                ),
-                                const SizedBox(height: 22),
-                                _buildLabel('Foot Abnormality'),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0x18FFFFFF),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0x2EFFFFFF)),
-                                  ),
-                                  child: Text(
-                                    'Wide Foot',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 22),
+                          _buildLabel('Foot Abnormality'),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Wide Foot',
+                            style: GoogleFonts.boldonse(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.white,
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(0, 18, 0, 18),
-                      child: _BottomPillNavigation(),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const DashboardLinkedBottomNav(),
+              ],
             ),
           ),
         );
@@ -449,10 +414,10 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
     return Text(
       text,
       style: GoogleFonts.montserrat(
-        fontSize: 15,
-        fontWeight: FontWeight.w500,
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
         color: Colors.white,
-        height: 1.2,
+        height: 1,
       ),
     );
   }
@@ -477,20 +442,20 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
       decoration: InputDecoration(
         filled: true,
         fillColor: readOnly ? _inputFillReadOnly : _inputFill,
-        isDense: false,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 26, vertical: 11),
         suffixIcon: suffix,
         suffixIconConstraints: const BoxConstraints(minHeight: 36, minWidth: 44),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: _inputBorder, width: 1),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: _inputBorder, width: 0.9),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: _inputBorderFocused, width: 1.3),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: _inputBorderFocused, width: 1.1),
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(100),
           borderSide: const BorderSide(color: _inputBorder),
         ),
       ),
@@ -499,76 +464,13 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
 
   Widget _footMetricChip(String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0x16FFFFFF),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x2EFFFFFF)),
-      ),
-      child: Center(
-        child: Text(
-          value,
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomPillNavigation extends StatelessWidget {
-  const _BottomPillNavigation();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      width: 239,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF062F35), Color(0xFF0AA9C2)],
-        ),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x55000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Icon(Icons.home_outlined, color: Colors.white, size: 28),
-            ),
-            const Expanded(
-              child: Icon(Icons.hiking_outlined, color: Colors.white, size: 28),
-            ),
-            Expanded(
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF062F35),
-                  ),
-                ),
-              ),
-            ),
-          ],
+      alignment: Alignment.centerLeft,
+      child: Text(
+        value,
+        style: GoogleFonts.boldonse(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: Colors.white,
         ),
       ),
     );

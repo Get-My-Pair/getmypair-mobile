@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/address.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
+
+const LinearGradient _kProfileShellGradient = LinearGradient(
+  begin: Alignment.topRight,
+  end: Alignment.bottomLeft,
+  colors: [Color(0xFF22D3EE), Color(0xFF0F6876), Color(0xFF062F35)],
+  stops: [0.0, 0.48, 1.0],
+);
 
 class SavedAddressesPage extends StatefulWidget {
   final UserProfile profile;
@@ -49,10 +57,10 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
         final currentProfile = state is ProfileLoaded
             ? state.profile
             : state is AddressActionLoading
-            ? state.profile
-            : state is ProfileError && state.profile != null
-            ? state.profile!
-            : widget.profile;
+                ? state.profile
+                : state is ProfileError && state.profile != null
+                    ? state.profile!
+                    : widget.profile;
         final isLoading = state is AddressActionLoading;
 
         final allAddresses = currentProfile.addresses;
@@ -66,152 +74,133 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
             child: Column(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 430),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppColors.footwearHeroStart,
-                                AppColors.footwearHeroMid,
-                                AppColors.footwearHeroEnd,
-                              ],
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(22),
+                      ),
+                      gradient: _kProfileShellGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 30),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Location',
+                            style: TextStyle(
+                              fontFamily: 'Boldonse',
+                              fontSize: 24,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFFDFE7E9),
                             ),
-                            borderRadius: const BorderRadius.only(
-                              bottomLeft: Radius.circular(20),
-                              bottomRight: Radius.circular(20),
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x38ABABAB),
-                                blurRadius: 12,
-                                offset: Offset(0, 4),
+                          ),
+                          const SizedBox(height: 24),
+                          _buildSearchBar(),
+                          const SizedBox(height: 28),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.my_location_outlined,
+                                  label: 'Turn on Location',
+                                  onTap: () {},
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ActionCard(
+                                  icon: Icons.add_box_outlined,
+                                  label: 'Add New Address',
+                                  onTap: isLoading
+                                      ? null
+                                      : () => _showAddressDialog(context),
+                                ),
                               ),
                             ],
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 26, 18, 28),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Location',
-                                  style: TextStyle(
-                                    fontFamily: 'Boldonse',
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color(0xFFDFE7E9),
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                _buildSearchBar(),
-                                const SizedBox(height: 28),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _ActionCard(
-                                        icon: Icons.my_location_outlined,
-                                        label: 'Turn on Location',
-                                        onTap: () {},
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _ActionCard(
-                                        icon: Icons.add_box_outlined,
-                                        label: 'Add New Address',
-                                        onTap: isLoading
-                                            ? null
-                                            : () => _showAddressDialog(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 42),
-                                const Text(
-                                  'Saved Address',
-                                  style: TextStyle(
-                                    fontFamily: 'Montserrat',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                if (allAddresses.isEmpty)
-                                  _buildEmptyState()
-                                else ...[
-                                  ...visibleAddresses.map(
-                                    (address) => _AddressRow(
-                                      address: address,
-                                      isLoading: isLoading,
-                                      onEdit: () => _showAddressDialog(
-                                        context,
-                                        address: address,
-                                      ),
-                                      onDelete: () =>
-                                          _confirmDelete(context, address),
-                                      isHome: address == allAddresses.first,
-                                    ),
-                                  ),
-                                  if (allAddresses.length > 2)
-                                    Center(
-                                      child: InkWell(
-                                        onTap: () => setState(
-                                          () => _showAllAddresses =
-                                              !_showAllAddresses,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 8,
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                _showAllAddresses
-                                                    ? 'View Less'
-                                                    : 'View All',
-                                                style: const TextStyle(
-                                                  fontFamily: 'Montserrat',
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Icon(
-                                                _showAllAddresses
-                                                    ? Icons.keyboard_arrow_up
-                                                    : Icons.keyboard_arrow_down,
-                                                color: Colors.white,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                                const SizedBox(height: 64),
-                              ],
+                          const SizedBox(height: 42),
+                          const Text(
+                            'Saved Address',
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          if (allAddresses.isEmpty)
+                            _buildEmptyState()
+                          else ...[
+                            ...visibleAddresses.map(
+                              (address) => _AddressRow(
+                                address: address,
+                                isLoading: isLoading,
+                                onEdit: () => _showAddressDialog(
+                                  context,
+                                  address: address,
+                                ),
+                                onDelete: () =>
+                                    _confirmDelete(context, address),
+                                isHome: address == allAddresses.first,
+                              ),
+                            ),
+                            if (allAddresses.length > 2)
+                              Center(
+                                child: InkWell(
+                                  onTap: () => setState(
+                                    () => _showAllAddresses =
+                                        !_showAllAddresses,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _showAllAddresses
+                                              ? 'View Less'
+                                              : 'View All',
+                                          style: const TextStyle(
+                                            fontFamily: 'Montserrat',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Icon(
+                                          _showAllAddresses
+                                              ? Icons.keyboard_arrow_up
+                                              : Icons.keyboard_arrow_down,
+                                          color: Colors.white,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                          const SizedBox(height: 64),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(0, 12, 0, 18),
-                  child: _BottomPillNavigation(),
-                ),
+                const DashboardLinkedBottomNav(),
               ],
             ),
           ),
@@ -258,9 +247,9 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
+        color: Colors.white.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
       ),
       child: const Text(
         'No saved addresses yet. Tap Add New Address to continue.',
@@ -290,11 +279,11 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
             onPressed: () {
               Navigator.pop(ctx);
               context.read<ProfileBloc>().add(
-                AddressDeleteRequested(
-                  accessToken: widget.accessToken,
-                  addressId: address.id,
-                ),
-              );
+                    AddressDeleteRequested(
+                      accessToken: widget.accessToken,
+                      addressId: address.id,
+                    ),
+                  );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -344,7 +333,7 @@ class _ActionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0x33D9D9D9),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withOpacity(0.28)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
         ),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Column(
@@ -406,7 +395,7 @@ class _AddressRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.5)),
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
         ),
       ),
       child: Row(
@@ -418,7 +407,7 @@ class _AddressRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0x33D9D9D9),
               borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: Colors.white.withOpacity(0.18)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
             ),
             child: Icon(
               isHome ? Icons.home_outlined : Icons.navigation_outlined,
@@ -488,58 +477,6 @@ class _AddressRow extends StatelessWidget {
   }
 }
 
-class _BottomPillNavigation extends StatelessWidget {
-  const _BottomPillNavigation();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      width: 239,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B4A53),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x55000000),
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Icon(Icons.home_outlined, color: Colors.white),
-            ),
-            const Expanded(
-              child: Icon(Icons.hiking_outlined, color: Colors.white),
-            ),
-            Expanded(
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF0B4A53),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _AddressFormSheet extends StatefulWidget {
   final String accessToken;
   final Address? existing;
@@ -579,25 +516,25 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     if (!_formKey.currentState!.validate()) return;
     if (widget.existing != null) {
       context.read<ProfileBloc>().add(
-        AddressUpdateRequested(
-          accessToken: widget.accessToken,
-          addressId: widget.existing!.id,
-          addressLine1: _line1.text.trim(),
-          city: _city.text.trim(),
-          state: _state.text.trim(),
-          pincode: _pincode.text.trim(),
-        ),
-      );
+            AddressUpdateRequested(
+              accessToken: widget.accessToken,
+              addressId: widget.existing!.id,
+              addressLine1: _line1.text.trim(),
+              city: _city.text.trim(),
+              state: _state.text.trim(),
+              pincode: _pincode.text.trim(),
+            ),
+          );
     } else {
       context.read<ProfileBloc>().add(
-        AddressAddRequested(
-          accessToken: widget.accessToken,
-          addressLine1: _line1.text.trim(),
-          city: _city.text.trim(),
-          state: _state.text.trim(),
-          pincode: _pincode.text.trim(),
-        ),
-      );
+            AddressAddRequested(
+              accessToken: widget.accessToken,
+              addressLine1: _line1.text.trim(),
+              city: _city.text.trim(),
+              state: _state.text.trim(),
+              pincode: _pincode.text.trim(),
+            ),
+          );
     }
     Navigator.pop(context);
   }
@@ -692,3 +629,4 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     );
   }
 }
+

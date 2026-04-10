@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/delete_article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
-import 'article_create_page.dart';
 import 'article_edit_page.dart';
 
 /// Module 3 – Article details. Figma rack-detail layout: gradient shell, panel, stats, actions.
@@ -167,6 +167,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final bottomSafe = Responsive.bottomInsetOf(context);
+    final bottomNavReserve = FloatingGradientBottomNav.barHeight + 12 + bottomSafe;
 
     if (_loading) {
       return Scaffold(
@@ -207,9 +208,15 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 72 + bottomSafe),
+                  SizedBox(height: bottomNavReserve),
                 ],
               ),
+            ),
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
             ),
           ],
         ),
@@ -292,9 +299,15 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 72 + bottomSafe),
+                  SizedBox(height: bottomNavReserve),
                 ],
               ),
+            ),
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
             ),
           ],
         ),
@@ -586,31 +599,15 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                     ),
                   ),
                 ),
-                SizedBox(height: 72 + bottomSafe),
+                SizedBox(height: bottomNavReserve),
               ],
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: _ArticleDetailBottomBar(
-                  onCenterTap: () {
-                    Navigator.of(context)
-                        .push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const ArticleCreatePage(),
-                      ),
-                    )
-                        .then((_) => _load());
-                  },
-                ),
-              ),
-            ),
+            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
         ],
       ),
@@ -743,81 +740,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
       color: AppColors.surfaceVariant,
       child: const Center(
         child: Icon(Icons.checkroom_outlined, color: AppColors.textTertiary, size: 56),
-      ),
-    );
-  }
-}
-
-class _ArticleDetailBottomBar extends StatelessWidget {
-  final VoidCallback onCenterTap;
-
-  const _ArticleDetailBottomBar({required this.onCenterTap});
-
-  static const SweepGradient _barGradient = SweepGradient(
-    center: Alignment(0.22, -1.07),
-    startAngle: -0.55,
-    endAngle: 5.73,
-    colors: [
-      Color(0xFF09E0FF),
-      Color(0xFF0F6876),
-      Color(0xFF062F35),
-      Color(0xFF062F35),
-    ],
-    stops: [0.05, 0.44, 0.57, 1],
-    transform: GradientRotation(-0.55),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: ShapeDecoration(
-        gradient: _barGradient,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-        shadows: const [
-          BoxShadow(
-            color: Color(0xFFABABAB),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Material(
-            color: Colors.white,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onCenterTap,
-              child: const SizedBox(
-                width: 45,
-                height: 45,
-                child: Icon(Icons.add_rounded, color: Color(0xFF062F35), size: 28),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.home_outlined, color: Colors.white, size: 24),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.grid_view_rounded, color: Colors.white, size: 24),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 24),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

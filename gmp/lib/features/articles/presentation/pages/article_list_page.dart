@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -44,7 +45,7 @@ class _RackGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelStyle = TextStyle(
       color: _labelColor,
-      fontSize: Responsive.fontSize(context, 11),
+      fontSize: Responsive.fontSize(context, 14),
       fontFamily: 'Boldonse',
       fontWeight: FontWeight.w400,
       height: 1.15,
@@ -158,7 +159,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
   /// Primary UI teal from mockup (#11999E).
   static const Color _rackTealPrimary = Color(0xFF11999E);
   static const Color _rackDark = Color(0xFF062F35);
-  static const Color _panelBg = Color(0xFFF5F5F5);
+  static const Color _panelBg = Color(0xFFF0F0F0);
 
   static const SweepGradient _shellSweep = SweepGradient(
     center: Alignment(0.22, -1.07),
@@ -303,23 +304,19 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   ),
                 ),
                 SizedBox(
-                  height: widget.showBottomBar ? (72 + bottomSafe) : bottomSafe,
+                  height: widget.showBottomBar
+                      ? (FloatingGradientBottomNav.barHeight + 12 + bottomSafe)
+                      : bottomSafe,
                 ),
               ],
             ),
           ),
           if (widget.showBottomBar)
-            Positioned(
+            const Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: const _RackBottomBar(),
-                ),
-              ),
+              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
             ),
         ],
       ),
@@ -428,7 +425,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   static const List<Map<String, String>> _filterTabs = [
-    {'value': '', 'label': 'All'},
     {'value': 'formal', 'label': 'Formals'},
     {'value': 'sports_shoe', 'label': 'Nike'},
     {'value': 'casual', 'label': 'Casuals'},
@@ -436,26 +432,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
     {'value': 'sandal', 'label': 'Converse'},
   ];
 
-  Widget _buildTealRowDivider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Center(
-        child: Container(
-          height: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: _rackTealPrimary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildRackBody(BuildContext context) {
     final list = _filteredArticles;
     final hPad = Responsive.horizontalPaddingOf(context).clamp(12.0, 20.0);
-    final canPop = Navigator.canPop(context);
     final rowCount = list.isEmpty ? 0 : (list.length + 2) ~/ 3;
     final selectedCount = _selectedIds.length;
 
@@ -500,14 +479,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 )
               : Row(
                   children: [
-                    if (canPop)
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _rackDark),
-                      ),
-                    if (canPop) const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         'My Rack',
@@ -525,14 +496,21 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         onTap: () => _navigateToCreate(context),
                         borderRadius: BorderRadius.circular(24),
                         child: Container(
-                          width: 44,
-                          height: 44,
+                          width: 48,
+                          height: 48,
                           decoration: ShapeDecoration(
-                            color: Colors.white,
+                            color: const Color(0x33DFE7E9),
                             shape: RoundedRectangleBorder(
-                              side: const BorderSide(width: 1.5, color: _rackTealPrimary),
+                              side: const BorderSide(width: 1, color: _rackTealPrimary),
                               borderRadius: BorderRadius.circular(22),
                             ),
+                            shadows: const [
+                              BoxShadow(
+                                color: Color(0x2E000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: Icon(Icons.add_rounded, color: _rackDark, size: 22),
                         ),
@@ -573,7 +551,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   height: 48,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: ShapeDecoration(
-                    color: _rackTealPrimary,
+                    gradient: const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [Color(0xFF063239), Color(0xFF0CADC5)],
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(100),
                     ),
@@ -587,7 +569,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         'Style Me',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: Responsive.fontSize(context, 17),
+                          fontSize: Responsive.fontSize(context, 16),
                           fontFamily: 'Boldonse',
                           fontWeight: FontWeight.w400,
                         ),
@@ -602,12 +584,12 @@ class _ArticleListPageState extends State<ArticleListPage> {
           Padding(
             padding: EdgeInsets.symmetric(horizontal: hPad),
             child: Container(
-              height: 44,
+              height: 42,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: ShapeDecoration(
                 color: Colors.white,
                 shape: RoundedRectangleBorder(
-                  side: const BorderSide(width: 1.5, color: _rackTealPrimary),
+                  side: const BorderSide(width: 1, color: _rackDark),
                   borderRadius: BorderRadius.circular(100),
                 ),
               ),
@@ -636,7 +618,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   ),
                   suffixIcon: Icon(
                     Icons.tune_rounded,
-                    color: _rackTealPrimary.withValues(alpha: 0.85),
+                    color: Colors.black.withValues(alpha: 0.35),
                     size: 22,
                   ),
                 ),
@@ -696,56 +678,78 @@ class _ArticleListPageState extends State<ArticleListPage> {
                     ),
                     children: [
                       for (int r = 0; r < rowCount; r++) ...[
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: List.generate(3, (c) {
-                            final idx = r * 3 + c;
-                            if (idx >= list.length) {
-                              return const Expanded(child: SizedBox.shrink());
-                            }
-                            final article = list[idx];
-                            final imageUrl = _imageUrl(article.thumbnailImage);
-                            return Expanded(
-                              child: AspectRatio(
-                                aspectRatio: 0.72,
-                                child: _RackGridItem(
-                                  article: article,
-                                  imageUrl: imageUrl,
-                                  selectionMode: _selectionMode,
-                                  selected: _selectedIds.contains(article.id),
-                                  onLongPress: () => setState(() {
-                                    _selectionMode = true;
-                                    _selectedIds.add(article.id);
-                                  }),
-                                  onTap: () {
-                                    if (_selectionMode) {
-                                      setState(() {
-                                        if (_selectedIds.contains(article.id)) {
-                                          _selectedIds.remove(article.id);
-                                          if (_selectedIds.isEmpty) {
-                                            _selectionMode = false;
-                                          }
-                                        } else {
-                                          _selectedIds.add(article.id);
-                                        }
-                                      });
-                                    } else {
-                                      if (_isServiceFlowMode) {
-                                        _navigateToServiceSelection(
-                                          context,
-                                          article,
-                                        );
-                                      } else {
-                                        _navigateToDetails(context, article);
-                                      }
-                                    }
-                                  },
-                                ),
+                        Container(
+                          height: 104,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                          decoration: const ShapeDecoration(
+                            color: _panelBg,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(10)),
+                            ),
+                          ),
+                          child: DecoratedBox(
+                            decoration: const BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: _rackTealPrimary, width: 3),
                               ),
-                            );
-                          }),
+                            ),
+                            // Fixed height avoids AspectRatio + tight Row width fighting maxHeight (~84px),
+                            // which triggers a layout assertion on web and mobile.
+                            child: SizedBox(
+                              height: 74,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: List.generate(3, (c) {
+                                  final idx = r * 3 + c;
+                                  if (idx >= list.length) {
+                                    return const Expanded(child: SizedBox.shrink());
+                                  }
+                                  final article = list[idx];
+                                  final imageUrl = _imageUrl(article.thumbnailImage);
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                                      child: _RackGridItem(
+                                        article: article,
+                                        imageUrl: imageUrl,
+                                        selectionMode: _selectionMode,
+                                        selected: _selectedIds.contains(article.id),
+                                        onLongPress: () => setState(() {
+                                          _selectionMode = true;
+                                          _selectedIds.add(article.id);
+                                        }),
+                                        onTap: () {
+                                          if (_selectionMode) {
+                                            setState(() {
+                                              if (_selectedIds.contains(article.id)) {
+                                                _selectedIds.remove(article.id);
+                                                if (_selectedIds.isEmpty) {
+                                                  _selectionMode = false;
+                                                }
+                                              } else {
+                                                _selectedIds.add(article.id);
+                                              }
+                                            });
+                                          } else {
+                                            if (_isServiceFlowMode) {
+                                              _navigateToServiceSelection(
+                                                context,
+                                                article,
+                                              );
+                                            } else {
+                                              _navigateToDetails(context, article);
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                          ),
                         ),
-                        if (r < rowCount - 1) _buildTealRowDivider(),
+                        if (r < rowCount - 1) const SizedBox(height: 12),
                       ],
                     ],
                   ),
@@ -787,7 +791,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
     )
         .then((created) {
       if (created == true && mounted) {
-        Navigator.of(context).pop(true);
+        Navigator.maybePop(context, true);
       }
     });
   }
@@ -805,6 +809,7 @@ class _FilterChipPill extends StatelessWidget {
   });
 
   static const Color _teal = Color(0xFF11999E);
+  static const Color _chipBorder = Color(0xFFC6C6C6);
 
   @override
   Widget build(BuildContext context) {
@@ -818,7 +823,7 @@ class _FilterChipPill extends StatelessWidget {
           decoration: ShapeDecoration(
             color: Colors.white,
             shape: RoundedRectangleBorder(
-              side: BorderSide(width: selected ? 2 : 1.2, color: _teal),
+              side: BorderSide(width: selected ? 1.4 : 1, color: selected ? _teal : _chipBorder),
               borderRadius: BorderRadius.circular(100),
             ),
           ),
@@ -827,140 +832,10 @@ class _FilterChipPill extends StatelessWidget {
             label,
             style: TextStyle(
               color: const Color(0xFF1A1A1A),
-              fontSize: Responsive.fontSize(context, 14),
+              fontSize: Responsive.fontSize(context, 16),
               fontFamily: 'Montserrat',
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              fontWeight: FontWeight.w400,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Mockup: Home · Favorites · Rack (shoe) · Cart · Profile — white circle on active tab.
-class _RackBottomBar extends StatelessWidget {
-  const _RackBottomBar();
-
-  static const double _barHeight = 56;
-  static const double _hitSize = 44;
-  static const Color _selectedIconColor = Color(0xFF08343A);
-
-  /// Rack tab is index 2 while on this page.
-  static const int _rackTabIndex = 2;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <({IconData outlined, IconData filled, VoidCallback onTap})>[
-      (
-        outlined: Icons.home_outlined,
-        filled: Icons.home_rounded,
-        onTap: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-        },
-      ),
-      (
-        outlined: Icons.favorite_border_rounded,
-        filled: Icons.favorite_rounded,
-        onTap: () {},
-      ),
-      (
-        outlined: Icons.checkroom_outlined,
-        filled: Icons.checkroom,
-        onTap: () {},
-      ),
-      (
-        outlined: Icons.shopping_cart_outlined,
-        filled: Icons.shopping_cart_rounded,
-        onTap: () {},
-      ),
-      (
-        outlined: Icons.person_outline_rounded,
-        filled: Icons.person_rounded,
-        onTap: () {},
-      ),
-    ];
-
-    return Material(
-      color: Colors.transparent,
-      elevation: 0,
-      child: Container(
-        height: _barHeight,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(_barHeight / 2),
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Color(0xFF08343A),
-              Color(0xFF0F6876),
-              Color(0xFF11999E),
-              Color(0xFF00D4E0),
-            ],
-            stops: [0.0, 0.35, 0.65, 1.0],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-              spreadRadius: -4,
-            ),
-            BoxShadow(
-              color: const Color(0xFF0A6C78).withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(items.length, (i) {
-              final selected = i == _rackTabIndex;
-              final item = items[i];
-              return Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: item.onTap,
-                    customBorder: const CircleBorder(),
-                    splashColor: Colors.white24,
-                    highlightColor: Colors.white10,
-                    child: Center(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOutCubic,
-                        width: _hitSize,
-                        height: _hitSize,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: selected ? Colors.white : Colors.transparent,
-                          boxShadow: selected
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.12),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Icon(
-                          selected ? item.filled : item.outlined,
-                          size: 24,
-                          color: selected ? _selectedIconColor : Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
           ),
         ),
       ),

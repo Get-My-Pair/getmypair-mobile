@@ -14,7 +14,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   Timer? _timer;
-  static const _figmaWidth = 390.0;
   static const _figmaHeight = 844.0;
 
   @override
@@ -68,45 +67,44 @@ class _SplashScreenState extends State<SplashScreen> {
           child: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final sx = constraints.maxWidth / _figmaWidth;
                 final sy = constraints.maxHeight / _figmaHeight;
 
-                final left = 98.0 * sx;
                 final top = 311.0 * sy;
-                final textWidth = 234.0 * sx;
                 final gap = 9.0 * sy;
                 return Stack(
                   children: [
                     Positioned(
-                      left: left,
                       top: top,
-                      width: textWidth,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Welcome to',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.w300,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Welcome to',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w300,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: gap),
-                          Text(
-                            'GetMyPair',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 36,
-                              fontFamily: 'Boldonse',
-                              fontWeight: FontWeight.w400,
+                            SizedBox(height: gap),
+                            Text(
+                              'GetMyPair',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontFamily: 'Boldonse',
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ],

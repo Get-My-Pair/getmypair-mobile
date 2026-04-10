@@ -311,6 +311,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   Widget build(BuildContext context) {
     final hPad = Responsive.horizontalPaddingOf(context).clamp(12.0, 20.0);
     final bottomSafe = Responsive.bottomInsetOf(context);
+    final isCompact = MediaQuery.sizeOf(context).width < 360;
     final authState = context.read<AuthBloc>().state;
     final userDisplayName = (widget.mapPinDisplayName != null &&
             widget.mapPinDisplayName!.trim().isNotEmpty)
@@ -362,7 +363,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Padding(
-                              padding: EdgeInsets.fromLTRB(hPad, 14, hPad, 0),
+                              padding: EdgeInsets.fromLTRB(hPad, isCompact ? 10 : 14, hPad, 0),
                               child: Row(
                                 children: [
                                   if (Navigator.of(context).canPop())
@@ -377,9 +378,11 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                   Expanded(
                                     child: Text(
                                       'Shoe Care',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         color: _titleNavy,
-                                        fontSize: Responsive.fontSize(context, 22),
+                                        fontSize: Responsive.fontSize(context, isCompact ? 19 : 22),
                                         fontFamily: 'Boldonse',
                                         fontWeight: FontWeight.w400,
                                       ),
@@ -456,13 +459,13 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                     child: InkWell(
                                       onTap: _showFilterSheet,
                                       borderRadius: BorderRadius.circular(12),
-                                      child: const SizedBox(
-                                        width: 48,
-                                        height: 48,
+                                      child: SizedBox(
+                                        width: isCompact ? 44 : 48,
+                                        height: isCompact ? 44 : 48,
                                         child: Icon(
                                           Icons.format_list_bulleted_rounded,
                                           color: Colors.white,
-                                          size: 24,
+                                          size: isCompact ? 22 : 24,
                                         ),
                                       ),
                                     ),

@@ -293,9 +293,19 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   child: SafeArea(
                     top: false,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(44, 62, 38, 24),
-                      child: Column(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
+                        final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 62.0);
+                        final countryWidth = (constraints.maxWidth * 0.26).clamp(86.0, 110.0);
+                        return SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPad,
+                            topPad,
+                            horizontalPad,
+                            24,
+                          ),
+                          child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const Text(
@@ -334,33 +344,38 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               InkWell(
                                 onTap: _pickCountryCode,
                                 borderRadius: BorderRadius.circular(100),
-                                child: Container(
-                                  height: 48,
-                                  width: 110,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(100),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(2),
-                                        child: Image.network(_kFlagImage,
-                                            width: 32, height: 21, fit: BoxFit.cover),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        _selectedCountry.dialCode,
-                                        style: const TextStyle(
-                                          color: Color(0x57000000),
-                                          fontSize: 16,
-                                          fontFamily: 'Montserrat',
-                                          fontWeight: FontWeight.w400,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(minWidth: 86, maxWidth: countryWidth),
+                                  child: Container(
+                                    height: 48,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(100),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(2),
+                                          child: Image.network(_kFlagImage,
+                                              width: 32, height: 21, fit: BoxFit.cover),
                                         ),
-                                      ),
-                                      const Icon(Icons.keyboard_arrow_down, color: Color(0x57000000), size: 18),
-                                    ],
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            _selectedCountry.dialCode,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Color(0x57000000),
+                                              fontSize: 16,
+                                              fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ),
+                                        const Icon(Icons.keyboard_arrow_down, color: Color(0x57000000), size: 18),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -382,6 +397,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                           controller: _phoneController,
                                           focusNode: _phoneFocusNode,
                                           keyboardType: TextInputType.phone,
+                                          textAlignVertical: TextAlignVertical.center,
                                           maxLength: 10,
                                           inputFormatters: [
                                             FilteringTextInputFormatter.digitsOnly,
@@ -396,7 +412,14 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                               fontSize: 16,
                                               fontFamily: 'Montserrat',
                                             ),
+                                            filled: false,
+                                            fillColor: Colors.transparent,
                                             border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            focusedErrorBorder: InputBorder.none,
                                             contentPadding: EdgeInsets.zero,
                                             isDense: true,
                                           ),
@@ -472,13 +495,13 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             ],
                           ),
                           const SizedBox(height: 22),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 24,
+                            runSpacing: 12,
                             children: const [
                               _SocialImageTile(imageUrl: _kFacebookImage),
-                              SizedBox(width: 40),
                               _SocialImageTile(imageUrl: _kGoogleImage),
-                              SizedBox(width: 40),
                               _SocialImageTile(imageUrl: _kAppleImage),
                             ],
                           ),
@@ -552,6 +575,8 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                           ),
                         ],
                       ),
+                        );
+                      },
                     ),
                   ),
                 ),

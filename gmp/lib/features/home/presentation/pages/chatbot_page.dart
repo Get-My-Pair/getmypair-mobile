@@ -52,6 +52,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final isCompact = MediaQuery.sizeOf(context).width < 360;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -76,7 +78,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   return Align(
                     alignment:
                         isBot ? Alignment.centerLeft : Alignment.centerRight,
-                    child: Container(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+                      ),
+                      child: Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
@@ -88,16 +94,18 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         m.text,
                         style: TextStyle(
                           color: isBot ? AppColors.textPrimary : AppColors.primary,
-                          fontSize: 13.5,
+                          fontSize: isCompact ? 13 : 13.5,
+                          height: 1.25,
                         ),
                       ),
+                    ),
                     ),
                   );
                 },
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              padding: EdgeInsets.fromLTRB(16, 10, 16, 14 + bottomInset),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 border: Border(

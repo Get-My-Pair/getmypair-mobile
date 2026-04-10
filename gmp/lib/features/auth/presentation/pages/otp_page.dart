@@ -268,9 +268,18 @@ class _OTPPageState extends State<OTPPage> {
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   child: SafeArea(
                     top: false,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(44, 60, 38, 24),
-                      child: Form(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
+                        final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 60.0);
+                        return SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPad,
+                            topPad,
+                            horizontalPad,
+                            24,
+                          ),
+                          child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -349,6 +358,8 @@ class _OTPPageState extends State<OTPPage> {
                           ],
                         ),
                       ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -382,13 +393,18 @@ class _OtpCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth = constraints.maxWidth - 30;
+        final spacing = (contentWidth * 0.045).clamp(8.0, 20.0);
+        final cellWidth = ((contentWidth - (spacing * 5)) / 6).clamp(30.0, 36.0);
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
         children: [
           const Text(
             'Enter 6 digit code',
@@ -408,8 +424,8 @@ class _OtpCard extends StatelessWidget {
             onCompleted: onCompleted,
             theme: MaterialPinTheme(
               shape: MaterialPinShape.outlined,
-              cellSize: const Size(36, 48),
-              spacing: 20,
+              cellSize: Size(cellWidth, 48),
+              spacing: spacing,
               borderRadius: BorderRadius.circular(5),
               borderWidth: 1,
               borderColor: _OTPPageState._kOtpBorder,
@@ -458,6 +474,8 @@ class _OtpCard extends StatelessWidget {
           ),
         ],
       ),
+        );
+      },
     );
   }
 }

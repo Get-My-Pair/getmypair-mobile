@@ -12,8 +12,8 @@ import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
-import '../widgets/edit_profile_widget.dart';
-import '../widgets/saved_addresses_page.dart';
+import 'saved_addresses_page.dart';
+import 'family_profile_page.dart';
 import 'manage_devices_page.dart';
 
 const LinearGradient _kProfileCardGradient = LinearGradient(
@@ -256,7 +256,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             icon: Icons.account_circle_outlined,
                             title: 'Family Profile',
                             onTap: () =>
-                                _openEditProfile(context, profile, token),
+                                _openFamilyProfile(context, profile, token),
                           ),
                           _GradientMenuTile(
                             icon: Icons.notifications_none_rounded,
@@ -322,14 +322,14 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _openEditProfile(
+  void _openFamilyProfile(
       BuildContext context, UserProfile profile, String token) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
           value: context.read<ProfileBloc>(),
-          child: EditProfileWidget(profile: profile, accessToken: token),
+          child: FamilyProfilePage(profile: profile, accessToken: token),
         ),
       ),
     );
@@ -395,7 +395,7 @@ class _OverlappingAvatarCluster extends StatelessWidget {
                         width: 79,
                         height: 79,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        errorBuilder: (context, error, stackTrace) =>
                             _initialsAvatar(profile, 39.5),
                       ),
                     )

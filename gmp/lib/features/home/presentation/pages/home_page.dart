@@ -44,6 +44,7 @@ const Color _kQuickActionMutedText = Color(0xFF062F35);
 const Color _kRackCardBorder = Color(0xFF0F6876);
 const Color _kRackCardBg = Color(0xFFF0F0F0);
 const Color _kSearchHintColor = Color(0x57000000);
+const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 
 /// Vertical gaps inside the hero (greeting → location → search → stats → carbon).
 const double _kHomeHeaderGreetingToLocation = 14;
@@ -60,16 +61,23 @@ const double _kAfterRackToActionsGap = 22;
 /// Tile height for quick actions.
 const double _kQuickActionCellHeight = 86;
 
-/// Stacked tool + bag icons (matches Shoe Care tile spacing in design).
-const Widget _kShoeCareLeadingIcons = Column(
-  mainAxisSize: MainAxisSize.min,
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-    Icon(Icons.handyman_outlined, size: 22, color: Colors.white),
-    SizedBox(height: 4),
-    Icon(Icons.shopping_bag_outlined, size: 22, color: Colors.white),
-  ],
-);
+/// Figma icon assets used to keep icon geometry consistent.
+const String _kMapPinIconUrl =
+    'https://www.figma.com/api/mcp/asset/6f6d9a2d-7883-48df-aecc-0a14054bc194';
+const String _kChevronRightIconUrl =
+    'https://www.figma.com/api/mcp/asset/544a7fbe-dbd4-46d5-a933-fd15130bad98';
+const String _kBellIconUrl =
+    'https://www.figma.com/api/mcp/asset/f72f8e91-49da-47ac-b4db-b26a3fe975ab';
+const String _kSearchIconUrl =
+    'https://www.figma.com/api/mcp/asset/86be91f0-2c6b-4d8a-a9c0-97db4c0a436f';
+const String _kOpenRackIconUrl =
+    'https://www.figma.com/api/mcp/asset/5b968dce-9204-4248-83b5-17c081b367be';
+const String _kShoeCareIconUrl =
+    'https://www.figma.com/api/mcp/asset/9f457cfb-52e7-4443-8375-28b4d34ada99';
+const String _kRentIconUrl =
+    'https://www.figma.com/api/mcp/asset/2d760945-cc07-4a4b-ab56-09d1be0f78e6';
+const String _kRehomeIconUrl =
+    'https://www.figma.com/api/mcp/asset/94221a3d-53f3-4bf6-88cc-2831fcc37546';
 
 /// Home Page — lives in the outer features layer.
 /// This is the landing tab shown to authenticated users on the main dashboard.
@@ -319,6 +327,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isCompact = width < 360;
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -364,9 +374,12 @@ class _HomePageState extends State<HomePage> {
                                     builder: (_) => SelectLocationPage(
                                       profileBloc: context.read<ProfileBloc>(),
                                       initialAddress: _currentAddress,
-                                      mapPinDisplayName:
-                                          mapPinDisplayNameFrom(profile, authState),
-                                      mapPinProfileImageRef: profile?.profileImage,
+                                      mapPinDisplayName: mapPinDisplayNameFrom(
+                                        profile,
+                                        authState,
+                                      ),
+                                      mapPinProfileImageRef:
+                                          profile?.profileImage,
                                     ),
                                   ),
                                 );
@@ -436,16 +449,27 @@ class _HomePageState extends State<HomePage> {
                                         IconButton(
                                           onPressed: _openArticleList,
                                           tooltip: 'Digital Shoes Rack',
-                                          padding: const EdgeInsets.only(right: 12),
+                                          padding: const EdgeInsets.only(
+                                            right: 12,
+                                          ),
                                           alignment: Alignment.topRight,
                                           constraints: const BoxConstraints(
                                             minWidth: 44,
                                             minHeight: 44,
                                           ),
-                                          icon: Icon(
-                                            Icons.open_in_full,
-                                            size: 22,
-                                            color: _kQuickActionMutedText,
+                                          icon: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: Image.network(
+                                              _kOpenRackIconUrl,
+                                              fit: BoxFit.contain,
+                                              color: _kQuickActionMutedText,
+                                              errorBuilder: (_, _, _) => Icon(
+                                                Icons.open_in_full,
+                                                size: 22,
+                                                color: _kQuickActionMutedText,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -506,9 +530,10 @@ class _HomePageState extends State<HomePage> {
                               SizedBox(height: _kAfterRackToActionsGap),
                               _QuickActionCard(
                                 label: 'Shoe Care',
-                                icon: Icons.design_services_outlined,
                                 highlight: true,
-                                leading: _kShoeCareLeadingIcons,
+                                iconAssetUrl: _kShoeCareIconUrl,
+                                iconWidth: 48,
+                                iconHeight: 48,
                                 fullWidth: true,
                                 onTap: () => _openServiceFlow(
                                   title:
@@ -521,30 +546,65 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                               const SizedBox(height: 22),
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    child: _QuickActionCard(
-                                      label: 'Rent',
-                                      icon: Icons.repeat_rounded,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 28),
-                                  Expanded(
-                                    child: _QuickActionCard(
-                                      label: 'Rehome',
-                                      icon: Icons.home_work_outlined,
-                                      onTap: () => _openServiceFlow(
-                                        title:
-                                            'Select article for Rehome (Donate, Dispose)',
-                                        allowedServiceTypes: const [
-                                          'donate',
-                                          'dispose',
-                                        ],
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  if (constraints.maxWidth < 340) {
+                                    return Column(
+                                      children: [
+                                        const _QuickActionCard(
+                                          label: 'Rent',
+                                          iconAssetUrl: _kRentIconUrl,
+                                          iconWidth: 51,
+                                          iconHeight: 48,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _QuickActionCard(
+                                          label: 'Rehome',
+                                          iconAssetUrl: _kRehomeIconUrl,
+                                          iconWidth: 48,
+                                          iconHeight: 41,
+                                          onTap: () => _openServiceFlow(
+                                            title:
+                                                'Select article for Rehome (Donate, Dispose)',
+                                            allowedServiceTypes: const [
+                                              'donate',
+                                              'dispose',
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                  return Row(
+                                    children: [
+                                      const Expanded(
+                                        child: _QuickActionCard(
+                                          label: 'Rent',
+                                          iconAssetUrl: _kRentIconUrl,
+                                          iconWidth: 51,
+                                          iconHeight: 48,
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ],
+                                      const SizedBox(width: 28),
+                                      Expanded(
+                                        child: _QuickActionCard(
+                                          label: 'Rehome',
+                                          iconAssetUrl: _kRehomeIconUrl,
+                                          iconWidth: 48,
+                                          iconHeight: 41,
+                                          onTap: () => _openServiceFlow(
+                                            title:
+                                                'Select article for Rehome (Donate, Dispose)',
+                                            allowedServiceTypes: const [
+                                              'donate',
+                                              'dispose',
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -553,8 +613,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   Positioned(
-                    right: 14,
-                    bottom: 104,
+                    right: isCompact ? 10 : 14,
+                    bottom: isCompact ? 94 : 104,
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -567,8 +627,8 @@ class _HomePageState extends State<HomePage> {
                           );
                         },
                         child: Container(
-                          width: 72,
-                          height: 72,
+                          width: isCompact ? 62 : 72,
+                          height: isCompact ? 62 : 72,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
@@ -588,7 +648,7 @@ class _HomePageState extends State<HomePage> {
                             child: Icon(
                               Icons.waves_rounded,
                               color: Color(0xFFB8FEFF),
-                              size: 32,
+                              size: 28,
                             ),
                           ),
                         ),
@@ -626,15 +686,19 @@ class _ProfileAvatarCluster extends StatelessWidget {
               height: 46,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0x55D7EEF2),
-                  width: 1,
-                ),
+                border: Border.all(color: const Color(0x55D7EEF2), width: 1),
               ),
-              child: Icon(
-                Icons.notifications_none_rounded,
-                color: const Color(0xFFDFE7E9),
-                size: 23,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Image.network(
+                  _kBellIconUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Color(0xFFDFE7E9),
+                    size: 23,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -653,12 +717,20 @@ class _ProfileAvatarCluster extends StatelessWidget {
                   Positioned(
                     right: 4,
                     top: 0,
-                    child: _avatarRing(radius: 11, imageUrl: null, isSmall: true),
+                    child: _avatarRing(
+                      radius: 11,
+                      imageUrl: null,
+                      isSmall: true,
+                    ),
                   ),
                   Positioned(
                     right: 0,
                     bottom: 0,
-                    child: _avatarRing(radius: 11, imageUrl: null, isSmall: true),
+                    child: _avatarRing(
+                      radius: 11,
+                      imageUrl: null,
+                      isSmall: true,
+                    ),
                   ),
                 ],
               ),
@@ -726,17 +798,14 @@ class _HomeTopCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topSafe = MediaQuery.paddingOf(context).top;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 360;
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
     final addressLine = _addressLineForHome(currentAddress);
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        horizontal,
-        topSafe + 34,
-        horizontal,
-        26,
-      ),
+      padding: EdgeInsets.fromLTRB(horizontal, topSafe + 34, horizontal, 26),
       decoration: BoxDecoration(
         gradient: _kHomeHeaderSweep,
         borderRadius: const BorderRadius.only(
@@ -766,7 +835,7 @@ class _HomeTopCard extends StatelessWidget {
                       'Hello, $greetingName!',
                       textAlign: TextAlign.left,
                       style: GoogleFonts.boldonse(
-                        fontSize: 24,
+                        fontSize: compact ? 20 : 24,
                         fontWeight: FontWeight.w400,
                         color: _kOnHeaderText,
                         height: 1.1,
@@ -781,10 +850,19 @@ class _HomeTopCard extends StatelessWidget {
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
-                            child: Icon(
-                              Icons.location_on_outlined,
-                              color: _kOnHeaderText.withValues(alpha: 0.95),
-                              size: 24,
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: Image.network(
+                                _kMapPinIconUrl,
+                                fit: BoxFit.contain,
+                                color: _kHeaderIconTint,
+                                errorBuilder: (_, _, _) => Icon(
+                                  Icons.location_on_outlined,
+                                  color: _kOnHeaderText.withValues(alpha: 0.95),
+                                  size: 24,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -805,10 +883,19 @@ class _HomeTopCard extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    Icon(
-                                      Icons.chevron_right_rounded,
-                                      size: 16,
-                                      color: _kOnHeaderText,
+                                    SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: Image.network(
+                                        _kChevronRightIconUrl,
+                                        fit: BoxFit.contain,
+                                        color: _kHeaderIconTint,
+                                        errorBuilder: (_, _, _) => Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 16,
+                                          color: _kOnHeaderText,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -818,7 +905,7 @@ class _HomeTopCard extends StatelessWidget {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.montserrat(
-                                    fontSize: 16,
+                                    fontSize: compact ? 14 : 16,
                                     fontWeight: FontWeight.w400,
                                     color: _kOnHeaderText,
                                     height: 1.2,
@@ -887,10 +974,19 @@ class _HomeTopCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.search,
-                    size: 24,
-                    color: _kSearchHintColor,
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Image.network(
+                      _kSearchIconUrl,
+                      fit: BoxFit.contain,
+                      color: _kSearchHintColor,
+                      errorBuilder: (_, _, _) => Icon(
+                        Icons.search,
+                        size: 24,
+                        color: _kSearchHintColor,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -1005,8 +1101,7 @@ class _RackThumbStrip extends StatelessWidget {
             ? constraints.maxHeight
             : 80.0;
         final tileWidth =
-            ((constraints.maxWidth - gap * (fitCount - 1)) / fitCount)
-                ;
+            ((constraints.maxWidth - gap * (fitCount - 1)) / fitCount);
 
         return ListView.separated(
           scrollDirection: Axis.horizontal,
@@ -1044,17 +1139,19 @@ class _RackThumbStrip extends StatelessWidget {
 
 class _QuickActionCard extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final String? iconAssetUrl;
+  final double iconWidth;
+  final double iconHeight;
   final bool highlight;
-  final Widget? leading;
   final VoidCallback? onTap;
   final bool fullWidth;
 
   const _QuickActionCard({
     required this.label,
-    required this.icon,
+    this.iconAssetUrl,
+    this.iconWidth = 24,
+    this.iconHeight = 24,
     this.highlight = false,
-    this.leading,
     this.onTap,
     this.fullWidth = false,
   });
@@ -1089,7 +1186,22 @@ class _QuickActionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              leading ?? Icon(icon, size: 24, color: textColor),
+              SizedBox(
+                width: iconWidth,
+                height: iconHeight,
+                child: iconAssetUrl == null
+                    ? Icon(Icons.widgets_outlined, size: 24, color: textColor)
+                    : Image.network(
+                        iconAssetUrl!,
+                        fit: BoxFit.contain,
+                        color: highlight ? Colors.white : null,
+                        errorBuilder: (_, _, _) => Icon(
+                          Icons.widgets_outlined,
+                          size: 24,
+                          color: textColor,
+                        ),
+                      ),
+              ),
               SizedBox(width: fullWidth ? 20 : 14),
               Flexible(
                 child: Text(
@@ -1097,7 +1209,7 @@ class _QuickActionCard extends StatelessWidget {
                   maxLines: 2,
                   textAlign: TextAlign.left,
                   style: GoogleFonts.boldonse(
-                    fontSize: 16,
+                    fontSize: MediaQuery.sizeOf(context).width < 360 ? 14 : 16,
                     fontWeight: FontWeight.w400,
                     color: textColor,
                     height: 1.05,

@@ -35,13 +35,56 @@ class _DotGridPainter extends CustomPainter {
 }
 
 /// Full-screen gradient used by splash + onboarding flows.
-class OnboardingGradientBackdrop extends StatelessWidget {
+/// Subtle slow drift + slight scale so the background feels alive.
+class OnboardingGradientBackdrop extends StatefulWidget {
   const OnboardingGradientBackdrop({super.key});
 
   @override
+  State<OnboardingGradientBackdrop> createState() =>
+      _OnboardingGradientBackdropState();
+}
+
+class _OnboardingGradientBackdropState extends State<OnboardingGradientBackdrop>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _drift;
+
+  @override
+  void initState() {
+    super.initState();
+    _drift = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 24),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _drift.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(gradient: AppGradients.heroVertical),
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _drift,
+        builder: (context, child) {
+          final t = _drift.value * 2 * math.pi;
+          final ox = 14 * math.sin(t);
+          final oy = 11 * math.cos(t * 0.88);
+          return Transform.translate(
+            offset: Offset(ox, oy),
+            child: Transform.scale(
+              scale: 1.09,
+              alignment: Alignment.center,
+              child: child,
+            ),
+          );
+        },
+        child: const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppGradients.heroVertical),
+        ),
+      ),
     );
   }
 }
@@ -51,7 +94,7 @@ class OnboardingGradientBackdrop extends StatelessWidget {
 /// Layout is driven by [TextPainter] with a **finite** max width so the label
 /// stays **one horizontal line** before rotation (avoids per-glyph wrapping /
 /// clipping when the rotated subtree gets tight constraints).
-class OnboardingBrandWatermark extends StatelessWidget {
+class OnboardingBrandWatermark extends StatefulWidget {
   const OnboardingBrandWatermark({super.key});
 
   static const String _label = 'GetMyPair';
@@ -70,6 +113,30 @@ class OnboardingBrandWatermark extends StatelessWidget {
   /// Large enough for one-line Latin label; keeps [TextPainter] from wrapping.
   static const double _layoutMaxWidth = 4096;
 
+  @override
+  State<OnboardingBrandWatermark> createState() =>
+      _OnboardingBrandWatermarkState();
+}
+
+class _OnboardingBrandWatermarkState extends State<OnboardingBrandWatermark>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _float;
+
+  @override
+  void initState() {
+    super.initState();
+    _float = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 28),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _float.dispose();
+    super.dispose();
+  }
+
   /// Figma: `border: 3.36px solid` + `border-image` linear-gradient 180deg.
   static const LinearGradient _strokeBorderGradient = LinearGradient(
     begin: Alignment.topCenter,
@@ -87,20 +154,25 @@ class OnboardingBrandWatermark extends StatelessWidget {
   Widget build(BuildContext context) {
     final sz = MediaQuery.sizeOf(context);
     final w = sz.width;
-    final h = sz.height;
 
-    final scaleX = w / _designFrameW;
-    final shortest = math.min(w, h);
-    final refShortest = math.min(_designFrameW, _designFrameH);
+    final scaleX = w / OnboardingBrandWatermark._designFrameW;
+    final shortest = math.min(w, sz.height);
+    final refShortest = math.min(
+      OnboardingBrandWatermark._designFrameW,
+      OnboardingBrandWatermark._designFrameH,
+    );
     final scaleUniform = (shortest / refShortest).clamp(0.68, 1.45);
-    final leftNudge = _insetFromPadLeft * scaleX;
+    final leftNudge = OnboardingBrandWatermark._insetFromPadLeft * scaleX;
 
     final fontSize =
-        (_designFontPx * scaleUniform * 0.5).clamp(32.0, 68.0);
+        (OnboardingBrandWatermark._designFontPx * scaleUniform * 0.5)
+            .clamp(32.0, 68.0);
     final letterSpacing =
-        (fontSize * _letterSpacingFactor).clamp(1.0, 5.0);
+        (fontSize * OnboardingBrandWatermark._letterSpacingFactor)
+            .clamp(1.0, 5.0);
     final strokeW =
-        (_designBorderPx * scaleUniform * 0.9).clamp(0.85, 3.5);
+        (OnboardingBrandWatermark._designBorderPx * scaleUniform * 0.9)
+            .clamp(0.85, 3.5);
 
     final baseStyle = GoogleFonts.boldonse(
       fontSize: fontSize,
@@ -110,11 +182,14 @@ class OnboardingBrandWatermark extends StatelessWidget {
     );
 
     final tp = TextPainter(
-      text: TextSpan(text: _label, style: baseStyle),
+      text: TextSpan(
+        text: OnboardingBrandWatermark._label,
+        style: baseStyle,
+      ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
       textScaler: TextScaler.noScaling,
-    )..layout(maxWidth: _layoutMaxWidth);
+    )..layout(maxWidth: OnboardingBrandWatermark._layoutMaxWidth);
 
     final tw = tp.width;
     final th = tp.height;
@@ -132,42 +207,53 @@ class OnboardingBrandWatermark extends StatelessWidget {
       color: Colors.white.withValues(alpha: 0.2),
     );
 
-    return IgnorePointer(
-      child: MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Align(
-            alignment: Alignment(-1, _alignY),
-            child: Transform.translate(
-              offset: Offset(leftNudge, 0),
-              child: Transform.rotate(
-                angle: -math.pi / 2,
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: tw,
-                  height: th,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.topLeft,
-                    children: [
-                      Text(
-                        _label,
-                        maxLines: 1,
-                        softWrap: false,
-                        textAlign: TextAlign.left,
-                        overflow: TextOverflow.visible,
-                        style: fillStyle,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _float,
+        builder: (context, child) {
+          final t = _float.value * 2 * math.pi;
+          final drift = Offset(5 * math.sin(t * 0.4), 8 * math.cos(t * 0.35));
+          return Transform.translate(offset: drift, child: child);
+        },
+        child: IgnorePointer(
+          child: MediaQuery(
+            data:
+                MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Align(
+                alignment: const Alignment(-1, OnboardingBrandWatermark._alignY),
+                child: Transform.translate(
+                  offset: Offset(leftNudge, 0),
+                  child: Transform.rotate(
+                    angle: -math.pi / 2,
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: tw,
+                      height: th,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.topLeft,
+                        children: [
+                          Text(
+                            OnboardingBrandWatermark._label,
+                            maxLines: 1,
+                            softWrap: false,
+                            textAlign: TextAlign.left,
+                            overflow: TextOverflow.visible,
+                            style: fillStyle,
+                          ),
+                          Text(
+                            OnboardingBrandWatermark._label,
+                            maxLines: 1,
+                            softWrap: false,
+                            textAlign: TextAlign.left,
+                            overflow: TextOverflow.visible,
+                            style: strokeStyle,
+                          ),
+                        ],
                       ),
-                      Text(
-                        _label,
-                        maxLines: 1,
-                        softWrap: false,
-                        textAlign: TextAlign.left,
-                        overflow: TextOverflow.visible,
-                        style: strokeStyle,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

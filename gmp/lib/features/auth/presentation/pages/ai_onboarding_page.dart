@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,8 @@ class AiOnboardingPage extends StatefulWidget {
   State<AiOnboardingPage> createState() => _AiOnboardingPageState();
 }
 
-class _AiOnboardingPageState extends State<AiOnboardingPage> {
+class _AiOnboardingPageState extends State<AiOnboardingPage>
+    with SingleTickerProviderStateMixin {
   static const int _pageCount = 7;
   static const Color _primary = Color(0xFF062F35);
   static const Color _text = Color(0xFFDFE7E9);
@@ -45,8 +47,28 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
   final Set<String> _rack = <String>{};
   final Set<String> _troubles = <String>{};
 
+  late final AnimationController _bgMotion;
+
+  static const List<Color> _bgGradientColors = [
+    Color(0xFF141C1D),
+    Color(0xFF0F6876),
+    Color(0xFF09E0FF),
+    Color(0xFFFFFFFF),
+  ];
+  static const List<double> _bgGradientStops = [0, .45, .76, 1];
+
+  @override
+  void initState() {
+    super.initState();
+    _bgMotion = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 22),
+    )..repeat(reverse: true);
+  }
+
   @override
   void dispose() {
+    _bgMotion.dispose();
     _name.dispose();
     _age.dispose();
     _controller.dispose();
@@ -172,6 +194,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final orbWidth = (screenWidth * 1.08).clamp(280.0, 420.0);
+
     final steps = <Widget>[
       _Step(
         text:
@@ -270,26 +295,52 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment(0.9, -1),
-                end: Alignment(-0.4, 1),
-                colors: [
-                  Color(0xFF141C1D),
-                  Color(0xFF0F6876),
-                  Color(0xFF09E0FF),
-                  Color(0xFFFFFFFF),
-                ],
-                stops: [0, .45, .76, 1],
-              ),
-            ),
-            child: Align(
-              alignment: const Alignment(0, .1),
-              child: Opacity(
-                opacity: .28,
-                child: _SafeNetworkImage(_orbAsset, width: 420),
-              ),
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _bgMotion,
+              builder: (context, _) {
+                final t = _bgMotion.value * 2 * math.pi;
+                final beginDx = 0.06 * math.sin(t * 0.7);
+                final beginDy = -1.0 + 0.05 * math.cos(t * 0.55);
+                final endDx = -0.35 + 0.08 * math.cos(t * 0.65);
+                final endDy = 1.0 + 0.04 * math.sin(t * 0.5);
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Transform.translate(
+                      offset: Offset(12 * math.sin(t), 10 * math.cos(t * 0.9)),
+                      child: Transform.scale(
+                        scale: 1.1,
+                        alignment: Alignment.center,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment(beginDx, beginDy),
+                              end: Alignment(endDx, endDy),
+                              colors: _bgGradientColors,
+                              stops: _bgGradientStops,
+                            ),
+                          ),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: const Alignment(0, .1),
+                      child: Transform.translate(
+                        offset: Offset(
+                          16 * math.sin(t * 1.25 + 0.4),
+                          12 * math.cos(t * 0.85),
+                        ),
+                        child: Opacity(
+                          opacity: .28,
+                          child: _SafeNetworkImage(_orbAsset, width: orbWidth),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           SafeArea(
@@ -429,6 +480,9 @@ class _Step extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final bodySize = screenWidth < 360 ? 20.0 : 24.0;
+    final titleSize = screenWidth < 360 ? 20.0 : 24.0;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
@@ -436,9 +490,9 @@ class _Step extends StatelessWidget {
         children: [
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               color: Color(0xFFDFE7E9),
-              fontSize: 24,
+              fontSize: bodySize,
               fontFamily: 'Montserrat',
               height: 1.25,
             ),
@@ -446,9 +500,9 @@ class _Step extends StatelessWidget {
           const SizedBox(height: 26),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: Color(0xFFDFE7E9),
-              fontSize: 24,
+              fontSize: titleSize,
               fontFamily: 'Boldonse',
               height: 1.25,
             ),
@@ -514,6 +568,8 @@ class _Checks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final optionSize = screenWidth < 360 ? 20.0 : 24.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: options.map((option) {
@@ -557,9 +613,9 @@ class _Checks extends StatelessWidget {
                 Expanded(
                   child: Text(
                     option,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Color(0xFFDFE7E9),
-                      fontSize: 24,
+                      fontSize: optionSize,
                       fontFamily: 'Boldonse',
                     ),
                   ),

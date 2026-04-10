@@ -12,7 +12,7 @@ import 'features/auth/domain/usecases/get_valid_access_token.dart';
 import 'features/auth/domain/usecases/login_with_email.dart';
 import 'features/auth/domain/usecases/logout.dart';
 import 'features/auth/domain/usecases/send_otp.dart';
-import 'features/auth/domain/usecases/verify_otp.dart';.
+import 'features/auth/domain/usecases/verify_otp.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/profile/data/datasources/profile_remote_datasource.dart';
 import 'features/profile/data/repositories/profile_repository_impl.dart';
