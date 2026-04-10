@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/constants/app_assets.dart';
 import 'onboarding/onboarding_flow_page.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -69,8 +70,9 @@ class _SplashScreenState extends State<SplashScreen> {
               builder: (context, constraints) {
                 final sy = constraints.maxHeight / _figmaHeight;
 
-                final top = 311.0 * sy;
+                final top = 260.0 * sy;
                 final gap = 9.0 * sy;
+                final logoH = (72 * sy).clamp(48.0, 96.0);
                 return Stack(
                   children: [
                     Positioned(
@@ -82,6 +84,13 @@ class _SplashScreenState extends State<SplashScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            Image.asset(
+                              AppAssets.appLogo,
+                              height: logoH,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
+                            ),
+                            SizedBox(height: gap * 1.5),
                             Text(
                               'Welcome to',
                               textAlign: TextAlign.center,

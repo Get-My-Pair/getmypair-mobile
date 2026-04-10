@@ -25,8 +25,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   static const Color _kTertiary = Color(0xFFDFE7E9);
   static const Color _kPanel = Color(0xFFD9D9D9);
 
-  static const String _kFlagImage =
-      'https://www.figma.com/api/mcp/asset/f2924cb4-41d5-41dd-b684-6ae3ef3b751b';
   static const String _kFacebookImage =
       'https://www.figma.com/api/mcp/asset/a4f220b1-86c3-441a-b0cb-d5d538de7e3e';
   static const String _kGoogleImage =
@@ -38,6 +36,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   final FocusNode _phoneFocusNode = FocusNode();
 
   CountryCode _selectedCountry = CountryCode.popularCountries[0];
+
   bool _isSendingOtp = false;
   bool _agreedToTerms = false;
   String? _phoneError;
@@ -75,17 +74,26 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     }
   }
 
-  bool get _isPhoneValid => _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '').length == 10;
+  static const int _minNationalDigits = 8;
+  static const int _maxNationalDigits = 15;
+
+  int get _nationalDigitCount =>
+      _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '').length;
+
+  bool get _isPhoneValid {
+    final n = _nationalDigitCount;
+    return n >= _minNationalDigits && n <= _maxNationalDigits;
+  }
 
   void _validatePhone(String value) {
     final clean = value.replaceAll(RegExp(r'[^0-9]'), '');
     setState(() {
       if (clean.isEmpty) {
         _phoneError = null;
-      } else if (clean.length < 10) {
-        _phoneError = 'Phone number must be 10 digits';
-      } else if (clean.length > 10) {
-        _phoneError = 'Phone number cannot exceed 10 digits';
+      } else if (clean.length < _minNationalDigits) {
+        _phoneError = 'Enter at least $_minNationalDigits digits';
+      } else if (clean.length > _maxNationalDigits) {
+        _phoneError = 'Too many digits (max $_maxNationalDigits)';
       } else {
         _phoneError = null;
       }
@@ -93,29 +101,20 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   }
 
   void _pickCountryCode() {
+    final all = CountryCode.getAllCountries();
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (sheetContext) {
-        return SafeArea(
-          child: ListView.separated(
-            itemCount: CountryCode.popularCountries.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, index) {
-              final country = CountryCode.popularCountries[index];
-              final isSelected = country.code == _selectedCountry.code;
-              return ListTile(
-                leading: Text(country.flag, style: const TextStyle(fontSize: 20)),
-                title: Text(country.name),
-                trailing: Text(country.dialCode, style: const TextStyle(fontWeight: FontWeight.w600)),
-                selected: isSelected,
-                onTap: () {
-                  setState(() => _selectedCountry = country);
-                  Navigator.of(sheetContext).pop();
-                },
-              );
-            },
-          ),
+        return _CountryCodePickerSheet(
+          countries: all,
+          selected: _selectedCountry,
+          onSelected: (country) {
+            setState(() => _selectedCountry = country);
+            _validatePhone(_phoneController.text);
+            Navigator.of(sheetContext).pop();
+          },
         );
       },
     );
@@ -297,7 +296,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                       builder: (context, constraints) {
                         final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
                         final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 62.0);
-                        final countryWidth = (constraints.maxWidth * 0.26).clamp(86.0, 110.0);
+                        final countryWidth = (constraints.maxWidth * 0.34).clamp(100.0, 132.0);
                         return SingleChildScrollView(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
@@ -345,31 +344,30 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                 onTap: _pickCountryCode,
                                 borderRadius: BorderRadius.circular(100),
                                 child: ConstrainedBox(
-                                  constraints: BoxConstraints(minWidth: 86, maxWidth: countryWidth),
+                                  constraints: BoxConstraints(minWidth: 96, maxWidth: countryWidth),
                                   child: Container(
                                     height: 48,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(100),
                                     ),
                                     child: Row(
                                       children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(2),
-                                          child: Image.network(_kFlagImage,
-                                              width: 32, height: 21, fit: BoxFit.cover),
+                                        Text(
+                                          _selectedCountry.flag,
+                                          style: const TextStyle(fontSize: 22, height: 1),
                                         ),
-                                        const SizedBox(width: 4),
+                                        const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
                                             _selectedCountry.dialCode,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               color: Color(0x57000000),
-                                              fontSize: 16,
+                                              fontSize: 15,
                                               fontFamily: 'Montserrat',
-                                              fontWeight: FontWeight.w400,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ),
@@ -398,10 +396,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                           focusNode: _phoneFocusNode,
                                           keyboardType: TextInputType.phone,
                                           textAlignVertical: TextAlignVertical.center,
-                                          maxLength: 10,
+                                          maxLength: _maxNationalDigits,
                                           inputFormatters: [
                                             FilteringTextInputFormatter.digitsOnly,
-                                            LengthLimitingTextInputFormatter(10),
+                                            LengthLimitingTextInputFormatter(_maxNationalDigits),
                                           ],
                                           onChanged: _validatePhone,
                                           decoration: const InputDecoration(
@@ -684,6 +682,133 @@ class _SendingOtpProgress extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _CountryCodePickerSheet extends StatefulWidget {
+  const _CountryCodePickerSheet({
+    required this.countries,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<CountryCode> countries;
+  final CountryCode selected;
+  final ValueChanged<CountryCode> onSelected;
+
+  @override
+  State<_CountryCodePickerSheet> createState() => _CountryCodePickerSheetState();
+}
+
+class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
+  static const Color _sheetPrimary = Color(0xFF062F35);
+  static const Color _sheetAccent = Color(0xFF0F6876);
+
+  late final List<CountryCode> _sorted;
+  late List<CountryCode> _filtered;
+  final TextEditingController _search = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _sorted = List<CountryCode>.from(widget.countries)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _filtered = List<CountryCode>.from(_sorted);
+    _search.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _search.removeListener(_onSearchChanged);
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final q = _search.text.trim().toLowerCase();
+    setState(() {
+      if (q.isEmpty) {
+        _filtered = List<CountryCode>.from(_sorted);
+        return;
+      }
+      _filtered = _sorted.where((c) {
+        return c.name.toLowerCase().contains(q) ||
+            c.dialCode.toLowerCase().contains(q) ||
+            c.code.toLowerCase().contains(q);
+      }).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.78,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: TextField(
+                controller: _search,
+                decoration: InputDecoration(
+                  hintText: 'Search country or dial code',
+                  hintStyle: TextStyle(
+                    color: _sheetPrimary.withValues(alpha: 0.45),
+                    fontFamily: 'Montserrat',
+                  ),
+                  prefixIcon: Icon(Icons.search, color: _sheetPrimary.withValues(alpha: 0.5)),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                style: const TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 16,
+                  color: _sheetPrimary,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.only(bottom: 16),
+                itemCount: _filtered.length,
+                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade300),
+                itemBuilder: (_, index) {
+                  final c = _filtered[index];
+                  final isSelected = c.code == widget.selected.code;
+                  return ListTile(
+                    leading: Text(c.flag, style: const TextStyle(fontSize: 22)),
+                    title: Text(
+                      c.name,
+                      style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16),
+                    ),
+                    trailing: Text(
+                      c.dialCode,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: _sheetPrimary,
+                      ),
+                    ),
+                    selected: isSelected,
+                    selectedTileColor: _sheetAccent.withValues(alpha: 0.12),
+                    onTap: () => widget.onSelected(c),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/app_assets.dart';
 import '../../../../core/utils/responsive.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -213,10 +214,11 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                       // Logo
                       Center(
                         child: Image.asset(
-                          'assets/images/logo.png',
+                          AppAssets.appLogo,
                           width: Responsive.maxLogoSizeOf(context, 0.22),
                           height: Responsive.maxLogoSizeOf(context, 0.22),
                           fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
                         ),
                       ),
                       const SizedBox(height: 24),
