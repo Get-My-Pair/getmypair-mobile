@@ -6,16 +6,15 @@ import 'app_colors.dart';
 abstract class AppGradients {
   AppGradients._();
 
-  /// Splash / onboarding: bright cyan → mid teal → dark teal (top → bottom).
-  static const LinearGradient heroVertical = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
+  /// Splash screen + onboarding backdrop (same gradient).
+  static const LinearGradient splashBackground = LinearGradient(
+    begin: Alignment(0.82, 0.05),
+    end: Alignment(-0.17, 1.22),
     colors: [
-      AppColors.footwearHeroEnd,
-      AppColors.footwearHeroMid,
-      AppColors.footwearHeroStart,
+      Color(0xFF062F35),
+      Color(0xFF0F6876),
+      Color(0xFF09E0FF),
     ],
-    stops: [0.0, 0.52, 1.0],
   );
 
   /// Login / hero screens: same palette on a diagonal.

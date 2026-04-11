@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
@@ -22,8 +24,11 @@ class MobileOTPPage extends StatefulWidget {
 class _MobileOTPPageState extends State<MobileOTPPage> {
   static const Color _kPrimary = Color(0xFF062F35);
   static const Color _kAccent = Color(0xFF0F6876);
-  static const Color _kTertiary = Color(0xFFDFE7E9);
+  /// Text/icons on the teal sweep (Figma: white).
+  static const Color _kOnGradient = Color(0xFFFFFFFF);
   static const Color _kPanel = Color(0xFFD9D9D9);
+  /// Secondary line under title (slightly softer than [_kPrimary]).
+  static const Color _kBodyMuted = Color(0xFF456970);
 
   static const String _kFacebookImage =
       'https://www.figma.com/api/mcp/asset/a4f220b1-86c3-441a-b0cb-d5d538de7e3e';
@@ -200,8 +205,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
     final topInset = MediaQuery.paddingOf(context).top;
-    final cardTop = topInset + MediaQuery.sizeOf(context).height * 0.27;
+    // Shorter strip than full Figma 430×368 frame — keeps “Hello” + welcome above the sheet.
+    final headerSweepHeight =
+        (size.height * 0.95).clamp(148.0, 260.0);
+    final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
@@ -231,6 +240,15 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
           children: [
             const Positioned.fill(
               child: DecoratedBox(
+                decoration: BoxDecoration(color: Color(0xFF062F35)),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: headerSweepHeight,
+              child: const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: SweepGradient(
                     center: Alignment(0.22, -1.07),
@@ -239,35 +257,44 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                     colors: [
                       Color(0xFF09E0FF),
                       Color(0xFF0F6876),
+                      Color(0xFF08414A),
                       Color(0xFF062F35),
                       Color(0xFF062F35),
                     ],
-                    stops: [0.05, 0.44, 0.57, 1],
+                    stops: [0.05, 0.44, 0.53, 0.57, 1],
                     transform: GradientRotation(-0.55),
                   ),
                 ),
               ),
             ),
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    SizedBox(height: 22),
-                    Text(
-                      'Hello!',
-                      style: TextStyle(
-                        color: _kTertiary,
-                        fontSize: 56 * 0.607,
-                        fontFamily: 'Boldonse',
-                        fontWeight: FontWeight.w400,
-                      ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: headerSweepHeight,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hello!',
+                          style: GoogleFonts.boldonse(
+                            color: _kOnGradient,
+                            fontSize: 56 * 0.607,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const _WelcomeRichText(),
+                      ],
                     ),
-                    SizedBox(height: 10),
-                    _WelcomeRichText(),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -279,24 +306,25 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _kPanel,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  // Downward-only shadow — avoids dark pooling in the top rounded corners (no negative Y).
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 4,
-                      offset: const Offset(10, 0),
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                   child: SafeArea(
                     top: false,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
                         final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 62.0);
-                        final countryWidth = (constraints.maxWidth * 0.34).clamp(100.0, 132.0);
                         return SingleChildScrollView(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
@@ -307,89 +335,97 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                           child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Text(
+                          Text(
                             'Sign Up',
-                            style: TextStyle(
+                            style: GoogleFonts.boldonse(
                               color: _kPrimary,
                               fontSize: 24,
-                              fontFamily: 'Boldonse',
                               fontWeight: FontWeight.w400,
                             ),
                           ),
                           const SizedBox(height: 20),
-                          const Text(
+                          Text(
                             'Enter your phone number',
-                            style: TextStyle(
+                            style: GoogleFonts.montserrat(
                               color: _kPrimary,
                               fontSize: 20,
-                              fontFamily: 'Montserrat',
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             "We’ll text you a quick verification\ncode",
-                            style: TextStyle(
-                              color: _kPrimary,
+                            style: GoogleFonts.montserrat(
+                              color: _kBodyMuted,
                               fontSize: 20,
-                              fontFamily: 'Montserrat',
                               fontWeight: FontWeight.w400,
                               height: 1.2,
                             ),
                           ),
                           const SizedBox(height: 24),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               InkWell(
                                 onTap: _pickCountryCode,
                                 borderRadius: BorderRadius.circular(100),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(minWidth: 96, maxWidth: countryWidth),
-                                  child: Container(
-                                    height: 48,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(100),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          _selectedCountry.flag,
-                                          style: const TextStyle(fontSize: 22, height: 1),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            _selectedCountry.dialCode,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              color: Color(0x57000000),
-                                              fontSize: 15,
-                                              fontFamily: 'Montserrat',
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        const Icon(Icons.keyboard_arrow_down, color: Color(0x57000000), size: 18),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Expanded(
                                 child: Container(
                                   height: 48,
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(100),
                                   ),
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.phone_outlined, color: Color(0x57000000), size: 22),
-                                      const SizedBox(width: 8),
+                                      Text(
+                                        _selectedCountry.flag,
+                                        style: const TextStyle(fontSize: 22, height: 1),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(maxWidth: 80),
+                                        child: Text(
+                                          _selectedCountry.dialCode,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Color(0x57000000),
+                                            fontSize: 15,
+                                            fontFamily: 'Montserrat',
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.keyboard_arrow_down, color: Color(0x57000000), size: 18),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  height: 48,
+                                  padding: const EdgeInsets.fromLTRB(16, 8, 18, 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(100),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Transform.rotate(
+                                        angle: -0.1,
+                                        child: const Icon(
+                                          Icons.phone_outlined,
+                                          color: Color(0x66000000),
+                                          size: 28,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
                                       Expanded(
                                         child: TextField(
                                           controller: _phoneController,
@@ -452,23 +488,23 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               onPressed: (_isPhoneValid && !_isSendingOtp) ? _sendOtp : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _kAccent,
-                                foregroundColor: _kTertiary,
-                                disabledBackgroundColor: _kAccent.withValues(alpha: 0.65),
-                                disabledForegroundColor: _kTertiary.withValues(alpha: 0.95),
+                                foregroundColor: _kOnGradient,
+                                disabledBackgroundColor: _kAccent,
+                                disabledForegroundColor: _kOnGradient,
+                                surfaceTintColor: Colors.transparent,
                                 elevation: 4,
-                                shadowColor: Colors.black.withValues(alpha: 0.1),
-                                side: const BorderSide(color: Color(0xFF09E0FF)),
+                                // shadowColor: Colors.black.withValues(alpha: 0.1),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                                 padding: EdgeInsets.zero,
                               ),
                               child: _isSendingOtp
                                   ? _SendingOtpProgress(progress: _sendingProgress)
-                                  : const Text(
+                                  : Text(
                                       'Send OTP',
-                                      style: TextStyle(
+                                      style: GoogleFonts.boldonse(
                                         fontSize: 14,
-                                        fontFamily: 'Boldonse',
                                         fontWeight: FontWeight.w400,
+                                        color: _kOnGradient,
                                       ),
                                     ),
                             ),
@@ -498,78 +534,141 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             spacing: 24,
                             runSpacing: 12,
                             children: const [
-                              _SocialImageTile(imageUrl: _kFacebookImage),
+                              _SocialImageTile(
+                                imageUrl: _kFacebookImage,
+                                contentInset: 0,
+                                innerScale: 1.28,
+                              ),
                               _SocialImageTile(imageUrl: _kGoogleImage),
                               _SocialImageTile(imageUrl: _kAppleImage),
                             ],
                           ),
                           const SizedBox(height: 36),
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
-                                child: Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: _agreedToTerms ? _kPrimary : Colors.transparent,
-                                    border: Border.all(color: _kPrimary, width: 1.8),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  child: _agreedToTerms
-                                      ? const Icon(Icons.check, size: 10, color: Colors.white)
-                                      : null,
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final w = constraints.maxWidth;
+                              final horizontalInset = (w * 0.042).clamp(10.0, 28.0);
+                              final verticalInset = (w * 0.018).clamp(6.0, 11.0);
+                              final tapSide = MediaQuery.textScalerOf(context)
+                                  .scale(40.0)
+                                  .clamp(40.0, 52.0);
+                              final blockMaxWidth = math.min(
+                                w - 2 * horizontalInset,
+                                420.0,
+                              );
+                              return Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: horizontalInset,
+                                  vertical: verticalInset,
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: RichText(
-                                  text: TextSpan(
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontFamily: 'Montserrat',
-                                      fontWeight: FontWeight.w400,
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(maxWidth: blockMaxWidth),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () =>
+                                              setState(() => _agreedToTerms = !_agreedToTerms),
+                                          child: SizedBox(
+                                            width: tapSide,
+                                            height: tapSide,
+                                            child: Center(
+                                              child: Container(
+                                                width: 18,
+                                                height: 18,
+                                                decoration: BoxDecoration(
+                                                  color: _agreedToTerms
+                                                      ? _kPrimary
+                                                      : Colors.transparent,
+                                                  border: Border.all(
+                                                    color: _kPrimary,
+                                                    width: 1.8,
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(2),
+                                                ),
+                                                child: _agreedToTerms
+                                                    ? const Icon(
+                                                        Icons.check,
+                                                        size: 11,
+                                                        color: Colors.white,
+                                                      )
+                                                    : null,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: (w * 0.02).clamp(6.0, 10.0)),
+                                        Expanded(
+                                          child: RichText(
+                                            textAlign: TextAlign.start,
+                                            text: TextSpan(
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.w400,
+                                                height: 1.35,
+                                              ),
+                                              children: [
+                                                const TextSpan(
+                                                  text: 'I agree to the ',
+                                                  style: TextStyle(color: Color(0xFF898989)),
+                                                ),
+                                                WidgetSpan(
+                                                  alignment: PlaceholderAlignment.baseline,
+                                                  baseline: TextBaseline.alphabetic,
+                                                  child: GestureDetector(
+                                                    onTap: () => Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            const TermsOfServicePage(),
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Terms of Service',
+                                                      style: TextStyle(
+                                                        color: _kPrimary,
+                                                        fontSize: 12,
+                                                        height: 1.35,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const TextSpan(
+                                                  text: ' and ',
+                                                  style: TextStyle(color: Color(0xFF898989)),
+                                                ),
+                                                WidgetSpan(
+                                                  alignment: PlaceholderAlignment.baseline,
+                                                  baseline: TextBaseline.alphabetic,
+                                                  child: GestureDetector(
+                                                    onTap: () => Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            const PrivacyPolicyPage(),
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Privacy Policy',
+                                                      style: TextStyle(
+                                                        color: _kPrimary,
+                                                        fontSize: 12,
+                                                        height: 1.35,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    children: [
-                                      const TextSpan(
-                                        text: 'I agree to the ',
-                                        style: TextStyle(color: Color(0xFF898989)),
-                                      ),
-                                      WidgetSpan(
-                                        alignment: PlaceholderAlignment.baseline,
-                                        baseline: TextBaseline.alphabetic,
-                                        child: GestureDetector(
-                                          onTap: () => Navigator.of(context).push(
-                                            MaterialPageRoute(builder: (_) => const TermsOfServicePage()),
-                                          ),
-                                          child: const Text(
-                                            'Terms of Service',
-                                            style: TextStyle(color: _kPrimary, fontSize: 12),
-                                          ),
-                                        ),
-                                      ),
-                                      const TextSpan(
-                                        text: ' and ',
-                                        style: TextStyle(color: Color(0xFF898989)),
-                                      ),
-                                      WidgetSpan(
-                                        alignment: PlaceholderAlignment.baseline,
-                                        baseline: TextBaseline.alphabetic,
-                                        child: GestureDetector(
-                                          onTap: () => Navigator.of(context).push(
-                                            MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
-                                          ),
-                                          child: const Text(
-                                            'Privacy Policy',
-                                            style: TextStyle(color: _kPrimary, fontSize: 12),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -592,20 +691,20 @@ class _WelcomeRichText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final base = GoogleFonts.montserrat(
+      color: _MobileOTPPageState._kOnGradient,
+      fontSize: 24,
+      fontWeight: FontWeight.w400,
+      height: 1.2,
+    );
     return Text.rich(
-      const TextSpan(
-        style: TextStyle(
-          color: _MobileOTPPageState._kTertiary,
-          fontSize: 24,
-          fontFamily: 'Montserrat',
-          fontWeight: FontWeight.w400,
-          height: 1.2,
-        ),
+      TextSpan(
+        style: base,
         children: [
-          TextSpan(text: 'Welcome to your '),
+          const TextSpan(text: 'Welcome to your '),
           TextSpan(
             text: 'solecial hub',
-            style: TextStyle(
+            style: base.copyWith(
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w600,
             ),
@@ -617,23 +716,45 @@ class _WelcomeRichText extends StatelessWidget {
 }
 
 class _SocialImageTile extends StatelessWidget {
-  const _SocialImageTile({required this.imageUrl});
+  const _SocialImageTile({
+    required this.imageUrl,
+    this.contentInset,
+    this.innerScale = 1,
+  });
+
+  static const double _tile = 56;
 
   final String imageUrl;
 
+  final double? contentInset;
+
+  final double innerScale;
+
   @override
   Widget build(BuildContext context) {
+    final pad = contentInset ?? (_tile * (7 / 49)).clamp(6.0, 14.0);
+    final r = (_tile * (10 / 49)).clamp(8.0, 16.0);
+    final innerR = r - 2;
+    Widget logo = Image.network(imageUrl, fit: BoxFit.contain);
+    if (innerScale != 1) {
+      logo = Transform.scale(
+        scale: innerScale,
+        alignment: Alignment.center,
+        child: logo,
+      );
+    }
     return Container(
-      width: 49,
-      height: 49,
-      padding: const EdgeInsets.all(7),
+      width: _tile,
+      height: _tile,
+      padding: EdgeInsets.all(pad),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(r),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Image.network(imageUrl, fit: BoxFit.contain),
+        borderRadius: BorderRadius.circular(innerR),
+        clipBehavior: Clip.hardEdge,
+        child: logo,
       ),
     );
   }

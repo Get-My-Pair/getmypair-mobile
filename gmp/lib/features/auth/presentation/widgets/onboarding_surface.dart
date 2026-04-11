@@ -82,7 +82,7 @@ class _OnboardingGradientBackdropState extends State<OnboardingGradientBackdrop>
           );
         },
         child: const DecoratedBox(
-          decoration: BoxDecoration(gradient: AppGradients.heroVertical),
+          decoration: BoxDecoration(gradient: AppGradients.splashBackground),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_gradients.dart';
 import 'onboarding/onboarding_flow_page.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -55,15 +56,7 @@ class _SplashScreenState extends State<SplashScreen> {
           width: double.infinity,
           height: double.infinity,
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(0.82, 0.05),
-              end: Alignment(-0.17, 1.22),
-              colors: [
-                Color(0xFF062F35),
-                Color(0xFF0F6876),
-                Color(0xFF09E0FF),
-              ],
-            ),
+            gradient: AppGradients.splashBackground,
           ),
           child: SafeArea(
             child: LayoutBuilder(
@@ -84,19 +77,19 @@ class _SplashScreenState extends State<SplashScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Image.asset(
-                              AppAssets.appLogo,
-                              height: logoH,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
-                            ),
+                            // Image.asset(
+                            //   AppAssets.appLogo,
+                            //   height: logoH,
+                            //   fit: BoxFit.contain,
+                            //   filterQuality: FilterQuality.high,
+                            // ),
                             SizedBox(height: gap * 1.5),
                             Text(
                               'Welcome to',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 24,
+                                fontSize: 32,
                                 fontFamily: 'Montserrat',
                                 fontWeight: FontWeight.w300,
                               ),
