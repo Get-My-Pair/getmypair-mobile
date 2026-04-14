@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -32,7 +33,7 @@ class OTPPage extends StatefulWidget {
 class _OTPPageState extends State<OTPPage> {
   static const Color _kPrimary = Color(0xFF062F35);
   static const Color _kAccent = Color(0xFF0F6876);
-  static const Color _kTertiary = Color(0xFFDFE7E9);
+  static const Color _kOnGradient = Color(0xFFFFFFFF);
   static const Color _kPanel = Color(0xFFD9D9D9);
   static const Color _kOtpBorder = Color(0x56062F35);
 
@@ -157,8 +158,10 @@ class _OTPPageState extends State<OTPPage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
     final topInset = MediaQuery.paddingOf(context).top;
-    final cardTop = topInset + MediaQuery.sizeOf(context).height * 0.27;
+    final headerSweepHeight = (size.height * 0.95).clamp(148.0, 260.0);
+    final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
@@ -207,6 +210,15 @@ class _OTPPageState extends State<OTPPage> {
           children: [
             const Positioned.fill(
               child: DecoratedBox(
+                decoration: BoxDecoration(color: Color(0xFF062F35)),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: headerSweepHeight,
+              child: const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: SweepGradient(
                     center: Alignment(0.22, -1.07),
@@ -215,36 +227,54 @@ class _OTPPageState extends State<OTPPage> {
                     colors: [
                       Color(0xFF09E0FF),
                       Color(0xFF0F6876),
+                      Color(0xFF08414A),
                       Color(0xFF062F35),
                       Color(0xFF062F35),
                     ],
-                    stops: [0.05, 0.44, 0.57, 1],
+                    stops: [0.05, 0.44, 0.53, 0.57, 1],
                     transform: GradientRotation(-0.55),
                   ),
                 ),
               ),
             ),
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    SizedBox(height: 22),
-                    Text(
-                      'Hello!',
-                      style: TextStyle(
-                        color: _kTertiary,
-                        fontSize: 34,
-                        fontFamily: 'Boldonse',
-                        fontWeight: FontWeight.w400,
-                      ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: headerSweepHeight,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hello!',
+                          style: GoogleFonts.boldonse(
+                            color: _kOnGradient,
+                            fontSize: 56 * 0.607,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const _WelcomeRichText(),
+                      ],
                     ),
-                    SizedBox(height: 10),
-                    _WelcomeRichText(),
-                  ],
+                  ),
                 ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: cardTop,
+              bottom: 0,
+              child: const DecoratedBox(
+                decoration: BoxDecoration(color: _kPanel),
               ),
             ),
             Positioned(
@@ -255,17 +285,10 @@ class _OTPPageState extends State<OTPPage> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _kPanel,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 4,
-                      offset: const Offset(10, 0),
-                    ),
-                  ],
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                   child: SafeArea(
                     top: false,
                     child: LayoutBuilder(
@@ -284,22 +307,20 @@ class _OTPPageState extends State<OTPPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
+                            Text(
                               'Verify Phone',
-                              style: TextStyle(
+                              style: GoogleFonts.boldonse(
                                 color: _kPrimary,
                                 fontSize: 24,
-                                fontFamily: 'Boldonse',
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
                             const SizedBox(height: 20),
                             Text(
                               'Code sent to $_displayPhoneNumber',
-                              style: const TextStyle(
+                              style: GoogleFonts.montserrat(
                                 color: _kPrimary,
                                 fontSize: 20,
-                                fontFamily: 'Montserrat',
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -326,9 +347,9 @@ class _OTPPageState extends State<OTPPage> {
                                     onPressed: isEnabled ? _verifyOtp : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _kAccent,
-                                      foregroundColor: _kTertiary,
+                                      foregroundColor: _kOnGradient,
                                       disabledBackgroundColor: _kAccent.withValues(alpha: 0.65),
-                                      disabledForegroundColor: _kTertiary.withValues(alpha: 0.95),
+                                      disabledForegroundColor: _kOnGradient.withValues(alpha: 0.95),
                                       elevation: 4,
                                       shadowColor: Colors.black.withValues(alpha: 0.1),
                                       side: const BorderSide(color: Color(0xFF09E0FF)),
@@ -340,14 +361,13 @@ class _OTPPageState extends State<OTPPage> {
                                             height: 20,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2.2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(_kTertiary),
+                                              valueColor: AlwaysStoppedAnimation<Color>(_kOnGradient),
                                             ),
                                           )
-                                        : const Text(
+                                        : Text(
                                             'Verify OTP',
-                                            style: TextStyle(
+                                            style: GoogleFonts.boldonse(
                                               fontSize: 14,
-                                              fontFamily: 'Boldonse',
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
@@ -406,13 +426,12 @@ class _OtpCard extends StatelessWidget {
           ),
           child: Column(
         children: [
-          const Text(
+          Text(
             'Enter 6 digit code',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               color: _OTPPageState._kPrimary,
               fontSize: 36 * 0.556,
-              fontFamily: 'Montserrat',
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -430,7 +449,7 @@ class _OtpCard extends StatelessWidget {
               borderWidth: 1,
               borderColor: _OTPPageState._kOtpBorder,
               focusedBorderColor: AppColors.primary,
-              textStyle: const TextStyle(
+              textStyle: GoogleFonts.montserrat(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: _OTPPageState._kPrimary,
@@ -461,9 +480,8 @@ class _OtpCard extends StatelessWidget {
                   const SizedBox(width: 14),
                   Text(
                     countdownText,
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat(
                       fontSize: 14,
-                      fontFamily: 'Montserrat',
                       fontWeight: FontWeight.w400,
                       color: canResend ? AppColors.primary : Colors.black.withValues(alpha: 0.34),
                     ),
@@ -486,21 +504,23 @@ class _WelcomeRichText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text.rich(
-      const TextSpan(
-        style: TextStyle(
-          color: _OTPPageState._kTertiary,
+      TextSpan(
+        style: GoogleFonts.montserrat(
+          color: _OTPPageState._kOnGradient,
           fontSize: 24,
-          fontFamily: 'Montserrat',
-          fontWeight: FontWeight.w400,
+          fontWeight: FontWeight.w200,
           height: 1.2,
         ),
         children: [
-          TextSpan(text: 'Welcome to your '),
+          const TextSpan(text: 'Welcome to your '),
           TextSpan(
             text: 'solecial hub',
-            style: TextStyle(
-              fontStyle: FontStyle.italic,
+            style: GoogleFonts.montserrat(
+              color: _OTPPageState._kOnGradient,
+              fontSize: 24,
               fontWeight: FontWeight.w600,
+              height: 1.2,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],

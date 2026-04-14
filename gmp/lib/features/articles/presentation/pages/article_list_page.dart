@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
@@ -43,10 +44,9 @@ class _RackGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelStyle = TextStyle(
+    final labelStyle = GoogleFonts.boldonse(
       color: _labelColor,
       fontSize: Responsive.fontSize(context, 14),
-      fontFamily: 'Boldonse',
       fontWeight: FontWeight.w400,
       height: 1.15,
     );
@@ -332,9 +332,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
           const SizedBox(height: 16),
           Text(
             'Loading your rack…',
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: Responsive.fontSize(context, 14),
-              fontFamily: 'Montserrat',
               color: AppColors.textSecondary,
             ),
           ),
@@ -356,9 +355,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.montserrat(
                 fontSize: Responsive.fontSize(context, 15),
-                fontFamily: 'Montserrat',
                 color: AppColors.textSecondary,
               ),
             ),
@@ -391,9 +389,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Text(
               'Your rack is empty',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.boldonse(
                 fontSize: Responsive.fontSize(context, 20),
-                fontFamily: 'Boldonse',
                 fontWeight: FontWeight.w400,
                 color: _rackDark,
               ),
@@ -402,9 +399,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Text(
               'Add your first pair',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.montserrat(
                 fontSize: Responsive.fontSize(context, 14),
-                fontFamily: 'Montserrat',
                 color: AppColors.textTertiary,
               ),
             ),
@@ -458,20 +454,18 @@ class _ArticleListPageState extends State<ArticleListPage> {
                     Expanded(
                       child: Text(
                         'My Rack',
-                        style: TextStyle(
+                        style: GoogleFonts.boldonse(
                           color: _rackDark,
                           fontSize: Responsive.fontSize(context, 22),
-                          fontFamily: 'Boldonse',
                           fontWeight: FontWeight.w400,
                         ),
                       ),
                     ),
                     Text(
                       '$selectedCount Selected',
-                      style: TextStyle(
+                      style: GoogleFonts.montserrat(
                         color: const Color(0xFF5C5C5C),
                         fontSize: Responsive.fontSize(context, 14),
-                        fontFamily: 'Montserrat',
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -482,10 +476,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
                     Expanded(
                       child: Text(
                         'My Rack',
-                        style: TextStyle(
+                        style: GoogleFonts.boldonse(
                           color: _rackDark,
                           fontSize: Responsive.fontSize(context, 24),
-                          fontFamily: 'Boldonse',
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -525,9 +518,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
               padding: EdgeInsets.fromLTRB(hPad, 6, hPad, 2),
               child: Text(
                 widget.serviceFlowTitle ?? 'Select an article to continue',
-                style: TextStyle(
+                style: GoogleFonts.montserrat(
                   fontSize: Responsive.fontSize(context, 13),
-                  fontFamily: 'Montserrat',
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
@@ -567,10 +559,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
                       const SizedBox(width: 10),
                       Text(
                         'Style Me',
-                        style: TextStyle(
+                        style: GoogleFonts.boldonse(
                           color: Colors.white,
                           fontSize: Responsive.fontSize(context, 16),
-                          fontFamily: 'Boldonse',
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -595,9 +586,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
               ),
               child: TextField(
                 onChanged: (v) => setState(() => _searchQuery = v),
-                style: TextStyle(
+                style: GoogleFonts.montserrat(
                   fontSize: Responsive.fontSize(context, 16),
-                  fontFamily: 'Montserrat',
                   color: Colors.black87,
                 ),
                 decoration: InputDecoration(
@@ -605,10 +595,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
                   hintText: 'Search',
-                  hintStyle: TextStyle(
+                  hintStyle: GoogleFonts.montserrat(
                     color: Colors.black.withValues(alpha: 0.35),
                     fontSize: Responsive.fontSize(context, 16),
-                    fontFamily: 'Montserrat',
                     fontWeight: FontWeight.w400,
                   ),
                   prefixIcon: Icon(
@@ -662,9 +651,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
                       Center(
                         child: Text(
                           'No shoes match',
-                          style: TextStyle(
+                          style: GoogleFonts.montserrat(
                             fontSize: Responsive.fontSize(context, 15),
-                            fontFamily: 'Montserrat',
                             color: AppColors.textTertiary,
                           ),
                         ),
@@ -830,10 +818,9 @@ class _FilterChipPill extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: TextStyle(
+            style: GoogleFonts.montserrat(
               color: const Color(0xFF1A1A1A),
               fontSize: Responsive.fontSize(context, 16),
-              fontFamily: 'Montserrat',
               fontWeight: FontWeight.w400,
             ),
           ),

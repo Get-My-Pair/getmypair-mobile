@@ -47,7 +47,7 @@ const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 
 /// Vertical gaps inside the hero (greeting → location → search → stats → carbon).
-const double _kHomeHeaderGreetingToLocation = 14;
+const double _kHomeHeaderGreetingToLocation = 24;
 const double _kHomeHeaderSearchToStats = 18;
 const double _kHomeHeaderStatsToCarbon = 12;
 
@@ -531,7 +531,7 @@ class _HomePageState extends State<HomePage> {
                               _QuickActionCard(
                                 label: 'Shoe Care',
                                 highlight: true,
-                                iconAssetUrl: _kShoeCareIconUrl,
+                                iconData: Icons.handyman_outlined,
                                 iconWidth: 48,
                                 iconHeight: 48,
                                 fullWidth: true,
@@ -553,14 +553,14 @@ class _HomePageState extends State<HomePage> {
                                       children: [
                                         const _QuickActionCard(
                                           label: 'Rent',
-                                          iconAssetUrl: _kRentIconUrl,
+                                          iconData: Icons.autorenew_rounded,
                                           iconWidth: 51,
                                           iconHeight: 48,
                                         ),
                                         const SizedBox(height: 12),
                                         _QuickActionCard(
                                           label: 'Rehome',
-                                          iconAssetUrl: _kRehomeIconUrl,
+                                          iconData: Icons.cottage_outlined,
                                           iconWidth: 48,
                                           iconHeight: 41,
                                           onTap: () => _openServiceFlow(
@@ -580,7 +580,7 @@ class _HomePageState extends State<HomePage> {
                                       const Expanded(
                                         child: _QuickActionCard(
                                           label: 'Rent',
-                                          iconAssetUrl: _kRentIconUrl,
+                                          iconData: Icons.autorenew_rounded,
                                           iconWidth: 51,
                                           iconHeight: 48,
                                         ),
@@ -589,7 +589,7 @@ class _HomePageState extends State<HomePage> {
                                       Expanded(
                                         child: _QuickActionCard(
                                           label: 'Rehome',
-                                          iconAssetUrl: _kRehomeIconUrl,
+                                          iconData: Icons.cottage_outlined,
                                           iconWidth: 48,
                                           iconHeight: 41,
                                           onTap: () => _openServiceFlow(
@@ -614,7 +614,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Positioned(
                     right: isCompact ? 10 : 14,
-                    bottom: isCompact ? 94 : 104,
+                    bottom: isCompact ? 90 : 60,
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -644,11 +644,17 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ],
                           ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.waves_rounded,
-                              color: Color(0xFFB8FEFF),
-                              size: 28,
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/chat.png',
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, _, _) => const Icon(
+                                Icons.waves_rounded,
+                                color: Color(0xFFB8FEFF),
+                                size: 28,
+                              ),
                             ),
                           ),
                         ),
@@ -865,7 +871,7 @@ class _HomeTopCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -906,7 +912,7 @@ class _HomeTopCard extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.montserrat(
                                     fontSize: compact ? 14 : 16,
-                                    fontWeight: FontWeight.w400,
+                                    fontWeight: FontWeight.w300,
                                     color: _kOnHeaderText,
                                     height: 1.2,
                                   ),
@@ -1140,6 +1146,7 @@ class _RackThumbStrip extends StatelessWidget {
 class _QuickActionCard extends StatelessWidget {
   final String label;
   final String? iconAssetUrl;
+  final IconData? iconData;
   final double iconWidth;
   final double iconHeight;
   final bool highlight;
@@ -1149,6 +1156,7 @@ class _QuickActionCard extends StatelessWidget {
   const _QuickActionCard({
     required this.label,
     this.iconAssetUrl,
+    this.iconData,
     this.iconWidth = 24,
     this.iconHeight = 24,
     this.highlight = false,
@@ -1189,7 +1197,9 @@ class _QuickActionCard extends StatelessWidget {
               SizedBox(
                 width: iconWidth,
                 height: iconHeight,
-                child: iconAssetUrl == null
+                child: iconData != null
+                    ? Icon(iconData, size: 26, color: textColor)
+                    : iconAssetUrl == null
                     ? Icon(Icons.widgets_outlined, size: 24, color: textColor)
                     : Image.network(
                         iconAssetUrl!,

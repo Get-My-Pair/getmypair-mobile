@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
@@ -222,11 +223,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   profile.name,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontFamily: 'Boldonse',
+                                  style: GoogleFonts.boldonse(
                                     fontSize: 24,
                                     height: 1.02,
-                                    color: Color(0xFFDFE7E9),
+                                    color: const Color(0xFFDFE7E9),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -234,11 +234,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   _subtitleLine(profile),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontFamily: 'Montserrat',
+                                  style: GoogleFonts.montserrat(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w400,
-                                    color: Color(0xFFDFE7E9),
+                                    color: const Color(0xFFDFE7E9),
                                     height: 1.1,
                                   ),
                                 ),
@@ -498,8 +497,7 @@ class _GradientMenuTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontFamily: 'Montserrat',
+                  style: GoogleFonts.montserrat(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                     color: Colors.white,

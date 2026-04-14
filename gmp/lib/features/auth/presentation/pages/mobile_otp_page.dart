@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/country_code.dart';
@@ -304,21 +305,13 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               top: cardTop,
               bottom: 0,
               child: DecoratedBox(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: _kPanel,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                  // Downward-only shadow — avoids dark pooling in the top rounded corners (no negative Y).
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                      spreadRadius: 0,
-                    ),
-                  ],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  clipBehavior: Clip.hardEdge,
                   child: SafeArea(
                     top: false,
                     child: LayoutBuilder(
@@ -391,10 +384,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                           _selectedCountry.dialCode,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Color(0x57000000),
+                                          style: GoogleFonts.montserrat(
+                                            color: const Color(0x57000000),
                                             fontSize: 15,
-                                            fontFamily: 'Montserrat',
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -409,7 +401,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               Expanded(
                                 child: Container(
                                   height: 48,
-                                  padding: const EdgeInsets.fromLTRB(16, 8, 18, 8),
+                                  padding: const EdgeInsets.fromLTRB(16, 10, 18, 10),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(100),
@@ -417,12 +409,20 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                   child: Row(
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      Transform.rotate(
-                                        angle: -0.1,
-                                        child: const Icon(
-                                          Icons.phone_outlined,
-                                          color: Color(0x66000000),
-                                          size: 28,
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 5),
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: SvgPicture.asset(
+                                            'assets/images/phone.svg',
+                                            width: 18,
+                                            height: 18,
+                                            colorFilter: const ColorFilter.mode(
+                                              Color(0x66000000),
+                                              BlendMode.srcIn,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 10),
@@ -438,13 +438,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                             LengthLimitingTextInputFormatter(_maxNationalDigits),
                                           ],
                                           onChanged: _validatePhone,
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             counterText: '',
                                             hintText: 'Phone',
-                                            hintStyle: TextStyle(
-                                              color: Color(0x57000000),
+                                            hintStyle: GoogleFonts.montserrat(
+                                              color: const Color(0x57000000),
                                               fontSize: 16,
-                                              fontFamily: 'Montserrat',
                                             ),
                                             filled: false,
                                             fillColor: Colors.transparent,
@@ -454,13 +453,13 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                             disabledBorder: InputBorder.none,
                                             errorBorder: InputBorder.none,
                                             focusedErrorBorder: InputBorder.none,
-                                            contentPadding: EdgeInsets.zero,
+                                            contentPadding: const EdgeInsets.only(bottom: 1),
                                             isDense: true,
                                           ),
-                                          style: const TextStyle(
+                                          style: GoogleFonts.montserrat(
                                             color: _kPrimary,
                                             fontSize: 16,
-                                            fontFamily: 'Montserrat',
+                                            height: 1.0,
                                           ),
                                         ),
                                       ),
@@ -474,10 +473,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             const SizedBox(height: 8),
                             Text(
                               _phoneError!,
-                              style: const TextStyle(
+                              style: GoogleFonts.montserrat(
                                 color: Colors.red,
                                 fontSize: 12,
-                                fontFamily: 'Montserrat',
                               ),
                             ),
                           ],
@@ -511,27 +509,26 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                           ),
                           const SizedBox(height: 42),
                           Row(
-                            children: const [
-                              Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                            children: [
+                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 25),
+                                padding: const EdgeInsets.symmetric(horizontal: 25),
                                 child: Text(
                                   'or Sign Up with',
-                                  style: TextStyle(
-                                    color: Color(0x33000000),
+                                  style: GoogleFonts.montserrat(
+                                    color: const Color(0x33000000),
                                     fontSize: 16,
-                                    fontFamily: 'Montserrat',
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
                               ),
-                              Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
                             ],
                           ),
                           const SizedBox(height: 22),
                           Wrap(
                             alignment: WrapAlignment.center,
-                            spacing: 24,
+                            spacing: 48,
                             runSpacing: 12,
                             children: const [
                               _SocialImageTile(
@@ -543,7 +540,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               _SocialImageTile(imageUrl: _kAppleImage),
                             ],
                           ),
-                          const SizedBox(height: 36),
+                          const SizedBox(height: 44),
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
@@ -604,9 +601,8 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                           child: RichText(
                                             textAlign: TextAlign.start,
                                             text: TextSpan(
-                                              style: const TextStyle(
+                                              style: GoogleFonts.montserrat(
                                                 fontSize: 12,
-                                                fontFamily: 'Montserrat',
                                                 fontWeight: FontWeight.w400,
                                                 height: 1.35,
                                               ),
@@ -625,9 +621,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                                             const TermsOfServicePage(),
                                                       ),
                                                     ),
-                                                    child: const Text(
+                                                    child: Text(
                                                       'Terms of Service',
-                                                      style: TextStyle(
+                                                      style: GoogleFonts.montserrat(
                                                         color: _kPrimary,
                                                         fontSize: 12,
                                                         height: 1.35,
@@ -649,9 +645,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                                             const PrivacyPolicyPage(),
                                                       ),
                                                     ),
-                                                    child: const Text(
+                                                    child: Text(
                                                       'Privacy Policy',
-                                                      style: TextStyle(
+                                                      style: GoogleFonts.montserrat(
                                                         color: _kPrimary,
                                                         fontSize: 12,
                                                         height: 1.35,
@@ -694,14 +690,14 @@ class _WelcomeRichText extends StatelessWidget {
     final base = GoogleFonts.montserrat(
       color: _MobileOTPPageState._kOnGradient,
       fontSize: 24,
-      fontWeight: FontWeight.w400,
+      fontWeight: FontWeight.w200,
       height: 1.2,
     );
     return Text.rich(
       TextSpan(
         style: base,
         children: [
-          const TextSpan(text: 'Welcome to your '),
+          const TextSpan(text: 'Welcome to your ',),
           TextSpan(
             text: 'solecial hub',
             style: base.copyWith(
@@ -722,7 +718,7 @@ class _SocialImageTile extends StatelessWidget {
     this.innerScale = 1,
   });
 
-  static const double _tile = 56;
+  static const double _tile = 42;
 
   final String imageUrl;
 
@@ -788,13 +784,12 @@ class _SendingOtpProgress extends StatelessWidget {
                   ),
                 ),
               ),
-              const Center(
+              Center(
                 child: Text(
                   'Sending...',
-                  style: TextStyle(
+                  style: GoogleFonts.montserrat(
                     color: AppColors.textPrimary,
                     fontSize: 14,
-                    fontFamily: 'Montserrat',
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -877,9 +872,8 @@ class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
                 controller: _search,
                 decoration: InputDecoration(
                   hintText: 'Search country or dial code',
-                  hintStyle: TextStyle(
+                  hintStyle: GoogleFonts.montserrat(
                     color: _sheetPrimary.withValues(alpha: 0.45),
-                    fontFamily: 'Montserrat',
                   ),
                   prefixIcon: Icon(Icons.search, color: _sheetPrimary.withValues(alpha: 0.5)),
                   filled: true,
@@ -890,8 +884,7 @@ class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
-                style: const TextStyle(
-                  fontFamily: 'Montserrat',
+                style: GoogleFonts.montserrat(
                   fontSize: 16,
                   color: _sheetPrimary,
                 ),
@@ -909,12 +902,11 @@ class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
                     leading: Text(c.flag, style: const TextStyle(fontSize: 22)),
                     title: Text(
                       c.name,
-                      style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16),
+                      style: GoogleFonts.montserrat(fontSize: 16),
                     ),
                     trailing: Text(
                       c.dialCode,
-                      style: const TextStyle(
-                        fontFamily: 'Montserrat',
+                      style: GoogleFonts.montserrat(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                         color: _sheetPrimary,

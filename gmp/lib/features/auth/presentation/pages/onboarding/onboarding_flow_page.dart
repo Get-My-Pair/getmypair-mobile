@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,7 +24,7 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
   static const int _total = 3;
   static const List<_OnboardingSlide> _slides = [
     _OnboardingSlide(
-      body: 'Scan your feet to find your perfect size and discover footwear that',
+      body: 'Scan your feet to find your perfect size and discover\nfootwear that',
       accent: 'truly fits!',
       textTop: 506,
       textLeft: 37,
@@ -39,7 +41,7 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
       accentAlign: TextAlign.center,
     ),
     _OnboardingSlide(
-      body: 'Extend the life of every pair',
+      body: 'Extend the life of\nevery pair',
       stacked: ['repair', 'maintain', 'donate', 'sell!'],
       textTop: 419,
       textLeft: 35,
@@ -117,7 +119,7 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
               child: Align(
                 alignment: Alignment.topRight,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 18, top: 8),
+                  padding: const EdgeInsets.only(right: 18, top: 24),
                   child: TextButton(
                     onPressed: _goWelcome,
                     style: TextButton.styleFrom(
@@ -204,27 +206,33 @@ class _OnboardingSlideView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Typography must follow the tighter of width/height scale; using [sy] alone
+    // makes tall narrow phones clip horizontally while short wide layouts stay OK.
+    final s = math.min(sx, sy);
     final bodyStyle = GoogleFonts.montserrat(
-      fontSize: (24 * sy).clamp(20.0, 28.0),
-      fontWeight: FontWeight.w400,
+      fontSize: (24 * s).clamp(16.0, 28.0),
+      fontWeight: FontWeight.w200,
       color: Colors.white,
       height: 1.0,
       letterSpacing: 0,
     );
     final accentStyle = GoogleFonts.boldonse(
-      fontSize: (48 * sy).clamp(36.0, 52.0),
+      fontSize: (48 * s).clamp(26.0, 52.0),
       fontWeight: FontWeight.w400,
       color: const Color(0xFFEDEEEF),
       height: 1.0,
       letterSpacing: 0,
     );
 
+    final rightPad =
+        (_figmaW - slide.textLeft - slide.textWidth) * sx;
+
     return Stack(
       children: [
         Positioned(
           top: slide.textTop * sy,
           left: slide.textLeft * sx,
-          width: slide.textWidth * sx,
+          right: rightPad,
           child: Column(
             crossAxisAlignment: slide.textAlign == TextAlign.end
                 ? CrossAxisAlignment.end
@@ -234,22 +242,25 @@ class _OnboardingSlideView extends StatelessWidget {
                 slide.body,
                 textAlign: slide.textAlign,
                 style: bodyStyle,
+                softWrap: true,
               ),
               if (slide.accent != null) ...[
-                SizedBox(height: 8 * sy),
+                SizedBox(height: 8 * s),
                 Text(
                   slide.accent!,
                   textAlign: slide.accentAlign ?? slide.textAlign,
                   style: accentStyle,
+                  softWrap: true,
                 ),
               ],
               if (slide.stacked != null) ...[
-                SizedBox(height: 12 * sy),
+                SizedBox(height: 12 * s),
                 for (final word in slide.stacked!)
                   Text(
                     word,
                     textAlign: TextAlign.start,
                     style: accentStyle.copyWith(height: 1.12),
+                    softWrap: true,
                   ),
               ],
             ],

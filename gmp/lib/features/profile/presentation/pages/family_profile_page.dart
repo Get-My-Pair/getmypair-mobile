@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -63,11 +64,10 @@ class FamilyProfilePage extends StatelessWidget {
                           Expanded(
                             child: Text(
                               'Family Profile',
-                              style: const TextStyle(
-                                fontFamily: 'Boldonse',
+                              style: GoogleFonts.boldonse(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w400,
-                                color: Color(0xFFDFE7E9),
+                                color: const Color(0xFFDFE7E9),
                                 height: 1,
                               ),
                             ),
@@ -135,8 +135,7 @@ class _FamilyRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontFamily: 'Montserrat',
+                  style: GoogleFonts.montserrat(
                     fontSize: 20,
                     fontWeight: FontWeight.w400,
                     color: Colors.white,

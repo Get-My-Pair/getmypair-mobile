@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -132,6 +133,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     try {
       final enabled = await Geolocator.isLocationServiceEnabled();
       if (!enabled) {
+        if (!mounted) return;
         setState(() => _address = 'Location services disabled');
         return;
       }
@@ -140,6 +142,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         perm = await Geolocator.requestPermission();
       }
       if (perm == LocationPermission.deniedForever || perm == LocationPermission.denied) {
+        if (!mounted) return;
         setState(() {
           _markerPosition = _defaultCenter;
           _address = 'Allow location to use current position';
@@ -151,10 +154,12 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         desiredAccuracy: LocationAccuracy.high,
       );
       final latLng = LatLng(position.latitude, position.longitude);
+      if (!mounted) return;
       setState(() => _markerPosition = latLng);
       _mapController.move(latLng, 15.5);
       _updateAddressFromLatLng(latLng);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _markerPosition = _defaultCenter;
         _address = 'Location unavailable';
@@ -380,10 +385,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                       'Shoe Care',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
+                                      style: GoogleFonts.boldonse(
                                         color: _titleNavy,
                                         fontSize: Responsive.fontSize(context, isCompact ? 19 : 22),
-                                        fontFamily: 'Boldonse',
                                         fontWeight: FontWeight.w400,
                                       ),
                                     ),
@@ -428,19 +432,17 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                       child: TextField(
                                         controller: _searchController,
                                         onChanged: (_) => setState(() {}),
-                                        style: TextStyle(
+                                        style: GoogleFonts.montserrat(
                                           fontSize: Responsive.fontSize(context, 15),
-                                          fontFamily: 'Montserrat',
                                           color: Colors.black87,
                                         ),
                                         decoration: InputDecoration(
                                           isDense: true,
                                           border: InputBorder.none,
                                           hintText: 'Search',
-                                          hintStyle: TextStyle(
+                                          hintStyle: GoogleFonts.montserrat(
                                             color: Colors.black.withValues(alpha: 0.35),
                                             fontSize: Responsive.fontSize(context, 15),
-                                            fontFamily: 'Montserrat',
                                           ),
                                           prefixIcon: Icon(
                                             Icons.search_rounded,
@@ -550,9 +552,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                       _isLoadingAddress ? 'Loading address…' : _address,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
+                                      style: GoogleFonts.montserrat(
                                         fontSize: Responsive.fontSize(context, 12),
-                                        fontFamily: 'Montserrat',
                                         color: AppColors.textSecondary,
                                       ),
                                     ),
@@ -570,10 +571,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                     ),
                                     child: Text(
                                       'Confirm',
-                                      style: TextStyle(
+                                      style: GoogleFonts.montserrat(
                                         fontSize: Responsive.fontSize(context, 14),
                                         fontWeight: FontWeight.w600,
-                                        fontFamily: 'Montserrat',
                                       ),
                                     ),
                                   ),
@@ -681,11 +681,10 @@ class _UserMapPin extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: GoogleFonts.montserrat(
               color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              fontFamily: 'Montserrat',
             ),
           ),
         ),
@@ -734,11 +733,10 @@ class _UserMapPin extends StatelessWidget {
       child: Center(
         child: Text(
           letter,
-          style: const TextStyle(
+          style: GoogleFonts.montserrat(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF424242),
-            fontFamily: 'Montserrat',
+            color: const Color(0xFF424242),
           ),
         ),
       ),
@@ -778,11 +776,10 @@ class _CobblerMapPin extends StatelessWidget {
             children: [
               Text(
                 name,
-                style: const TextStyle(
+                style: GoogleFonts.montserrat(
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  fontFamily: 'Montserrat',
                 ),
               ),
               const SizedBox(height: 2),

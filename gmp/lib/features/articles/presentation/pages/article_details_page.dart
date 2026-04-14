@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
@@ -267,9 +268,8 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                 Text(
                                   _error ?? 'Shoe not found',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: GoogleFonts.montserrat(
                                     fontSize: Responsive.fontSize(context, 15),
-                                    fontFamily: 'Montserrat',
                                     color: AppColors.textSecondary,
                                   ),
                                 ),
@@ -319,15 +319,13 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     final hPad = Responsive.horizontalPaddingOf(context);
     final swatchColor = _parseColorHex(a.color) ?? const Color(0xFF11253F);
 
-    TextStyle boldonse(double base) => TextStyle(
-          fontFamily: 'Boldonse',
+    TextStyle boldonse(double base) => GoogleFonts.boldonse(
           fontWeight: FontWeight.w400,
           fontSize: Responsive.fontSize(context, base),
           color: Colors.black,
         );
 
-    TextStyle montserrat(double base, {Color? color}) => TextStyle(
-          fontFamily: 'Montserrat',
+    TextStyle montserrat(double base, {Color? color}) => GoogleFonts.montserrat(
           fontWeight: FontWeight.w400,
           fontSize: Responsive.fontSize(context, base),
           color: color ?? Colors.black,
@@ -424,20 +422,18 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                               const SizedBox(height: 8),
                               Text(
                                 a.brand.isNotEmpty ? a.brand : 'Shoe',
-                                style: TextStyle(
+                                style: GoogleFonts.boldonse(
                                   color: _rackTealAccent,
                                   fontSize: Responsive.fontSize(context, 24),
-                                  fontFamily: 'Boldonse',
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 a.model.isNotEmpty ? a.model : '—',
-                                style: TextStyle(
+                                style: GoogleFonts.montserrat(
                                   color: Colors.black,
                                   fontSize: Responsive.fontSize(context, 20),
-                                  fontFamily: 'Montserrat',
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
@@ -687,10 +683,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
           child: Center(
             child: Text(
               label,
-              style: const TextStyle(
+              style: GoogleFonts.boldonse(
                 color: Colors.white,
                 fontSize: 16,
-                fontFamily: 'Boldonse',
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -723,10 +718,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
           ),
           child: Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF062F35),
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFF062F35),
               fontSize: 16,
-              fontFamily: 'Boldonse',
               fontWeight: FontWeight.w400,
             ),
           ),

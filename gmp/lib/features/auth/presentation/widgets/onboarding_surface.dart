@@ -99,17 +99,8 @@ class OnboardingBrandWatermark extends StatefulWidget {
 
   static const String _label = 'GetMyPair';
 
-  static const double _designFrameW = 390;
-  static const double _designFrameH = 812;
-  static const double _designFontPx = 120.78;
+  static const double _designFontPx = 100.78;
   static const double _designBorderPx = 3.36;
-  /// Extra inset from the padded left edge so the full word stays on-screen.
-  static const double _insetFromPadLeft = 12;
-  /// Left side; Y in [-1,1]: negative = higher, positive = lower. Center = 0.
-  static const double _alignY = 0.12;
-  /// Extra tracking for the watermark (scaled with type size).
-  static const double _letterSpacingFactor = 0.045;
-
   /// Large enough for one-line Latin label; keeps [TextPainter] from wrapping.
   static const double _layoutMaxWidth = 4096;
 
@@ -137,8 +128,8 @@ class _OnboardingBrandWatermarkState extends State<OnboardingBrandWatermark>
     super.dispose();
   }
 
-  /// Figma: `border: 3.36px solid` + `border-image` linear-gradient 180deg.
-  static const LinearGradient _strokeBorderGradient = LinearGradient(
+  /// Figma “GetMyPair” watermark: linear gradient #AFEDD6 → #64877A @ ~5% opacity.
+  static const LinearGradient _watermarkGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     stops: [0.0, 0.181, 0.8341, 1.0],
@@ -152,33 +143,15 @@ class _OnboardingBrandWatermarkState extends State<OnboardingBrandWatermark>
 
   @override
   Widget build(BuildContext context) {
-    final sz = MediaQuery.sizeOf(context);
-    final w = sz.width;
-
-    final scaleX = w / OnboardingBrandWatermark._designFrameW;
-    final shortest = math.min(w, sz.height);
-    final refShortest = math.min(
-      OnboardingBrandWatermark._designFrameW,
-      OnboardingBrandWatermark._designFrameH,
-    );
-    final scaleUniform = (shortest / refShortest).clamp(0.68, 1.45);
-    final leftNudge = OnboardingBrandWatermark._insetFromPadLeft * scaleX;
-
-    final fontSize =
-        (OnboardingBrandWatermark._designFontPx * scaleUniform * 0.5)
-            .clamp(32.0, 68.0);
-    final letterSpacing =
-        (fontSize * OnboardingBrandWatermark._letterSpacingFactor)
-            .clamp(1.0, 5.0);
-    final strokeW =
-        (OnboardingBrandWatermark._designBorderPx * scaleUniform * 0.9)
-            .clamp(0.85, 3.5);
+    // Match Figma watermark sizing.
+    const fontSize = OnboardingBrandWatermark._designFontPx;
+    const strokeW = OnboardingBrandWatermark._designBorderPx;
 
     final baseStyle = GoogleFonts.boldonse(
       fontSize: fontSize,
       fontWeight: FontWeight.w400,
       height: 1.0,
-      letterSpacing: letterSpacing,
+      letterSpacing: 0,
     );
 
     final tp = TextPainter(
@@ -194,18 +167,19 @@ class _OnboardingBrandWatermarkState extends State<OnboardingBrandWatermark>
     final tw = tp.width;
     final th = tp.height;
 
-    final strokeRect = Rect.fromLTWH(0, 0, tw, th);
+    final textBounds = Rect.fromLTWH(0, 0, tw, th);
+    final fillPaint = Paint()
+      ..shader = _watermarkGradient.createShader(textBounds);
+
+    final fillStyle = baseStyle.copyWith(foreground: fillPaint);
+
     final strokePaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeW
       ..strokeJoin = StrokeJoin.round
-      ..shader = _strokeBorderGradient.createShader(strokeRect);
+      ..shader = _watermarkGradient.createShader(textBounds);
 
     final strokeStyle = baseStyle.copyWith(foreground: strokePaint);
-
-    final fillStyle = baseStyle.copyWith(
-      color: Colors.white.withValues(alpha: 0.2),
-    );
 
     return RepaintBoundary(
       child: AnimatedBuilder(
@@ -217,46 +191,51 @@ class _OnboardingBrandWatermarkState extends State<OnboardingBrandWatermark>
         },
         child: IgnorePointer(
           child: MediaQuery(
-            data:
-                MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Align(
-                alignment: const Alignment(-1, OnboardingBrandWatermark._alignY),
-                child: Transform.translate(
-                  offset: Offset(leftNudge, 0),
-                  child: Transform.rotate(
-                    angle: -math.pi / 2,
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: tw,
-                      height: th,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        alignment: Alignment.topLeft,
-                        children: [
-                          Text(
-                            OnboardingBrandWatermark._label,
-                            maxLines: 1,
-                            softWrap: false,
-                            textAlign: TextAlign.left,
-                            overflow: TextOverflow.visible,
-                            style: fillStyle,
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final top = (constraints.maxHeight - tw) / 2 + 190;
+                final left = -th * 2.50;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      top: top,
+                      left: left,
+                      child: Transform.rotate(
+                        angle: -math.pi / 2,
+                        alignment: Alignment.center,
+                        child: SizedBox(
+                          width: tw,
+                          height: th,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.topLeft,
+                            children: [
+                              Text(
+                                OnboardingBrandWatermark._label,
+                                maxLines: 1,
+                                softWrap: false,
+                                textAlign: TextAlign.left,
+                                overflow: TextOverflow.visible,
+                                style: fillStyle,
+                              ),
+                              Text(
+                                OnboardingBrandWatermark._label,
+                                maxLines: 1,
+                                softWrap: false,
+                                textAlign: TextAlign.left,
+                                overflow: TextOverflow.visible,
+                                style: strokeStyle,
+                              ),
+                            ],
                           ),
-                          Text(
-                            OnboardingBrandWatermark._label,
-                            maxLines: 1,
-                            softWrap: false,
-                            textAlign: TextAlign.left,
-                            overflow: TextOverflow.visible,
-                            style: strokeStyle,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
+                  ],
+                );
+              },
             ),
           ),
         ),

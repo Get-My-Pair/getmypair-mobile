@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../core/constants/app_assets.dart';
 import '../../../../core/theme/app_gradients.dart';
 import 'onboarding/onboarding_flow_page.dart';
 
@@ -65,7 +65,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
                 final top = 260.0 * sy;
                 final gap = 9.0 * sy;
-                final logoH = (72 * sy).clamp(48.0, 96.0);
                 return Stack(
                   children: [
                     Positioned(
@@ -87,10 +86,9 @@ class _SplashScreenState extends State<SplashScreen> {
                             Text(
                               'Welcome to',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: GoogleFonts.montserrat(
                                 color: Colors.white,
                                 fontSize: 32,
-                                fontFamily: 'Montserrat',
                                 fontWeight: FontWeight.w300,
                               ),
                             ),
@@ -98,10 +96,9 @@ class _SplashScreenState extends State<SplashScreen> {
                             Text(
                               'GetMyPair',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: GoogleFonts.boldonse(
                                 color: Colors.white,
                                 fontSize: 36,
-                                fontFamily: 'Boldonse',
                                 fontWeight: FontWeight.w400,
                               ),
                             ),

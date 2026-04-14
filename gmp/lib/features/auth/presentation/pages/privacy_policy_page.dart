@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
@@ -28,32 +29,30 @@ class PrivacyPolicyPage extends StatelessWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 80, 14, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Privacy Policy',
-                    style: TextStyle(
-                      color: Color(0xFFDFE7E9),
+                    style: GoogleFonts.boldonse(
+                      color: const Color(0xFFDFE7E9),
                       fontSize: 24,
-                      fontFamily: 'Boldonse',
                       fontWeight: FontWeight.w400,
                       height: 1,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  const SizedBox(height: 20),
+                  Text(
                     'Last Updated March 2026',
-                    style: TextStyle(
+                    style: GoogleFonts.montserrat(
                       color: Colors.white,
                       fontSize: 12,
-                      fontFamily: 'Montserrat',
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w300,
                       height: 1,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   Expanded(
                     child: ScrollbarTheme(
                       data: ScrollbarThemeData(
@@ -73,6 +72,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                         trackVisibility: true,
                         interactive: true,
                         child: ListView(
+                          padding: const EdgeInsets.only(right: 6, bottom: 24),
                           children: const [
                             _SectionBlock(
                               title: '1. Information We Collect',
@@ -80,7 +80,7 @@ class PrivacyPolicyPage extends StatelessWidget {
                                   'We collect information you provide directly to us, such as name, phone number, email, and address. We use this data to provide and improve the service.',
                             ),
                             _SectionBlock(
-                              title: '2. How We Use Your\nInformation',
+                              title: '2. How We Use Your\n Information',
                               body:
                                   'We use your data to process orders, communicate with you, improve the app and comply with legal obligations.',
                             ),
@@ -143,31 +143,35 @@ class _SectionBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMultiLineTitle = title.contains('\n');
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            textAlign: isMultiLineTitle ? TextAlign.center : TextAlign.start,
-            style: const TextStyle(
-              color: Color(0xFFDFE7E9),
-              fontSize: 24,
-              fontFamily: 'Montserrat',
-              fontWeight: FontWeight.w400,
-              height: 1,
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: Text(
+                title,
+                softWrap: false,
+                style: GoogleFonts.montserrat(
+                  color: const Color(0xFFDFE7E9),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w300,
+                  height: 1,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 11),
           Text(
             body,
-            style: const TextStyle(
-              color: Color(0xFFDFE7E9),
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFFDFE7E9),
               fontSize: 14,
-              fontFamily: 'Montserrat',
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1,
             ),
           ),

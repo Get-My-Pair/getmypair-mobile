@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_page.dart';
 
 import 'profile_completion_page.dart';
@@ -30,8 +31,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   static const String _orbAsset =
       'https://www.figma.com/api/mcp/asset/95f21855-ca3e-4a72-b797-54cbc89cd676';
-  static const String _pauseIcon =
-      'https://www.figma.com/api/mcp/asset/ed44b649-c0c0-47d6-a6ab-f0acfdb23466';
   static const String _voiceIcon =
       'https://www.figma.com/api/mcp/asset/62419914-36bc-4d5a-9e4b-2aeed47dd5b7';
 
@@ -347,20 +346,38 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
                   child: Row(
                     children: [
                       const Spacer(),
                       Container(
                         width: 48,
                         height: 48,
-                        decoration: const BoxDecoration(
-                          color: Color(0xCCDFE7E9),
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF062F35),
+                            width: 1.6,
+                          ),
+                          color: const Color(0xFFF2F7F8),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: _SafeNetworkImage(_pauseIcon),
+                        child: Center(
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF0F6876),
+                                width: 1.4,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.pause,
+                              size: 14,
+                              color: Color(0xFF062F35),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -444,10 +461,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                                 const SizedBox(width: 12),
                                 Text(
                                   _listening ? 'Listening...' : 'Voice',
-                                  style: const TextStyle(
+                                  style: GoogleFonts.boldonse(
                                     color: _mint,
                                     fontSize: 16,
-                                    fontFamily: 'Boldonse',
                                   ),
                                 ),
                               ],
@@ -472,17 +488,21 @@ class _Step extends StatelessWidget {
     required this.text,
     required this.title,
     this.child,
+    this.titleFontSize,
+    this.titleTopSpacing,
   });
 
   final String text;
   final String title;
   final Widget? child;
+  final double? titleFontSize;
+  final double? titleTopSpacing;
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final bodySize = screenWidth < 360 ? 20.0 : 24.0;
-    final titleSize = screenWidth < 360 ? 20.0 : 24.0;
+    final bodySize = screenWidth < 360 ? 20.0 : 23.0;
+    final titleSize = titleFontSize ?? (screenWidth < 360 ? 20.0 : 23.0);
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
@@ -490,25 +510,26 @@ class _Step extends StatelessWidget {
         children: [
           Text(
             text,
-            style: TextStyle(
-              color: Color(0xFFDFE7E9),
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFFDFE7E9),
               fontSize: bodySize,
-              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w300,
               height: 1.25,
             ),
           ),
-          const SizedBox(height: 26),
+          SizedBox(height: titleTopSpacing ?? 50),
           Text(
             title,
-            style: TextStyle(
-              color: Color(0xFFDFE7E9),
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFFDFE7E9),
               fontSize: titleSize,
-              fontFamily: 'Boldonse',
-              height: 1.25,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+              height: 1.59,
             ),
           ),
           if (child != null) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: 80),
             child!,
           ],
         ],
@@ -536,10 +557,9 @@ class _Input extends StatelessWidget {
       controller: controller,
       keyboardType: numeric ? TextInputType.number : TextInputType.text,
       onChanged: (_) => onChanged(),
-      style: const TextStyle(
-        color: Color(0xFFDFE7E9),
+      style: GoogleFonts.montserrat(
+        color: const Color(0xFFDFE7E9),
         fontSize: 18,
-        fontFamily: 'Montserrat',
       ),
       decoration: InputDecoration(
         hintText: hint,
@@ -613,10 +633,9 @@ class _Checks extends StatelessWidget {
                 Expanded(
                   child: Text(
                     option,
-                    style: TextStyle(
-                      color: Color(0xFFDFE7E9),
+                    style: GoogleFonts.boldonse(
+                      color: const Color(0xFFDFE7E9),
                       fontSize: optionSize,
-                      fontFamily: 'Boldonse',
                     ),
                   ),
                 ),

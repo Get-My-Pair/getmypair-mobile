@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../data/models/country_code.dart';
 import 'mobile_otp_page.dart';
 
@@ -70,22 +73,21 @@ class _LoginPageState extends State<LoginPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              padding: const EdgeInsets.fromLTRB(80, 12, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  SizedBox(height: 22),
+                children: [
+                  const SizedBox(height: 22),
                   Text(
                     'Hello!',
-                    style: TextStyle(
+                    style: GoogleFonts.boldonse(
                       color: _kTertiary,
                       fontSize: 56 * 0.607,
-                      fontFamily: 'Boldonse',
                       fontWeight: FontWeight.w400,
                     ),
                   ),
-                  SizedBox(height: 10),
-                  _WelcomeRichText(),
+                  const SizedBox(height: 10),
+                  const _WelcomeRichText(),
                 ],
               ),
             ),
@@ -126,32 +128,29 @@ class _LoginPageState extends State<LoginPage> {
                         child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
+                        Text(
                           'Sign Up',
-                          style: TextStyle(
+                          style: GoogleFonts.boldonse(
                             color: _kPrimary,
                             fontSize: 24,
-                            fontFamily: 'Boldonse',
                             fontWeight: FontWeight.w400,
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
+                        Text(
                           'Enter your phone number',
-                          style: TextStyle(
+                          style: GoogleFonts.montserrat(
                             color: _kPrimary,
                             fontSize: 20,
-                            fontFamily: 'Montserrat',
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           "We’ll text you a quick verification\ncode",
-                          style: TextStyle(
+                          style: GoogleFonts.montserrat(
                             color: _kPrimary,
                             fontSize: 20,
-                            fontFamily: 'Montserrat',
                             fontWeight: FontWeight.w400,
                             height: 1.2,
                           ),
@@ -162,7 +161,7 @@ class _LoginPageState extends State<LoginPage> {
                             ConstrainedBox(
                               constraints: BoxConstraints(minWidth: 86, maxWidth: countryWidth),
                               child: Container(
-                                height: 48,
+                                height: 58,
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
@@ -179,10 +178,9 @@ class _LoginPageState extends State<LoginPage> {
                                       child: Text(
                                         _selectedCountry.dialCode,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Color(0x57000000),
+                                        style: GoogleFonts.montserrat(
+                                          color: const Color(0x57000000),
                                           fontSize: 16,
-                                          fontFamily: 'Montserrat',
                                           fontWeight: FontWeight.w400,
                                         ),
                                       ),
@@ -203,27 +201,33 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.phone_outlined, color: Color(0x57000000), size: 22),
+                                    SvgPicture.asset(
+                                      'assets/images/phone.svg',
+                                      width: 22,
+                                      height: 22,
+                                      colorFilter: const ColorFilter.mode(
+                                        Color(0x57000000),
+                                        BlendMode.srcIn,
+                                      ),
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: TextField(
                                         controller: _phoneController,
                                         keyboardType: TextInputType.phone,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           hintText: 'Phone',
-                                          hintStyle: TextStyle(
-                                            color: Color(0x57000000),
+                                          hintStyle: GoogleFonts.montserrat(
+                                            color: const Color(0x57000000),
                                             fontSize: 16,
-                                            fontFamily: 'Montserrat',
                                           ),
                                           border: InputBorder.none,
                                           contentPadding: EdgeInsets.zero,
                                           isDense: true,
                                         ),
-                                        style: const TextStyle(
+                                        style: GoogleFonts.montserrat(
                                           color: _kPrimary,
                                           fontSize: 16,
-                                          fontFamily: 'Montserrat',
                                         ),
                                       ),
                                     ),
@@ -246,11 +250,10 @@ class _LoginPageState extends State<LoginPage> {
                               side: const BorderSide(color: Color(0xFF09E0FF)),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Send OTP',
-                              style: TextStyle(
+                              style: GoogleFonts.boldonse(
                                 fontSize: 14,
-                                fontFamily: 'Boldonse',
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -258,21 +261,20 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 42),
                         Row(
-                          children: const [
-                            Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                          children: [
+                            const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
                             Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 25),
+                              padding: const EdgeInsets.symmetric(horizontal: 25),
                               child: Text(
                                 'or Sign Up with',
-                                style: TextStyle(
-                                  color: Color(0x33000000),
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0x33000000),
                                   fontSize: 16,
-                                  fontFamily: 'Montserrat',
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ),
-                            Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                            const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
                           ],
                         ),
                         const SizedBox(height: 22),
@@ -316,20 +318,22 @@ class _WelcomeRichText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(
-        style: const TextStyle(
+        style: GoogleFonts.montserrat(
           color: _LoginPageState._kTertiary,
           fontSize: 24,
-          fontFamily: 'Montserrat',
           fontWeight: FontWeight.w400,
           height: 1.2,
         ),
-        children: const [
-          TextSpan(text: 'Welcome to your '),
+        children: [
+          const TextSpan(text: 'Welcome to your '),
           TextSpan(
             text: 'solecial hub',
-            style: TextStyle(
-              fontStyle: FontStyle.italic,
+            style: GoogleFonts.montserrat(
+              color: _LoginPageState._kTertiary,
+              fontSize: 24,
               fontWeight: FontWeight.w600,
+              height: 1.2,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -382,14 +386,26 @@ class _TermsText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text.rich(
+    return Text.rich(
       TextSpan(
-        style: TextStyle(fontSize: 12, fontFamily: 'Montserrat', fontWeight: FontWeight.w400),
+        style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w400),
         children: [
-          TextSpan(text: 'I agree to the ', style: TextStyle(color: Color(0xFF898989))),
-          TextSpan(text: 'Terms of Service', style: TextStyle(color: _LoginPageState._kPrimary)),
-          TextSpan(text: ' and ', style: TextStyle(color: Color(0xFF898989))),
-          TextSpan(text: 'Privacy Policy', style: TextStyle(color: _LoginPageState._kPrimary)),
+          TextSpan(
+            text: 'I agree to the ',
+            style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF898989)),
+          ),
+          TextSpan(
+            text: 'Terms of Service',
+            style: GoogleFonts.montserrat(fontSize: 12, color: _LoginPageState._kPrimary),
+          ),
+          TextSpan(
+            text: ' and ',
+            style: GoogleFonts.montserrat(fontSize: 12, color: const Color(0xFF898989)),
+          ),
+          TextSpan(
+            text: 'Privacy Policy',
+            style: GoogleFonts.montserrat(fontSize: 12, color: _LoginPageState._kPrimary),
+          ),
         ],
       ),
     );

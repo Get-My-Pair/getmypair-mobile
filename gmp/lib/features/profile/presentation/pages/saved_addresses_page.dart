@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -94,13 +95,12 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Location',
-                            style: TextStyle(
-                              fontFamily: 'Boldonse',
+                            style: GoogleFonts.boldonse(
                               fontSize: 24,
                               fontWeight: FontWeight.w400,
-                              color: Color(0xFFDFE7E9),
+                              color: const Color(0xFFDFE7E9),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -128,10 +128,9 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             ],
                           ),
                           const SizedBox(height: 42),
-                          const Text(
+                          Text(
                             'Saved Address',
-                            style: TextStyle(
-                              fontFamily: 'Montserrat',
+                            style: GoogleFonts.montserrat(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
@@ -174,8 +173,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                           _showAllAddresses
                                               ? 'View Less'
                                               : 'View All',
-                                          style: const TextStyle(
-                                            fontFamily: 'Montserrat',
+                                          style: GoogleFonts.montserrat(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
                                             color: Colors.white,
@@ -220,23 +218,21 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
       child: TextField(
         controller: _searchController,
         readOnly: true,
-        style: const TextStyle(
-          fontFamily: 'Montserrat',
+        style: GoogleFonts.montserrat(
           fontSize: 16,
           fontWeight: FontWeight.w400,
-          color: Color(0xFF2A2A2A),
+          color: const Color(0xFF2A2A2A),
         ),
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           isDense: true,
           border: InputBorder.none,
           hintText: 'Search an area or address',
-          hintStyle: TextStyle(
-            fontFamily: 'Montserrat',
+          hintStyle: GoogleFonts.montserrat(
             fontSize: 16,
             fontWeight: FontWeight.w400,
-            color: Color(0x57000000),
+            color: const Color(0x57000000),
           ),
-          prefixIcon: Icon(Icons.search, color: Color(0x57000000)),
+          prefixIcon: const Icon(Icons.search, color: Color(0x57000000)),
         ),
       ),
     );
@@ -251,10 +247,9 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
       ),
-      child: const Text(
+      child: Text(
         'No saved addresses yet. Tap Add New Address to continue.',
-        style: TextStyle(
-          fontFamily: 'Montserrat',
+        style: GoogleFonts.montserrat(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: Colors.white,
@@ -344,8 +339,7 @@ class _ActionCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(
-                fontFamily: 'Montserrat',
+              style: GoogleFonts.montserrat(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
                 color: Colors.white,
@@ -424,8 +418,7 @@ class _AddressRow extends StatelessWidget {
                   children: [
                     Text(
                       _label,
-                      style: const TextStyle(
-                        fontFamily: 'Montserrat',
+                      style: GoogleFonts.montserrat(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -460,8 +453,7 @@ class _AddressRow extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   _fullAddress,
-                  style: const TextStyle(
-                    fontFamily: 'Montserrat',
+                  style: GoogleFonts.montserrat(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                     color: Colors.white,
@@ -557,8 +549,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
             children: [
               Text(
                 widget.existing != null ? 'Edit Address' : 'Add Address',
-                style: const TextStyle(
-                  fontFamily: 'Montserrat',
+                style: GoogleFonts.montserrat(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
@@ -587,8 +578,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                   ),
                   child: Text(
                     widget.existing != null ? 'Update Address' : 'Save Address',
-                    style: const TextStyle(
-                      fontFamily: 'Montserrat',
+                    style: GoogleFonts.montserrat(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                     ),

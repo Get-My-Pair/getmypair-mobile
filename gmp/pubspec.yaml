@@ -53,6 +53,7 @@ dependencies:
 
   # Fonts
   google_fonts: 7.0.1
+  flutter_svg: ^2.2.1
   
   # Date picker
   intl: ^0.20.2
@@ -106,6 +107,7 @@ flutter:
   # Assets
   assets:
     - assets/images/
+    - assets/images/phone.svg
     - assets/images/logo/
 
   # An image asset can refer to one or more resolution-specific "variants", see

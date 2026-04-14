@@ -42,7 +42,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 14, 0),
+              padding: const EdgeInsets.fromLTRB(20, 80, 14, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -55,17 +55,17 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
                       height: 1.0,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 20),
                   Text(
                     'Last Updated March 2026',
                     style: GoogleFonts.montserrat(
                       color: Colors.white,
                       fontSize: 12,
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w300,
                       height: 1.0,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   Expanded(
                     child: RawScrollbar(
                       controller: _scrollController,
@@ -172,7 +172,7 @@ class _TermsSection extends StatelessWidget {
             style: GoogleFonts.montserrat(
               color: const Color(0xFFDFE7E9),
               fontSize: 24,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w300,
               height: 1.0,
             ),
           ),
@@ -182,7 +182,7 @@ class _TermsSection extends StatelessWidget {
             style: GoogleFonts.montserrat(
               color: const Color(0xFFDFE7E9),
               fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.0,
             ),
           ),

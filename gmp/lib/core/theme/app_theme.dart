@@ -179,17 +179,17 @@ class AppTheme {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.error, width: 2),
       ),
-      hintStyle: const TextStyle(
+      hintStyle: GoogleFonts.montserrat(
         color: AppColors.textTertiary,
         fontSize: 14,
         fontWeight: FontWeight.w400,
       ),
-      labelStyle: const TextStyle(
+      labelStyle: GoogleFonts.montserrat(
         color: AppColors.textSecondary,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
-      errorStyle: const TextStyle(
+      errorStyle: GoogleFonts.montserrat(
         color: AppColors.error,
         fontSize: 12,
         fontWeight: FontWeight.w400,
@@ -208,7 +208,7 @@ class AppTheme {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
       ),
-      textStyle: const TextStyle(
+      textStyle: GoogleFonts.montserrat(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
@@ -229,7 +229,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
-        textStyle: const TextStyle(
+        textStyle: GoogleFonts.montserrat(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
@@ -251,7 +251,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
-        textStyle: const TextStyle(
+        textStyle: GoogleFonts.montserrat(
           fontSize: 15,
           fontWeight: FontWeight.w600,
         ),
@@ -264,7 +264,7 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primaryDark,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: const TextStyle(
+        textStyle: GoogleFonts.montserrat(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
