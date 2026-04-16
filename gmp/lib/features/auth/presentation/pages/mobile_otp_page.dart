@@ -257,7 +257,8 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               left: 0,
               right: 0,
               top: 0,
-              height: headerSweepHeight,
+              // Extend gradient to panel start so corner cutouts keep matching color.
+              height: cardTop + panelRadius + 2,
               child: const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: SweepGradient(
@@ -307,13 +308,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: cardTop,
-              bottom: 0,
-              child: const ColoredBox(color: _kPanel),
             ),
             Positioned(
               left: 0,
