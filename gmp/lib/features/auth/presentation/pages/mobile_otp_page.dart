@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -207,10 +208,18 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final scale = (size.width / Responsive.designFrameWidth).clamp(0.88, 1.14);
+    final titleSize = (34.0 * scale).clamp(28.0, 39.0);
+    final welcomeSize = (24.0 * scale).clamp(18.0, 28.0);
+    final panelRadius = (28.0 * scale).clamp(20.0, 32.0);
+    final cardTitleSize = (24.0 * scale).clamp(21.0, 28.0);
+    final bodyTitleSize = (20.0 * scale).clamp(17.0, 24.0);
+    final bodySize = (20.0 * scale).clamp(16.0, 22.0);
+    final fieldTextSize = (16.0 * scale).clamp(14.0, 18.0);
     final topInset = MediaQuery.paddingOf(context).top;
-    // Shorter strip than full Figma 430×368 frame — keeps “Hello” + welcome above the sheet.
-    final headerSweepHeight =
-        (size.height * 0.95).clamp(148.0, 260.0);
+    // Keep hero responsive across short/tall phones.
+    // Previous 0.95 factor made this almost always hit max height.
+    final headerSweepHeight = (size.height * 0.30).clamp(170.0, 230.0);
     final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
@@ -287,12 +296,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                           'Hello!',
                           style: GoogleFonts.boldonse(
                             color: _kOnGradient,
-                            fontSize: 56 * 0.607,
+                            fontSize: titleSize,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const _WelcomeRichText(),
+                        _WelcomeRichText(fontSize: welcomeSize),
                       ],
                     ),
                   ),
@@ -304,13 +313,20 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               right: 0,
               top: cardTop,
               bottom: 0,
+              child: const ColoredBox(color: _kPanel),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: cardTop,
+              bottom: 0,
               child: DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _kPanel,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
                   clipBehavior: Clip.hardEdge,
                   child: SafeArea(
                     top: false,
@@ -332,7 +348,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             'Sign Up',
                             style: GoogleFonts.boldonse(
                               color: _kPrimary,
-                              fontSize: 24,
+                              fontSize: cardTitleSize,
                               fontWeight: FontWeight.w400,
                             ),
                           ),
@@ -341,7 +357,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             'Enter your phone number',
                             style: GoogleFonts.montserrat(
                               color: _kPrimary,
-                              fontSize: 20,
+                              fontSize: bodyTitleSize,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -350,7 +366,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             "We’ll text you a quick verification\ncode",
                             style: GoogleFonts.montserrat(
                               color: _kBodyMuted,
-                              fontSize: 20,
+                              fontSize: bodySize,
                               fontWeight: FontWeight.w400,
                               height: 1.2,
                             ),
@@ -386,7 +402,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                           overflow: TextOverflow.ellipsis,
                                           style: GoogleFonts.montserrat(
                                             color: const Color(0x57000000),
-                                            fontSize: 15,
+                                            fontSize: fieldTextSize - 1,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -443,7 +459,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                             hintText: 'Phone',
                                             hintStyle: GoogleFonts.montserrat(
                                               color: const Color(0x57000000),
-                                              fontSize: 16,
+                                              fontSize: fieldTextSize,
                                             ),
                                             filled: false,
                                             fillColor: Colors.transparent,
@@ -458,7 +474,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                           ),
                                           style: GoogleFonts.montserrat(
                                             color: _kPrimary,
-                                            fontSize: 16,
+                                            fontSize: fieldTextSize,
                                             height: 1.0,
                                           ),
                                         ),
@@ -500,7 +516,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                   : Text(
                                       'Send OTP',
                                       style: GoogleFonts.boldonse(
-                                        fontSize: 14,
+                                        fontSize: (14.0 * scale).clamp(13.0, 16.0),
                                         fontWeight: FontWeight.w400,
                                         color: _kOnGradient,
                                       ),
@@ -517,7 +533,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                   'or Sign Up with',
                                   style: GoogleFonts.montserrat(
                                     color: const Color(0x33000000),
-                                    fontSize: 16,
+                                    fontSize: fieldTextSize,
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
@@ -598,64 +614,70 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                         ),
                                         SizedBox(width: (w * 0.02).clamp(6.0, 10.0)),
                                         Expanded(
-                                          child: RichText(
-                                            textAlign: TextAlign.start,
-                                            text: TextSpan(
-                                              style: GoogleFonts.montserrat(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w400,
-                                                height: 1.35,
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: RichText(
+                                              textAlign: TextAlign.start,
+                                              maxLines: 1,
+                                              softWrap: false,
+                                              text: TextSpan(
+                                                style: GoogleFonts.montserrat(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w400,
+                                                  height: 1.35,
+                                                ),
+                                                children: [
+                                                  const TextSpan(
+                                                    text: 'I agree to the ',
+                                                    style: TextStyle(color: Color(0xFF898989)),
+                                                  ),
+                                                  WidgetSpan(
+                                                    alignment: PlaceholderAlignment.baseline,
+                                                    baseline: TextBaseline.alphabetic,
+                                                    child: GestureDetector(
+                                                      onTap: () => Navigator.of(context).push(
+                                                        MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              const TermsOfServicePage(),
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        'Terms of Service',
+                                                        style: GoogleFonts.montserrat(
+                                                          color: _kPrimary,
+                                                          fontSize: 12,
+                                                          height: 1.35,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const TextSpan(
+                                                    text: ' and ',
+                                                    style: TextStyle(color: Color(0xFF898989)),
+                                                  ),
+                                                  WidgetSpan(
+                                                    alignment: PlaceholderAlignment.baseline,
+                                                    baseline: TextBaseline.alphabetic,
+                                                    child: GestureDetector(
+                                                      onTap: () => Navigator.of(context).push(
+                                                        MaterialPageRoute(
+                                                          builder: (_) =>
+                                                              const PrivacyPolicyPage(),
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        'Privacy Policy',
+                                                        style: GoogleFonts.montserrat(
+                                                          color: _kPrimary,
+                                                          fontSize: 12,
+                                                          height: 1.35,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              children: [
-                                                const TextSpan(
-                                                  text: 'I agree to the ',
-                                                  style: TextStyle(color: Color(0xFF898989)),
-                                                ),
-                                                WidgetSpan(
-                                                  alignment: PlaceholderAlignment.baseline,
-                                                  baseline: TextBaseline.alphabetic,
-                                                  child: GestureDetector(
-                                                    onTap: () => Navigator.of(context).push(
-                                                      MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            const TermsOfServicePage(),
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      'Terms of Service',
-                                                      style: GoogleFonts.montserrat(
-                                                        color: _kPrimary,
-                                                        fontSize: 12,
-                                                        height: 1.35,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                const TextSpan(
-                                                  text: ' and ',
-                                                  style: TextStyle(color: Color(0xFF898989)),
-                                                ),
-                                                WidgetSpan(
-                                                  alignment: PlaceholderAlignment.baseline,
-                                                  baseline: TextBaseline.alphabetic,
-                                                  child: GestureDetector(
-                                                    onTap: () => Navigator.of(context).push(
-                                                      MaterialPageRoute(
-                                                        builder: (_) =>
-                                                            const PrivacyPolicyPage(),
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      'Privacy Policy',
-                                                      style: GoogleFonts.montserrat(
-                                                        color: _kPrimary,
-                                                        fontSize: 12,
-                                                        height: 1.35,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
                                             ),
                                           ),
                                         ),
@@ -683,13 +705,15 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
 }
 
 class _WelcomeRichText extends StatelessWidget {
-  const _WelcomeRichText();
+  const _WelcomeRichText({required this.fontSize});
+
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
     final base = GoogleFonts.montserrat(
       color: _MobileOTPPageState._kOnGradient,
-      fontSize: 24,
+      fontSize: fontSize,
       fontWeight: FontWeight.w200,
       height: 1.2,
     );

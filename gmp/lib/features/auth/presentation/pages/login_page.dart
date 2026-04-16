@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/utils/responsive.dart';
 
 import '../../data/models/country_code.dart';
 import 'mobile_otp_page.dart';
@@ -44,6 +45,17 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final screenWidth = size.width;
+    final scale = (screenWidth / Responsive.designFrameWidth).clamp(0.88, 1.14);
+    final titleSize = (34.0 * scale).clamp(28.0, 39.0);
+    final welcomeSize = (24.0 * scale).clamp(18.0, 28.0);
+    final panelRadius = (28.0 * scale).clamp(20.0, 32.0);
+    final headerLeft = Responsive.horizontalPaddingOf(context);
+    final cardTitleSize = (24.0 * scale).clamp(21.0, 28.0);
+    final bodyTitleSize = (20.0 * scale).clamp(17.0, 24.0);
+    final bodySize = (20.0 * scale).clamp(16.0, 22.0);
+    final fieldTextSize = (16.0 * scale).clamp(14.0, 18.0);
     final topInset = MediaQuery.paddingOf(context).top;
     final cardTop = topInset + MediaQuery.sizeOf(context).height * 0.27;
 
@@ -73,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(80, 12, 20, 0),
+              padding: EdgeInsets.fromLTRB(headerLeft, 12, headerLeft, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -82,12 +94,12 @@ class _LoginPageState extends State<LoginPage> {
                     'Hello!',
                     style: GoogleFonts.boldonse(
                       color: _kTertiary,
-                      fontSize: 56 * 0.607,
+                      fontSize: titleSize,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const _WelcomeRichText(),
+                  _WelcomeRichText(fontSize: welcomeSize),
                 ],
               ),
             ),
@@ -97,10 +109,115 @@ class _LoginPageState extends State<LoginPage> {
             right: 0,
             top: cardTop,
             bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
+            child: const ColoredBox(color: _kPanel),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: cardTop,
+            bottom: 0,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: _kPanel,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.18),
@@ -110,7 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
                 child: SafeArea(
                   top: false,
                   child: LayoutBuilder(
@@ -132,7 +249,7 @@ class _LoginPageState extends State<LoginPage> {
                           'Sign Up',
                           style: GoogleFonts.boldonse(
                             color: _kPrimary,
-                            fontSize: 24,
+                            fontSize: cardTitleSize,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -141,7 +258,7 @@ class _LoginPageState extends State<LoginPage> {
                           'Enter your phone number',
                           style: GoogleFonts.montserrat(
                             color: _kPrimary,
-                            fontSize: 20,
+                            fontSize: bodyTitleSize,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -150,7 +267,7 @@ class _LoginPageState extends State<LoginPage> {
                           "We’ll text you a quick verification\ncode",
                           style: GoogleFonts.montserrat(
                             color: _kPrimary,
-                            fontSize: 20,
+                            fontSize: bodySize,
                             fontWeight: FontWeight.w400,
                             height: 1.2,
                           ),
@@ -180,7 +297,7 @@ class _LoginPageState extends State<LoginPage> {
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.montserrat(
                                           color: const Color(0x57000000),
-                                          fontSize: 16,
+                                          fontSize: fieldTextSize,
                                           fontWeight: FontWeight.w400,
                                         ),
                                       ),
@@ -219,7 +336,7 @@ class _LoginPageState extends State<LoginPage> {
                                           hintText: 'Phone',
                                           hintStyle: GoogleFonts.montserrat(
                                             color: const Color(0x57000000),
-                                            fontSize: 16,
+                                            fontSize: fieldTextSize,
                                           ),
                                           border: InputBorder.none,
                                           contentPadding: EdgeInsets.zero,
@@ -227,7 +344,7 @@ class _LoginPageState extends State<LoginPage> {
                                         ),
                                         style: GoogleFonts.montserrat(
                                           color: _kPrimary,
-                                          fontSize: 16,
+                                          fontSize: fieldTextSize,
                                         ),
                                       ),
                                     ),
@@ -253,7 +370,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: Text(
                               'Send OTP',
                               style: GoogleFonts.boldonse(
-                                fontSize: 14,
+                                fontSize: (14.0 * scale).clamp(13.0, 16.0),
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -269,7 +386,7 @@ class _LoginPageState extends State<LoginPage> {
                                 'or Sign Up with',
                                 style: GoogleFonts.montserrat(
                                   color: const Color(0x33000000),
-                                  fontSize: 16,
+                                  fontSize: fieldTextSize,
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
@@ -312,7 +429,9 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class _WelcomeRichText extends StatelessWidget {
-  const _WelcomeRichText();
+  const _WelcomeRichText({required this.fontSize});
+
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +439,7 @@ class _WelcomeRichText extends StatelessWidget {
       TextSpan(
         style: GoogleFonts.montserrat(
           color: _LoginPageState._kTertiary,
-          fontSize: 24,
+          fontSize: fontSize,
           fontWeight: FontWeight.w400,
           height: 1.2,
         ),
@@ -330,7 +449,7 @@ class _WelcomeRichText extends StatelessWidget {
             text: 'solecial hub',
             style: GoogleFonts.montserrat(
               color: _LoginPageState._kTertiary,
-              fontSize: 24,
+              fontSize: fontSize,
               fontWeight: FontWeight.w600,
               height: 1.2,
               fontStyle: FontStyle.italic,

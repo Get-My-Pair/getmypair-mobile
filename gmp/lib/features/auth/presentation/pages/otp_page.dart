@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -36,6 +37,7 @@ class _OTPPageState extends State<OTPPage> {
   static const Color _kOnGradient = Color(0xFFFFFFFF);
   static const Color _kPanel = Color(0xFFD9D9D9);
   static const Color _kOtpBorder = Color(0x56062F35);
+  static const double _kPanelRadius = 28;
 
   static const String _kClockIconUrl =
       'https://www.figma.com/api/mcp/asset/cc06893c-2fe8-4c01-9422-ece708223602';
@@ -159,8 +161,15 @@ class _OTPPageState extends State<OTPPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final scale = (size.width / Responsive.designFrameWidth).clamp(0.88, 1.14);
+    final titleSize = (34.0 * scale).clamp(28.0, 39.0);
+    final welcomeSize = (24.0 * scale).clamp(18.0, 28.0);
+    final panelRadius = (28.0 * scale).clamp(20.0, 32.0);
+    final pageTitleSize = (24.0 * scale).clamp(21.0, 28.0);
+    final pageBodySize = (20.0 * scale).clamp(16.0, 22.0);
+    final otpButtonSize = (14.0 * scale).clamp(13.0, 16.0);
     final topInset = MediaQuery.paddingOf(context).top;
-    final headerSweepHeight = (size.height * 0.95).clamp(148.0, 260.0);
+    final headerSweepHeight = (size.height * 0.30).clamp(170.0, 230.0);
     final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
@@ -256,12 +265,12 @@ class _OTPPageState extends State<OTPPage> {
                           'Hello!',
                           style: GoogleFonts.boldonse(
                             color: _kOnGradient,
-                            fontSize: 56 * 0.607,
+                            fontSize: titleSize,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const _WelcomeRichText(),
+                        _WelcomeRichText(fontSize: welcomeSize),
                       ],
                     ),
                   ),
@@ -273,9 +282,7 @@ class _OTPPageState extends State<OTPPage> {
               right: 0,
               top: cardTop,
               bottom: 0,
-              child: const DecoratedBox(
-                decoration: BoxDecoration(color: _kPanel),
-              ),
+              child: const ColoredBox(color: _kPanel),
             ),
             Positioned(
               left: 0,
@@ -285,10 +292,11 @@ class _OTPPageState extends State<OTPPage> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _kPanel,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
+                  clipBehavior: Clip.hardEdge,
                   child: SafeArea(
                     top: false,
                     child: LayoutBuilder(
@@ -311,7 +319,7 @@ class _OTPPageState extends State<OTPPage> {
                               'Verify Phone',
                               style: GoogleFonts.boldonse(
                                 color: _kPrimary,
-                                fontSize: 24,
+                                fontSize: pageTitleSize,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -320,7 +328,7 @@ class _OTPPageState extends State<OTPPage> {
                               'Code sent to $_displayPhoneNumber',
                               style: GoogleFonts.montserrat(
                                 color: _kPrimary,
-                                fontSize: 20,
+                                fontSize: pageBodySize,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
@@ -367,7 +375,7 @@ class _OTPPageState extends State<OTPPage> {
                                         : Text(
                                             'Verify OTP',
                                             style: GoogleFonts.boldonse(
-                                              fontSize: 14,
+                                              fontSize: otpButtonSize,
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
@@ -422,7 +430,7 @@ class _OtpCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
         children: [
@@ -445,7 +453,7 @@ class _OtpCard extends StatelessWidget {
               shape: MaterialPinShape.outlined,
               cellSize: Size(cellWidth, 48),
               spacing: spacing,
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(8),
               borderWidth: 1,
               borderColor: _OTPPageState._kOtpBorder,
               focusedBorderColor: AppColors.primary,
@@ -499,7 +507,9 @@ class _OtpCard extends StatelessWidget {
 }
 
 class _WelcomeRichText extends StatelessWidget {
-  const _WelcomeRichText();
+  const _WelcomeRichText({required this.fontSize});
+
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -507,7 +517,7 @@ class _WelcomeRichText extends StatelessWidget {
       TextSpan(
         style: GoogleFonts.montserrat(
           color: _OTPPageState._kOnGradient,
-          fontSize: 24,
+          fontSize: fontSize,
           fontWeight: FontWeight.w200,
           height: 1.2,
         ),
@@ -517,7 +527,7 @@ class _WelcomeRichText extends StatelessWidget {
             text: 'solecial hub',
             style: GoogleFonts.montserrat(
               color: _OTPPageState._kOnGradient,
-              fontSize: 24,
+              fontSize: fontSize,
               fontWeight: FontWeight.w600,
               height: 1.2,
               fontStyle: FontStyle.italic,
