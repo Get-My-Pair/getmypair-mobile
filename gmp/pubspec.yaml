@@ -136,12 +136,12 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# App icon (Android & iOS) — uses square mark in assets/images/logo/
-# After adding/updating app_icon.png run: dart run flutter_launcher_icons
+# App icon (Android & iOS) — uses main logo image
+# After updating the logo run: dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/logo/app_icon.png
+  image_path: assets/images/logo.png
   remove_alpha_ios: true
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: assets/images/logo/app_icon.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/logo.png

@@ -247,33 +247,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: SingleChildScrollView(
                       // Keep the last fields comfortably above the floating
                       // bottom navigation bar.
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
+                      padding: const EdgeInsets.fromLTRB(19, 28, 19, 112),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildHeader(profile, avatarImage, isLoading, state),
-                          const SizedBox(height: 26),
+                          const SizedBox(height: 18),
                           _buildLabel('Full Name'),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           _profileField(controller: _nameController),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 26),
                           _buildLabel('Nick Name'),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           _profileField(controller: _nickNameController, readOnly: true),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 26),
                           _buildLabel('Phone Number'),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           _profileField(controller: _phoneController, readOnly: true),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 26),
                           _buildLabel('E-Mail Address'),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           _profileField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 26),
                           _buildLabel('Password'),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           _profileField(
                             controller: _passwordController,
                             readOnly: true,
@@ -288,21 +288,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 26),
                           _buildLabel('Foot Size Chart'),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 5),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Expanded(child: _footMetricChip('US:10')),
+                              _footMetricChip('US: 10'),
                               const SizedBox(width: 10),
-                              Expanded(child: _footMetricChip('UK:09')),
+                              _footMetricChip('UK: 09'),
                               const SizedBox(width: 10),
-                              Expanded(child: _footMetricChip('EURO:41')),
+                              _footMetricChip('EURO: 41'),
                             ],
                           ),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 26),
                           _buildLabel('Foot Abnormality'),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           Text(
                             'Wide Foot',
                             style: GoogleFonts.boldonse(
@@ -331,13 +332,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
     bool isLoading,
     ProfileState state,
   ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Padding(
-            // Align with the reference header rhythm (title + avatar cluster).
-            padding: const EdgeInsets.only(top: 28),
+    return SizedBox(
+      height: 110,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Align(
+            alignment: Alignment.topLeft,
             child: Text(
               'Edit Profile',
               style: GoogleFonts.boldonse(
@@ -348,79 +349,70 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ),
           ),
-        ),
-        SizedBox(
-          width: 112,
-          height: 110,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                top: 6,
-                right: 0,
-                child: CircleAvatar(
-                  radius: 39.5,
-                  backgroundColor: const Color(0x33FFFFFF),
-                  backgroundImage: avatarImage,
-                  child: avatarImage == null
-                      ? Text(
-                          profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U',
-                          style: GoogleFonts.boldonse(
-                            fontSize: 20,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        )
-                      : null,
-                ),
-              ),
-              if (state is ProfileImageUploading || _isPickingImage)
-                const Positioned(
-                  top: 8,
-                  right: 0,
-                  child: SizedBox(
-                    width: 79,
-                    height: 79,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppColors.overlayOnGradient,
-                        shape: BoxShape.circle,
+          Positioned(
+            top: 6,
+            right: 0,
+            child: CircleAvatar(
+              radius: 39.5,
+              backgroundColor: const Color(0x33FFFFFF),
+              backgroundImage: avatarImage,
+              child: avatarImage == null
+                  ? Text(
+                      profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U',
+                      style: GoogleFonts.boldonse(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400,
                       ),
-                      child: Center(
-                        child: SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              Positioned(
-                right: 4,
-                top: 56,
-                child: InkWell(
-                  onTap: isLoading ? null : _pickAndUploadImage,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Container(
-                    height: 46,
-                    width: 46,
-                    decoration: BoxDecoration(
-                      color: const Color(0xCC0E8EA4),
-                      border: Border.all(color: const Color(0x4DFFFFFF)),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 18),
-                  ),
-                ),
-              ),
-            ],
+                    )
+                  : null,
+            ),
           ),
-        ),
-      ],
+          if (state is ProfileImageUploading || _isPickingImage)
+            const Positioned(
+              top: 8,
+              right: 0,
+              child: SizedBox(
+                width: 79,
+                height: 79,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.overlayOnGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            right: 4,
+            top: 56,
+            child: InkWell(
+              onTap: isLoading ? null : _pickAndUploadImage,
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                height: 46,
+                width: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xCC0E8EA4),
+                  border: Border.all(color: const Color(0x4DFFFFFF)),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -443,34 +435,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
     Widget? suffix,
     TextInputType? keyboardType,
   }) {
-    return TextFormField(
-      controller: controller,
-      readOnly: readOnly,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: GoogleFonts.montserrat(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: const Color(0xF2FFFFFF),
-      ),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: readOnly ? _inputFillReadOnly : _inputFill,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 26, vertical: 11),
-        suffixIcon: suffix,
-        suffixIconConstraints: const BoxConstraints(minHeight: 36, minWidth: 44),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: const BorderSide(color: _inputBorder, width: 0.9),
+    return SizedBox(
+      height: 42,
+      child: TextFormField(
+        controller: controller,
+        readOnly: readOnly,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: GoogleFonts.montserrat(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: const Color(0xF2FFFFFF),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: const BorderSide(color: _inputBorderFocused, width: 1.1),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: const BorderSide(color: _inputBorder),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: readOnly ? _inputFillReadOnly : _inputFill,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 26, vertical: 10),
+          suffixIcon: suffix,
+          suffixIconConstraints: const BoxConstraints(minHeight: 36, minWidth: 44),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(100),
+            borderSide: const BorderSide(color: Colors.transparent, width: 0),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(100),
+            borderSide: const BorderSide(color: Colors.transparent, width: 0),
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(100),
+            borderSide: const BorderSide(color: Colors.transparent, width: 0),
+          ),
         ),
       ),
     );
