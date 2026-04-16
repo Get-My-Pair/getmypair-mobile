@@ -683,7 +683,7 @@ class _ProfileAvatarCluster extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 96,
+        width: 75,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -803,7 +803,6 @@ class _HomeTopCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topSafe = MediaQuery.paddingOf(context).top;
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 360;
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
@@ -811,7 +810,7 @@ class _HomeTopCard extends StatelessWidget {
     final addressLine = _addressLineForHome(currentAddress);
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(horizontal, topSafe + 34, horizontal, 26),
+      padding: EdgeInsets.fromLTRB(horizontal, 86, horizontal, 26),
       decoration: BoxDecoration(
         gradient: _kHomeHeaderSweep,
         borderRadius: const BorderRadius.only(
