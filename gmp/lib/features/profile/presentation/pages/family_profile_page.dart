@@ -55,11 +55,13 @@ class FamilyProfilePage extends StatelessWidget {
                   ],
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                  // Match the Home hero content vertical rhythm (top 86px, bottom reserve 112px).
+                  padding: const EdgeInsets.fromLTRB(20, 86, 20, 112),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
@@ -75,7 +77,7 @@ class FamilyProfilePage extends StatelessWidget {
                           _AvatarCluster(profile: profile),
                         ],
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
                       for (final name in names)
                         _FamilyRow(
                           title: name,

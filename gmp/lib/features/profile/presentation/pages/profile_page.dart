@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
@@ -25,7 +26,15 @@ const LinearGradient _kProfileCardGradient = LinearGradient(
 );
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({
+    super.key,
+    this.showBottomNav = true,
+  });
+
+  /// When this profile page is shown as a standalone route (not inside
+  /// `CustomerDashboardPage`), we render the floating bottom navigation.
+  /// The dashboard renders it itself.
+  final bool showBottomNav;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -194,125 +203,136 @@ class _ProfilePageState extends State<ProfilePage> {
           return Scaffold(
             backgroundColor: AppColors.background,
             body: SafeArea(
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  borderRadius:
-                      const BorderRadius.vertical(bottom: Radius.circular(22)),
-                  gradient: _kProfileCardGradient,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 30),
-                  child: Column(
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(22),
+                        ),
+                        gradient: _kProfileCardGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: SingleChildScrollView(
+                        // Match the Home hero content vertical rhythm (top 86px, bottom reserve 112px).
+                        padding: const EdgeInsets.fromLTRB(20, 86, 20, 112),
+                        child: Column(
+                          children: [
+                            Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  profile.name,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.boldonse(
-                                    fontSize: 24,
-                                    height: 1.02,
-                                    color: const Color(0xFFDFE7E9),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        profile.name,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.boldonse(
+                                          fontSize: 24,
+                                          height: 1.02,
+                                          color: const Color(0xFFDFE7E9),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        _subtitleLine(profile),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w400,
+                                          color: const Color(0xFFDFE7E9),
+                                          height: 1.1,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _subtitleLine(profile),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w400,
-                                    color: const Color(0xFFDFE7E9),
-                                    height: 1.1,
-                                  ),
+                                const SizedBox(width: 12),
+                                _OverlappingAvatarCluster(profile: profile),
+                              ],
+                            ),
+                            const SizedBox(height: 28),
+                            _MenuSection(
+                              children: [
+                                _GradientMenuTile(
+                                  icon: Icons.account_circle_outlined,
+                                  title: 'Family Profile',
+                                  onTap: () =>
+                                      _openFamilyProfile(context, profile, token),
+                                ),
+                                _GradientMenuTile(
+                                  icon: Icons.notifications_none_rounded,
+                                  title: 'Notifications',
+                                  onTap: () {},
+                                ),
+                                _GradientMenuTile(
+                                  icon: Icons.location_on_outlined,
+                                  title: 'Location',
+                                  onTap: () => _openSavedAddresses(
+                                      context, profile, token),
+                                ),
+                                _GradientMenuTile(
+                                  icon: Icons.credit_card_outlined,
+                                  title: 'Payment',
+                                  onTap: () {},
+                                ),
+                                _GradientMenuTile(
+                                  icon: Icons.devices_other_outlined,
+                                  title: 'Manage Devices',
+                                  onTap: () => _openManageDevices(context),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          _OverlappingAvatarCluster(profile: profile),
-                        ],
+                            const SizedBox(height: 18),
+                            _MenuSection(
+                              children: [
+                                _GradientMenuTile(
+                                  icon: Icons.help_outline_rounded,
+                                  title: 'FAQ',
+                                  onTap: () {},
+                                ),
+                                _GradientMenuTile(
+                                  icon: Icons.error_outline_rounded,
+                                  title: 'Terms & Conditions',
+                                  onTap: () {},
+                                ),
+                                _GradientMenuTile(
+                                  icon: Icons.workspace_premium_outlined,
+                                  title: 'License',
+                                  onTap: () {},
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 18),
+                            _MenuSection(
+                              children: [
+                                _GradientMenuTile(
+                                  icon: Icons.logout_rounded,
+                                  title: 'Log Out',
+                                  onTap: _logout,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 34),
-                      _MenuSection(
-                        children: [
-                          _GradientMenuTile(
-                            icon: Icons.account_circle_outlined,
-                            title: 'Family Profile',
-                            onTap: () =>
-                                _openFamilyProfile(context, profile, token),
-                          ),
-                          _GradientMenuTile(
-                            icon: Icons.notifications_none_rounded,
-                            title: 'Notifications',
-                            onTap: () {},
-                          ),
-                          _GradientMenuTile(
-                            icon: Icons.location_on_outlined,
-                            title: 'Location',
-                            onTap: () =>
-                                _openSavedAddresses(context, profile, token),
-                          ),
-                          _GradientMenuTile(
-                            icon: Icons.credit_card_outlined,
-                            title: 'Payment',
-                            onTap: () {},
-                          ),
-                          _GradientMenuTile(
-                            icon: Icons.devices_other_outlined,
-                            title: 'Manage Devices',
-                            onTap: () => _openManageDevices(context),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      _MenuSection(
-                        children: [
-                          _GradientMenuTile(
-                            icon: Icons.help_outline_rounded,
-                            title: 'FAQ',
-                            onTap: () {},
-                          ),
-                          _GradientMenuTile(
-                            icon: Icons.error_outline_rounded,
-                            title: 'Terms & Conditions',
-                            onTap: () {},
-                          ),
-                          _GradientMenuTile(
-                            icon: Icons.workspace_premium_outlined,
-                            title: 'License',
-                            onTap: () {},
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      _MenuSection(
-                        children: [
-                          _GradientMenuTile(
-                            icon: Icons.logout_rounded,
-                            title: 'Log Out',
-                            onTap: _logout,
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  if (widget.showBottomNav)
+                    const DashboardLinkedBottomNav(selectedTabIndex: 2),
+                ],
               ),
             ),
           );
@@ -531,7 +551,6 @@ class _GradientSectionDivider extends StatelessWidget {
     );
   }
 }
-
 class _MenuSection extends StatelessWidget {
   const _MenuSection({required this.children});
 

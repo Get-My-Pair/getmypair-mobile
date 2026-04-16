@@ -167,8 +167,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = Responsive.bottomInsetOf(context);
-    final bottomNavReserve = FloatingGradientBottomNav.barHeight + 12 + bottomSafe;
+    // Match the Home/Profile bottom reserve so content doesn't tuck under the
+    // floating bottom nav.
+    const bottomNavReserve = 112.0;
 
     if (_loading) {
       return Scaffold(

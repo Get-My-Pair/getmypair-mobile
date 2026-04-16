@@ -14,11 +14,18 @@ import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 
-const LinearGradient _kProfileShellGradient = LinearGradient(
-  begin: Alignment.topRight,
-  end: Alignment.bottomLeft,
-  colors: [Color(0xFF22D3EE), Color(0xFF0F6876), Color(0xFF062F35)],
-  stops: [0.0, 0.48, 1.0],
+const SweepGradient _kProfileShellGradient = SweepGradient(
+  center: Alignment(0.22, -1.07),
+  startAngle: -0.55,
+  endAngle: 5.73,
+  colors: [
+    Color(0xFF09E0FF),
+    Color(0xFF0F6876),
+    Color(0xFF062F35),
+    Color(0xFF062F35),
+  ],
+  stops: [0.05, 0.44, 0.57, 1],
+  transform: GradientRotation(-0.55),
 );
 
 class EditProfilePage extends StatefulWidget {
@@ -215,6 +222,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
+            // Let the bottom-nav widget own the bottom inset, otherwise we can
+            // end up double-padding and the header/card spacing feels off.
+            bottom: false,
             child: Column(
               children: [
                 Expanded(
@@ -222,19 +232,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(22),
+                        bottom: Radius.circular(20),
                       ),
                       gradient: _kProfileShellGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.22),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
+                          color: const Color(0xFFABABAB),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                          spreadRadius: 0,
                         ),
                       ],
                     ),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
+                      // Keep the last fields comfortably above the floating
+                      // bottom navigation bar.
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -303,7 +316,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                   ),
                 ),
-                const DashboardLinkedBottomNav(),
+                const DashboardLinkedBottomNav(selectedTabIndex: 2),
               ],
             ),
           ),
@@ -323,7 +336,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(top: 34),
+            // Align with the reference header rhythm (title + avatar cluster).
+            padding: const EdgeInsets.only(top: 28),
             child: Text(
               'Edit Profile',
               style: GoogleFonts.boldonse(
@@ -342,7 +356,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                top: 8,
+                top: 6,
                 right: 0,
                 child: CircleAvatar(
                   radius: 39.5,
@@ -386,7 +400,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
               Positioned(
-                left: 4,
+                right: 4,
                 top: 56,
                 child: InkWell(
                   onTap: isLoading ? null : _pickAndUploadImage,

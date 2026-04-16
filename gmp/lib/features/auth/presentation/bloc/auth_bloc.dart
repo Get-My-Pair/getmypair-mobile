@@ -49,16 +49,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(const AuthLoading());
 
     final result = await checkAuthStatus();
-    result.fold(
-      (failure) => emit(const AuthUnauthenticated()),
+    // IMPORTANT: `fold` does not automatically await an async callback.
+    // Without `await`, the event handler can finish and later `emit(...)`
+    // calls will trip the bloc assertion.
+    if (emit.isDone) return;
+    await result.fold<Future<void>>(
+      (failure) async {
+        if (emit.isDone) return;
+        emit(const AuthUnauthenticated());
+      },
       (isAuthenticated) async {
         if (isAuthenticated) {
           final userResult = await getCurrentUser();
+          if (emit.isDone) return;
           userResult.fold(
-            (failure) => emit(const AuthUnauthenticated()),
-            (user) => emit(AuthAuthenticated(user)),
+            (failure) {
+              if (emit.isDone) return;
+              emit(const AuthUnauthenticated());
+            },
+            (user) {
+              if (emit.isDone) return;
+              emit(AuthAuthenticated(user));
+            },
           );
         } else {
+          if (emit.isDone) return;
           emit(const AuthUnauthenticated());
         }
       },

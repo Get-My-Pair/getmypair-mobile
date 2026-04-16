@@ -246,7 +246,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = Responsive.bottomInsetOf(context);
+    // Match the Home/Profile bottom reserve so content doesn't tuck under
+    // the floating bottom nav.
+    const bottomNavReserve = 112.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -304,9 +306,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   ),
                 ),
                 SizedBox(
-                  height: widget.showBottomBar
-                      ? (FloatingGradientBottomNav.barHeight + 12 + bottomSafe)
-                      : bottomSafe,
+                  height: bottomNavReserve,
                 ),
               ],
             ),

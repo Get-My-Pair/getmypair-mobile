@@ -65,7 +65,9 @@ class FloatingGradientBottomNav extends StatelessWidget {
             children: List.generate(items.length, (i) {
               final selected = i == currentIndex;
               final pair = items[i];
-              return Expanded(
+              // Use fixed-width cells so `spaceBetween` can increase the gap between items.
+              return SizedBox(
+                width: hitSize,
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(

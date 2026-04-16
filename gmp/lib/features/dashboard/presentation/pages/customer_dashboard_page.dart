@@ -132,6 +132,6 @@ class _ProfilePageWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ProfilePage();
+    return const ProfilePage(showBottomNav: false);
   }
 }
