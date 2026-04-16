@@ -545,7 +545,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Last sent to shoe care',
+                                        'Last sent to CareMyPair',
                                         style: montserrat(16),
                                       ),
                                     ),
@@ -562,10 +562,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                 children: [
                                   Expanded(
                                     child: _gradientPillButton(
-                                      label: 'Rehome',
+                                      label: 'Rehome\nMyPair',
                                       onTap: () {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Rehome coming soon')),
+                                          const SnackBar(content: Text('Rehome MyPair coming soon')),
                                         );
                                       },
                                     ),
@@ -573,10 +573,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: _outlinedPillButton(
-                                      label: 'Rent',
+                                      label: 'Rent\nMyPair',
                                       onTap: () {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Rent coming soon')),
+                                          const SnackBar(content: Text('Rent MyPair coming soon')),
                                         );
                                       },
                                     ),
@@ -658,13 +658,14 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   }
 
   Widget _gradientPillButton({required String label, required VoidCallback onTap}) {
+    final isTwoLine = label.contains('\n');
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Ink(
-          height: 59,
+          height: isTwoLine ? 86 : 59,
           decoration: ShapeDecoration(
             gradient: const LinearGradient(
               begin: Alignment(1, 0.5),
@@ -687,6 +688,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
+                height: isTwoLine ? 1.28 : null,
               ),
             ),
           ),
@@ -696,6 +698,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   }
 
   Widget _outlinedPillButton({required String label, required VoidCallback onTap}) {
+    final isTwoLine = label.contains('\n');
     return Material(
       color: const Color(0xFFDFE7E9),
       borderRadius: BorderRadius.circular(10),
@@ -703,7 +706,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: 59,
+          height: isTwoLine ? 86 : 59,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
@@ -722,6 +725,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
               color: const Color(0xFF062F35),
               fontSize: 16,
               fontWeight: FontWeight.w400,
+              height: isTwoLine ? 1.28 : null,
             ),
           ),
         ),

@@ -127,7 +127,7 @@ class DashboardLinkedBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         child: FloatingGradientBottomNav(
           currentIndex: selectedTabIndex.clamp(0, 2),
           onChanged: (i) {

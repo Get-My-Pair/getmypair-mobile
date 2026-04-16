@@ -50,7 +50,7 @@ String? mapPinAbsoluteProfileImageUrl(String? path) {
   return '$base/uploads/$t';
 }
 
-/// “Shoe Care” — find cobblers near you: light map, distance rings, demo markers,
+/// “CareMyPair” — find cobblers near you: light map, distance rings, demo markers,
 /// confirm location (returns address to [Navigator.pop]).
 ///
 /// Pass [mapPinDisplayName] / [mapPinProfileImageRef] from the opener (e.g. home).
@@ -382,7 +382,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                     const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Shoe Care',
+                                      'CareMyPair',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.boldonse(

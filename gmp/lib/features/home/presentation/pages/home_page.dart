@@ -529,7 +529,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               SizedBox(height: _kAfterRackToActionsGap),
                               _QuickActionCard(
-                                label: 'Shoe Care',
+                                label: 'CareMyPair',
                                 highlight: true,
                                 iconData: Icons.handyman_outlined,
                                 iconWidth: 48,
@@ -537,7 +537,7 @@ class _HomePageState extends State<HomePage> {
                                 fullWidth: true,
                                 onTap: () => _openServiceFlow(
                                   title:
-                                      'Select article for Shoe Care (Repair, Maintenance, Wash)',
+                                      'Select article for CareMyPair (Repair, Maintenance, Wash)',
                                   allowedServiceTypes: const [
                                     'repair',
                                     'maintenance',
@@ -552,20 +552,20 @@ class _HomePageState extends State<HomePage> {
                                     return Column(
                                       children: [
                                         const _QuickActionCard(
-                                          label: 'Rent',
+                                          label: 'Rent\nMyPair',
                                           iconData: Icons.autorenew_rounded,
                                           iconWidth: 51,
                                           iconHeight: 48,
                                         ),
                                         const SizedBox(height: 12),
                                         _QuickActionCard(
-                                          label: 'Rehome',
+                                          label: 'Rehome\nMyPair',
                                           iconData: Icons.cottage_outlined,
                                           iconWidth: 48,
                                           iconHeight: 41,
                                           onTap: () => _openServiceFlow(
                                             title:
-                                                'Select article for Rehome (Donate, Dispose)',
+                                                'Select article for Rehome MyPair (Donate, Dispose)',
                                             allowedServiceTypes: const [
                                               'donate',
                                               'dispose',
@@ -579,7 +579,7 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       const Expanded(
                                         child: _QuickActionCard(
-                                          label: 'Rent',
+                                          label: 'Rent\nMyPair',
                                           iconData: Icons.autorenew_rounded,
                                           iconWidth: 51,
                                           iconHeight: 48,
@@ -588,13 +588,13 @@ class _HomePageState extends State<HomePage> {
                                       const SizedBox(width: 28),
                                       Expanded(
                                         child: _QuickActionCard(
-                                          label: 'Rehome',
+                                          label: 'Rehome\nMyPair',
                                           iconData: Icons.cottage_outlined,
                                           iconWidth: 48,
                                           iconHeight: 41,
                                           onTap: () => _openServiceFlow(
                                             title:
-                                                'Select article for Rehome (Donate, Dispose)',
+                                                'Select article for Rehome MyPair (Donate, Dispose)',
                                             allowedServiceTypes: const [
                                               'donate',
                                               'dispose',
@@ -1165,17 +1165,18 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTwoLine = label.contains('\n');
     final textColor = highlight ? Colors.white : _kQuickActionMutedText;
     final padding = highlight
         ? const EdgeInsets.fromLTRB(18, 8, 18, 8)
-        : const EdgeInsets.symmetric(horizontal: 14, vertical: 8);
+        : EdgeInsets.symmetric(horizontal: 12, vertical: isTwoLine ? 10 : 8);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: _kQuickActionCellHeight,
+          height: isTwoLine ? _kQuickActionCellHeight + 28 : _kQuickActionCellHeight,
           padding: padding,
           decoration: BoxDecoration(
             color: highlight ? null : _kQuickActionMutedBg,
@@ -1221,7 +1222,7 @@ class _QuickActionCard extends StatelessWidget {
                     fontSize: MediaQuery.sizeOf(context).width < 360 ? 14 : 16,
                     fontWeight: FontWeight.w400,
                     color: textColor,
-                    height: 1.05,
+                    height: isTwoLine ? 1.60 : 1.10,
                   ),
                 ),
               ),

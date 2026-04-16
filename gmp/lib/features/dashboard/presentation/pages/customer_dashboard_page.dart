@@ -110,7 +110,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 80),
         child: FloatingGradientBottomNav(
           currentIndex: index,
           onChanged: (i) {
