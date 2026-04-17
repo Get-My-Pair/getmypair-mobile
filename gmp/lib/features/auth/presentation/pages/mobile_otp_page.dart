@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -80,7 +79,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     }
   }
 
-  static const int _minNationalDigits = 8;
+  static const int _minNationalDigits = 10;
   static const int _maxNationalDigits = 15;
 
   int get _nationalDigitCount =>
@@ -687,22 +686,24 @@ class _WelcomeRichText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = GoogleFonts.montserrat(
-      color: _MobileOTPPageState._kOnGradient,
-      fontSize: 24,
-      fontWeight: FontWeight.w200,
-      height: 1.2,
-    );
     return Text.rich(
       TextSpan(
-        style: base,
+        style: GoogleFonts.montserrat(
+          color: _MobileOTPPageState._kOnGradient,
+          fontSize: 24,
+          fontWeight: FontWeight.w200,
+          height: 1.2,
+        ),
         children: [
-          const TextSpan(text: 'Welcome to your ',),
+          const TextSpan(text: 'Welcome to your '),
           TextSpan(
             text: 'solecial hub',
-            style: base.copyWith(
-              fontStyle: FontStyle.italic,
+            style: GoogleFonts.montserrat(
+              color: _MobileOTPPageState._kOnGradient,
+              fontSize: 24,
               fontWeight: FontWeight.w600,
+              height: 1.2,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -759,6 +760,11 @@ class _SocialImageTile extends StatelessWidget {
 class _SendingOtpProgress extends StatelessWidget {
   const _SendingOtpProgress({required this.progress});
 
+  /// Deeper teal track (matches hero gradient end / button family).
+  static const Color _progressTrack = Color(0xFF08414A);
+  /// Lighter teal fill (same family as [_MobileOTPPageState._kAccent]).
+  static const Color _progressFill = Color(0xFF12899B);
+
   final double progress;
 
   @override
@@ -771,7 +777,7 @@ class _SendingOtpProgress extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Container(color: AppColors.surface),
+              Container(color: _progressTrack),
               Align(
                 alignment: Alignment.centerLeft,
                 child: AnimatedContainer(
@@ -779,7 +785,7 @@ class _SendingOtpProgress extends StatelessWidget {
                   curve: Curves.easeOut,
                   width: fillWidth,
                   decoration: BoxDecoration(
-                    color: AppColors.success,
+                    color: _progressFill,
                     borderRadius: BorderRadius.circular(100),
                   ),
                 ),
@@ -788,9 +794,9 @@ class _SendingOtpProgress extends StatelessWidget {
                 child: Text(
                   'Sending...',
                   style: GoogleFonts.montserrat(
-                    color: AppColors.textPrimary,
+                    color: _MobileOTPPageState._kOnGradient,
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),

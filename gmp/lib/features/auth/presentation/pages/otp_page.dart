@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,7 +36,7 @@ class _OTPPageState extends State<OTPPage> {
   static const Color _kAccent = Color(0xFF0F6876);
   static const Color _kOnGradient = Color(0xFFFFFFFF);
   static const Color _kPanel = Color(0xFFD9D9D9);
-  static const Color _kOtpBorder = Color(0x56062F35);
+  static const Color _kOtpBorder = Color(0xFFD7DEE0);
 
   static const String _kClockIconUrl =
       'https://www.figma.com/api/mcp/asset/cc06893c-2fe8-4c01-9422-ece708223602';
@@ -341,37 +342,42 @@ class _OTPPageState extends State<OTPPage> {
                               builder: (context, state) {
                                 final isLoading = state is AuthLoading;
                                 final isEnabled = _otp.length == 6 && !isLoading;
-                                return SizedBox(
-                                  height: 48,
-                                  child: ElevatedButton(
-                                    onPressed: isEnabled ? _verifyOtp : null,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _kAccent,
-                                      foregroundColor: _kOnGradient,
-                                      disabledBackgroundColor: _kAccent.withValues(alpha: 0.65),
-                                      disabledForegroundColor: _kOnGradient.withValues(alpha: 0.95),
-                                      elevation: 4,
-                                      shadowColor: Colors.black.withValues(alpha: 0.1),
-                                      side: const BorderSide(color: Color(0xFF09E0FF)),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                                return ElevatedButton(
+                                  onPressed: isEnabled ? _verifyOtp : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _kAccent,
+                                    foregroundColor: _kOnGradient,
+                                    disabledBackgroundColor: _kAccent.withValues(alpha: 0.65),
+                                    disabledForegroundColor: _kOnGradient.withValues(alpha: 0.95),
+                                    elevation: 4,
+                                    shadowColor: Colors.black.withValues(alpha: 0.1),
+                                    side: const BorderSide(color: Color(0xFF09E0FF)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(100),
                                     ),
-                                    child: isLoading
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(_kOnGradient),
-                                            ),
-                                          )
-                                        : Text(
-                                            'Verify OTP',
-                                            style: GoogleFonts.boldonse(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
+                                    minimumSize: const Size(double.infinity, 52),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 14,
+                                    ),
                                   ),
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(_kOnGradient),
+                                          ),
+                                        )
+                                      : Text(
+                                          'Verify OTP',
+                                          style: GoogleFonts.boldonse(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            height: 1.05,
+                                          ),
+                                        ),
                                 );
                               },
                             ),
@@ -415,83 +421,116 @@ class _OtpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final contentWidth = constraints.maxWidth - 30;
-        final spacing = (contentWidth * 0.045).clamp(8.0, 20.0);
-        final cellWidth = ((contentWidth - (spacing * 5)) / 6).clamp(30.0, 36.0);
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-        children: [
-          Text(
-            'Enter 6 digit code',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(
-              color: _OTPPageState._kPrimary,
-              fontSize: 36 * 0.556,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 24),
-          MaterialPinField(
-            length: 6,
-            initialValue: initialOtpValue,
-            onChanged: onChanged,
-            onCompleted: onCompleted,
-            theme: MaterialPinTheme(
-              shape: MaterialPinShape.outlined,
-              cellSize: Size(cellWidth, 48),
-              spacing: spacing,
-              borderRadius: BorderRadius.circular(5),
-              borderWidth: 1,
-              borderColor: _OTPPageState._kOtpBorder,
-              focusedBorderColor: AppColors.primary,
-              textStyle: GoogleFonts.montserrat(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: _OTPPageState._kPrimary,
-              ),
-              entryAnimation: MaterialPinAnimation.scale,
-              animationDuration: const Duration(milliseconds: 250),
-              animationCurve: Curves.easeOut,
-            ),
-          ),
-          const SizedBox(height: 50),
-          InkWell(
-            onTap: canResend ? onTapTimer : null,
-            borderRadius: BorderRadius.circular(100),
+        const cardMaxWidth = 346.0;
+        const padH = 15.0;
+        const padV = 20.0;
+        const titleToOtp = 24.0;
+        const otpToTimer = 50.0;
+        const cellW = 36.0;
+        const cellH = 48.0;
+        const cellGap = 20.0;
+        const otpRowTargetW = 6 * cellW + 5 * cellGap;
+
+        final cardWidth = math.min(cardMaxWidth, constraints.maxWidth);
+        final innerW = cardWidth - padH * 2;
+        final scale = innerW < otpRowTargetW ? innerW / otpRowTargetW : 1.0;
+        final pinW = cellW * scale;
+        final pinH = cellH * scale;
+        final pinGap = cellGap * scale;
+
+        return Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: cardWidth,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: padH, vertical: padV),
               decoration: BoxDecoration(
-                color: const Color(0x66DFE7E9),
-                borderRadius: BorderRadius.circular(100),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.schedule_rounded,
-                    size: 16,
-                    color: Colors.black.withValues(alpha: 0.34),
-                  ),
-                  const SizedBox(width: 14),
                   Text(
-                    countdownText,
+                    'Enter 6 digit code',
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.montserrat(
-                      fontSize: 14,
+                      color: _OTPPageState._kPrimary,
+                      fontSize: 20,
                       fontWeight: FontWeight.w400,
-                      color: canResend ? AppColors.primary : Colors.black.withValues(alpha: 0.34),
+                    ),
+                  ),
+                  SizedBox(height: titleToOtp),
+                  MaterialPinField(
+                    length: 6,
+                    initialValue: initialOtpValue,
+                    onChanged: onChanged,
+                    onCompleted: onCompleted,
+                    theme: MaterialPinTheme(
+                      shape: MaterialPinShape.outlined,
+                      cellSize: Size(pinW, pinH),
+                      spacing: pinGap,
+                      borderRadius: BorderRadius.circular(5),
+                      borderWidth: 1,
+                      focusedBorderWidth: 1,
+                      fillColor: Colors.white,
+                      focusedFillColor: Colors.white,
+                      filledFillColor: Colors.white,
+                      followingFillColor: Colors.white,
+                      completeFillColor: Colors.white,
+                      borderColor: _OTPPageState._kOtpBorder,
+                      filledBorderColor: _OTPPageState._kOtpBorder,
+                      completeBorderColor: _OTPPageState._kOtpBorder,
+                      focusedBorderColor: AppColors.border,
+                      textStyle: GoogleFonts.montserrat(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: _OTPPageState._kPrimary,
+                      ),
+                      entryAnimation: MaterialPinAnimation.scale,
+                      animationDuration: const Duration(milliseconds: 250),
+                      animationCurve: Curves.easeOut,
+                    ),
+                  ),
+                  SizedBox(height: otpToTimer),
+                  InkWell(
+                    onTap: canResend ? onTapTimer : null,
+                    borderRadius: BorderRadius.circular(100),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0x66DFE7E9),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 16,
+                            color: Colors.black.withValues(alpha: 0.34),
+                          ),
+                          const SizedBox(width: 14),
+                          Text(
+                            countdownText,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.montserrat(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: canResend
+                                  ? AppColors.primary
+                                  : Colors.black.withValues(alpha: 0.34),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ],
-      ),
         );
       },
     );

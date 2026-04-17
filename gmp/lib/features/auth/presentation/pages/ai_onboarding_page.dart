@@ -1,9 +1,6 @@
-import 'dart:async';
-import 'dart:math' as math;
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_page.dart';
 
 import 'profile_completion_page.dart';
@@ -22,17 +19,17 @@ class AiOnboardingPage extends StatefulWidget {
   State<AiOnboardingPage> createState() => _AiOnboardingPageState();
 }
 
-class _AiOnboardingPageState extends State<AiOnboardingPage>
-    with SingleTickerProviderStateMixin {
+class _AiOnboardingPageState extends State<AiOnboardingPage> {
   static const int _pageCount = 7;
-  static const Color _primary = Color(0xFF062F35);
+  static const Color _primary = AppColors.footwearHeroStart;
   static const Color _text = Color(0xFFDFE7E9);
-  static const Color _mint = Color(0xFFAFEDD6);
+  static const Color _mint = AppColors.onboardingTrulyFits;
 
   static const String _orbAsset =
       'https://www.figma.com/api/mcp/asset/95f21855-ca3e-4a72-b797-54cbc89cd676';
-  static const String _voiceIcon =
-      'https://www.figma.com/api/mcp/asset/62419914-36bc-4d5a-9e4b-2aeed47dd5b7';
+
+  /// Wireframe orb over the gradient (~10–15% visible per mockup).
+  static const double _orbImageOpacity = 0.12;
 
   final PageController _controller = PageController();
   final TextEditingController _name = TextEditingController();
@@ -40,34 +37,12 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   int _index = 0;
   String? _gender;
-  bool _voiceAllowed = false;
-  bool _listening = false;
   bool _cameraAllowed = false;
   final Set<String> _rack = <String>{};
   final Set<String> _troubles = <String>{};
 
-  late final AnimationController _bgMotion;
-
-  static const List<Color> _bgGradientColors = [
-    Color(0xFF141C1D),
-    Color(0xFF0F6876),
-    Color(0xFF09E0FF),
-    Color(0xFFFFFFFF),
-  ];
-  static const List<double> _bgGradientStops = [0, .45, .76, 1];
-
-  @override
-  void initState() {
-    super.initState();
-    _bgMotion = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 22),
-    )..repeat(reverse: true);
-  }
-
   @override
   void dispose() {
-    _bgMotion.dispose();
     _name.dispose();
     _age.dispose();
     _controller.dispose();
@@ -129,63 +104,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     }
   }
 
-  Future<bool?> _permissionDialog(String title, String body) {
-    return showCupertinoDialog<bool>(
-      context: context,
-      builder: (c) => CupertinoAlertDialog(
-        title: Text(title),
-        content: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(body),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(c).pop(false),
-            child: const Text("Don't Allow"),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.of(c).pop(true),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _onVoiceTap() async {
-    if (!_voiceAllowed) {
-      final ok = await _permissionDialog(
-        '"GetMyPair" Would Like to Access the Microphone',
-        'Please allow GetMyPair to access your microphone.',
-      );
-      if (ok != true) return;
-      setState(() => _voiceAllowed = true);
-    }
-
-    setState(() => _listening = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-
-    if (_index == 0) _name.text = 'Aashi';
-    if (_index == 1) {
-      _age.text = '26';
-      _gender = 'Female';
-    }
-    if (_index == 2) {
-      _rack
-        ..clear()
-        ..add('My Kids');
-    }
-    if (_index == 3) {
-      _troubles
-        ..clear()
-        ..add('Hard to find the right fit!')
-        ..add('No strong support at heel.');
-    }
-    setState(() => _listening = false);
-  }
-
   Future<void> _onCameraTap() async {
     if (_cameraAllowed) return;
     setState(() => _cameraAllowed = true);
@@ -226,7 +144,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                   label: Text(g),
                   selected: _gender == g,
                   onSelected: (_) => setState(() => _gender = g),
-                  selectedColor: const Color(0xFF0F6876),
+                  selectedColor: AppColors.footwearHeroMid,
                 );
               }).toList(),
             ),
@@ -295,51 +213,63 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         fit: StackFit.expand,
         children: [
           RepaintBoundary(
-            child: AnimatedBuilder(
-              animation: _bgMotion,
-              builder: (context, _) {
-                final t = _bgMotion.value * 2 * math.pi;
-                final beginDx = 0.06 * math.sin(t * 0.7);
-                final beginDy = -1.0 + 0.05 * math.cos(t * 0.55);
-                final endDx = -0.35 + 0.08 * math.cos(t * 0.65);
-                final endDy = 1.0 + 0.04 * math.sin(t * 0.5);
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Transform.translate(
-                      offset: Offset(12 * math.sin(t), 10 * math.cos(t * 0.9)),
-                      child: Transform.scale(
-                        scale: 1.1,
-                        alignment: Alignment.center,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment(beginDx, beginDy),
-                              end: Alignment(endDx, endDy),
-                              colors: _bgGradientColors,
-                              stops: _bgGradientStops,
-                            ),
+            child: Stack(
+              fit: StackFit.expand,
+              clipBehavior: Clip.none,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: const [
+                        AppColors.footwearHeroStart,
+                        AppColors.footwearHeroMid,
+                        AppColors.footwearHeroEnd,
+                      ],
+                      stops: const [0.0, 0.48, 1.0],
+                    ),
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: MediaQuery.sizeOf(context).height * 0.14,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: Container(
+                        width: orbWidth * 1.35,
+                        height: orbWidth * 1.35,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              AppColors.footwearHeroEnd.withValues(alpha: 0.14),
+                              AppColors.footwearHeroMid.withValues(alpha: 0.06),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.45, 1.0],
                           ),
-                          child: const SizedBox.expand(),
                         ),
                       ),
                     ),
-                    Align(
-                      alignment: const Alignment(0, .1),
-                      child: Transform.translate(
-                        offset: Offset(
-                          16 * math.sin(t * 1.25 + 0.4),
-                          12 * math.cos(t * 0.85),
-                        ),
-                        child: Opacity(
-                          opacity: .28,
-                          child: _SafeNetworkImage(_orbAsset, width: orbWidth),
-                        ),
+                  ),
+                ),
+                Align(
+                  alignment: const Alignment(0, .1),
+                  child: Opacity(
+                    opacity: _orbImageOpacity,
+                    child: ColorFiltered(
+                      colorFilter: const ColorFilter.mode(
+                        AppColors.secondaryLight,
+                        BlendMode.modulate,
                       ),
+                      child: _SafeNetworkImage(_orbAsset, width: orbWidth),
                     ),
-                  ],
-                );
-              },
+                  ),
+                ),
+              ],
             ),
           ),
           SafeArea(
@@ -355,29 +285,23 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                         height: 48,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          color: Colors.white,
                           border: Border.all(
-                            color: const Color(0xFF062F35),
-                            width: 1.6,
+                            color: AppColors.footwearHeroStart.withValues(alpha: 0.35),
+                            width: 1,
                           ),
-                          color: const Color(0xFFF2F7F8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: Center(
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF0F6876),
-                                width: 1.4,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.pause,
-                              size: 14,
-                              color: Color(0xFF062F35),
-                            ),
-                          ),
+                        child: const Icon(
+                          Icons.pause,
+                          size: 16,
+                          color: AppColors.footwearHeroStart,
                         ),
                       ),
                     ],
@@ -400,73 +324,45 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                     top: false,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              TextButton(
-                                onPressed: _index > 0 ? _prev : null,
-                                child: Text(
-                                  'Prev',
-                                  style: TextStyle(
-                                    color: _index > 0 ? Colors.white : Colors.white38,
-                                  ),
-                                ),
+                          TextButton(
+                            onPressed: _index > 0 ? _prev : null,
+                            child: Text(
+                              'Prev',
+                              style: TextStyle(
+                                color: _index > 0 ? Colors.white : Colors.white38,
                               ),
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(_pageCount, (i) {
-                                    final active = i == _index;
-                                    return AnimatedContainer(
-                                      duration: const Duration(milliseconds: 180),
-                                      width: active ? 18 : 6,
-                                      height: 6,
-                                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                                      decoration: BoxDecoration(
-                                        color: active
-                                            ? _mint
-                                            : Colors.white.withValues(alpha: .35),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    );
-                                  }),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _canNext ? _next : null,
-                                child: Text(
-                                  _index == _pageCount - 1 ? 'Done' : 'Next',
-                                  style: TextStyle(
-                                    color: _canNext ? _mint : Colors.white38,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                          const Divider(height: 1, color: Color(0x33FFFFFF)),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: _onVoiceTap,
+                          Expanded(
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 18,
-                                  height: 28,
-                                  child: _SafeNetworkImage(_voiceIcon),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _listening ? 'Listening...' : 'Voice',
-                                  style: GoogleFonts.boldonse(
-                                    color: _mint,
-                                    fontSize: 16,
+                              children: List.generate(_pageCount, (i) {
+                                final active = i == _index;
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  width: active ? 18 : 6,
+                                  height: 6,
+                                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                                  decoration: BoxDecoration(
+                                    color: active
+                                        ? _mint
+                                        : Colors.white.withValues(alpha: .35),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                ),
-                              ],
+                                );
+                              }),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _canNext ? _next : null,
+                            child: Text(
+                              _index == _pageCount - 1 ? 'Done' : 'Next',
+                              style: TextStyle(
+                                color: _canNext ? _mint : Colors.white38,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
@@ -556,6 +452,8 @@ class _Input extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: numeric ? TextInputType.number : TextInputType.text,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       onChanged: (_) => onChanged(),
       style: GoogleFonts.montserrat(
         color: const Color(0xFFDFE7E9),

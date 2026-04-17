@@ -1,0 +1,178 @@
+Container(
+    width: 346,
+    height: 235,
+    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+    decoration: ShapeDecoration(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+        ),
+    ),
+    child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 10,
+        children: [
+            Container(
+                width: 316,
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    spacing: 50,
+                    children: [
+                        Container(
+                            width: double.infinity,
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                spacing: 24,
+                                children: [
+                                    SizedBox(
+                                        width: 316,
+                                        height: 23,
+                                        child: Text(
+                                            'Enter 6 digit code',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                color: const Color(0xFF062F35),
+                                                fontSize: 20,
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.w400,
+                                            ),
+                                        ),
+                                    ),
+                                    Container(
+                                        width: double.infinity,
+                                        child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment: MainAxisAlignment.start,
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            spacing: 20,
+                                            children: [
+                                                Container(
+                                                    width: 36,
+                                                    height: 48,
+                                                    decoration: ShapeDecoration(
+                                                        shape: RoundedRectangleBorder(
+                                                            side: BorderSide(
+                                                                width: 1,
+                                                                color: const Color(0x56062F35),
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(5),
+                                                        ),
+                                                    ),
+                                                ),
+                                                Container(
+                                                    width: 36,
+                                                    height: 48,
+                                                    decoration: ShapeDecoration(
+                                                        shape: RoundedRectangleBorder(
+                                                            side: BorderSide(
+                                                                width: 1,
+                                                                color: const Color(0x56062F35),
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(5),
+                                                        ),
+                                                    ),
+                                                ),
+                                                Container(
+                                                    width: 36,
+                                                    height: 48,
+                                                    decoration: ShapeDecoration(
+                                                        shape: RoundedRectangleBorder(
+                                                            side: BorderSide(
+                                                                width: 1,
+                                                                color: const Color(0x56062F35),
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(5),
+                                                        ),
+                                                    ),
+                                                ),
+                                                Container(
+                                                    width: 36,
+                                                    height: 48,
+                                                    decoration: ShapeDecoration(
+                                                        shape: RoundedRectangleBorder(
+                                                            side: BorderSide(
+                                                                width: 1,
+                                                                color: const Color(0x56062F35),
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(5),
+                                                        ),
+                                                    ),
+                                                ),
+                                                Container(
+                                                    width: 36,
+                                                    height: 48,
+                                                    decoration: ShapeDecoration(
+                                                        shape: RoundedRectangleBorder(
+                                                            side: BorderSide(
+                                                                width: 1,
+                                                                color: const Color(0x56062F35),
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(5),
+                                                        ),
+                                                    ),
+                                                ),
+                                                Container(
+                                                    width: 36,
+                                                    height: 48,
+                                                    decoration: ShapeDecoration(
+                                                        shape: RoundedRectangleBorder(
+                                                            side: BorderSide(
+                                                                width: 1,
+                                                                color: const Color(0x56062F35),
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(5),
+                                                        ),
+                                                    ),
+                                                ),
+                                            ],
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ),
+                        Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            decoration: ShapeDecoration(
+                                color: const Color(0x66DFE7E9),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(100),
+                                ),
+                            ),
+                            child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                spacing: 14,
+                                children: [
+                                    Container(
+                                        width: 16,
+                                        height: 16,
+                                        clipBehavior: Clip.antiAlias,
+                                        decoration: BoxDecoration(),
+                                        child: Stack(),
+                                    ),
+                                    Text(
+                                        'Code expires in 0:46',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: Colors.black.withValues(alpha: 0.34),
+                                            fontSize: 14,
+                                            fontFamily: 'Montserrat',
+                                            fontWeight: FontWeight.w400,
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+            ),
+        ],
+    ),
+)

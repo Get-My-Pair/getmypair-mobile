@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,8 +8,10 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/mobile_otp_page.dart';
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/figma_home_assets.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
@@ -23,16 +27,16 @@ import '../../../articles/presentation/pages/article_create_page.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 
-/// Header sweep gradient (matches Figma home hero).
+/// Header sweep gradient — Figma home (`335:1687`), palette from [AppColors] hero tokens.
 const SweepGradient _kHomeHeaderSweep = SweepGradient(
   center: Alignment(0.22, -1.07),
   startAngle: -0.55,
   endAngle: 5.73,
   colors: [
-    Color(0xFF09E0FF),
-    Color(0xFF0F6876),
-    Color(0xFF062F35),
-    Color(0xFF062F35),
+    AppColors.footwearHeroEnd,
+    AppColors.footwearHeroMid,
+    AppColors.footwearHeroStart,
+    AppColors.footwearHeroStart,
   ],
   stops: [0.05, 0.44, 0.57, 1],
   transform: GradientRotation(-0.55),
@@ -46,10 +50,9 @@ const Color _kRackCardBg = Color(0xFFF0F0F0);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 
-/// Vertical gaps inside the hero (greeting → location → search → stats → carbon).
+/// Vertical gaps inside the hero (greeting → location → search → stats).
 const double _kHomeHeaderGreetingToLocation = 24;
-const double _kHomeHeaderSearchToStats = 18;
-const double _kHomeHeaderStatsToCarbon = 12;
+const double _kHomeHeaderSearchToStats = 12;
 
 /// Section spacing below hero / between blocks (12–16px).
 const double _kSectionGap = 28;
@@ -58,28 +61,22 @@ const double _kRackThumbGap = 12;
 /// Extra breathing room between "My Rack" and quick action tiles.
 const double _kAfterRackToActionsGap = 22;
 
-/// Tile height for quick actions.
+/// Tile height for quick actions (reference @ 390px width).
 const double _kQuickActionCellHeight = 86;
 
-/// Figma icon assets used to keep icon geometry consistent.
-const String _kMapPinIconUrl =
-    'https://www.figma.com/api/mcp/asset/6f6d9a2d-7883-48df-aecc-0a14054bc194';
-const String _kChevronRightIconUrl =
-    'https://www.figma.com/api/mcp/asset/544a7fbe-dbd4-46d5-a933-fd15130bad98';
-const String _kBellIconUrl =
-    'https://www.figma.com/api/mcp/asset/f72f8e91-49da-47ac-b4db-b26a3fe975ab';
-const String _kSearchIconUrl =
-    'https://www.figma.com/api/mcp/asset/86be91f0-2c6b-4d8a-a9c0-97db4c0a436f';
-const String _kOpenRackIconUrl =
-    'https://www.figma.com/api/mcp/asset/5b968dce-9204-4248-83b5-17c081b367be';
-const String _kShoeCareIconUrl =
-    'https://www.figma.com/api/mcp/asset/9f457cfb-52e7-4443-8375-28b4d34ada99';
-const String _kRentIconUrl =
-    'https://www.figma.com/api/mcp/asset/2d760945-cc07-4a4b-ab56-09d1be0f78e6';
-const String _kRehomeIconUrl =
-    'https://www.figma.com/api/mcp/asset/94221a3d-53f3-4bf6-88cc-2831fcc37546';
+/// Scales home chrome from a 390px-wide design frame so the same UI fits smaller devices.
+double _homeUiScale(BuildContext context) {
+  final w = MediaQuery.sizeOf(context).width;
+  return (w / Responsive.designFrameWidth).clamp(0.72, 1.0);
+}
 
-/// Home Page — lives in the outer features layer.
+/// Space to leave above the dashboard’s floating bottom nav (home tab is non-scrollable).
+double _homeViewportBottomReserve(BuildContext context) {
+  final safe = MediaQuery.paddingOf(context).bottom;
+  return safe + FloatingGradientBottomNav.barHeight + 20;
+}
+
+/// Home Page — Figma `335:1687`; icons from [FigmaHomeAssets].
 /// This is the landing tab shown to authenticated users on the main dashboard.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -329,6 +326,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isCompact = width < 360;
+    final uiScale = _homeUiScale(context);
+    final fabSize = (72 * uiScale).clamp(56.0, 72.0);
+    final fabIconSize = (28 * uiScale).clamp(22.0, 28.0);
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -351,14 +351,32 @@ class _HomePageState extends State<HomePage> {
               statusBarIconBrightness: Brightness.light,
             ),
             child: Scaffold(
-              backgroundColor: const Color(0xFFFAFAFA),
+              backgroundColor: const Color(0xFFF5F5F5),
               body: Stack(
+                fit: StackFit.expand,
                 children: [
-                  SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 112),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final w = constraints.maxWidth;
+                      final maxH = (constraints.maxHeight -
+                              _homeViewportBottomReserve(context))
+                          .clamp(120.0, double.infinity);
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          width: w,
+                          height: maxH,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.topCenter,
+                            clipBehavior: Clip.hardEdge,
+                            child: SizedBox(
+                              width: w,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
                         _HomeTopCard(
                           userName: userName,
                           currentAddress: _currentAddress,
@@ -402,14 +420,14 @@ class _HomePageState extends State<HomePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              SizedBox(height: _kSectionGap),
+                              SizedBox(height: _kSectionGap * uiScale),
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.fromLTRB(
-                                  12,
-                                  14,
-                                  12,
-                                  16,
+                                padding: EdgeInsets.fromLTRB(
+                                  12 * uiScale,
+                                  14 * uiScale,
+                                  12 * uiScale,
+                                  16 * uiScale,
                                 ),
                                 decoration: BoxDecoration(
                                   color: _kRackCardBg,
@@ -440,6 +458,7 @@ class _HomePageState extends State<HomePage> {
                                               'My Rack',
                                               style: GoogleFonts.boldonse(
                                                 fontSize: 16,
+                                                fontWeight: FontWeight.w400,
                                                 color: _kQuickActionMutedText,
                                                 height: 1.1,
                                               ),
@@ -461,9 +480,10 @@ class _HomePageState extends State<HomePage> {
                                             width: 24,
                                             height: 24,
                                             child: Image.network(
-                                              _kOpenRackIconUrl,
+                                              FigmaHomeAssets.openRack,
                                               fit: BoxFit.contain,
                                               color: _kQuickActionMutedText,
+                                              colorBlendMode: BlendMode.srcIn,
                                               errorBuilder: (_, _, _) => Icon(
                                                 Icons.open_in_full,
                                                 size: 22,
@@ -474,9 +494,9 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: 12 * uiScale),
                                     SizedBox(
-                                      height: 80,
+                                      height: (80 * uiScale).clamp(64.0, 80.0),
                                       width: double.infinity,
                                       child:
                                           _rackLoading && _rackArticles == null
@@ -518,7 +538,7 @@ class _HomePageState extends State<HomePage> {
                                             )
                                           : _RackThumbStrip(
                                               articles: _rackArticles!.toList(),
-                                              gap: _kRackThumbGap,
+                                              gap: _kRackThumbGap * uiScale,
                                               onOpen: _openArticleDetails,
                                               articleImageUrl: _articleImageUrl,
                                               articleThumb: _articleThumb,
@@ -527,14 +547,16 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                 ),
                               ),
-                              SizedBox(height: _kAfterRackToActionsGap),
+                              SizedBox(height: _kAfterRackToActionsGap * uiScale),
                               _QuickActionCard(
-                                label: 'Shoe Care',
+                                label: 'CareMyPair',
                                 highlight: true,
-                                iconData: Icons.handyman_outlined,
-                                iconWidth: 48,
-                                iconHeight: 48,
                                 fullWidth: true,
+                                iconAssetUrl: FigmaHomeAssets.shoeCare,
+                                iconWidth: (48 * uiScale).clamp(36.0, 48.0),
+                                iconHeight: (48 * uiScale).clamp(36.0, 48.0),
+                                cellHeight: (_kQuickActionCellHeight * uiScale)
+                                    .clamp(72.0, 86.0),
                                 onTap: () => _openServiceFlow(
                                   title:
                                       'Select article for Shoe Care (Repair, Maintenance, Wash)',
@@ -545,24 +567,39 @@ class _HomePageState extends State<HomePage> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 22),
+                              SizedBox(height: 22 * uiScale),
                               LayoutBuilder(
                                 builder: (context, constraints) {
-                                  if (constraints.maxWidth < 340) {
+                                  final narrowActions =
+                                      constraints.maxWidth < 360;
+                                  final rentIconW =
+                                      (51 * uiScale).clamp(40.0, 51.0);
+                                  final rentIconH =
+                                      (48 * uiScale).clamp(38.0, 48.0);
+                                  final rehomeIconW =
+                                      (48 * uiScale).clamp(38.0, 48.0);
+                                  final rehomeIconH =
+                                      (41 * uiScale).clamp(32.0, 41.0);
+                                  final actionH =
+                                      (_kQuickActionCellHeight * uiScale)
+                                          .clamp(70.0, 86.0);
+                                  if (narrowActions) {
                                     return Column(
                                       children: [
-                                        const _QuickActionCard(
-                                          label: 'Rent',
-                                          iconData: Icons.autorenew_rounded,
-                                          iconWidth: 51,
-                                          iconHeight: 48,
-                                        ),
-                                        const SizedBox(height: 12),
                                         _QuickActionCard(
-                                          label: 'Rehome',
-                                          iconData: Icons.cottage_outlined,
-                                          iconWidth: 48,
-                                          iconHeight: 41,
+                                          label: 'Rent MyPair',
+                                          iconAssetUrl: FigmaHomeAssets.rent,
+                                          iconWidth: rentIconW,
+                                          iconHeight: rentIconH,
+                                          cellHeight: actionH,
+                                        ),
+                                        SizedBox(height: 12 * uiScale),
+                                        _QuickActionCard(
+                                          label: 'Rehome MyPair',
+                                          iconAssetUrl: FigmaHomeAssets.rehome,
+                                          iconWidth: rehomeIconW,
+                                          iconHeight: rehomeIconH,
+                                          cellHeight: actionH,
                                           onTap: () => _openServiceFlow(
                                             title:
                                                 'Select article for Rehome (Donate, Dispose)',
@@ -577,21 +614,23 @@ class _HomePageState extends State<HomePage> {
                                   }
                                   return Row(
                                     children: [
-                                      const Expanded(
-                                        child: _QuickActionCard(
-                                          label: 'Rent',
-                                          iconData: Icons.autorenew_rounded,
-                                          iconWidth: 51,
-                                          iconHeight: 48,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 28),
                                       Expanded(
                                         child: _QuickActionCard(
-                                          label: 'Rehome',
-                                          iconData: Icons.cottage_outlined,
-                                          iconWidth: 48,
-                                          iconHeight: 41,
+                                          label: 'Rent MyPair',
+                                          iconAssetUrl: FigmaHomeAssets.rent,
+                                          iconWidth: rentIconW,
+                                          iconHeight: rentIconH,
+                                          cellHeight: actionH,
+                                        ),
+                                      ),
+                                      SizedBox(width: 28 * uiScale),
+                                      Expanded(
+                                        child: _QuickActionCard(
+                                          label: 'Rehome MyPair',
+                                          iconAssetUrl: FigmaHomeAssets.rehome,
+                                          iconWidth: rehomeIconW,
+                                          iconHeight: rehomeIconH,
+                                          cellHeight: actionH,
                                           onTap: () => _openServiceFlow(
                                             title:
                                                 'Select article for Rehome (Donate, Dispose)',
@@ -609,8 +648,13 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   Positioned(
                     right: isCompact ? 10 : 14,
@@ -627,14 +671,17 @@ class _HomePageState extends State<HomePage> {
                           );
                         },
                         child: Container(
-                          width: isCompact ? 62 : 72,
-                          height: isCompact ? 62 : 72,
-                          decoration: const BoxDecoration(
+                          width: fabSize,
+                          height: fabSize,
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
-                              begin: Alignment(1, 0.2),
-                              end: Alignment(-0.4, 1),
-                              colors: [Color(0xFF12899B), Color(0xFF09E0FF)],
+                              begin: const Alignment(1, 0.2),
+                              end: const Alignment(-0.4, 1),
+                              colors: [
+                                AppColors.primary,
+                                AppColors.footwearHeroEnd,
+                              ],
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -645,16 +692,10 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                           child: Center(
-                            child: Image.asset(
-                              'assets/images/chat.png',
-                              width: 28,
-                              height: 28,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, _, _) => const Icon(
-                                Icons.waves_rounded,
-                                color: Color(0xFFB8FEFF),
-                                size: 28,
-                              ),
+                            child: Icon(
+                              Icons.forum_outlined,
+                              size: fabIconSize,
+                              color: AppColors.secondaryLight,
                             ),
                           ),
                         ),
@@ -671,7 +712,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Large profile photo with two smaller circles on the right (design mock).
+/// Notification control + two overlapping profile avatars (home hero reference).
 class _ProfileAvatarCluster extends StatelessWidget {
   final String? imageUrl;
   final VoidCallback onTap;
@@ -680,60 +721,93 @@ class _ProfileAvatarCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 96,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0x55D7EEF2), width: 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Image.network(
-                  _kBellIconUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.notifications_none_rounded,
-                    color: Color(0xFFDFE7E9),
-                    size: 23,
+    final s = _homeUiScale(context);
+    final bell = 46.0 * s;
+    final pad = 8.0 * s;
+    // Border is painted inside the box; padding applies inside that, so inner
+    // side is smaller than (bell - 2*pad) — omitting the border caused overflow.
+    const bellBorder = 1.0;
+    final innerSide = math.max(0.0, bell - 2 * pad - 2 * bellBorder);
+    final iconBox = math.min(30.0, innerSide);
+    final stackW = 56.0 * s;
+    final stackH = 52.0 * s;
+    final rLarge = (22.0 * s).clamp(17.0, 22.0);
+    final rSmall = (15.0 * s).clamp(12.0, 15.0);
+
+    return SizedBox(
+      width: math.max(stackW, bell),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notifications coming soon')),
+                );
+              },
+              child: Container(
+                width: bell,
+                height: bell,
+                padding: EdgeInsets.all(pad),
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 4 * s,
+                      offset: Offset(0, 2 * s),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: iconBox,
+                    height: iconBox,
+                    child: Image.network(
+                      FigmaHomeAssets.bell,
+                      fit: BoxFit.contain,
+                      color: _kHeaderIconTint,
+                      colorBlendMode: BlendMode.srcIn,
+                      errorBuilder: (_, _, _) => Icon(
+                        Icons.notifications_none_rounded,
+                        color: _kHeaderIconTint,
+                        size: iconBox * 0.78,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: 96,
-              height: 52,
+          ),
+          SizedBox(height: 10 * s),
+          GestureDetector(
+            onTap: onTap,
+            child: SizedBox(
+              width: stackW,
+              height: stackH,
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.centerRight,
                 children: [
                   Positioned(
-                    left: 0,
-                    top: 2,
-                    child: _avatarRing(radius: 24, imageUrl: imageUrl),
-                  ),
-                  Positioned(
-                    right: 4,
                     top: 0,
-                    child: _avatarRing(
-                      radius: 11,
-                      imageUrl: null,
-                      isSmall: true,
-                    ),
+                    right: 10 * s,
+                    child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
                   ),
                   Positioned(
                     right: 0,
                     bottom: 0,
                     child: _avatarRing(
-                      radius: 11,
+                      radius: rSmall,
                       imageUrl: null,
                       isSmall: true,
                     ),
@@ -741,8 +815,8 @@ class _ProfileAvatarCluster extends StatelessWidget {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -806,12 +880,18 @@ class _HomeTopCard extends StatelessWidget {
     final topSafe = MediaQuery.paddingOf(context).top;
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 360;
+    final s = _homeUiScale(context);
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
     final addressLine = _addressLineForHome(currentAddress);
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(horizontal, topSafe + 34, horizontal, 26),
+      padding: EdgeInsets.fromLTRB(
+        horizontal,
+        topSafe + 34 * s,
+        horizontal,
+        26 * s,
+      ),
       decoration: BoxDecoration(
         gradient: _kHomeHeaderSweep,
         borderRadius: const BorderRadius.only(
@@ -841,13 +921,13 @@ class _HomeTopCard extends StatelessWidget {
                       'Hello, $greetingName!',
                       textAlign: TextAlign.left,
                       style: GoogleFonts.boldonse(
-                        fontSize: compact ? 20 : 24,
+                        fontSize: ((compact ? 20.0 : 24.0) * s).clamp(18.0, 24.0),
                         fontWeight: FontWeight.w400,
                         color: _kOnHeaderText,
                         height: 1.1,
                       ),
                     ),
-                    const SizedBox(height: _kHomeHeaderGreetingToLocation),
+                    SizedBox(height: _kHomeHeaderGreetingToLocation * s),
                     GestureDetector(
                       onTap: onLocationTap,
                       behavior: HitTestBehavior.opaque,
@@ -860,9 +940,10 @@ class _HomeTopCard extends StatelessWidget {
                               width: 24,
                               height: 24,
                               child: Image.network(
-                                _kMapPinIconUrl,
+                                FigmaHomeAssets.mapPin,
                                 fit: BoxFit.contain,
                                 color: _kHeaderIconTint,
+                                colorBlendMode: BlendMode.srcIn,
                                 errorBuilder: (_, _, _) => Icon(
                                   Icons.location_on_outlined,
                                   color: _kOnHeaderText.withValues(alpha: 0.95),
@@ -893,9 +974,10 @@ class _HomeTopCard extends StatelessWidget {
                                       width: 14,
                                       height: 14,
                                       child: Image.network(
-                                        _kChevronRightIconUrl,
+                                        FigmaHomeAssets.chevronRight,
                                         fit: BoxFit.contain,
                                         color: _kHeaderIconTint,
+                                        colorBlendMode: BlendMode.srcIn,
                                         errorBuilder: (_, _, _) => Icon(
                                           Icons.chevron_right_rounded,
                                           size: 16,
@@ -926,7 +1008,7 @@ class _HomeTopCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12 * s),
               BlocBuilder<ProfileBloc, ProfileState>(
                 buildWhen: (prev, curr) =>
                     curr is ProfileLoaded ||
@@ -959,12 +1041,12 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: 18 * s),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: EdgeInsets.symmetric(vertical: 2 * s),
             child: Container(
-              height: 42,
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              height: (42 * s).clamp(36.0, 44.0),
+              padding: EdgeInsets.symmetric(horizontal: 18 * s),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
@@ -981,25 +1063,26 @@ class _HomeTopCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(
-                    width: 24,
-                    height: 24,
+                    width: (24 * s).clamp(20.0, 24.0),
+                    height: (24 * s).clamp(20.0, 24.0),
                     child: Image.network(
-                      _kSearchIconUrl,
+                      FigmaHomeAssets.search,
                       fit: BoxFit.contain,
                       color: _kSearchHintColor,
+                      colorBlendMode: BlendMode.srcIn,
                       errorBuilder: (_, _, _) => Icon(
                         Icons.search,
-                        size: 24,
+                        size: (24 * s).clamp(20.0, 24.0),
                         color: _kSearchHintColor,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10 * s),
                   Expanded(
                     child: Text(
                       'Search',
                       style: GoogleFonts.montserrat(
-                        fontSize: 16,
+                        fontSize: (16 * s).clamp(14.0, 16.0),
                         fontWeight: FontWeight.w400,
                         color: _kSearchHintColor,
                       ),
@@ -1009,28 +1092,41 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: _kHomeHeaderSearchToStats),
+          SizedBox(height: _kHomeHeaderSearchToStats * s),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: _StatItem(
                   value: pairsInRackDisplay,
-                  label: 'Pairs in your rack',
+                  labelLine1: 'Pairs in',
+                  labelLine2: 'your rack',
                 ),
               ),
               const Expanded(
-                child: _StatItem(value: '05', label: 'Pairs Donated'),
+                child: _StatItem(
+                  value: '05',
+                  labelLine1: 'Pairs',
+                  labelLine2: 'Donated',
+                ),
               ),
               const Expanded(
-                child: _StatItem(value: '00', label: 'Pairs Sold'),
+                child: _StatItem(
+                  value: '00',
+                  labelLine1: 'Pairs',
+                  labelLine2: 'Sold',
+                ),
               ),
               const Expanded(
-                child: _StatItem(value: '02', label: 'Pairs in Care'),
+                child: _StatItem(
+                  value: '02',
+                  labelLine1: 'Pairs in',
+                  labelLine2: 'Care',
+                ),
               ),
             ],
           ),
-          const SizedBox(height: _kHomeHeaderStatsToCarbon),
         ],
       ),
     );
@@ -1039,12 +1135,27 @@ class _HomeTopCard extends StatelessWidget {
 
 class _StatItem extends StatelessWidget {
   final String value;
-  final String label;
+  final String labelLine1;
+  final String labelLine2;
 
-  const _StatItem({required this.value, required this.label});
+  const _StatItem({
+    required this.value,
+    required this.labelLine1,
+    required this.labelLine2,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final s = _homeUiScale(context);
+    final narrow = MediaQuery.sizeOf(context).width < 360;
+    final valueSize = ((narrow ? 28.0 : 32.0) * s).clamp(22.0, 32.0);
+    final labelSize = (14 * s).clamp(10.0, 14.0);
+    final labelStyle = GoogleFonts.montserrat(
+      fontSize: labelSize,
+      fontWeight: FontWeight.w400,
+      color: _kOnHeaderText,
+      height: 1.15,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -1052,23 +1163,24 @@ class _StatItem extends StatelessWidget {
           value,
           textAlign: TextAlign.center,
           style: GoogleFonts.boldonse(
-            fontSize: 24,
+            fontSize: valueSize,
             fontWeight: FontWeight.w400,
             color: _kOnHeaderText,
             height: 1,
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 8 * s),
         Text(
-          label,
+          labelLine1,
           textAlign: TextAlign.center,
-          maxLines: 2,
-          style: GoogleFonts.montserrat(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: _kOnHeaderText,
-            height: 1.2,
-          ),
+          maxLines: 1,
+          style: labelStyle,
+        ),
+        Text(
+          labelLine2,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          style: labelStyle,
         ),
       ],
     );
@@ -1146,9 +1258,9 @@ class _RackThumbStrip extends StatelessWidget {
 class _QuickActionCard extends StatelessWidget {
   final String label;
   final String? iconAssetUrl;
-  final IconData? iconData;
   final double iconWidth;
   final double iconHeight;
+  final double? cellHeight;
   final bool highlight;
   final VoidCallback? onTap;
   final bool fullWidth;
@@ -1156,9 +1268,9 @@ class _QuickActionCard extends StatelessWidget {
   const _QuickActionCard({
     required this.label,
     this.iconAssetUrl,
-    this.iconData,
     this.iconWidth = 24,
     this.iconHeight = 24,
+    this.cellHeight,
     this.highlight = false,
     this.onTap,
     this.fullWidth = false,
@@ -1166,25 +1278,34 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = _homeUiScale(context);
     final textColor = highlight ? Colors.white : _kQuickActionMutedText;
+    final leadingBox = math.min(iconWidth, iconHeight);
+    final materialIconSize =
+        leadingBox >= 40 ? 36.0 : (leadingBox >= 32 ? 28.0 : 26.0);
     final padding = highlight
-        ? const EdgeInsets.fromLTRB(18, 8, 18, 8)
-        : const EdgeInsets.symmetric(horizontal: 14, vertical: 8);
+        ? EdgeInsets.fromLTRB(18 * s, 8 * s, 18 * s, 8 * s)
+        : EdgeInsets.symmetric(horizontal: 14 * s, vertical: 8 * s);
+    final h = cellHeight ??
+        (_kQuickActionCellHeight * s).clamp(68.0, _kQuickActionCellHeight);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: _kQuickActionCellHeight,
+          height: h,
           padding: padding,
           decoration: BoxDecoration(
             color: highlight ? null : _kQuickActionMutedBg,
             gradient: highlight
-                ? const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [Color(0xFF063239), Color(0xFF0CADC5)],
+                ? LinearGradient(
+                    begin: const Alignment(1, 0.5),
+                    end: const Alignment(0, 0.5),
+                    colors: [
+                      AppColors.primaryLight,
+                      AppColors.footwearHeroStart,
+                    ],
                   )
                 : null,
             borderRadius: BorderRadius.circular(10),
@@ -1197,14 +1318,17 @@ class _QuickActionCard extends StatelessWidget {
               SizedBox(
                 width: iconWidth,
                 height: iconHeight,
-                child: iconData != null
-                    ? Icon(iconData, size: 26, color: textColor)
-                    : iconAssetUrl == null
-                    ? Icon(Icons.widgets_outlined, size: 24, color: textColor)
+                child: iconAssetUrl == null
+                    ? Icon(
+                        Icons.widgets_outlined,
+                        size: materialIconSize,
+                        color: textColor,
+                      )
                     : Image.network(
                         iconAssetUrl!,
                         fit: BoxFit.contain,
-                        color: highlight ? Colors.white : null,
+                        color: textColor,
+                        colorBlendMode: BlendMode.srcIn,
                         errorBuilder: (_, _, _) => Icon(
                           Icons.widgets_outlined,
                           size: 24,
@@ -1212,14 +1336,18 @@ class _QuickActionCard extends StatelessWidget {
                         ),
                       ),
               ),
-              SizedBox(width: fullWidth ? 20 : 14),
+              SizedBox(width: (fullWidth ? 20 : 14) * s),
               Flexible(
                 child: Text(
                   label,
                   maxLines: 2,
                   textAlign: TextAlign.left,
                   style: GoogleFonts.boldonse(
-                    fontSize: MediaQuery.sizeOf(context).width < 360 ? 14 : 16,
+                    fontSize: ((MediaQuery.sizeOf(context).width < 360
+                            ? 14.0
+                            : 16.0) *
+                        s)
+                        .clamp(12.0, 16.0),
                     fontWeight: FontWeight.w400,
                     color: textColor,
                     height: 1.05,
