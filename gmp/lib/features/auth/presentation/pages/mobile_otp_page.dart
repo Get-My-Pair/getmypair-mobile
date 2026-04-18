@@ -360,7 +360,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             style: GoogleFonts.montserrat(
                               color: _kBodyMuted,
                               fontSize: bodySize,
-                              fontWeight: FontWeight.w400,
+                              fontWeight: FontWeight.w500,
                               height: 1.2,
                             ),
                           ),
@@ -704,22 +704,24 @@ class _WelcomeRichText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = GoogleFonts.montserrat(
-      color: _MobileOTPPageState._kOnGradient,
-      fontSize: fontSize,
-      fontWeight: FontWeight.w200,
-      height: 1.2,
-    );
     return Text.rich(
       TextSpan(
-        style: base,
+        style: GoogleFonts.montserrat(
+          color: _MobileOTPPageState._kOnGradient,
+          fontSize: 24,
+          fontWeight: FontWeight.w200,
+          height: 1.2,
+        ),
         children: [
           const TextSpan(text: 'Welcome to your '),
           TextSpan(
-            text: 'social hub',
-            style: base.copyWith(
+            text: 'solecial hub',
+            style: GoogleFonts.montserrat(
+              color: _MobileOTPPageState._kOnGradient,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
               fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ],

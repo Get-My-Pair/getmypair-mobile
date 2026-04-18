@@ -34,7 +34,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
             ...BgTheme.background(),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 14, 10),
+                padding: const EdgeInsets.fromLTRB(20, 80, 8, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -68,7 +68,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
                         thumbColor: const Color(0x80000000),
                         child: SingleChildScrollView(
                           controller: _scrollController,
-                          padding: const EdgeInsets.only(right: 6, bottom: 24),
+                          padding: const EdgeInsets.only(right: 20, bottom: 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
