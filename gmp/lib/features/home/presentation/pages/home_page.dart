@@ -24,6 +24,7 @@ import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../articles/presentation/pages/article_create_page.dart';
+import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 
@@ -49,6 +50,7 @@ const Color _kRackCardBorder = Color(0xFF0F6876);
 const Color _kRackCardBg = Color(0xFFF0F0F0);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
+const String _kBellIconUrl = FigmaHomeAssets.bell;
 
 /// Vertical gaps inside the hero (greeting → location → search → stats).
 const double _kHomeHeaderGreetingToLocation = 24;
@@ -549,7 +551,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               SizedBox(height: _kAfterRackToActionsGap * uiScale),
                               _QuickActionCard(
-                                label: 'CareMyPair',
+                                label: 'RepairMyPair',
                                 highlight: true,
                                 fullWidth: true,
                                 iconAssetUrl: FigmaHomeAssets.shoeCare,
@@ -557,14 +559,10 @@ class _HomePageState extends State<HomePage> {
                                 iconHeight: (48 * uiScale).clamp(36.0, 48.0),
                                 cellHeight: (_kQuickActionCellHeight * uiScale)
                                     .clamp(72.0, 86.0),
-                                onTap: () => _openServiceFlow(
-                                  title:
-                                      'Select article for Shoe Care (Repair, Maintenance, Wash)',
-                                  allowedServiceTypes: const [
-                                    'repair',
-                                    'maintenance',
-                                    'wash',
-                                  ],
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const CareMyPairPage(),
+                                  ),
                                 ),
                               ),
                               SizedBox(height: 22 * uiScale),
@@ -586,23 +584,21 @@ class _HomePageState extends State<HomePage> {
                                   if (narrowActions) {
                                     return Column(
                                       children: [
-                                        _QuickActionCard(
-                                          label: 'Rent MyPair',
-                                          iconAssetUrl: FigmaHomeAssets.rent,
-                                          iconWidth: rentIconW,
-                                          iconHeight: rentIconH,
-                                          cellHeight: actionH,
+                                        const _QuickActionCard(
+                                          label: 'Rent\nMyPair',
+                                          iconData: Icons.autorenew_rounded,
+                                          iconWidth: 51,
+                                          iconHeight: 48,
                                         ),
-                                        SizedBox(height: 12 * uiScale),
+                                        const SizedBox(height: 12),
                                         _QuickActionCard(
-                                          label: 'Rehome MyPair',
-                                          iconAssetUrl: FigmaHomeAssets.rehome,
-                                          iconWidth: rehomeIconW,
-                                          iconHeight: rehomeIconH,
-                                          cellHeight: actionH,
+                                          label: 'Rehome\nMyPair',
+                                          iconData: Icons.cottage_outlined,
+                                          iconWidth: 48,
+                                          iconHeight: 41,
                                           onTap: () => _openServiceFlow(
                                             title:
-                                                'Select article for Rehome (Donate, Dispose)',
+                                                'Select article for Rehome MyPair (Donate, Dispose)',
                                             allowedServiceTypes: const [
                                               'donate',
                                               'dispose',
@@ -614,26 +610,24 @@ class _HomePageState extends State<HomePage> {
                                   }
                                   return Row(
                                     children: [
-                                      Expanded(
+                                      const Expanded(
                                         child: _QuickActionCard(
-                                          label: 'Rent MyPair',
-                                          iconAssetUrl: FigmaHomeAssets.rent,
-                                          iconWidth: rentIconW,
-                                          iconHeight: rentIconH,
-                                          cellHeight: actionH,
+                                          label: 'Rent\nMyPair',
+                                          iconData: Icons.autorenew_rounded,
+                                          iconWidth: 51,
+                                          iconHeight: 48,
                                         ),
                                       ),
-                                      SizedBox(width: 28 * uiScale),
+                                      const SizedBox(width: 28),
                                       Expanded(
                                         child: _QuickActionCard(
-                                          label: 'Rehome MyPair',
-                                          iconAssetUrl: FigmaHomeAssets.rehome,
-                                          iconWidth: rehomeIconW,
-                                          iconHeight: rehomeIconH,
-                                          cellHeight: actionH,
+                                          label: 'Rehome\nMyPair',
+                                          iconData: Icons.cottage_outlined,
+                                          iconWidth: 48,
+                                          iconHeight: 41,
                                           onTap: () => _openServiceFlow(
                                             title:
-                                                'Select article for Rehome (Donate, Dispose)',
+                                                'Select article for Rehome MyPair (Donate, Dispose)',
                                             allowedServiceTypes: const [
                                               'donate',
                                               'dispose',
@@ -721,102 +715,69 @@ class _ProfileAvatarCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = _homeUiScale(context);
-    final bell = 46.0 * s;
-    final pad = 8.0 * s;
-    // Border is painted inside the box; padding applies inside that, so inner
-    // side is smaller than (bell - 2*pad) — omitting the border caused overflow.
-    const bellBorder = 1.0;
-    final innerSide = math.max(0.0, bell - 2 * pad - 2 * bellBorder);
-    final iconBox = math.min(30.0, innerSide);
-    final stackW = 56.0 * s;
-    final stackH = 52.0 * s;
-    final rLarge = (22.0 * s).clamp(17.0, 22.0);
-    final rSmall = (15.0 * s).clamp(12.0, 15.0);
+    final s = (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
+    final rLarge = 20.0 * s;
+    final rSmall = 13.0 * s;
+    final stackW = 62.0 * s;
+    final stackH = 44.0 * s;
 
-    return SizedBox(
-      width: math.max(stackW, bell),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notifications coming soon')),
-                );
-              },
-              child: Container(
-                width: bell,
-                height: bell,
-                padding: EdgeInsets.all(pad),
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.45),
-                    width: 1,
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 75,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x55D7EEF2), width: 1),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Image.network(
+                  _kBellIconUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Color(0xFFDFE7E9),
+                    size: 23,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 4 * s,
-                      offset: Offset(0, 2 * s),
+                ),
+              ),
+            ),
+            SizedBox(height: 10 * s),
+            GestureDetector(
+              onTap: onTap,
+              child: SizedBox(
+                width: stackW,
+                height: stackH,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.centerRight,
+                  children: [
+                    Positioned(
+                      top: 0,
+                      right: 10 * s,
+                      child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: _avatarRing(
+                        radius: rSmall,
+                        imageUrl: null,
+                        isSmall: true,
+                      ),
                     ),
                   ],
                 ),
-                child: Center(
-                  child: SizedBox(
-                    width: iconBox,
-                    height: iconBox,
-                    child: Image.network(
-                      FigmaHomeAssets.bell,
-                      fit: BoxFit.contain,
-                      color: _kHeaderIconTint,
-                      colorBlendMode: BlendMode.srcIn,
-                      errorBuilder: (_, _, _) => Icon(
-                        Icons.notifications_none_rounded,
-                        color: _kHeaderIconTint,
-                        size: iconBox * 0.78,
-                      ),
-                    ),
-                  ),
-                ),
               ),
             ),
-          ),
-          SizedBox(height: 10 * s),
-          GestureDetector(
-            onTap: onTap,
-            child: SizedBox(
-              width: stackW,
-              height: stackH,
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.centerRight,
-                children: [
-                  Positioned(
-                    top: 0,
-                    right: 10 * s,
-                    child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: _avatarRing(
-                      radius: rSmall,
-                      imageUrl: null,
-                      isSmall: true,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -877,7 +838,6 @@ class _HomeTopCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topSafe = MediaQuery.paddingOf(context).top;
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 360;
     final s = _homeUiScale(context);
@@ -886,12 +846,7 @@ class _HomeTopCard extends StatelessWidget {
     final addressLine = _addressLineForHome(currentAddress);
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        horizontal,
-        topSafe + 34 * s,
-        horizontal,
-        26 * s,
-      ),
+      padding: EdgeInsets.fromLTRB(horizontal, 86, horizontal, 26),
       decoration: BoxDecoration(
         gradient: _kHomeHeaderSweep,
         borderRadius: const BorderRadius.only(
@@ -1258,6 +1213,7 @@ class _RackThumbStrip extends StatelessWidget {
 class _QuickActionCard extends StatelessWidget {
   final String label;
   final String? iconAssetUrl;
+  final IconData? iconData;
   final double iconWidth;
   final double iconHeight;
   final double? cellHeight;
@@ -1268,6 +1224,7 @@ class _QuickActionCard extends StatelessWidget {
   const _QuickActionCard({
     required this.label,
     this.iconAssetUrl,
+    this.iconData,
     this.iconWidth = 24,
     this.iconHeight = 24,
     this.cellHeight,
@@ -1278,23 +1235,22 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = _homeUiScale(context);
+    final s = (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
+    final isTwoLine = label.contains('\n');
     final textColor = highlight ? Colors.white : _kQuickActionMutedText;
     final leadingBox = math.min(iconWidth, iconHeight);
     final materialIconSize =
         leadingBox >= 40 ? 36.0 : (leadingBox >= 32 ? 28.0 : 26.0);
     final padding = highlight
-        ? EdgeInsets.fromLTRB(18 * s, 8 * s, 18 * s, 8 * s)
-        : EdgeInsets.symmetric(horizontal: 14 * s, vertical: 8 * s);
-    final h = cellHeight ??
-        (_kQuickActionCellHeight * s).clamp(68.0, _kQuickActionCellHeight);
+        ? const EdgeInsets.fromLTRB(18, 8, 18, 8)
+        : EdgeInsets.symmetric(horizontal: 12, vertical: isTwoLine ? 10 : 8);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: h,
+          height: isTwoLine ? _kQuickActionCellHeight + 28 : _kQuickActionCellHeight,
           padding: padding,
           decoration: BoxDecoration(
             color: highlight ? null : _kQuickActionMutedBg,
@@ -1320,7 +1276,7 @@ class _QuickActionCard extends StatelessWidget {
                 height: iconHeight,
                 child: iconAssetUrl == null
                     ? Icon(
-                        Icons.widgets_outlined,
+                        iconData ?? Icons.widgets_outlined,
                         size: materialIconSize,
                         color: textColor,
                       )
@@ -1350,7 +1306,7 @@ class _QuickActionCard extends StatelessWidget {
                         .clamp(12.0, 16.0),
                     fontWeight: FontWeight.w400,
                     color: textColor,
-                    height: 1.05,
+                    height: isTwoLine ? 1.60 : 1.10,
                   ),
                 ),
               ),

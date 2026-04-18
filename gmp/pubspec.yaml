@@ -108,6 +108,17 @@ flutter:
   assets:
     - assets/images/
     - assets/images/phone.svg
+    - assets/images/icons/
+    - assets/images/icons/profile/
+    - assets/images/icons/profile/edit.svg
+    - assets/images/icons/profile/home.svg
+    - assets/images/icons/profile/navigation.svg
+    - assets/images/icons/profile/plus-square.svg
+    - assets/images/icons/profile/trash-2.svg
+    - assets/images/icons/profile/toggle-left.svg
+    - assets/images/icons/home.svg
+    - assets/images/icons/shoe.svg
+    - assets/images/icons/profile.svg
     - assets/images/logo/
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -136,6 +147,8 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
+# App icon (Android & iOS) — uses square mark in assets/images/logo/
+# After adding/updating app_icon.png run: dart run flutter_launcher_icons
 # App icon (Android & iOS) — uses square mark in assets/images/logo/
 # After adding/updating app_icon.png run: dart run flutter_launcher_icons
 flutter_launcher_icons:

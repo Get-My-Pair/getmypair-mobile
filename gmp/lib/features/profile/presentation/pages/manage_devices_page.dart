@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../../../core/utils/responsive.dart';
-import '../../../../core/widgets/gradient_page_shell.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 
 /// Account Settings → Manage Devices: view and remove sessions on other devices.
 class ManageDevicesPage extends StatelessWidget {
@@ -25,167 +26,167 @@ class ManageDevicesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final deviceLabel = _deviceLabel();
-    final isPhone = _isPhone();
+    final thisDeviceLabel = _isPhone() ? 'Android' : _deviceLabel();
+    final h = Responsive.horizontalPaddingOf(context);
 
-    return GradientPageShell(
-      appBar: buildGradientAppBar(
-        title: 'Manage Devices',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        automaticallyImplyLeading: false,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: Responsive.horizontalPaddingOf(context)),
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      body: SafeArea(
+        bottom: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8),
-            Text(
-              'Devices where you\'re logged in. Remove a device to sign out there.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.onGradientBody,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // This device (current session)
-            Text(
-              'This device',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.onGradientMuted,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-                boxShadow: const [
-                  BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: 10,
-                    offset: Offset(0, 2),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const ShapeDecoration(
+                  gradient: SweepGradient(
+                    center: Alignment(0.22, -1.07),
+                    startAngle: -0.55,
+                    endAngle: 5.73,
+                    colors: [
+                      Color(0xFF09E0FF),
+                      Color(0xFF0F6876),
+                      Color(0xFF062F35),
+                      Color(0xFF062F35),
+                    ],
+                    stops: [0.05, 0.44, 0.57, 1.0],
+                    transform: GradientRotation(-0.55),
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isPhone ? Icons.smartphone : Icons.laptop,
-                      color: AppColors.primary,
-                      size: 28,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          deviceLabel,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Current session',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // Other sessions
-            Text(
-              'Other sessions',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.onGradientMuted,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-                boxShadow: const [
-                  BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.devices_other,
-                      size: 48,
-                      color: AppColors.textTertiary,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No other devices',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'When you log in on another phone or browser,\nit will appear here. You can sign out remotely.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textTertiary,
-                        height: 1.4,
-                      ),
+                  shadows: [
+                    BoxShadow(
+                      color: Color(0xFFABABAB),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(h, 44, h, 112),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Manage Devices',
+                        style: GoogleFonts.boldonse(
+                          color: const Color(0xFFDFE7E9),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Devices you\'re currently logged in on. Remove one to sign out from it',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 42),
+                      Text(
+                        'This Device',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _DeviceRow(
+                        icon: Icons.phone_android,
+                        label: thisDeviceLabel,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Other Devices',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const _DeviceRow(
+                        icon: Icons.desktop_windows,
+                        label: 'Desktop',
+                      ),
+                      const _DeviceRow(
+                        icon: Icons.watch,
+                        label: 'Smart Watch',
+                        showTopDivider: false,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 32),
+            const DashboardLinkedBottomNav(selectedTabIndex: 2),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeviceRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool showTopDivider;
+
+  const _DeviceRow({
+    required this.icon,
+    required this.label,
+    this.showTopDivider = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: showTopDivider
+              ? BorderSide(
+                  color: Colors.white.withValues(alpha: 0.50),
+                  width: 1,
+                )
+              : BorderSide.none,
+          bottom: BorderSide(
+            color: Colors.white.withValues(alpha: 0.50),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.montserrat(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Color(0xFF71F5FF),
+              ),
+            ),
           ],
         ),
       ),

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/bgtheme.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
+import '../profile_screen_system_ui.dart';
 import 'edit_profile_page.dart';
 
 class FamilyProfilePage extends StatelessWidget {
@@ -18,13 +20,6 @@ class FamilyProfilePage extends StatelessWidget {
     required this.accessToken,
   });
 
-  static const LinearGradient _kGradient = LinearGradient(
-    begin: Alignment.topRight,
-    end: Alignment.bottomLeft,
-    colors: [Color(0xFF22D3EE), Color(0xFF0F6876), Color(0xFF062F35)],
-    stops: [0.0, 0.48, 1.0],
-  );
-
   @override
   Widget build(BuildContext context) {
     final names = <String>[
@@ -33,74 +28,83 @@ class FamilyProfilePage extends StatelessWidget {
       'Vignesh R',
     ];
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  gradient: _kGradient,
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(22),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
+    final statusTop = MediaQuery.paddingOf(context).top;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: kProfileGradientHeaderSystemUi,
+      child: Scaffold(
+        extendBody: true,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: BgTheme.authMarketingSweep,
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(22),
                     ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Family Profile',
-                              style: GoogleFonts.boldonse(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFFDFE7E9),
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                          _AvatarCluster(profile: profile),
-                        ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.22),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
                       ),
-                      const SizedBox(height: 28),
-                      for (final name in names)
-                        _FamilyRow(
-                          title: name,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BlocProvider.value(
-                                  value: context.read<ProfileBloc>(),
-                                  child: EditProfilePage(
-                                    profile: profile,
-                                    accessToken: accessToken,
-                                  ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    // Status bar inset + same rhythm as [EditProfilePage]; reserve for bottom bar.
+                    padding: EdgeInsets.fromLTRB(20, statusTop + 20, 20, 112),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Family Profile',
+                                style: GoogleFonts.boldonse(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w400,
+                                  color: const Color(0xFFDFE7E9),
+                                  height: 1,
                                 ),
                               ),
-                            );
-                          },
+                            ),
+                            _AvatarCluster(profile: profile),
+                          ],
                         ),
-                    ],
+                        const SizedBox(height: 24),
+                        for (final name in names)
+                          _FamilyRow(
+                            title: name,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<ProfileBloc>(),
+                                    child: EditProfilePage(
+                                      profile: profile,
+                                      accessToken: accessToken,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            const DashboardLinkedBottomNav(),
-          ],
+              const SizedBox(height: 14),
+              const DashboardLinkedBottomNav(selectedTabIndex: 2),
+            ],
+          ),
         ),
       ),
     );
@@ -111,10 +115,7 @@ class _FamilyRow extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
 
-  const _FamilyRow({
-    required this.title,
-    required this.onTap,
-  });
+  const _FamilyRow({required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +216,9 @@ class _AvatarCluster extends StatelessWidget {
   }
 
   Widget _initialsAvatar(UserProfile profile, double radius) {
-    final letter = profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U';
+    final letter = profile.name.isNotEmpty
+        ? profile.name[0].toUpperCase()
+        : 'U';
     return Container(
       width: radius * 2,
       height: radius * 2,
@@ -265,4 +268,3 @@ class _RingAvatar extends StatelessWidget {
     );
   }
 }
-

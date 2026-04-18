@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_gradients.dart';
 
 /// Full-screen teal → cyan gradient behind a transparent [Scaffold].
@@ -17,13 +19,23 @@ class GradientPageShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(gradient: AppGradients.screenTealCyan),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: appBar,
-        body: body,
-        floatingActionButton: floatingActionButton,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: AppColors.background,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(gradient: AppGradients.screenTealCyan),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          extendBody: true,
+          appBar: appBar,
+          body: body,
+          floatingActionButton: floatingActionButton,
+        ),
       ),
     );
   }
@@ -60,7 +72,9 @@ PreferredSizeWidget buildGradientAppBar({
 }
 
 /// App bar with only a white back control (e.g. profile completion).
-PreferredSizeWidget buildGradientBackOnlyAppBar({required VoidCallback onBack}) {
+PreferredSizeWidget buildGradientBackOnlyAppBar({
+  required VoidCallback onBack,
+}) {
   return AppBar(
     backgroundColor: Colors.transparent,
     elevation: 0,

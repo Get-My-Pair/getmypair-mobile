@@ -110,7 +110,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding:kDashboardBottomNavPadding,
         child: FloatingGradientBottomNav(
           currentIndex: index,
           onChanged: (i) {
@@ -132,6 +132,6 @@ class _ProfilePageWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ProfilePage();
+    return const ProfilePage(showBottomNav: false);
   }
 }

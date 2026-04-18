@@ -1,25 +1,20 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/bgtheme.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
-
-const LinearGradient _kProfileShellGradient = LinearGradient(
-  begin: Alignment.topRight,
-  end: Alignment.bottomLeft,
-  colors: [Color(0xFF22D3EE), Color(0xFF0F6876), Color(0xFF062F35)],
-  stops: [0.0, 0.48, 1.0],
-);
+import '../profile_screen_system_ui.dart';
 
 class EditProfilePage extends StatefulWidget {
   final UserProfile profile;
@@ -129,7 +124,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         barrierDismissible: false,
         builder: (ctx) {
           final controller = CropController();
-          final cropHeight = (MediaQuery.sizeOf(ctx).height * 0.5).clamp(280.0, 400.0);
+          final cropHeight = (MediaQuery.sizeOf(ctx).height * 0.5).clamp(
+            280.0,
+            400.0,
+          );
           return AlertDialog(
             title: const Text('Crop image'),
             content: SizedBox(
@@ -151,7 +149,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               ElevatedButton(
                 onPressed: () => controller.crop(),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
                 child: const Text('Crop'),
               ),
             ],
@@ -164,12 +164,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       if (!mounted) return;
       context.read<ProfileBloc>().add(
-            ProfileImageUploadRequested(
-              accessToken: widget.accessToken,
-              imageBytes: bytes,
-              fileName: fileName,
-            ),
-          );
+        ProfileImageUploadRequested(
+          accessToken: widget.accessToken,
+          imageBytes: bytes,
+          fileName: fileName,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
     }
@@ -193,118 +193,153 @@ class _EditProfilePageState extends State<EditProfilePage> {
               content: Text(state.message),
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         }
       },
       builder: (context, state) {
-        final isLoading = state is ProfileUpdating || state is ProfileImageUploading;
+        final isLoading =
+            state is ProfileUpdating || state is ProfileImageUploading;
         final profile = (state is ProfileLoaded)
             ? state.profile
             : (state is ProfileUpdating)
-                ? state.profile
-                : (state is ProfileImageUploading)
-                    ? state.profile
-                    : widget.profile;
+            ? state.profile
+            : (state is ProfileImageUploading)
+            ? state.profile
+            : widget.profile;
 
-        final avatarImage = profile.profileImage != null && profile.profileImage!.isNotEmpty
+        final avatarImage =
+            profile.profileImage != null && profile.profileImage!.isNotEmpty
             ? NetworkImage(profile.profileImage!)
             : null;
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(22),
-                      ),
-                      gradient: _kProfileShellGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.22),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
+        final statusTop = MediaQuery.paddingOf(context).top;
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: kProfileGradientHeaderSystemUi,
+          child: Scaffold(
+            extendBody: true,
+            body: SafeArea(
+              top: false,
+              // Let the bottom-nav widget own the bottom inset, otherwise we can
+              // end up double-padding and the header/card spacing feels off.
+              bottom: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(20),
                         ),
-                      ],
-                    ),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeader(profile, avatarImage, isLoading, state),
-                          const SizedBox(height: 26),
-                          _buildLabel('Full Name'),
-                          const SizedBox(height: 8),
-                          _profileField(controller: _nameController),
-                          const SizedBox(height: 18),
-                          _buildLabel('Nick Name'),
-                          const SizedBox(height: 8),
-                          _profileField(controller: _nickNameController, readOnly: true),
-                          const SizedBox(height: 18),
-                          _buildLabel('Phone Number'),
-                          const SizedBox(height: 8),
-                          _profileField(controller: _phoneController, readOnly: true),
-                          const SizedBox(height: 18),
-                          _buildLabel('E-Mail Address'),
-                          const SizedBox(height: 8),
-                          _profileField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          const SizedBox(height: 18),
-                          _buildLabel('Password'),
-                          const SizedBox(height: 8),
-                          _profileField(
-                            controller: _passwordController,
-                            readOnly: true,
-                            obscureText: !_showPassword,
-                            suffix: IconButton(
-                              onPressed: () => setState(() => _showPassword = !_showPassword),
-                              splashRadius: 18,
-                              icon: Icon(
-                                _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                color: const Color(0xCCFFFFFF),
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 22),
-                          _buildLabel('Foot Size Chart'),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(child: _footMetricChip('US:10')),
-                              const SizedBox(width: 10),
-                              Expanded(child: _footMetricChip('UK:09')),
-                              const SizedBox(width: 10),
-                              Expanded(child: _footMetricChip('EURO:41')),
-                            ],
-                          ),
-                          const SizedBox(height: 22),
-                          _buildLabel('Foot Abnormality'),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Wide Foot',
-                            style: GoogleFonts.boldonse(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.white,
-                            ),
+                        gradient: BgTheme.authMarketingSweep,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFABABAB),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                            spreadRadius: 0,
                           ),
                         ],
                       ),
+                      child: SingleChildScrollView(
+                        // Status bar inset; keep the last fields above the bottom bar.
+                        padding: EdgeInsets.fromLTRB(
+                          20,
+                          statusTop + 20,
+                          20,
+                          112,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeader(
+                              profile,
+                              avatarImage,
+                              isLoading,
+                              state,
+                            ),
+                            const SizedBox(height: 26),
+                            _buildLabel('Full Name'),
+                            const SizedBox(height: 8),
+                            _profileField(controller: _nameController),
+                            const SizedBox(height: 18),
+                            _buildLabel('Nick Name'),
+                            const SizedBox(height: 8),
+                            _profileField(
+                              controller: _nickNameController,
+                              readOnly: true,
+                            ),
+                            const SizedBox(height: 18),
+                            _buildLabel('Phone Number'),
+                            const SizedBox(height: 8),
+                            _profileField(
+                              controller: _phoneController,
+                              readOnly: true,
+                            ),
+                            const SizedBox(height: 18),
+                            _buildLabel('E-Mail Address'),
+                            const SizedBox(height: 8),
+                            _profileField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                            const SizedBox(height: 18),
+                            _buildLabel('Password'),
+                            const SizedBox(height: 8),
+                            _profileField(
+                              controller: _passwordController,
+                              readOnly: true,
+                              obscureText: !_showPassword,
+                              suffix: IconButton(
+                                onPressed: () => setState(
+                                  () => _showPassword = !_showPassword,
+                                ),
+                                splashRadius: 18,
+                                icon: Icon(
+                                  _showPassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: const Color(0xCCFFFFFF),
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 22),
+                            _buildLabel('Foot Size Chart'),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(child: _footMetricChip('US:10')),
+                                const SizedBox(width: 10),
+                                Expanded(child: _footMetricChip('UK:09')),
+                                const SizedBox(width: 10),
+                                Expanded(child: _footMetricChip('EURO:41')),
+                              ],
+                            ),
+                            const SizedBox(height: 22),
+                            _buildLabel('Foot Abnormality'),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Wide Foot',
+                              style: GoogleFonts.boldonse(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const DashboardLinkedBottomNav(),
-              ],
+                  const DashboardLinkedBottomNav(selectedTabIndex: 2),
+                ],
+              ),
             ),
           ),
         );
@@ -323,7 +358,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(top: 34),
+            // Align with the reference header rhythm (title + avatar cluster).
+            padding: const EdgeInsets.only(top: 28),
             child: Text(
               'Edit Profile',
               style: GoogleFonts.boldonse(
@@ -342,7 +378,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                top: 8,
+                top: 6,
                 right: 0,
                 child: CircleAvatar(
                   radius: 39.5,
@@ -350,7 +386,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   backgroundImage: avatarImage,
                   child: avatarImage == null
                       ? Text(
-                          profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U',
+                          profile.name.isNotEmpty
+                              ? profile.name[0].toUpperCase()
+                              : 'U',
                           style: GoogleFonts.boldonse(
                             fontSize: 20,
                             color: Colors.white,
@@ -386,7 +424,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
               Positioned(
-                left: 4,
+                right: 4,
                 top: 56,
                 child: InkWell(
                   onTap: isLoading ? null : _pickAndUploadImage,
@@ -399,7 +437,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       border: Border.all(color: const Color(0x4DFFFFFF)),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 18),
+                    child: const Icon(
+                      Icons.camera_alt_outlined,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -443,9 +485,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
         filled: true,
         fillColor: readOnly ? _inputFillReadOnly : _inputFill,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 26, vertical: 11),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 26,
+          vertical: 11,
+        ),
         suffixIcon: suffix,
-        suffixIconConstraints: const BoxConstraints(minHeight: 36, minWidth: 44),
+        suffixIconConstraints: const BoxConstraints(
+          minHeight: 36,
+          minWidth: 44,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(100),
           borderSide: const BorderSide(color: _inputBorder, width: 0.9),

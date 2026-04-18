@@ -43,6 +43,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   static const int kMaxProofVideos = 3;
   static const int kRepairEstimateRupees = 1000;
   static const int kWashEstimateRupees = 300;
+  static const List<String> _repairPickupDays = [
+    '23rd Monday',
+    '24th Tuesday',
+    '25th Wednesday',
+  ];
+  static const List<String> _repairPickupSlots = [
+    '11:00 AM',
+    '11:30 AM',
+    '12:00 PM',
+  ];
 
   static const List<MaintenancePlanData> _maintenancePlans = [
     MaintenancePlanData(id: '1m', label: '1 month', priceRupees: 299),
@@ -59,6 +69,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
   ServiceOptionData? _selectedService;
   MaintenancePlanData? _selectedMaintenancePlan;
+  int _repairStep = 0;
+  bool _homePickup = true;
+  int _selectedPickupDay = 0;
+  int _selectedPickupSlot = 0;
+  final TextEditingController _problemController = TextEditingController();
 
   final List<XFile> _proofImages = [];
   final List<XFile> _proofVideos = [];
@@ -104,10 +119,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     return _options.where((o) => allowedSet.contains(o.value)).toList();
   }
 
+  bool get _isRepairOnlyFlow =>
+      _visibleOptions.length == 1 && _visibleOptions.first.value == 'repair';
+
   @override
   void initState() {
     super.initState();
+    if (_isRepairOnlyFlow) {
+      _selectedService = _visibleOptions.first;
+    }
     _load();
+  }
+
+  @override
+  void dispose() {
+    _problemController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -135,6 +162,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             _selectedAddress = profile.addresses.isNotEmpty
                 ? profile.addresses.first
                 : null;
+            if (_isRepairOnlyFlow && _selectedService == null) {
+              _selectedService = _visibleOptions.first;
+            }
             _loading = false;
           });
         } catch (e) {
@@ -207,6 +237,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   void _onSelectService(ServiceOptionData opt) {
     setState(() {
       _selectedService = opt;
+      _repairStep = 0;
       if (opt.value != 'maintenance') {
         _selectedMaintenancePlan = null;
       }
@@ -272,6 +303,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           proofImages: List<XFile>.from(_proofImages),
           proofVideos: List<XFile>.from(_proofVideos),
           estimatedCostRupees: est,
+          problemDescription: _problemController.text.trim().isEmpty
+              ? null
+              : _problemController.text.trim(),
+          pickupModeLabel: _homePickup ? 'Home Pickup' : 'Cobblers Nearby',
+          pickupScheduleLabel:
+              '${_repairPickupDays[_selectedPickupDay]}, ${_repairPickupSlots[_selectedPickupSlot]}',
           maintenancePlan: _selectedService!.value == 'maintenance'
               ? _selectedMaintenancePlan
               : null,
@@ -308,10 +345,18 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
     return GradientPageShell(
       appBar: buildGradientAppBar(
-        title: 'Select Service',
+        title: _isRepairOnlyFlow ? 'RepairMyPair' : 'Select Service',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _submitting ? null : () => Navigator.pop(context),
+          onPressed: _submitting
+              ? null
+              : () {
+                  if (_isRepairOnlyFlow && _repairStep > 0) {
+                    setState(() => _repairStep -= 1);
+                    return;
+                  }
+                  Navigator.pop(context);
+                },
         ),
         automaticallyImplyLeading: false,
         centerTitle: true,
@@ -322,7 +367,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           ),
         ],
       ),
-      body: ListView(
+      body: _isRepairOnlyFlow
+          ? _buildRepairFlowBody(horizontal)
+          : ListView(
         padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
         children: [
           if (_error != null) ...[
@@ -423,6 +470,258 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRepairFlowBody(double horizontal) {
+    return ListView(
+      padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
+      children: [
+        if (_error != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.error),
+            ),
+            child: Text(
+              _error!,
+              style: const TextStyle(color: AppColors.error, fontSize: 13),
+            ),
+          ),
+        ],
+        Row(
+          children: [
+            _stepBadge('1', _repairStep == 0),
+            const SizedBox(width: 8),
+            _stepBadge('2', _repairStep == 1),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (_repairStep == 0) ...[
+          _sectionTitle(
+            'Repair details',
+            'Describe the problem and upload shoe photos.',
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Please describe the problem with your footwear',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _problemController,
+                  minLines: 3,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Type Here',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _proofImagesCard(),
+          const SizedBox(height: 12),
+          _proofVideosCard(),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'How would you like to send us your footwear?',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _pickupModeChip(
+                        label: 'Home Pickup',
+                        selected: _homePickup,
+                        onTap: () => setState(() => _homePickup = true),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _pickupModeChip(
+                        label: 'Cobblers Nearby',
+                        selected: !_homePickup,
+                        onTap: () => setState(() => _homePickup = false),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _estimationCard(
+            title: 'Estimated cost',
+            amountRupees: kRepairEstimateRupees,
+            subtitle: 'Fixed estimate for repair service',
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _submitting ? null : () => setState(() => _repairStep = 1),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textOnPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+            ),
+          ),
+        ] else ...[
+          _sectionTitle(
+            'Home Pickup',
+            'Please choose a time slot from the options below.',
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: List.generate(_repairPickupDays.length, (index) {
+              final selected = _selectedPickupDay == index;
+              return ChoiceChip(
+                label: Text(_repairPickupDays[index]),
+                selected: selected,
+                onSelected: _submitting ? null : (_) => setState(() => _selectedPickupDay = index),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: List.generate(_repairPickupSlots.length, (index) {
+              final selected = _selectedPickupSlot == index;
+              return ChoiceChip(
+                label: Text(_repairPickupSlots[index]),
+                selected: selected,
+                onSelected: _submitting ? null : (_) => setState(() => _selectedPickupSlot = index),
+              );
+            }),
+          ),
+          const SizedBox(height: 16),
+          _addressCard(),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _submitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textOnPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _submitting
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: AppColors.textOnPrimary,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Continue to summary',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _stepBadge(String text, bool active) {
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: active ? AppColors.primary : AppColors.surface,
+        border: Border.all(
+          color: active ? AppColors.primary : AppColors.border,
+          width: 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: TextStyle(
+          color: active ? AppColors.textOnPrimary : AppColors.textSecondary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _pickupModeChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withOpacity(0.12) : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppColors.primary : AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+          ),
+        ),
       ),
     );
   }

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
-import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -22,6 +21,8 @@ class ArticleCreatePage extends StatefulWidget {
 }
 
 class _ArticleCreatePageState extends State<ArticleCreatePage> {
+  static const String _headingFontFamily = 'Boldonse';
+  static const String _contentFontFamily = 'Montserrat';
   final _formKey = GlobalKey<FormState>();
   final _colorController = TextEditingController();
 
@@ -191,82 +192,136 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   @override
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
-    return GradientPageShell(
-      appBar: buildGradientAppBar(
-        title: 'Add Shoe',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _submitting ? null : () => Navigator.pop(context),
-        ),
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: ColoredBox(
-            color: AppColors.surface,
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-                children: [
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.error),
-                ),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 13),
-                ),
-              ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: SweepGradient(
+            center: Alignment(0.22, -1.07),
+            startAngle: -0.55,
+            endAngle: 5.73,
+            colors: [
+              Color(0xFF09E0FF),
+              Color(0xFF0F6876),
+              Color(0xFF062F35),
+              Color(0xFF062F35),
             ],
-            _brandDropdown(),
-            const SizedBox(height: 14),
-            _modelDropdown(),
-            const SizedBox(height: 14),
-            _dropdownWithLabel('Category', _category, _categories, (v) => setState(() => _category = v!)),
-            const SizedBox(height: 14),
-            _field(_colorController, 'Color', textCapitalization: TextCapitalization.words),
-            const SizedBox(height: 14),
-            _purchaseYearDropdown(),
-            const SizedBox(height: 14),
-            _dropdownWithLabel('Condition', _condition, _conditions, (v) => setState(() => _condition = v!)),
-            const SizedBox(height: 20),
-            _materialsSection(horizontal),
-            const SizedBox(height: 20),
-            _imagesSection(),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _submitting ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textOnPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            stops: [0.05, 0.44, 0.57, 1],
+            transform: GradientRotation(-0.55),
+          ),
+        ),
+        child: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 28),
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: _submitting ? null : () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text(
+                        'Add New Footwear',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          height: 1.1,
+                          fontFamily: _headingFontFamily,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                if (_errorMessage != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.22),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                ],
+                _modelDropdown(),
+                const SizedBox(height: 14),
+                _brandDropdown(),
+                const SizedBox(height: 14),
+                _purchaseYearDropdown(),
+                const SizedBox(height: 14),
+                _field(_colorController, 'Colour', textCapitalization: TextCapitalization.words),
+                const SizedBox(height: 14),
+                _dropdownWithLabel('Category', _category, _categories, (v) => setState(() => _category = v!)),
+                const SizedBox(height: 14),
+                _dropdownWithLabel('Condition', _condition, _conditions, (v) => setState(() => _condition = v!)),
+                const SizedBox(height: 14),
+                _materialsSection(horizontal),
+                const SizedBox(height: 18),
+                _imagesSection(),
+                const SizedBox(height: 28),
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _pickImages,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF12899B),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                      side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
+                    ),
+                    child: const Text(
+                      'Upload Footwear',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: _headingFontFamily,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
                   ),
                 ),
-                child: _submitting
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: AppColors.textOnPrimary,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Add Shoe', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              ),
-            ),
-          ],
-              ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _submitting ? const Color(0xFFABABAB) : const Color(0xFFABABAB),
+                      foregroundColor: const Color(0xFF5A5A5A),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                      side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF5A5A5A),
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Save Footwear',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontFamily: _headingFontFamily,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -284,20 +339,36 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
       controller: ctrl,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontFamily: _contentFontFamily,
+      ),
       decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 15),
+        labelText: hint,
+        labelStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontFamily: _contentFontFamily,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        hintText: '',
+        hintStyle: const TextStyle(color: Colors.white70, fontSize: 16),
         filled: true,
-        fillColor: AppColors.surfaceVariant,
+        fillColor: Colors.white.withOpacity(0.10),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(100),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderRadius: BorderRadius.circular(100),
+          borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(100),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
       validator: (v) {
         if (hint.startsWith('Purchase')) return null;
@@ -315,9 +386,9 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           child: Text(
             'Brand',
             style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              color: Colors.white,
+              fontFamily: _contentFontFamily,
             ),
           ),
         ),
@@ -325,13 +396,28 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           value: _brand,
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppColors.surfaceVariant,
+            fillColor: Colors.white.withOpacity(0.10),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(100),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(100),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(100),
+              borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
+          dropdownColor: const Color(0xFF0D5B68),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontFamily: _contentFontFamily,
+          ),
+          iconEnabledColor: Colors.white,
           items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
           onChanged: (v) => setState(() => _brand = v ?? _brands.first),
         ),
@@ -346,11 +432,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
         Padding(
           padding: const EdgeInsets.only(left: 2, bottom: 6),
           child: Text(
-            'Model',
+            'Name your footwear',
             style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              color: Colors.white,
+              fontFamily: _contentFontFamily,
             ),
           ),
         ),
@@ -358,13 +444,28 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           value: _model,
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppColors.surfaceVariant,
+            fillColor: Colors.white.withOpacity(0.10),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(100),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(100),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(100),
+              borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
+          dropdownColor: const Color(0xFF0D5B68),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontFamily: _contentFontFamily,
+          ),
+          iconEnabledColor: Colors.white,
           items: _models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
           onChanged: (v) => setState(() => _model = v ?? _models.first),
         ),
@@ -396,22 +497,23 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
         Padding(
           padding: const EdgeInsets.only(left: 2, bottom: 6),
           child: Text(
-            'Purchase Year (optional)',
+            'Purchased On',
             style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              color: Colors.white,
+              fontFamily: _contentFontFamily,
             ),
           ),
         ),
         InkWell(
           onTap: _submitting ? null : _openPurchaseYearPicker,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(100),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.white.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: Colors.white.withOpacity(0.2)),
             ),
             child: Row(
               children: [
@@ -419,16 +521,15 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                   child: Text(
                     _purchaseYear?.toString() ?? 'Not specified',
                     style: TextStyle(
-                      fontSize: 15,
-                      color: _purchaseYear != null
-                          ? AppColors.textPrimary
-                          : AppColors.textTertiary,
+                      fontSize: 16,
+                      color: _purchaseYear != null ? Colors.white : Colors.white70,
+                      fontFamily: _contentFontFamily,
                     ),
                   ),
                 ),
                 if (_purchaseYear != null)
                   IconButton(
-                    icon: const Icon(Icons.clear, size: 20, color: AppColors.textTertiary),
+                    icon: const Icon(Icons.clear, size: 20, color: Colors.white70),
                     onPressed: _submitting ? null : () => setState(() => _purchaseYear = null),
                     style: IconButton.styleFrom(
                       padding: EdgeInsets.zero,
@@ -436,7 +537,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                     ),
                   )
                 else
-                  const Icon(Icons.calendar_today_outlined, size: 20, color: AppColors.textTertiary),
+                  const Icon(Icons.calendar_today_outlined, size: 20, color: Colors.white),
               ],
             ),
           ),
@@ -459,9 +560,9 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              color: Colors.white,
+              fontFamily: _contentFontFamily,
             ),
           ),
         ),
@@ -469,13 +570,28 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           value: value,
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppColors.surfaceVariant,
+            fillColor: Colors.white.withOpacity(0.10),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(100),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(100),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(100),
+              borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
+          dropdownColor: const Color(0xFF0D5B68),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontFamily: _contentFontFamily,
+          ),
+          iconEnabledColor: Colors.white,
           items: items.map((e) => DropdownMenuItem(value: e['value'], child: Text(e['label']!))).toList(),
           onChanged: onChanged,
         ),
@@ -493,9 +609,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             const Text(
               'Material composition',
               style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                fontFamily: _contentFontFamily,
               ),
             ),
             TextButton(
@@ -505,7 +622,15 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('+ Add', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 14)),
+              child: const Text(
+                '+ Add',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  fontFamily: _contentFontFamily,
+                ),
+              ),
             ),
           ],
         ),
@@ -513,7 +638,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           padding: const EdgeInsets.only(top: 6),
           child: Text(
             'Optional. Add material type and percentage (e.g. Rubber 40%).',
-            style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withOpacity(0.82),
+              fontFamily: _contentFontFamily,
+            ),
           ),
         ),
         if (_materials.isNotEmpty)
@@ -530,13 +659,24 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                           : _materialTypes.first,
                       decoration: const InputDecoration(
                         filled: true,
-                        fillColor: AppColors.surfaceVariant,
+                        fillColor: Color(0x2BFFFFFF),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(10)),
-                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.all(Radius.circular(100)),
+                          borderSide: BorderSide(color: Color(0x33FFFFFF)),
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(100)),
+                          borderSide: BorderSide(color: Color(0x33FFFFFF)),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
+                      dropdownColor: Color(0xFF0D5B68),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontFamily: _contentFontFamily,
+                      ),
+                      iconEnabledColor: Colors.white,
                       items: _materialTypes
                           .map(
                             (t) => DropdownMenuItem<String>(
@@ -560,9 +700,21 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                       decoration: const InputDecoration(
                         hintText: '%',
                         filled: true,
-                        fillColor: AppColors.surfaceVariant,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10)), borderSide: BorderSide.none),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        hintStyle: TextStyle(color: Colors.white70),
+                        fillColor: Color(0x2BFFFFFF),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(100)),
+                          borderSide: BorderSide(color: Color(0x33FFFFFF)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(100)),
+                          borderSide: BorderSide(color: Color(0x33FFFFFF)),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: _contentFontFamily,
                       ),
                       onChanged: (v) => _materials[i]['percentage'] = int.tryParse(v) ?? 0,
                     ),
@@ -586,9 +738,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
         const Text(
           'Photos',
           style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+            fontFamily: _contentFontFamily,
           ),
         ),
         const SizedBox(height: 10),
@@ -602,11 +755,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
+                    color: Colors.white.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withOpacity(0.22)),
                   ),
-                  child: const Icon(Icons.add_photo_alternate_outlined, color: AppColors.textTertiary, size: 40),
+                  child: const Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 40),
                 ),
               ),
               const SizedBox(width: 8),

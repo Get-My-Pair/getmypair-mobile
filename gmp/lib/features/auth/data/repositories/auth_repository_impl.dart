@@ -195,16 +195,35 @@ class AuthRepositoryImpl implements AuthRepository {
                   await localDataSource.saveUser(userModel);
                   return Right(userModel);
                 } on ServerException catch (e2) {
+                  // If backend is temporarily failing after a successful refresh,
+                  // keep the user logged in using cached profile data.
+                  final cachedUser = await localDataSource.getUser();
+                  if (cachedUser != null) {
+                    return Right(cachedUser);
+                  }
                   return Left(ServerFailure(e2.message));
                 } on NetworkException catch (e2) {
+                  final cachedUser = await localDataSource.getUser();
+                  if (cachedUser != null) {
+                    return Right(cachedUser);
+                  }
                   return Left(NetworkFailure(e2.message));
                 }
               }
             }
             return refreshResult.fold((l) => Left(l), (_) => Left(ServerFailure(e.message)));
           }
+          // Non-auth server errors should not force logout if we have cached user.
+          final cachedUser = await localDataSource.getUser();
+          if (cachedUser != null) {
+            return Right(cachedUser);
+          }
           return Left(ServerFailure(e.message));
         } on NetworkException catch (e) {
+          final cachedUser = await localDataSource.getUser();
+          if (cachedUser != null) {
+            return Right(cachedUser);
+          }
           return Left(NetworkFailure(e.message));
         }
       } else {
@@ -322,10 +341,13 @@ class AuthRepositoryImpl implements AuthRepository {
           return const Left(AuthenticationFailure('No access token after refresh'));
         }
       }
-      // Refresh if expired or expiring within 60 seconds
+      // Refresh proactively only when token has a parsable `exp` claim.
+      // If token format is opaque/non-JWT, defer to backend 401 handling instead
+      // of forcing refresh locally and risking premature session expiry.
       final exp = JwtHelper.getTokenExpiration(accessToken);
-      final shouldRefresh = JwtHelper.isTokenExpired(accessToken) ||
-          (exp != null && exp.difference(DateTime.now()).inSeconds < 60);
+      final shouldRefresh = exp != null &&
+          (DateTime.now().isAfter(exp) ||
+              exp.difference(DateTime.now()).inSeconds < 60);
       if (shouldRefresh) {
         final refreshResult = await refreshToken();
         if (refreshResult.isLeft()) {

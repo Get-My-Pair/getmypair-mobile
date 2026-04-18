@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:gmp/core/constants/figma_home_assets.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
-import 'package:gmp/core/theme/app_colors.dart';
 
 /// Pill-shaped floating bar: dark teal → cyan gradient, white outline icons,
 /// selected tab on a solid white circle (icon in dark teal).
 /// Tabs: Home · Services (rack) · Profile.
-///
-/// Figma: [GetMyPair home `335:1687`](https://www.figma.com/design/DQ61w1v0ZSIyDdjTTLRQvv/GetMyPair?node-id=335-1687&m=dev).
-/// Set [FigmaHomeAssets.tabHomeIcon] / `tabServicesIcon` / `tabProfileIcon` to MCP asset URLs to match the file.
 class FloatingGradientBottomNav extends StatelessWidget {
   const FloatingGradientBottomNav({
     super.key,
@@ -22,31 +18,14 @@ class FloatingGradientBottomNav extends StatelessWidget {
 
   static const double barHeight = 56;
   static const double hitSize = 44;
-  static const Color selectedIconColor = AppColors.footwearHeroStart;
+  static const Color selectedIconColor = Color(0xFF08343A);
+  static const String _homeIcon = 'assets/images/icons/home.svg';
+  static const String _middleShoeIcon = 'assets/images/icons/shoe.svg';
+  static const String _profileIcon = 'assets/images/icons/profile.svg';
 
   @override
   Widget build(BuildContext context) {
-    final items = <({
-      IconData outlined,
-      IconData filled,
-      String? figmaAssetUrl,
-    })>[
-      (
-        outlined: Icons.home_outlined,
-        filled: Icons.home_rounded,
-        figmaAssetUrl: FigmaHomeAssets.tabHomeIcon,
-      ),
-      (
-        outlined: Icons.hiking_outlined,
-        filled: Icons.hiking_rounded,
-        figmaAssetUrl: FigmaHomeAssets.tabServicesIcon,
-      ),
-      (
-        outlined: Icons.person_outline_rounded,
-        filled: Icons.person_rounded,
-        figmaAssetUrl: FigmaHomeAssets.tabProfileIcon,
-      ),
-    ];
+    final svgIcons = <String>[_homeIcon, _middleShoeIcon, _profileIcon];
 
     return Material(
       color: Colors.transparent,
@@ -55,15 +34,15 @@ class FloatingGradientBottomNav extends StatelessWidget {
         height: barHeight,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(barHeight / 2),
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
-              AppColors.footwearHeroStart,
-              AppColors.footwearHeroMid,
-              AppColors.secondary,
+              Color(0xFF08343A),
+              Color(0xFF0F6876),
+              Color(0xFF00E0FF),
             ],
-            stops: const [0.0, 0.42, 1.0],
+            stops: [0.0, 0.42, 1.0],
           ),
           boxShadow: [
             BoxShadow(
@@ -73,7 +52,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
               spreadRadius: -4,
             ),
             BoxShadow(
-              color: AppColors.footwearHeroMid.withValues(alpha: 0.35),
+              color: const Color(0xFF0A6C78).withValues(alpha: 0.35),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -83,10 +62,11 @@ class FloatingGradientBottomNav extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(items.length, (i) {
+            children: List.generate(svgIcons.length, (i) {
               final selected = i == currentIndex;
-              final pair = items[i];
-              return Expanded(
+              // Use fixed-width cells so `spaceBetween` can increase the gap between items.
+              return SizedBox(
+                width: hitSize,
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -114,11 +94,14 @@ class FloatingGradientBottomNav extends StatelessWidget {
                                 ]
                               : null,
                         ),
-                        child: _NavTabIcon(
-                          selected: selected,
-                          outlined: pair.outlined,
-                          filled: pair.filled,
-                          figmaUrl: pair.figmaAssetUrl,
+                        child: SvgPicture.asset(
+                          svgIcons[i],
+                          width: i == 2 ? 23 : 22,
+                          height: i == 2 ? 23 : 22,
+                          colorFilter: ColorFilter.mode(
+                            selected ? selectedIconColor : Colors.white,
+                            BlendMode.srcIn,
+                          ),
                         ),
                       ),
                     ),
@@ -133,38 +116,10 @@ class FloatingGradientBottomNav extends StatelessWidget {
   }
 }
 
-class _NavTabIcon extends StatelessWidget {
-  const _NavTabIcon({
-    required this.selected,
-    required this.outlined,
-    required this.filled,
-    required this.figmaUrl,
-  });
-
-  final bool selected;
-  final IconData outlined;
-  final IconData filled;
-  final String? figmaUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? FloatingGradientBottomNav.selectedIconColor : Colors.white;
-    final iconData = selected ? filled : outlined;
-    final url = figmaUrl;
-    if (url == null || url.isEmpty) {
-      return Icon(iconData, size: 24, color: color);
-    }
-    return Image.network(
-      url,
-      width: 24,
-      height: 24,
-      fit: BoxFit.contain,
-      color: color,
-      colorBlendMode: BlendMode.srcIn,
-      errorBuilder: (_, _, _) => Icon(iconData, size: 24, color: color),
-    );
-  }
-}
+/// Outer padding around [FloatingGradientBottomNav] on [CustomerDashboardPage]
+/// and on pushed stack pages that use [DashboardLinkedBottomNav].
+const EdgeInsets kDashboardBottomNavPadding =
+    EdgeInsets.symmetric(vertical: 8, horizontal: 80);
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
 /// Use on profile stack pages so Home / Rack / Profile match main navigation.
@@ -182,7 +137,7 @@ class DashboardLinkedBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding: kDashboardBottomNavPadding,
         child: FloatingGradientBottomNav(
           currentIndex: selectedTabIndex.clamp(0, 2),
           onChanged: (i) {

@@ -306,148 +306,182 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
     return GradientPageShell(
       appBar: buildGradientAppBar(
-        title: 'Edit Shoe',
+        title: 'Edit Footwear',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _submitting ? null : () => Navigator.pop(context),
         ),
         automaticallyImplyLeading: false,
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: SafeArea(
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: ColoredBox(
-            color: AppColors.surface,
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-                children: [
-            if (_error != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.error),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(horizontal, 10, horizontal, 24),
+            children: [
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.error),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
                 ),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 13),
+              ],
+              _modelField(),
+              const SizedBox(height: 16),
+              _brandDropdown(),
+              const SizedBox(height: 16),
+              _purchaseYearField(),
+              const SizedBox(height: 16),
+              _colorField(),
+              const SizedBox(height: 16),
+              _dropdownWithLabel(
+                'Category',
+                _category,
+                _categories,
+                (v) => setState(() => _category = v ?? _category),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: _submitting
+                      ? null
+                      : () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Upload flow will be added in next step')),
+                          );
+                        },
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.95),
+                    foregroundColor: const Color(0xFF12899B),
+                    side: const BorderSide(color: Color(0xFF09DFFF)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                  child: const Text('Upload Footwear'),
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _submitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFABABAB),
+                    foregroundColor: const Color(0xFF5A5A5A),
+                    disabledBackgroundColor: const Color(0xFFABABAB),
+                    disabledForegroundColor: const Color(0xFF5A5A5A),
+                    side: const BorderSide(color: Color(0xFF09DFFF)),
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                  child: _submitting
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF5A5A5A),
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Save Footwear'),
                 ),
               ),
             ],
-            _brandDropdown(),
-            const SizedBox(height: 14),
-            _modelDropdown(),
-            const SizedBox(height: 14),
-            _dropdownWithLabel('Category', _category, _categories, (v) => setState(() => _category = v ?? _category)),
-            const SizedBox(height: 14),
-            _colorField(),
-            const SizedBox(height: 14),
-            _purchaseYearField(),
-            const SizedBox(height: 14),
-            _dropdownWithLabel('Condition', _condition, _conditions, (v) => setState(() => _condition = v ?? _condition)),
-            const SizedBox(height: 20),
-            _materialsSection(),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _submitting ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.textOnPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _submitting
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: AppColors.textOnPrimary,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Save changes', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              ),
-            ),
-          ],
-              ),
-            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _modelField() {
+    return _glassFieldShell(
+      label: 'Name your footwear',
+      child: TextFormField(
+        initialValue: _model,
+        textCapitalization: TextCapitalization.words,
+        style: const TextStyle(fontSize: 16, color: Colors.white),
+        decoration: _glassInputDecoration(hintText: 'Nike Shoes'),
+        onChanged: (v) => _model = v.trim(),
+        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
       ),
     );
   }
 
   Widget _brandDropdown() {
+    return _glassFieldShell(
+      label: 'Brand',
+      child: DropdownButtonFormField<String>(
+        value: _brand,
+        iconEnabledColor: Colors.white,
+        dropdownColor: const Color(0xFF0C5B67),
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+        decoration: _glassInputDecoration(),
+        items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+        onChanged: (v) => setState(() => _brand = v ?? _brands.first),
+      ),
+    );
+  }
+
+  Widget _glassFieldShell({required String label, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 2, bottom: 6),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
-            'Brand',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ),
-        DropdownButtonFormField<String>(
-          value: _brand,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceVariant,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          ),
-          items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-          onChanged: (v) => setState(() => _brand = v ?? _brands.first),
-        ),
+        child,
       ],
     );
   }
 
-  Widget _modelDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            'Model',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        DropdownButtonFormField<String>(
-          value: _model,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceVariant,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          ),
-          items: _models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-          onChanged: (v) => setState(() => _model = v ?? _models.first),
-        ),
-      ],
+  InputDecoration _glassInputDecoration({String? hintText, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(color: Colors.white70, fontSize: 16),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.10),
+      errorStyle: const TextStyle(color: Colors.white),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      suffixIcon: suffixIcon,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: const BorderSide(color: Color(0xFF09E0FF), width: 1.4),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: const BorderSide(color: Color(0xFFFFB4B4)),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: const BorderSide(color: Color(0xFFFFB4B4), width: 1.2),
+      ),
     );
   }
 
@@ -457,136 +491,68 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     List<Map<String, String>> items,
     ValueChanged<String?> onChanged,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        DropdownButtonFormField<String>(
-          value: value,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceVariant,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          ),
-          items: items
-              .map(
-                (e) => DropdownMenuItem<String>(
-                  value: e['value'],
-                  child: Text(e['label']!),
-                ),
-              )
-              .toList(),
-          onChanged: onChanged,
-        ),
-      ],
+    return _glassFieldShell(
+      label: label,
+      child: DropdownButtonFormField<String>(
+        value: value,
+        iconEnabledColor: Colors.white,
+        dropdownColor: const Color(0xFF0C5B67),
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+        decoration: _glassInputDecoration(),
+        items: items
+            .map(
+              (e) => DropdownMenuItem<String>(
+                value: e['value'],
+                child: Text(e['label']!),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
+      ),
     );
   }
 
   Widget _colorField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            'Color',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        TextFormField(
-          initialValue: _color,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(
-            hintText: 'Color',
-            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 15),
-            filled: true,
-            fillColor: AppColors.surfaceVariant,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(10)),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          ),
-          onChanged: (v) => _color = v.trim(),
-          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-        ),
-      ],
+    return _glassFieldShell(
+      label: 'Colour',
+      child: TextFormField(
+        initialValue: _color,
+        textCapitalization: TextCapitalization.words,
+        style: const TextStyle(fontSize: 16, color: Colors.white),
+        decoration: _glassInputDecoration(hintText: 'Denim'),
+        onChanged: (v) => _color = v.trim(),
+        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+      ),
     );
   }
 
   Widget _purchaseYearField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 2, bottom: 6),
+    return _glassFieldShell(
+      label: 'Purchased On',
+      child: InkWell(
+        onTap: _submitting ? null : _openPurchaseYearPicker,
+        borderRadius: BorderRadius.circular(100),
+        child: InputDecorator(
+          decoration: _glassInputDecoration(
+            suffixIcon: IconButton(
+              icon: Icon(
+                _purchaseYear != null ? Icons.close : Icons.calendar_today_outlined,
+                size: 20,
+                color: Colors.white,
+              ),
+              onPressed: _submitting
+                  ? null
+                  : _purchaseYear != null
+                      ? () => setState(() => _purchaseYear = null)
+                      : _openPurchaseYearPicker,
+            ),
+          ),
           child: Text(
-            'Purchase Year (optional)',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
+            _purchaseYear?.toString() ?? '2023',
+            style: const TextStyle(fontSize: 16, color: Colors.white),
           ),
         ),
-        InkWell(
-          onTap: _submitting ? null : _openPurchaseYearPicker,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _purchaseYear?.toString() ?? 'Not specified',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: _purchaseYear != null ? AppColors.textPrimary : AppColors.textTertiary,
-                    ),
-                  ),
-                ),
-                if (_purchaseYear != null)
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 20, color: AppColors.textTertiary),
-                    onPressed: _submitting ? null : () => setState(() => _purchaseYear = null),
-                    style: IconButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(32, 32),
-                    ),
-                  )
-                else
-                  const Icon(Icons.calendar_today_outlined, size: 20, color: AppColors.textTertiary),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 

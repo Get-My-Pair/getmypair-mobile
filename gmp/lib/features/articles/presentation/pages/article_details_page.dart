@@ -316,39 +316,63 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
 
     final a = _article!;
     final imageUrl = _imageUrl(a.thumbnailImage);
-    final hPad = Responsive.horizontalPaddingOf(context);
     final swatchColor = _parseColorHex(a.color) ?? const Color(0xFF11253F);
-
-    TextStyle boldonse(double base) => GoogleFonts.boldonse(
-          fontWeight: FontWeight.w400,
-          fontSize: Responsive.fontSize(context, base),
-          color: Colors.black,
-        );
-
-    TextStyle montserrat(double base, {Color? color}) => GoogleFonts.montserrat(
-          fontWeight: FontWeight.w400,
-          fontSize: Responsive.fontSize(context, base),
-          color: color ?? Colors.black,
-        );
-
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-      extendBody: true,
-      body: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: _shellSweep))),
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-                    child: DecoratedBox(
+      body: Center(
+        child: SingleChildScrollView(
+          child: SizedBox(
+            width: 430,
+            height: 932,
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(color: Color(0xFFFAFAFA)),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Container(
+                      decoration: const BoxDecoration(gradient: _shellSweep),
+                    ),
+                  ),
+                  Positioned(
+                    left: 367.04,
+                    top: 18,
+                    child: Opacity(
+                      opacity: 0.35,
+                      child: Container(
+                        width: 26.75,
+                        height: 14.98,
+                        decoration: ShapeDecoration(
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            side: const BorderSide(width: 1, color: Colors.white),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 369.18,
+                    top: 20.14,
+                    child: Container(
+                      width: 22.47,
+                      height: 10.70,
                       decoration: ShapeDecoration(
-                        color: _panelBg,
-                        shape: const RoundedRectangleBorder(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 10,
+                    top: 86,
+                    child: Container(
+                      width: 412,
+                      height: 837,
+                      decoration: const ShapeDecoration(
+                        color: Color(0xFFF0F0F0),
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(20),
                             topRight: Radius.circular(20),
@@ -356,256 +380,466 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                             bottomRight: Radius.circular(50),
                           ),
                         ),
-                        shadows: const [
+                        shadows: [
                           BoxShadow(
                             color: Color(0x19000000),
                             blurRadius: 10,
                             offset: Offset(0, 4),
+                            spreadRadius: 0,
                           ),
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                          bottomLeft: Radius.circular(50),
-                          bottomRight: Radius.circular(50),
-                        ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                                    onPressed: () => Navigator.pop(context),
-                                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22, color: _rackDark),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                                        onPressed: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Share coming soon')),
-                                          );
-                                        },
-                                        icon: const Icon(Icons.ios_share_rounded, size: 24, color: _rackDark),
-                                      ),
-                                      PopupMenuButton<String>(
-                                        icon: const Icon(Icons.more_horiz_rounded, size: 26, color: _rackDark),
-                                        onSelected: (v) async {
-                                          if (v == 'edit') {
-                                            await Navigator.of(context).push(
-                                              MaterialPageRoute(builder: (_) => ArticleEditPage(articleId: a.id)),
-                                            );
-                                            if (mounted) _load();
-                                          } else if (v == 'delete') {
-                                            await _deleteArticle();
-                                          }
-                                        },
-                                        itemBuilder: (ctx) => [
-                                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                a.brand.isNotEmpty ? a.brand : 'Shoe',
-                                style: GoogleFonts.boldonse(
-                                  color: _rackTealAccent,
-                                  fontSize: Responsive.fontSize(context, 24),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                a.model.isNotEmpty ? a.model : '—',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: Responsive.fontSize(context, 20),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Center(
-                                child: Transform.rotate(
-                                  angle: -0.48,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: SizedBox(
-                                      width: Responsive.scaleDesignWidth(context, 165).clamp(210.0, 310.0),
-                                      height: Responsive.scaleDesignWidth(context, 135).clamp(100.0, 165.0),
-                                      child: imageUrl.isNotEmpty
-                                          ? Image.network(
-                                              imageUrl,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) => _placeholder(),
-                                            )
-                                          : _placeholder(),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: Responsive.scaleDesignWidth(context, 30)),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.only(bottom: 14),
-                                decoration: ShapeDecoration(
-                                  shape: RoundedRectangleBorder(
-                                    side: BorderSide(
-                                      width: 1,
-                                      color: Colors.black.withValues(alpha: 0.2),
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: _statPair(
-                                        context,
-                                        value: '—',
-                                        label: 'Size',
-                                        valueStyle: boldonse(16),
-                                        labelStyle: montserrat(16),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: _statColorColumn(
-                                        context,
-                                        swatchColor: swatchColor,
-                                        colorName: a.color.isNotEmpty ? a.color : '—',
-                                        labelStyle: montserrat(16),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: _statPair(
-                                        context,
-                                        value: a.purchaseYear?.toString() ?? '—',
-                                        label: 'Purchased',
-                                        valueStyle: boldonse(16),
-                                        labelStyle: montserrat(16),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: _statPair(
-                                      context,
-                                      value: _categoryLabel(a.category),
-                                      label: 'Category',
-                                      valueStyle: boldonse(16),
-                                      labelStyle: montserrat(16),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: _statPair(
-                                      context,
-                                      value: '—',
-                                      label: 'Last wear',
-                                      valueStyle: boldonse(16),
-                                      labelStyle: montserrat(16),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: const Color(0xFF09DFFF)),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x19000000),
-                                      blurRadius: 4,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Last sent to shoe care',
-                                        style: montserrat(16),
-                                      ),
-                                    ),
-                                    Text(
-                                      '—',
-                                      textAlign: TextAlign.right,
-                                      style: boldonse(16),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _gradientPillButton(
-                                      label: 'Rehome',
-                                      onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Rehome coming soon')),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: _outlinedPillButton(
-                                      label: 'Rent',
-                                      onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Rent coming soon')),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Condition: ${_conditionLabel(a.condition)}',
-                                style: montserrat(14, color: AppColors.textSecondary),
-                              ),
-                            ],
+                    ),
+                  ),
+                  Positioned(
+                    left: 25,
+                    top: 109,
+                    child: SizedBox(
+                      width: 369,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded),
                           ),
-                        ),
+                          PopupMenuButton<String>(
+                            onSelected: (v) async {
+                              if (v == 'edit') {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => ArticleEditPage(articleId: a.id)),
+                                );
+                                if (mounted) _load();
+                              } else if (v == 'delete') {
+                                await _deleteArticle();
+                              }
+                            },
+                            itemBuilder: (ctx) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(value: 'delete', child: Text('Delete')),
+                            ],
+                            icon: const Icon(Icons.more_horiz_rounded),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: bottomNavReserve),
-              ],
+                  Positioned(
+                    left: 33,
+                    top: 150,
+                    child: SizedBox(
+                      width: 200,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            a.brand.isNotEmpty ? a.brand : 'Converse',
+                            style: const TextStyle(
+                              color: Color(0xFF11899B),
+                              fontSize: 24,
+                              fontFamily: 'Boldonse',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          Text(
+                            a.model.isNotEmpty ? a.model : 'Converse',
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 20,
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: -8,
+                    top: 309.71,
+                    child: Transform.rotate(
+                      angle: -0.48,
+                      child: SizedBox(
+                        width: 381,
+                        height: 196.10,
+                        child: imageUrl.isNotEmpty
+                            ? Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => _placeholder(),
+                              )
+                            : _placeholder(),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 42,
+                    top: 466,
+                    child: SizedBox(
+                      width: 347,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.only(bottom: 14),
+                            decoration: ShapeDecoration(
+                              shape: RoundedRectangleBorder(
+                                side: BorderSide(
+                                  width: 1,
+                                  color: Colors.black.withValues(alpha: 0.20),
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                SizedBox(
+                                  width: 68,
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        'US: 06',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Boldonse',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'Size',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 68,
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: 34,
+                                        height: 34,
+                                        decoration: ShapeDecoration(
+                                          color: swatchColor,
+                                          shape: const OvalBorder(),
+                                        ),
+                                      ),
+                                      Text(
+                                        a.color.isNotEmpty ? a.color : 'Denim',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 87,
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        a.purchaseYear?.toString() ?? '2023',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Boldonse',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'Purchased',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 31),
+                          SizedBox(
+                            width: double.infinity,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                SizedBox(
+                                  width: 81,
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        _categoryLabel(a.category),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Boldonse',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'Category',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 18),
+                                const SizedBox(
+                                  width: 92,
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        '26 Mar’26',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Boldonse',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Last Wear',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 31),
+                          Container(
+                            width: double.infinity,
+                            height: 81,
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                            decoration: ShapeDecoration(
+                              color: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                side: const BorderSide(width: 1, color: Color(0xFF09DFFF)),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              shadows: const [
+                                BoxShadow(
+                                  color: Color(0x19000000),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 4),
+                                  spreadRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const SizedBox(
+                                  width: 140,
+                                  child: Text(
+                                    'Last sent to shoe care',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontFamily: 'Montserrat',
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(
+                                  width: 93,
+                                  child: Text(
+                                    '17 Feb’25',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontFamily: 'Boldonse',
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                                Transform.rotate(
+                                  angle: -3.14,
+                                  child: const Icon(Icons.chevron_left, size: 24),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 31),
+                          SizedBox(
+                            width: double.infinity,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Rehome coming soon')),
+                                    ),
+                                    child: Container(
+                                      height: 59,
+                                      decoration: ShapeDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment(1.00, 0.50),
+                                          end: Alignment(0.00, 0.50),
+                                          colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                        shadows: const [
+                                          BoxShadow(
+                                            color: Color(0x19000000),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 4),
+                                            spreadRadius: 0,
+                                          )
+                                        ],
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const Text(
+                                        'Rehome',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontFamily: 'Boldonse',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 19),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Rent coming soon')),
+                                    ),
+                                    child: Container(
+                                      height: 59,
+                                      decoration: ShapeDecoration(
+                                        color: const Color(0xFFDFE7E9),
+                                        shape: RoundedRectangleBorder(
+                                          side: const BorderSide(width: 1, color: Color(0xFF0F6876)),
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                        shadows: const [
+                                          BoxShadow(
+                                            color: Color(0x19000000),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 4),
+                                            spreadRadius: 0,
+                                          )
+                                        ],
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const Text(
+                                        'Rent',
+                                        style: TextStyle(
+                                          color: Color(0xFF062F35),
+                                          fontSize: 14,
+                                          fontFamily: 'Boldonse',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const SizedBox(
+                            width: 347,
+                            child: Text(
+                              'Upload photos to show us the problem',
+                              style: TextStyle(
+                                color: Color(0xFF062F35),
+                                fontSize: 16,
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 95.50,
+                    top: 840,
+                    child: Container(
+                      width: 239,
+                      height: 58,
+                      padding: const EdgeInsets.only(top: 13, left: 14, right: 14, bottom: 12),
+                      decoration: ShapeDecoration(
+                        gradient: _shellSweep,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                        shadows: const [
+                          BoxShadow(
+                            color: Color(0xFFABABAB),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            left: 95,
+                            top: 0,
+                            child: Container(
+                              width: 45,
+                              height: 45,
+                              decoration: const ShapeDecoration(
+                                color: Colors.white,
+                                shape: OvalBorder(),
+                              ),
+                            ),
+                          ),
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Icon(Icons.home_rounded, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
-          ),
-        ],
+        ),
       ),
     );
   }

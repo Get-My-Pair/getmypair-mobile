@@ -160,8 +160,10 @@ class _OTPPageState extends State<OTPPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final scale = (size.width / 393.0).clamp(0.88, 1.14);
     final topInset = MediaQuery.paddingOf(context).top;
     final headerSweepHeight = (size.height * 0.95).clamp(148.0, 260.0);
+    final panelRadius = (28.0 * scale).clamp(20.0, 32.0);
     final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
@@ -218,7 +220,7 @@ class _OTPPageState extends State<OTPPage> {
               left: 0,
               right: 0,
               top: 0,
-              height: headerSweepHeight,
+              height: cardTop + panelRadius + 2,
               child: const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: SweepGradient(
@@ -274,22 +276,14 @@ class _OTPPageState extends State<OTPPage> {
               right: 0,
               top: cardTop,
               bottom: 0,
-              child: const DecoratedBox(
-                decoration: BoxDecoration(color: _kPanel),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: cardTop,
-              bottom: 0,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _kPanel,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
+                  clipBehavior: Clip.hardEdge,
                   child: SafeArea(
                     top: false,
                     child: LayoutBuilder(

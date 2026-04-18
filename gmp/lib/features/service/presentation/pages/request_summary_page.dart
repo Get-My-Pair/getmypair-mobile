@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
@@ -22,6 +23,9 @@ class RequestSummaryPage extends StatefulWidget {
   final List<XFile> proofVideos;
   final int estimatedCostRupees;
   final MaintenancePlanData? maintenancePlan;
+  final String? problemDescription;
+  final String? pickupModeLabel;
+  final String? pickupScheduleLabel;
 
   const RequestSummaryPage({
     super.key,
@@ -32,6 +36,9 @@ class RequestSummaryPage extends StatefulWidget {
     required this.proofVideos,
     required this.estimatedCostRupees,
     this.maintenancePlan,
+    this.problemDescription,
+    this.pickupModeLabel,
+    this.pickupScheduleLabel,
   });
 
   @override
@@ -161,9 +168,10 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   @override
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
+    final isRepairFlow = widget.service.value == 'repair';
     return GradientPageShell(
       appBar: buildGradientAppBar(
-        title: 'Request Summary',
+        title: 'RepairMyPair',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _submitting ? null : () => Navigator.pop(context),
@@ -175,6 +183,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           ? const Center(
               child: CircularProgressIndicator(color: Colors.white),
             )
+          : isRepairFlow
+          ? _buildRepairSummaryBody(horizontal)
           : ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
               children: [
@@ -221,6 +231,36 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                _card(
+                  title: 'Summary',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _row('Type of service', widget.service.title),
+                      _row(
+                        'Name of footwear',
+                        _article == null
+                            ? 'Loading...'
+                            : '${_article!.brand} ${_article!.model}',
+                      ),
+                      _row(
+                        'Pickup scheduled on',
+                        widget.pickupScheduleLabel ?? 'Not specified',
+                      ),
+                      _row(
+                        'Pickup mode',
+                        widget.pickupModeLabel ?? 'Not specified',
+                      ),
+                      _row(
+                        'Problem described',
+                        widget.problemDescription?.isNotEmpty == true
+                            ? widget.problemDescription!
+                            : 'Not provided',
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 _card(
                   title: 'Request proof',
@@ -375,6 +415,187 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 
+  Widget _buildRepairSummaryBody(double horizontal) {
+    final footwearName = _article == null
+        ? 'Loading...'
+        : '${_article!.brand} ${_article!.model}';
+    final problemText = widget.problemDescription?.trim().isNotEmpty == true
+        ? widget.problemDescription!.trim()
+        : 'Lorem ipsum dolor sit amet consectetur. Ut vitae libero lorem tincidunt egestas congue. Enim ultricies luctus porta ut.';
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
+      children: [
+        if (_error != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.error),
+            ),
+            child: Text(
+              _error!,
+              style: const TextStyle(
+                color: AppColors.error,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+        Text(
+          'Summary',
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF083C45),
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _summaryLine('Type of service:', 'Repair My Pair'),
+        _summaryLine('Name of my footwear:', footwearName),
+        _summaryLine(
+          'Pickup scheduled on:',
+          widget.pickupScheduleLabel ?? 'Not specified',
+        ),
+        _summaryLine('Problem described:', ''),
+        const SizedBox(height: 2),
+        Text(
+          problemText,
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF5A5A5A),
+            fontSize: 12.5,
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildProofPreviewStrip(),
+        const SizedBox(height: 16),
+        if (_submitting)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Text(
+              'Uploading proof and creating request…',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        Center(
+          child: SizedBox(
+            width: 170,
+            height: 42,
+            child: ElevatedButton(
+              onPressed: _submitting || _article == null ? null : _confirmRequest,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0A6070),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                ),
+              ),
+              child: _submitting
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'RequestQuotation',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+        if (_article == null) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _loadArticle,
+            child: const Text('Retry loading article'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _summaryLine(String key, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              key,
+              style: GoogleFonts.montserrat(
+                color: const Color(0xFF0A859A),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.montserrat(
+                color: const Color(0xFF3F3F3F),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProofPreviewStrip() {
+    final images = widget.proofImages.take(2).toList();
+    return Row(
+      children: List.generate(2, (index) {
+        if (index < images.length) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: index == 0 ? 4 : 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: SizedBox(
+                  height: 78,
+                  child: FutureBuilder(
+                    future: images[index].readAsBytes(),
+                    builder: (context, snap) {
+                      if (!snap.hasData) {
+                        return Container(color: const Color(0xFFD6D6D6));
+                      }
+                      return Image.memory(snap.data!, fit: BoxFit.cover);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        return Expanded(
+          child: Container(
+            height: 78,
+            margin: EdgeInsets.only(right: index == 0 ? 4 : 0),
+            color: const Color(0xFFD6D6D6),
+          ),
+        );
+      }),
+    );
+  }
+
   Widget _card({required String title, required Widget child}) {
     return Container(
       width: double.infinity,
@@ -396,6 +617,37 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           ),
           const SizedBox(height: 10),
           child,
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String key, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              key,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13.5,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -2,6 +2,673 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/features/articles/domain/entities/article.dart';
+import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/injection_container.dart';
+
+import '../../../service/presentation/pages/service_selection_page.dart';
+import 'article_create_page.dart';
+import 'article_details_page.dart';
+
+class ArticleListPage extends StatefulWidget {
+  final List<String>? serviceFlowAllowedTypes;
+  final String? serviceFlowTitle;
+  final bool showBottomBar;
+
+  const ArticleListPage({
+    super.key,
+    this.serviceFlowAllowedTypes,
+    this.serviceFlowTitle,
+    this.showBottomBar = true,
+  });
+
+  @override
+  State<ArticleListPage> createState() => _ArticleListPageState();
+}
+
+class _ArticleListPageState extends State<ArticleListPage> {
+  bool get _isServiceFlowMode =>
+      widget.serviceFlowAllowedTypes != null &&
+      widget.serviceFlowAllowedTypes!.isNotEmpty;
+
+  List<Article>? _articles;
+  String? _error;
+  bool _loading = true;
+  String? _filterCategory;
+  String _searchQuery = '';
+
+  static const Color _rackTeal = Color(0xFF0F6876);
+  static const Color _rackTealPrimary = Color(0xFF11999E);
+  static const Color _rackDark = Color(0xFF062F35);
+  static const Color _panelBg = Color(0xFFF0F0F0);
+  static const Color _shellBg = Color(0xFFFAFAFA);
+
+  static const SweepGradient _shellSweep = SweepGradient(
+    center: Alignment(0.22, -1.07),
+    startAngle: -0.55,
+    endAngle: 5.73,
+    colors: [
+      Color(0xFF09E0FF),
+      Color(0xFF0F6876),
+      Color(0xFF062F35),
+      Color(0xFF062F35),
+    ],
+    stops: [0.05, 0.44, 0.57, 1],
+    transform: GradientRotation(-0.55),
+  );
+
+  static const List<Map<String, String>> _filterTabs = [
+    {'value': 'formal', 'label': 'Formals'},
+    {'value': 'sports_shoe', 'label': 'Nike'},
+    {'value': 'casual', 'label': 'Casuals'},
+    {'value': 'boot', 'label': 'Heels'},
+    {'value': 'sandal', 'label': 'Converse'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArticles();
+  }
+
+  Future<void> _loadArticles() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+
+    tokenResult.fold(
+      (_) {
+        setState(() {
+          _error = 'Please sign in again';
+          _loading = false;
+        });
+      },
+      (token) async {
+        try {
+          final result = await sl<GetMyArticles>().call(token);
+          if (!mounted) return;
+          setState(() {
+            _articles = result;
+            _loading = false;
+            _error = null;
+          });
+        } catch (e) {
+          if (!mounted) return;
+          setState(() {
+            _error = e.toString().replaceFirst('Exception: ', '');
+            _articles = null;
+            _loading = false;
+          });
+        }
+      },
+    );
+  }
+
+  static String _imageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    final base = ApiEndpoints.baseUrl;
+    if (path.startsWith('/')) return '$base$path';
+    return '$base/uploads/$path';
+  }
+
+  List<Article> get _filteredArticles {
+    final list = _articles ?? [];
+    Iterable<Article> out = list;
+
+    if (_filterCategory != null && _filterCategory!.isNotEmpty) {
+      out = out.where((a) => a.category == _filterCategory);
+    }
+
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      out = out.where((a) {
+        return a.brand.toLowerCase().contains(q) ||
+            a.model.toLowerCase().contains(q) ||
+            a.color.toLowerCase().contains(q);
+      });
+    }
+
+    return out.toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    const panelRadius = BorderRadius.only(
+      topLeft: Radius.circular(20),
+      topRight: Radius.circular(20),
+      bottomLeft: Radius.circular(50),
+      bottomRight: Radius.circular(50),
+    );
+
+    return Scaffold(
+      backgroundColor: _shellBg,
+      extendBody: true,
+      body: Stack(
+        children: [
+          const Positioned.fill(
+            child: DecoratedBox(decoration: BoxDecoration(gradient: _shellSweep)),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+              child: DecoratedBox(
+                decoration: const ShapeDecoration(
+                  color: _panelBg,
+                  shape: RoundedRectangleBorder(borderRadius: panelRadius),
+                  shadows: [
+                    BoxShadow(
+                      color: Color(0x19000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: panelRadius,
+                  child: _loading
+                      ? _buildLoading()
+                      : _error != null
+                          ? _buildError()
+                          : (_articles?.isEmpty ?? true)
+                              ? _buildEmpty()
+                              : _buildRackBody(),
+                ),
+              ),
+            ),
+          ),
+          if (widget.showBottomBar)
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
+            ),
+          if (!widget.showBottomBar)
+            SizedBox(height: bottomSafe),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(color: _rackTealPrimary),
+          const SizedBox(height: 16),
+          Text(
+            'Loading your rack...',
+            style: GoogleFonts.montserrat(fontSize: 14, color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.montserrat(fontSize: 15, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _loadArticles,
+              icon: const Icon(Icons.refresh, size: 20),
+              label: const Text('Retry'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _rackTealPrimary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.checkroom_outlined, size: 64, color: AppColors.textTertiary),
+            const SizedBox(height: 20),
+            Text(
+              'Your rack is empty',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.boldonse(
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+                color: _rackDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first pair',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.montserrat(fontSize: 14, color: AppColors.textTertiary),
+            ),
+            const SizedBox(height: 28),
+            FilledButton.icon(
+              onPressed: () => _navigateToCreate(context),
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('Add shoe'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _rackTealPrimary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRackBody() {
+    final list = _filteredArticles;
+    final rowCount = (list.length + 2) ~/ 3;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      onPressed: () => Navigator.maybePop(context),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22, color: _rackDark),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'My Rack',
+                      style: GoogleFonts.boldonse(
+                        color: _rackDark,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _navigateToCreate(context),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: ShapeDecoration(
+                      color: const Color(0x33DFE7E9),
+                      shape: RoundedRectangleBorder(
+                        side: const BorderSide(width: 1, color: _rackTealPrimary),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      shadows: const [
+                        BoxShadow(
+                          color: Color(0x2E000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.add_rounded, color: _rackDark, size: 22),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_isServiceFlowMode)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+            child: Text(
+              widget.serviceFlowTitle ?? 'Select an article to continue',
+              style: GoogleFonts.montserrat(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Container(
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: ShapeDecoration(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(width: 1, color: _rackDark),
+                borderRadius: BorderRadius.circular(100),
+              ),
+            ),
+            child: TextField(
+              onChanged: (value) => setState(() => _searchQuery = value),
+              style: GoogleFonts.montserrat(fontSize: 16, color: Colors.black87),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                hintText: 'Search',
+                hintStyle: GoogleFonts.montserrat(
+                  color: Colors.black.withValues(alpha: 0.34),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: Colors.black.withValues(alpha: 0.34),
+                  size: 22,
+                ),
+                suffixIcon: Icon(
+                  Icons.tune_rounded,
+                  color: Colors.black.withValues(alpha: 0.34),
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 38,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: _filterTabs.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final tab = _filterTabs[i];
+              final value = tab['value']!;
+              final label = tab['label']!;
+              return _FilterChipPill(
+                label: label,
+                selected: _filterCategory == value,
+                onTap: () => setState(() => _filterCategory = value),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadArticles,
+            color: _rackTealPrimary,
+            backgroundColor: Colors.white,
+            child: list.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
+                      Center(
+                        child: Text(
+                          'No shoes match',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 15,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    itemCount: rowCount,
+                    itemBuilder: (context, rowIndex) {
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: rowIndex == rowCount - 1 ? 0 : 12),
+                        child: _RackRow(
+                          children: List.generate(3, (colIndex) {
+                            final itemIndex = rowIndex * 3 + colIndex;
+                            if (itemIndex >= list.length) return const SizedBox.shrink();
+                            final article = list[itemIndex];
+                            return _RackGridItem(
+                              article: article,
+                              imageUrl: _imageUrl(article.thumbnailImage),
+                              onTap: () {
+                                if (_isServiceFlowMode) {
+                                  _navigateToServiceSelection(context, article);
+                                } else {
+                                  _navigateToDetails(context, article);
+                                }
+                              },
+                            );
+                          }),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToDetails(BuildContext context, Article article) {
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (_) => ArticleDetailsPage(articleId: article.id),
+      ),
+    )
+        .then((_) => _loadArticles());
+  }
+
+  void _navigateToCreate(BuildContext context) {
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(builder: (_) => const ArticleCreatePage()),
+    )
+        .then((_) => _loadArticles());
+  }
+
+  void _navigateToServiceSelection(BuildContext context, Article article) {
+    Navigator.of(context)
+        .push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ServiceSelectionPage(
+          articleId: article.id,
+          allowedServiceTypes: widget.serviceFlowAllowedTypes,
+        ),
+      ),
+    )
+        .then((created) {
+      if (created == true && mounted) {
+        Navigator.maybePop(context, true);
+      }
+    });
+  }
+}
+
+class _RackRow extends StatelessWidget {
+  final List<Widget> children;
+
+  const _RackRow({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 112,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+      decoration: ShapeDecoration(
+        color: const Color(0xFFF0F0F0),
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 2.6, color: _ArticleListPageState._rackTeal),
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: _ArticleListPageState._rackTealPrimary,
+              width: 2.6,
+            ),
+          ),
+        ),
+        child: Row(
+          children: List.generate(3, (index) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: index < children.length ? children[index] : const SizedBox.shrink(),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _RackGridItem extends StatelessWidget {
+  final Article article;
+  final String imageUrl;
+  final VoidCallback onTap;
+
+  const _RackGridItem({
+    required this.article,
+    required this.imageUrl,
+    required this.onTap,
+  });
+
+  static String _displayLabel(Article article) {
+    if (article.color.trim().isNotEmpty) return article.color.trim();
+    if (article.brand.trim().isNotEmpty) return article.brand.trim();
+    if (article.model.trim().isNotEmpty) return article.model.trim();
+    return 'Shoe';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _displayLabel(article);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          children: [
+            Expanded(
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => _rackThumbPlaceholder(),
+                    )
+                  : _rackThumbPlaceholder(),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.boldonse(
+                color: const Color(0xFF11899B),
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _rackThumbPlaceholder() {
+    return Center(
+      child: Icon(
+        Icons.checkroom_outlined,
+        color: AppColors.textTertiary.withValues(alpha: 0.5),
+        size: 32,
+      ),
+    );
+  }
+}
+
+class _FilterChipPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChipPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  static const Color _teal = Color(0xFF11999E);
+  static const Color _chipBorder = Color(0xFFC6C6C6);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(100),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: ShapeDecoration(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(width: selected ? 1.4 : 1, color: selected ? _teal : _chipBorder),
+              borderRadius: BorderRadius.circular(100),
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF1A1A1A),
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+/*
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:gmp/core/constants/api_endpoints.dart';
+import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
@@ -829,3 +1496,4 @@ class _FilterChipPill extends StatelessWidget {
     );
   }
 }
+*/
