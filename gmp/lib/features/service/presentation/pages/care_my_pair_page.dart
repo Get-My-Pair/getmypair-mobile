@@ -457,38 +457,45 @@ class _ArticleCard extends StatelessWidget {
             child: Image.network(
               data.image,
               width: 134,
-              height: 68,
+              height: 64,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => Container(
                 width: 134,
-                height: 68,
+                height: 64,
                 color: Colors.grey.shade300,
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
-            child: Text(
-              data.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.montserrat(
-                color: Colors.black,
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
-            child: Text(
-              data.summary,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.montserrat(
-                color: const Color(0xFF929292),
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.montserrat(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Expanded(
+                    child: Text(
+                      data.summary,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF929292),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

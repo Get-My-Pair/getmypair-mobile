@@ -220,14 +220,16 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
                 DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                      // Keep the top area darker and transition to a lighter tone
+                      // toward the lower-right side for a side-flowing gradient look.
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                       colors: const [
                         AppColors.footwearHeroStart,
                         AppColors.footwearHeroMid,
                         AppColors.footwearHeroEnd,
                       ],
-                      stops: const [0.0, 0.48, 1.0],
+                      stops: const [0.0, 0.52, 1.0],
                     ),
                   ),
                   child: const SizedBox.expand(),

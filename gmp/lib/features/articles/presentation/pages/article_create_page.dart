@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
@@ -194,28 +195,15 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     final horizontal = Responsive.horizontalPaddingOf(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: SweepGradient(
-            center: Alignment(0.22, -1.07),
-            startAngle: -0.55,
-            endAngle: 5.73,
-            colors: [
-              Color(0xFF09E0FF),
-              Color(0xFF0F6876),
-              Color(0xFF062F35),
-              Color(0xFF062F35),
-            ],
-            stops: [0.05, 0.44, 0.57, 1],
-            transform: GradientRotation(-0.55),
-          ),
-        ),
-        child: SafeArea(
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 28),
-              children: [
+      body: Stack(
+        children: [
+          ...BgTheme.background(),
+          SafeArea(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(horizontal, 75, horizontal, 28),
+                children: [
                 Row(
                   children: [
                     IconButton(
@@ -321,10 +309,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                           ),
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

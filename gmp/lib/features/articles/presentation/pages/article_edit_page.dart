@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
@@ -221,7 +222,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return GradientPageShell(
+      return _buildWithBg(
         appBar: buildGradientAppBar(
           title: 'Edit Shoe',
           leading: IconButton(
@@ -248,7 +249,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     }
 
     if (_error != null || _article == null) {
-      return GradientPageShell(
+      return _buildWithBg(
         appBar: buildGradientAppBar(
           title: 'Edit Shoe',
           leading: IconButton(
@@ -304,7 +305,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
     final horizontal = Responsive.horizontalPaddingOf(context);
 
-    return GradientPageShell(
+    return _buildWithBg(
       appBar: buildGradientAppBar(
         title: 'Edit Footwear',
         leading: IconButton(
@@ -318,7 +319,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: EdgeInsets.fromLTRB(horizontal, 10, horizontal, 24),
+            padding: EdgeInsets.fromLTRB(horizontal, 75, horizontal, 24),
             children: [
               if (_error != null) ...[
                 Container(
@@ -404,6 +405,23 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWithBg({
+    required Widget body,
+    PreferredSizeWidget? appBar,
+  }) {
+    return Scaffold(
+      backgroundColor: BgTheme.baseDeepTeal,
+      extendBodyBehindAppBar: true,
+      appBar: appBar,
+      body: Stack(
+        children: [
+          ...BgTheme.background(),
+          Positioned.fill(child: body),
+        ],
       ),
     );
   }

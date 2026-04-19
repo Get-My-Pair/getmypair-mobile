@@ -109,6 +109,10 @@ flutter:
     - assets/images/
     - assets/images/phone.svg
     - assets/images/icons/
+    - assets/images/icons/home/
+    - assets/images/icons/home/caremypair.svg
+    - assets/images/icons/home/rentmypair.svg
+    - assets/images/icons/home/rehomemypair.svg
     - assets/images/icons/profile/
     - assets/images/icons/profile/edit.svg
     - assets/images/icons/profile/home.svg
