@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,7 +52,7 @@ const Color _kRackCardBorder = Color(0xFF0F6876);
 const Color _kRackCardBg = Color(0xFFF0F0F0);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
-const String _kBellIconUrl = FigmaHomeAssets.bell;
+const String _kNotificationBellSvgAsset = 'assets/images/Vector.svg';
 const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
 const String _kRehomeMyPairIconAsset = 'assets/images/icons/home/rehomemypair.svg';
@@ -825,34 +826,45 @@ class _ProfileAvatarCluster extends StatelessWidget {
             Container(
               width: 46,
               height: 46,
-              padding: const EdgeInsets.all(8),
-              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: const Color(0xFF13B9CF),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  width: 1,
-                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    spreadRadius: 0,
+                    color: Colors.black.withValues(alpha: 0.14),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
-              child: Center(
-                child: Icon(
-                  Icons.notifications_none_rounded,
-                  color: Colors.white,
-                  size: 18,
-                  shadows: [
-                    Shadow(
-                      color: Colors.white.withValues(alpha: 0.35),
-                      blurRadius: 4,
+              child: ClipOval(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.38),
+                          Colors.white.withValues(alpha: 0.14),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        width: 1,
+                      ),
                     ),
-                  ],
+                    child: Center(
+                      child: SvgPicture.asset(
+                        _kNotificationBellSvgAsset,
+                        width: 18,
+                        height: 15,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
