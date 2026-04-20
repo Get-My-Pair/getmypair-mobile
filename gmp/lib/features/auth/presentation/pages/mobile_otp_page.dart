@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
@@ -30,13 +31,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   static const Color _kPanel = Color(0xFFD9D9D9);
   /// Secondary line under title (slightly softer than [_kPrimary]).
   static const Color _kBodyMuted = Color(0xFF456970);
-
-  static const String _kFacebookImage =
-      'https://www.figma.com/api/mcp/asset/a4f220b1-86c3-441a-b0cb-d5d538de7e3e';
-  static const String _kGoogleImage =
-      'https://www.figma.com/api/mcp/asset/711583d9-a333-4c61-af4e-0f17a59890c3';
-  static const String _kAppleImage =
-      'https://www.figma.com/api/mcp/asset/aa606515-5cd1-4dec-ba1d-a3f669c4086a';
 
   final TextEditingController _phoneController = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
@@ -260,20 +254,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               height: cardTop + panelRadius + 2,
               child: const DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: SweepGradient(
-                    center: Alignment(0.22, -1.07),
-                    startAngle: -0.55,
-                    endAngle: 5.73,
-                    colors: [
-                      Color(0xFF09E0FF),
-                      Color(0xFF0F6876),
-                      Color(0xFF08414A),
-                      Color(0xFF062F35),
-                      Color(0xFF062F35),
-                    ],
-                    stops: [0.05, 0.44, 0.53, 0.57, 1],
-                    transform: GradientRotation(-0.55),
-                  ),
+                  gradient: AppColors.figma825AngularSweep,
                 ),
               ),
             ),
@@ -540,13 +521,13 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             spacing: 48,
                             runSpacing: 12,
                             children: const [
-                              _SocialImageTile(
-                                imageUrl: _kFacebookImage,
+                              _SocialSvgTile(
+                                assetPath: 'assets/images/facebook.svg',
                                 contentInset: 0,
-                                innerScale: 1.28,
+                                innerScale: 1.12,
                               ),
-                              _SocialImageTile(imageUrl: _kGoogleImage),
-                              _SocialImageTile(imageUrl: _kAppleImage),
+                              _SocialSvgTile(assetPath: 'assets/images/google.svg'),
+                              _SocialSvgTile(assetPath: 'assets/images/apple.svg'),
                             ],
                           ),
                           const SizedBox(height: 44),
@@ -730,16 +711,16 @@ class _WelcomeRichText extends StatelessWidget {
   }
 }
 
-class _SocialImageTile extends StatelessWidget {
-  const _SocialImageTile({
-    required this.imageUrl,
+class _SocialSvgTile extends StatelessWidget {
+  const _SocialSvgTile({
+    required this.assetPath,
     this.contentInset,
     this.innerScale = 1,
   });
 
   static const double _tile = 42;
 
-  final String imageUrl;
+  final String assetPath;
 
   final double? contentInset;
 
@@ -748,9 +729,10 @@ class _SocialImageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pad = contentInset ?? (_tile * (7 / 49)).clamp(6.0, 14.0);
-    final r = (_tile * (10 / 49)).clamp(8.0, 16.0);
-    final innerR = r - 2;
-    Widget logo = Image.network(imageUrl, fit: BoxFit.contain);
+    // Corner radius tuned for a rounded square tile (not circular / pill).
+    final r = (_tile * (8 / 49)).clamp(5.5, 9.0);
+    final innerR = (r - 1.5).clamp(4.0, r);
+    Widget logo = SvgPicture.asset(assetPath, fit: BoxFit.contain);
     if (innerScale != 1) {
       logo = Transform.scale(
         scale: innerScale,
@@ -769,7 +751,7 @@ class _SocialImageTile extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(innerR),
         clipBehavior: Clip.hardEdge,
-        child: logo,
+        child: Center(child: logo),
       ),
     );
   }

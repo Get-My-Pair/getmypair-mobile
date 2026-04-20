@@ -110,7 +110,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding:kDashboardBottomNavPadding,
+        padding: dashboardBottomNavOuterInsets(context),
         child: FloatingGradientBottomNav(
           currentIndex: index,
           onChanged: (i) {

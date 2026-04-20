@@ -30,21 +30,6 @@ import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 
-/// Header sweep gradient — Figma home (`335:1687`), palette from [AppColors] hero tokens.
-const SweepGradient _kHomeHeaderSweep = SweepGradient(
-  center: Alignment(0.22, -1.07),
-  startAngle: -0.55,
-  endAngle: 5.73,
-  colors: [
-    AppColors.footwearHeroEnd,
-    AppColors.footwearHeroMid,
-    AppColors.footwearHeroStart,
-    AppColors.footwearHeroStart,
-  ],
-  stops: [0.05, 0.44, 0.57, 1],
-  transform: GradientRotation(-0.55),
-);
-
 const Color _kOnHeaderText = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
@@ -54,14 +39,15 @@ const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 const String _kNotificationBellBodySvgAsset = 'assets/images/notification1.svg';
 const String _kNotificationBellClapperSvgAsset = 'assets/images/notification2.svg';
+const String _kHomeMapPinSvgAsset = 'assets/images/map-pin.svg';
 const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
 const String _kRehomeMyPairIconAsset = 'assets/images/icons/home/rehomemypair.svg';
 const String _kMyRackMaximizeSvgAsset = 'assets/images/maximize.svg';
 
 /// Vertical gaps inside the hero (greeting → location → search → stats).
-const double _kHomeHeaderGreetingToLocation = 28;
-const double _kHomeHeaderSearchToStats = 12;
+const double _kHomeHeaderGreetingToLocation = 10;
+const double _kHomeHeaderSearchToStats = 24;
 
 /// Section spacing below hero / between blocks (12–16px).
 const double _kSectionGap = 28;
@@ -81,8 +67,15 @@ double _homeUiScale(BuildContext context) {
 
 /// Space to leave above the dashboard’s floating bottom nav (home tab is non-scrollable).
 double _homeViewportBottomReserve(BuildContext context) {
-  final safe = MediaQuery.paddingOf(context).bottom;
-  return safe + FloatingGradientBottomNav.barHeight + 24;
+  // Use view-based inset: with [Scaffold.extendBody], [MediaQuery.padding] on the
+  // body can be 0 while Samsung still draws a gesture bar — avoid content under the pill.
+  final safe = Responsive.physicalBottomInsetOf(context);
+  const navOuterVertical = 20.0; // matches [dashboardBottomNavOuterInsets] vertical
+  const gapAboveNav = 12.0;
+  return safe +
+      FloatingGradientBottomNav.barHeight +
+      navOuterVertical +
+      gapAboveNav;
 }
 
 /// Home Page — Figma `335:1687`; icons from [FigmaHomeAssets].
@@ -359,7 +352,7 @@ class _HomePageState extends State<HomePage> {
               statusBarIconBrightness: Brightness.light,
             ),
             child: Scaffold(
-              backgroundColor: const Color(0xFFF5F5F5),
+              backgroundColor: AppColors.background,
               body: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -823,21 +816,19 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Notification control + two overlapping profile avatars (home hero reference).
-class _ProfileAvatarCluster extends StatelessWidget {
-  final String? imageUrl;
+double _homeHeaderChromeScale(BuildContext context) {
+  return (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
+}
+
+/// Notification bell — top row with greeting (Figma row 1).
+class _HomeHeaderBell extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _ProfileAvatarCluster({required this.imageUrl, required this.onTap});
+  const _HomeHeaderBell({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final s = (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
-    final rLarge = 32.0 * s;
-    final rSmall = 20.0 * s;
-    final stackW = 132.0 * s;
-    final stackH = 84.0 * s;
-    final containerWidth = (104.0 * s).clamp(72.0, 104.0);
+    final s = _homeHeaderChromeScale(context);
     final bellSize = (54.0 * s).clamp(48.0, 58.0);
     final bellPad = (12.0 * s).clamp(9.0, 14.0);
     final bellBodyW = (21.0 * s).clamp(17.0, 24.0);
@@ -847,105 +838,124 @@ class _ProfileAvatarCluster extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: SizedBox(
-        width: containerWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
-              width: bellSize,
-              height: bellSize,
+      child: Container(
+        width: bellSize,
+        height: bellSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.14),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              padding: EdgeInsets.all(bellPad),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.14),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: ClipOval(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                  child: Container(
-                    padding: EdgeInsets.all(bellPad),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.38),
-                          Colors.white.withValues(alpha: 0.14),
-                        ],
-                      ),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.55),
-                        width: 1,
-                      ),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.asset(
-                            _kNotificationBellBodySvgAsset,
-                            width: bellBodyW,
-                            height: bellBodyH,
-                            fit: BoxFit.contain,
-                          ),
-                          Transform.translate(
-                            offset: Offset(0, 2 * s),
-                            child: SvgPicture.asset(
-                              _kNotificationBellClapperSvgAsset,
-                              width: bellClapperW,
-                              height: bellClapperH,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.38),
+                    Colors.white.withValues(alpha: 0.14),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  width: 1,
                 ),
               ),
-            ),
-            SizedBox(height: 14 * s),
-            GestureDetector(
-              onTap: onTap,
-              child: SizedBox(
-                width: stackW,
-                height: stackH,
-                child: Stack(
-                  clipBehavior: Clip.none,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Positioned(
-                      left: 2,
-                      top: (stackH - (rLarge * 2)) / 2,
-                      child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
+                    SvgPicture.asset(
+                      _kNotificationBellBodySvgAsset,
+                      width: bellBodyW,
+                      height: bellBodyH,
+                      fit: BoxFit.contain,
                     ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: _avatarRing(
-                        radius: rSmall,
-                        imageUrl: imageUrl,
-                        isSmall: true,
-                      ),
-                    ),
-                    Positioned(
-                      right: 4 * s,
-                      bottom: 0,
-                      child: _avatarRing(
-                        radius: rSmall,
-                        imageUrl: null,
-                        isSmall: true,
+                    Transform.translate(
+                      offset: Offset(0, 2 * s),
+                      child: SvgPicture.asset(
+                        _kNotificationBellClapperSvgAsset,
+                        width: bellClapperW,
+                        height: bellClapperH,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Overlapping profile avatars — same row as location (Figma row 2).
+class _HomeProfileAvatarStack extends StatelessWidget {
+  final String? imageUrl;
+  final VoidCallback onTap;
+
+  const _HomeProfileAvatarStack({
+    required this.imageUrl,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _homeHeaderChromeScale(context);
+    final rLarge = 32.0 * s;
+    final rSmall = 20.0 * s;
+    final stackH = 84.0 * s;
+    final smallInset = (2 * s).clamp(0.0, 4.0);
+    // Large + small column almost tangent: tiny [kiss] only so borders read as touching, not stacked deep.
+    final kiss = (2 * s).clamp(0.0, 3.5);
+    final stackW = math.max(
+      2 * rLarge + 2 * rSmall + smallInset - kiss,
+      2 * rLarge + 6,
+    );
+    final smallStagger = (5 * s).clamp(3.0, 8.0);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: stackW,
+        height: stackH,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: 0,
+              top: (stackH - (rLarge * 2)) / 2,
+              child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
+            ),
+            Positioned(
+              right: smallInset,
+              top: 0,
+              child: _avatarRing(
+                radius: rSmall,
+                imageUrl: imageUrl,
+                isSmall: true,
+              ),
+            ),
+            Positioned(
+              right: smallInset + smallStagger,
+              bottom: 0,
+              child: _avatarRing(
+                radius: rSmall,
+                imageUrl: null,
+                isSmall: true,
               ),
             ),
           ],
@@ -1016,17 +1026,18 @@ class _HomeTopCard extends StatelessWidget {
     final s = _homeUiScale(context) * layoutScale;
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
+    final headerHorizontal = (horizontal - 4).clamp(12.0, horizontal);
     final addressLine = _addressLineForHome(currentAddress);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        horizontal,
-        (96 * layoutScale).clamp(40.0, 96.0),
-        horizontal,
-        (32 * layoutScale).clamp(12.0, 32.0),
+        headerHorizontal,
+        (76 * layoutScale).clamp(44.0, 88.0),
+        headerHorizontal,
+        (22 * layoutScale).clamp(10.0, 26.0),
       ),
       decoration: BoxDecoration(
-        gradient: _kHomeHeaderSweep,
+        gradient: AppColors.figma825AngularSweep,
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -1044,111 +1055,121 @@ class _HomeTopCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hello, $greetingName!',
-                      textAlign: TextAlign.left,
-                      style: GoogleFonts.boldonse(
-                        fontSize:
-                            ((compact ? 20.0 : 24.0) * s).clamp(13.0, 24.0),
-                        fontWeight: FontWeight.w400,
-                        color: _kOnHeaderText,
-                        height: 1.1,
+                child: Text(
+                  'Hello, $greetingName!',
+                  textAlign: TextAlign.left,
+                  style: GoogleFonts.boldonse(
+                    fontSize:
+                        ((compact ? 20.0 : 24.0) * s).clamp(13.0, 24.0),
+                    fontWeight: FontWeight.w400,
+                    color: _kOnHeaderText,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+              _HomeHeaderBell(
+                onTap: () {
+                  final profileBloc = context.read<ProfileBloc>();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: profileBloc,
+                        child: const ProfilePage(),
                       ),
                     ),
-                    SizedBox(
-                      height: (_kHomeHeaderGreetingToLocation * s).clamp(6.0, 28.0),
-                    ),
-                    GestureDetector(
-                      onTap: onLocationTap,
-                      behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(top: 2 * s),
-                            child: SizedBox(
-                              width: (24 * s).clamp(14.0, 24.0),
-                              height: (24 * s).clamp(14.0, 24.0),
-                              child: Image.network(
-                                FigmaHomeAssets.mapPin,
-                                fit: BoxFit.contain,
-                                color: _kHeaderIconTint,
-                                colorBlendMode: BlendMode.srcIn,
-                                errorBuilder: (_, _, _) => Icon(
-                                  Icons.location_on_outlined,
-                                  color: _kOnHeaderText.withValues(alpha: 0.95),
-                                  size: (24 * s).clamp(14.0, 24.0),
-                                ),
-                              ),
-                            ),
+                  );
+                },
+              ),
+            ],
+          ),
+          SizedBox(
+            height: (_kHomeHeaderGreetingToLocation * s).clamp(4.0, 16.0),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: onLocationTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: (24 * s).clamp(14.0, 24.0),
+                        height: (24 * s).clamp(14.0, 24.0),
+                        child: SvgPicture.asset(
+                          _kHomeMapPinSvgAsset,
+                          fit: BoxFit.contain,
+                          colorFilter: const ColorFilter.mode(
+                            _kHeaderIconTint,
+                            BlendMode.srcIn,
                           ),
-                          SizedBox(width: (10 * s).clamp(4.0, 10.0)),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      ),
+                      SizedBox(width: (10 * s).clamp(4.0, 10.0)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Home',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: (14 * s).clamp(10.0, 14.0),
-                                        fontWeight: FontWeight.w600,
-                                        color: _kOnHeaderText,
-                                        height: 1.15,
-                                      ),
-                                    ),
-                                    SizedBox(width: (4 * s).clamp(2.0, 4.0)),
-                                    SizedBox(
-                                      width: (14 * s).clamp(10.0, 14.0),
-                                      height: (14 * s).clamp(10.0, 14.0),
-                                      child: Image.network(
-                                        FigmaHomeAssets.chevronRight,
-                                        fit: BoxFit.contain,
-                                        color: _kHeaderIconTint,
-                                        colorBlendMode: BlendMode.srcIn,
-                                        errorBuilder: (_, _, _) => Icon(
-                                          Icons.chevron_right_rounded,
-                                          size: (16 * s).clamp(11.0, 16.0),
-                                          color: _kOnHeaderText,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: (2 * s).clamp(1.0, 2.0)),
                                 Text(
-                                  addressLine,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                  'Home',
                                   style: GoogleFonts.montserrat(
-                                    fontSize:
-                                        ((compact ? 14.0 : 16.0) * s).clamp(
-                                          10.0,
-                                          16.0,
-                                        ),
-                                    fontWeight: FontWeight.w300,
+                                    fontSize: (14 * s).clamp(10.0, 14.0),
+                                    fontWeight: FontWeight.w600,
                                     color: _kOnHeaderText,
-                                    height: 1.2,
+                                    height: 1.15,
+                                  ),
+                                ),
+                                SizedBox(width: (4 * s).clamp(2.0, 4.0)),
+                                SizedBox(
+                                  width: (14 * s).clamp(10.0, 14.0),
+                                  height: (14 * s).clamp(10.0, 14.0),
+                                  child: Image.network(
+                                    FigmaHomeAssets.chevronRight,
+                                    fit: BoxFit.contain,
+                                    color: _kHeaderIconTint,
+                                    colorBlendMode: BlendMode.srcIn,
+                                    errorBuilder: (_, _, _) => Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: (16 * s).clamp(11.0, 16.0),
+                                      color: _kOnHeaderText,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            SizedBox(height: (2 * s).clamp(1.0, 2.0)),
+                            Text(
+                              addressLine,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.montserrat(
+                                fontSize:
+                                    ((compact ? 14.0 : 16.0) * s).clamp(
+                                      10.0,
+                                      16.0,
+                                    ),
+                                fontWeight: FontWeight.w300,
+                                color: _kOnHeaderText,
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              SizedBox(width: 12 * s),
+              SizedBox(width: (8 * s).clamp(6.0, 12.0)),
               BlocBuilder<ProfileBloc, ProfileState>(
                 buildWhen: (prev, curr) =>
                     curr is ProfileLoaded ||
@@ -1163,7 +1184,7 @@ class _HomeTopCard extends StatelessWidget {
                       ? profileState.profile
                       : null;
                   final imageUrl = profile?.profileImage;
-                  return _ProfileAvatarCluster(
+                  return _HomeProfileAvatarStack(
                     imageUrl: imageUrl,
                     onTap: () {
                       final profileBloc = context.read<ProfileBloc>();
@@ -1181,12 +1202,12 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: (22 * s).clamp(8.0, 22.0)),
+          SizedBox(height: (14 * s).clamp(6.0, 18.0)),
           Padding(
-            padding: EdgeInsets.symmetric(vertical: (4 * s).clamp(2.0, 8.0)),
+            padding: EdgeInsets.symmetric(vertical: (2 * s).clamp(0.0, 6.0)),
             child: Container(
-              height: (48 * s).clamp(32.0, 50.0),
-              padding: EdgeInsets.symmetric(horizontal: (20 * s).clamp(14.0, 22.0)),
+              height: (46 * s).clamp(32.0, 48.0),
+              padding: EdgeInsets.symmetric(horizontal: (16 * s).clamp(12.0, 20.0)),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
@@ -1232,37 +1253,57 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: (_kHomeHeaderSearchToStats * s).clamp(4.0, 12.0)),
+          SizedBox(height: (_kHomeHeaderSearchToStats * s).clamp(14.0, 30.0)),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: _StatItem(
-                  value: pairsInRackDisplay,
-                  labelLine1: 'Pairs in',
-                  labelLine2: 'your rack',
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: _StatItem(
+                    value: pairsInRackDisplay,
+                    labelLine1: 'Pairs in',
+                    labelLine2: 'your rack',
+                  ),
                 ),
               ),
-              const Expanded(
-                child: _StatItem(
-                  value: '05',
-                  labelLine1: 'Pairs',
-                  labelLine2: 'Donated',
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: const _StatItem(
+                    value: '05',
+                    labelLine1: 'Pairs',
+                    labelLine2: 'Donated',
+                  ),
                 ),
               ),
-              const Expanded(
-                child: _StatItem(
-                  value: '00',
-                  labelLine1: 'Pairs',
-                  labelLine2: 'Sold',
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: const _StatItem(
+                    value: '00',
+                    labelLine1: 'Pairs',
+                    labelLine2: 'Sold',
+                  ),
                 ),
               ),
-              const Expanded(
-                child: _StatItem(
-                  value: '02',
-                  labelLine1: 'Pairs in',
-                  labelLine2: 'Care',
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: const _StatItem(
+                    value: '02',
+                    labelLine1: 'Pairs in',
+                    labelLine2: 'Care',
+                  ),
                 ),
               ),
             ],
@@ -1296,33 +1337,47 @@ class _StatItem extends StatelessWidget {
       color: _kOnHeaderText,
       height: 1.15,
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.boldonse(
-            fontSize: valueSize,
-            fontWeight: FontWeight.w400,
-            color: _kOnHeaderText,
-            height: 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.boldonse(
+                    fontSize: valueSize,
+                    fontWeight: FontWeight.w400,
+                    color: _kOnHeaderText,
+                    height: 1,
+                  ),
+                ),
+                SizedBox(height: (11 * s).clamp(6.0, 14.0)),
+                Text(
+                  labelLine1,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
+                ),
+                Text(
+                  labelLine2,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
+                ),
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: 8 * s),
-        Text(
-          labelLine1,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          style: labelStyle,
-        ),
-        Text(
-          labelLine2,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          style: labelStyle,
-        ),
-      ],
+        );
+      },
     );
   }
 }

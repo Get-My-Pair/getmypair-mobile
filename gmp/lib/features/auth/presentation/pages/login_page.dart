@@ -18,15 +18,6 @@ class _LoginPageState extends State<LoginPage> {
   static const Color _kTertiary = Color(0xFFDFE7E9);
   static const Color _kPanel = Color(0xFFD9D9D9);
 
-  static const String _kFlagImage =
-      'https://www.figma.com/api/mcp/asset/f2924cb4-41d5-41dd-b684-6ae3ef3b751b';
-  static const String _kFacebookImage =
-      'https://www.figma.com/api/mcp/asset/a4f220b1-86c3-441a-b0cb-d5d538de7e3e';
-  static const String _kGoogleImage =
-      'https://www.figma.com/api/mcp/asset/711583d9-a333-4c61-af4e-0f17a59890c3';
-  static const String _kAppleImage =
-      'https://www.figma.com/api/mcp/asset/aa606515-5cd1-4dec-ba1d-a3f669c4086a';
-
   final CountryCode _selectedCountry = CountryCode.popularCountries[0];
   final TextEditingController _phoneController = TextEditingController();
 
@@ -169,9 +160,9 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 child: Row(
                                   children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(2),
-                                      child: Image.network(_kFlagImage, width: 32, height: 21, fit: BoxFit.cover),
+                                    Text(
+                                      _selectedCountry.flag,
+                                      style: const TextStyle(fontSize: 22, height: 1),
                                     ),
                                     const SizedBox(width: 4),
                                     Expanded(
@@ -283,9 +274,13 @@ class _LoginPageState extends State<LoginPage> {
                           spacing: 24,
                           runSpacing: 12,
                           children: const [
-                            _SocialImageTile(imageUrl: _kFacebookImage),
-                            _SocialImageTile(imageUrl: _kGoogleImage),
-                            _SocialImageTile(imageUrl: _kAppleImage),
+                            _SocialSvgTile(
+                              assetPath: 'assets/images/facebook.svg',
+                              innerScale: 1.12,
+                              contentPadding: 5,
+                            ),
+                            _SocialSvgTile(assetPath: 'assets/images/google.svg'),
+                            _SocialSvgTile(assetPath: 'assets/images/apple.svg'),
                           ],
                         ),
                         const SizedBox(height: 36),
@@ -342,24 +337,43 @@ class _WelcomeRichText extends StatelessWidget {
   }
 }
 
-class _SocialImageTile extends StatelessWidget {
-  const _SocialImageTile({required this.imageUrl});
+class _SocialSvgTile extends StatelessWidget {
+  const _SocialSvgTile({
+    required this.assetPath,
+    this.innerScale = 1,
+    this.contentPadding = 7,
+  });
 
-  final String imageUrl;
+  final String assetPath;
+
+  /// Scales the logo inside the tile (use >1 when the artwork reads small).
+  final double innerScale;
+
+  final double contentPadding;
 
   @override
   Widget build(BuildContext context) {
+    Widget logo = SvgPicture.asset(assetPath, fit: BoxFit.contain);
+    if (innerScale != 1) {
+      logo = Transform.scale(
+        scale: innerScale,
+        alignment: Alignment.center,
+        child: logo,
+      );
+    }
     return Container(
       width: 49,
       height: 49,
-      padding: const EdgeInsets.all(7),
+      padding: EdgeInsets.all(contentPadding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        // Rounded square (Figma-style), not a circle / superellipse pill.
+        borderRadius: BorderRadius.circular(8),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
-        child: Image.network(imageUrl, fit: BoxFit.contain),
+        clipBehavior: Clip.hardEdge,
+        child: Center(child: logo),
       ),
     );
   }

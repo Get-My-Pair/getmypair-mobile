@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
+import 'package:gmp/core/theme/app_colors.dart';
 
-/// Pill-shaped floating bar: dark teal → cyan gradient, white outline icons,
-/// selected tab on a solid white circle (icon in dark teal).
+/// Pill-shaped floating bar: angular (conic) teal sweep from Figma `825:756`,
+/// white icons, selected tab on a solid white circle (icon in dark teal).
 /// Tabs: Home · Services (rack) · Profile.
+///
+/// The exported SVG uses `foreignObject` + HTML conic-gradient; Flutter cannot
+/// render that as an asset, so the same stops are applied via [SweepGradient].
 class FloatingGradientBottomNav extends StatelessWidget {
   const FloatingGradientBottomNav({
     super.key,
@@ -16,7 +20,9 @@ class FloatingGradientBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onChanged;
 
-  static const double barHeight = 56;
+  /// Inner pill from Figma: `rect … height="58" rx="29"`.
+  static const double barHeight = 58;
+  static const double _pillRadius = barHeight / 2;
   static const double hitSize = 44;
   static const Color selectedIconColor = Color(0xFF08343A);
   static const String _homeIcon = 'assets/images/icons/home.svg';
@@ -33,33 +39,22 @@ class FloatingGradientBottomNav extends StatelessWidget {
       child: Container(
         height: barHeight,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(barHeight / 2),
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Color(0xFF08343A),
-              Color(0xFF0F6876),
-              Color(0xFF00E0FF),
-            ],
-            stops: [0.0, 0.42, 1.0],
-          ),
+          borderRadius: BorderRadius.circular(_pillRadius),
+          gradient: AppColors.figma825AngularSweep,
+          // Matches SVG filter: `feOffset dy="4"` + `feGaussianBlur stdDeviation="6"`.
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-              spreadRadius: -4,
-            ),
-            BoxShadow(
-              color: const Color(0xFF0A6C78).withValues(alpha: 0.35),
+              color: const Color(0xFFABABAB).withValues(alpha: 0.55),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
+          padding: EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: (barHeight - hitSize) / 2,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(svgIcons.length, (i) {
@@ -118,8 +113,15 @@ class FloatingGradientBottomNav extends StatelessWidget {
 
 /// Outer padding around [FloatingGradientBottomNav] on [CustomerDashboardPage]
 /// and on pushed stack pages that use [DashboardLinkedBottomNav].
-const EdgeInsets kDashboardBottomNavPadding =
-    EdgeInsets.fromLTRB(80, 12, 80, 8);
+///
+/// Horizontal insets scale down on narrow devices so the pill does not overflow;
+/// at ~390px width they stay close to the original 80px side margins.
+EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
+  final w = MediaQuery.sizeOf(context).width;
+  const minBarBody = 172.0;
+  final side = ((w - minBarBody) * 0.5).clamp(16.0, 88.0);
+  return EdgeInsets.fromLTRB(side, 12, side, 8);
+}
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
 /// Use on profile stack pages so Home / Rack / Profile match main navigation.
@@ -137,7 +139,7 @@ class DashboardLinkedBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: kDashboardBottomNavPadding,
+        padding: dashboardBottomNavOuterInsets(context),
         child: FloatingGradientBottomNav(
           currentIndex: selectedTabIndex.clamp(0, 2),
           onChanged: (i) {

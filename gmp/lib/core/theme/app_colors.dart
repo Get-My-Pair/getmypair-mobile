@@ -50,6 +50,23 @@ class AppColors {
   static const Color footwearHeroEnd = Color(0xFF09E0FF);
   static const Color footwearCardHighlight = Color(0xFFF0F0F0);
 
+  /// Figma `825:*` angular (conic) fill — `foreignObject` exports cannot be used in Flutter;
+  /// same stop angles as `conic-gradient(from 90deg, #062F35, #09E0FF, #0F6876, #062F35, #062F35)`.
+  static const SweepGradient figma825AngularSweep = SweepGradient(
+    center: Alignment(0.22, -1.07),
+    startAngle: -0.55,
+    endAngle: 5.73,
+    colors: [
+      footwearHeroStart,
+      footwearHeroEnd,
+      footwearHeroMid,
+      footwearHeroStart,
+      footwearHeroStart,
+    ],
+    stops: [0.0, 0.05290124, 0.44465911, 0.56714088, 1.0],
+    transform: GradientRotation(-0.55),
+  );
+
   /// Large display / emphasis on teal/cyan gradients (onboarding mint).
   static const Color onGradientDisplay = Color(0xFFA7F3D0);
 

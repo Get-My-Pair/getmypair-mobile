@@ -223,20 +223,7 @@ class _OTPPageState extends State<OTPPage> {
               height: cardTop + panelRadius + 2,
               child: const DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: SweepGradient(
-                    center: Alignment(0.22, -1.07),
-                    startAngle: -0.55,
-                    endAngle: 5.73,
-                    colors: [
-                      Color(0xFF09E0FF),
-                      Color(0xFF0F6876),
-                      Color(0xFF08414A),
-                      Color(0xFF062F35),
-                      Color(0xFF062F35),
-                    ],
-                    stops: [0.05, 0.44, 0.53, 0.57, 1],
-                    transform: GradientRotation(-0.55),
-                  ),
+                  gradient: AppColors.figma825AngularSweep,
                 ),
               ),
             ),
