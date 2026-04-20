@@ -59,7 +59,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(svgIcons.length, (i) {
@@ -119,7 +119,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
 /// Outer padding around [FloatingGradientBottomNav] on [CustomerDashboardPage]
 /// and on pushed stack pages that use [DashboardLinkedBottomNav].
 const EdgeInsets kDashboardBottomNavPadding =
-    EdgeInsets.symmetric(vertical: 8, horizontal: 80);
+    EdgeInsets.fromLTRB(80, 12, 80, 8);
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
 /// Use on profile stack pages so Home / Rack / Profile match main navigation.
