@@ -44,7 +44,8 @@ const String _kNotificationBellClapperSvgAsset =
 const String _kHomeMapPinSvgAsset = 'assets/images/allicons/map-pin.svg';
 const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
-const String _kRehomeMyPairIconAsset = 'assets/images/icons/home/rehomemypair.svg';
+const String _kRehomeMyPairIconAsset =
+    'assets/images/icons/home/rehomemypair.svg';
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 
@@ -71,7 +72,8 @@ double _homeUiScale(BuildContext context) {
 /// Space to leave above the dashboard’s floating bottom nav (home tab is non-scrollable).
 double _homeViewportBottomReserve(BuildContext context) {
   final safe = MediaQuery.viewPaddingOf(context).bottom;
-  const navOuterVertical = 20.0; // matches [dashboardBottomNavOuterInsets] vertical
+  const navOuterVertical =
+      20.0; // matches [dashboardBottomNavOuterInsets] vertical
   const gapAboveNav = 12.0;
   return safe +
       FloatingGradientBottomNav.barHeight +
@@ -360,9 +362,10 @@ class _HomePageState extends State<HomePage> {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final w = constraints.maxWidth;
-                      final maxH = (constraints.maxHeight -
-                              _homeViewportBottomReserve(context))
-                          .clamp(120.0, double.infinity);
+                      final maxH =
+                          (constraints.maxHeight -
+                                  _homeViewportBottomReserve(context))
+                              .clamp(120.0, double.infinity);
                       final heightScale = (maxH / 760).clamp(0.5, 1.0);
                       final layoutScale = math.min(uiScale, heightScale);
 
@@ -384,25 +387,29 @@ class _HomePageState extends State<HomePage> {
                                   final profile = userProfileFromProfileState(
                                     context.read<ProfileBloc>().state,
                                   );
-                                  final authState = context.read<AuthBloc>().state;
+                                  final authState = context
+                                      .read<AuthBloc>()
+                                      .state;
                                   final selected = await Navigator.of(context)
                                       .push<String>(
                                         MaterialPageRoute(
                                           builder: (_) => SelectLocationPage(
-                                            profileBloc:
-                                                context.read<ProfileBloc>(),
+                                            profileBloc: context
+                                                .read<ProfileBloc>(),
                                             initialAddress: _currentAddress,
-                                            mapPinDisplayName: mapPinDisplayNameFrom(
-                                              profile,
-                                              authState,
-                                            ),
+                                            mapPinDisplayName:
+                                                mapPinDisplayNameFrom(
+                                                  profile,
+                                                  authState,
+                                                ),
                                             mapPinProfileImageRef:
                                                 profile?.profileImage,
                                           ),
                                         ),
                                       );
                                   if (selected != null && mounted) {
-                                    final addressText = _looksLikeLatLong(selected)
+                                    final addressText =
+                                        _looksLikeLatLong(selected)
                                         ? await _latLongToAddress(selected)
                                         : selected.startsWith('📍')
                                         ? selected
@@ -418,8 +425,9 @@ class _HomePageState extends State<HomePage> {
                               Expanded(
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal:
-                                        Responsive.horizontalPaddingOf(context),
+                                    horizontal: Responsive.horizontalPaddingOf(
+                                      context,
+                                    ),
                                   ),
                                   child: Builder(
                                     builder: (context) {
@@ -427,326 +435,358 @@ class _HomePageState extends State<HomePage> {
                                           (_kQuickActionCellHeight *
                                                   layoutScale)
                                               .clamp(44.0, 86.0);
-                                      final midSpacer =
-                                          (22 * layoutScale)
-                                              .clamp(3.0, 22.0);
+                                      final midSpacer = (22 * layoutScale)
+                                          .clamp(3.0, 22.0);
                                       return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      SizedBox(
-                                        height: (_kSectionGap * layoutScale)
-                                            .clamp(4.0, _kSectionGap),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Container(
-                                        width: double.infinity,
-                                        padding: EdgeInsets.fromLTRB(
-                                          12 * layoutScale,
-                                          14 * layoutScale,
-                                          12 * layoutScale,
-                                          16 * layoutScale,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _kRackCardBg,
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: const Border(
-                                            bottom: BorderSide(
-                                              color: _kRackCardBorder,
-                                              width: 3,
-                                            ),
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          SizedBox(
+                                            height: (_kSectionGap * layoutScale)
+                                                .clamp(4.0, _kSectionGap),
                                           ),
-                                        ),
-                                        child: LayoutBuilder(
-                                          builder: (context, rackInner) {
-                                            final innerH = rackInner.maxHeight;
-                                            final gapLoose =
-                                                (12 * uiScale * layoutScale)
-                                                    .clamp(2.0, 12.0);
-                                            final rackHeaderReserve =
-                                                innerH < 88 ? 40.0 : 46.0;
-                                            const minStrip = 1.0;
-                                            final gapTight = (innerH -
-                                                    rackHeaderReserve -
-                                                    minStrip)
-                                                .clamp(0.0, gapLoose);
-                                            final headerGap =
-                                                innerH < 88 ? gapTight : gapLoose;
-                                            final compactRackHeader =
-                                                innerH < 88;
-                                            return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Expanded(
-                                                  child: Padding(
-                                                    padding: EdgeInsets.only(
-                                                      top: compactRackHeader
-                                                          ? 4
-                                                          : 10,
-                                                      left: 16,
-                                                      right: 4,
-                                                    ),
-                                                    child: Text(
-                                                      'My Rack',
-                                                      style:
-                                                          GoogleFonts.boldonse(
-                                                            fontSize:
-                                                                compactRackHeader
-                                                                    ? 14
-                                                                    : 16,
-                                                            fontWeight:
-                                                                FontWeight.w400,
-                                                            color:
-                                                                _kQuickActionMutedText,
-                                                            height: 1.05,
-                                                          ),
-                                                    ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Container(
+                                              width: double.infinity,
+                                              padding: EdgeInsets.fromLTRB(
+                                                12 * layoutScale,
+                                                14 * layoutScale,
+                                                12 * layoutScale,
+                                                16 * layoutScale,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: _kRackCardBg,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                border: const Border(
+                                                  bottom: BorderSide(
+                                                    color: _kRackCardBorder,
+                                                    width: 3,
                                                   ),
                                                 ),
-                                                IconButton(
-                                                  onPressed: _openArticleList,
-                                                  tooltip: 'Digital Shoes Rack',
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                  style: IconButton.styleFrom(
-                                                    tapTargetSize:
-                                                        MaterialTapTargetSize
-                                                            .shrinkWrap,
-                                                    minimumSize: Size(
-                                                      compactRackHeader
-                                                          ? 36
-                                                          : 44,
-                                                      compactRackHeader
-                                                          ? 36
-                                                          : 44,
-                                                    ),
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                      right: 8,
-                                                    ),
-                                                  ),
-                                                  alignment: Alignment.topRight,
-                                                  icon: SizedBox(
-                                                    width: compactRackHeader
-                                                        ? 20
-                                                        : 24,
-                                                    height: compactRackHeader
-                                                        ? 20
-                                                        : 24,
-                                                    child: SvgPicture.asset(
-                                                      _kMyRackMaximizeSvgAsset,
-                                                      fit: BoxFit.contain,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(height: headerGap),
-                                            Expanded(
+                                              ),
                                               child: LayoutBuilder(
-                                                builder: (context, stripBox) {
-                                                  final idealStrip =
-                                                      (80 * layoutScale).clamp(
-                                                        42.0,
-                                                        80.0,
-                                                      );
-                                                  final stripH = math.max(
-                                                    1.0,
-                                                    math.min(
-                                                      idealStrip,
-                                                      stripBox.maxHeight,
-                                                    ),
-                                                  );
-                                                  return SizedBox(
-                                                    height: stripH,
-                                                    width: double.infinity,
-                                                    child:
-                                                        _rackLoading &&
-                                                            _rackArticles ==
-                                                                null
-                                                        ? const Center(
-                                                            child: SizedBox(
-                                                              width: 24,
-                                                              height: 24,
-                                                              child:
-                                                                  CircularProgressIndicator(
-                                                                strokeWidth: 2,
-                                                                color: AppColors
-                                                                    .primary,
+                                                builder: (context, rackInner) {
+                                                  final innerH =
+                                                      rackInner.maxHeight;
+                                                  final gapLoose =
+                                                      (12 *
+                                                              uiScale *
+                                                              layoutScale)
+                                                          .clamp(2.0, 12.0);
+                                                  final rackHeaderReserve =
+                                                      innerH < 88 ? 40.0 : 46.0;
+                                                  const minStrip = 1.0;
+                                                  final gapTight =
+                                                      (innerH -
+                                                              rackHeaderReserve -
+                                                              minStrip)
+                                                          .clamp(0.0, gapLoose);
+                                                  final headerGap = innerH < 88
+                                                      ? gapTight
+                                                      : gapLoose;
+                                                  final compactRackHeader =
+                                                      innerH < 88;
+                                                  return Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .stretch,
+                                                    children: [
+                                                      Row(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Expanded(
+                                                            child: Padding(
+                                                              padding:
+                                                                  EdgeInsets.only(
+                                                                    top:
+                                                                        compactRackHeader
+                                                                        ? 4
+                                                                        : 10,
+                                                                    left: 16,
+                                                                    right: 4,
+                                                                  ),
+                                                              child: Text(
+                                                                'My Rack',
+                                                                style: GoogleFonts.boldonse(
+                                                                  fontSize:
+                                                                      compactRackHeader
+                                                                      ? 14
+                                                                      : 16,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w400,
+                                                                  color:
+                                                                      _kQuickActionMutedText,
+                                                                  height: 1.05,
+                                                                ),
                                                               ),
                                                             ),
-                                                          )
-                                                        : _rackError != null
-                                                        ? Center(
-                                                            child: Text(
-                                                              _rackError!,
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              maxLines: 2,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                color: AppColors
-                                                                    .textTertiary,
-                                                              ),
-                                                            ),
-                                                          )
-                                                        : (_rackArticles ==
-                                                                      null ||
-                                                                  _rackArticles!
-                                                                      .isEmpty)
-                                                        ? Center(
-                                                            child: Text(
-                                                              'No pairs yet — tap ↗ to open your rack',
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                color: AppColors
-                                                                    .textTertiary,
-                                                              ),
-                                                            ),
-                                                          )
-                                                        : _RackThumbStrip(
-                                                            articles:
-                                                                _rackArticles!
-                                                                    .take(3)
-                                                                    .toList(),
-                                                            gap:
-                                                                _kRackThumbGap *
-                                                                layoutScale,
-                                                            onOpen:
-                                                                _openArticleDetails,
-                                                            articleImageUrl:
-                                                                _articleImageUrl,
-                                                            articleThumb:
-                                                                _articleThumb,
                                                           ),
+                                                          IconButton(
+                                                            onPressed:
+                                                                _openArticleList,
+                                                            tooltip:
+                                                                'Digital Shoes Rack',
+                                                            visualDensity:
+                                                                VisualDensity
+                                                                    .compact,
+                                                            style: IconButton.styleFrom(
+                                                              tapTargetSize:
+                                                                  MaterialTapTargetSize
+                                                                      .shrinkWrap,
+                                                              minimumSize: Size(
+                                                                compactRackHeader
+                                                                    ? 36
+                                                                    : 44,
+                                                                compactRackHeader
+                                                                    ? 36
+                                                                    : 44,
+                                                              ),
+                                                              padding:
+                                                                  const EdgeInsets.only(
+                                                                    right: 8,
+                                                                  ),
+                                                            ),
+                                                            alignment: Alignment
+                                                                .topRight,
+                                                            icon: SizedBox(
+                                                              width:
+                                                                  compactRackHeader
+                                                                  ? 20
+                                                                  : 24,
+                                                              height:
+                                                                  compactRackHeader
+                                                                  ? 20
+                                                                  : 24,
+                                                              child: SvgPicture.asset(
+                                                                _kMyRackMaximizeSvgAsset,
+                                                                fit: BoxFit
+                                                                    .contain,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      SizedBox(
+                                                        height: headerGap,
+                                                      ),
+                                                      Expanded(
+                                                        child: LayoutBuilder(
+                                                          builder: (context, stripBox) {
+                                                            final idealStrip =
+                                                                (80 *
+                                                                        layoutScale)
+                                                                    .clamp(
+                                                                      42.0,
+                                                                      80.0,
+                                                                    );
+                                                            final stripH = math
+                                                                .max(
+                                                                  1.0,
+                                                                  math.min(
+                                                                    idealStrip,
+                                                                    stripBox
+                                                                        .maxHeight,
+                                                                  ),
+                                                                );
+                                                            return SizedBox(
+                                                              height: stripH,
+                                                              width: double
+                                                                  .infinity,
+                                                              child:
+                                                                  _rackLoading &&
+                                                                      _rackArticles ==
+                                                                          null
+                                                                  ? const Center(
+                                                                      child: SizedBox(
+                                                                        width:
+                                                                            24,
+                                                                        height:
+                                                                            24,
+                                                                        child: CircularProgressIndicator(
+                                                                          strokeWidth:
+                                                                              2,
+                                                                          color:
+                                                                              AppColors.primary,
+                                                                        ),
+                                                                      ),
+                                                                    )
+                                                                  : _rackError !=
+                                                                        null
+                                                                  ? Center(
+                                                                      child: Text(
+                                                                        _rackError!,
+                                                                        textAlign:
+                                                                            TextAlign.center,
+                                                                        maxLines:
+                                                                            2,
+                                                                        overflow:
+                                                                            TextOverflow.ellipsis,
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              12,
+                                                                          color:
+                                                                              AppColors.textTertiary,
+                                                                        ),
+                                                                      ),
+                                                                    )
+                                                                  : (_rackArticles ==
+                                                                            null ||
+                                                                        _rackArticles!
+                                                                            .isEmpty)
+                                                                  ? Center(
+                                                                      child: Text(
+                                                                        'No pairs yet — tap ↗ to open your rack',
+                                                                        textAlign:
+                                                                            TextAlign.center,
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              12,
+                                                                          color:
+                                                                              AppColors.textTertiary,
+                                                                        ),
+                                                                      ),
+                                                                    )
+                                                                  : _RackThumbStrip(
+                                                                      articles: _rackArticles!
+                                                                          .take(
+                                                                            3,
+                                                                          )
+                                                                          .toList(),
+                                                                      gap:
+                                                                          _kRackThumbGap *
+                                                                          layoutScale,
+                                                                      onOpen:
+                                                                          _openArticleDetails,
+                                                                      articleImageUrl:
+                                                                          _articleImageUrl,
+                                                                      articleThumb:
+                                                                          _articleThumb,
+                                                                    ),
+                                                            );
+                                                          },
+                                                        ),
+                                                      ),
+                                                    ],
                                                   );
                                                 },
                                               ),
                                             ),
-                                          ],
-                                        );
-                                          },
-                                        ),
-                                      ),
-                                      ),
-                                      SizedBox(
-                                        height:
-                                            (_kAfterRackToActionsGap *
-                                                    layoutScale)
-                                                .clamp(
-                                                  4.0,
-                                                  _kAfterRackToActionsGap,
-                                                ),
-                                      ),
-                                      _QuickActionCard(
-                                        label: 'CareMyPair',
-                                        highlight: true,
-                                        fullWidth: true,
-                                        iconAssetUrl: _kCareMyPairIconAsset,
-                                        iconWidth:
-                                            (48 * layoutScale).clamp(32.0, 48.0),
-                                        iconHeight:
-                                            (48 * layoutScale).clamp(32.0, 48.0),
-                                        cellHeight:
-                                            (_kQuickActionCellHeight *
-                                                    layoutScale)
-                                                .clamp(52.0, 86.0),
-                                        onTap: () => Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                const CareMyPairPage(),
                                           ),
-                                        ),
-                                      ),
-                                      SizedBox(height: midSpacer),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Align(
-                                          alignment: Alignment.bottomCenter,
-                                          child: SizedBox(
-                                        height: actionH,
-                                        child: Builder(
-                                          builder: (_) {
-                                            final rentIconW =
-                                                (51 * layoutScale).clamp(
-                                                  34.0,
-                                                  51.0,
-                                                );
-                                            final rentIconH =
-                                                (48 * layoutScale).clamp(
-                                                  32.0,
-                                                  48.0,
-                                                );
-                                            final rehomeIconW =
-                                                (48 * layoutScale).clamp(
-                                                  32.0,
-                                                  48.0,
-                                                );
-                                            final rehomeIconH =
-                                                (41 * layoutScale).clamp(
-                                                  26.0,
-                                                  41.0,
-                                                );
+                                          SizedBox(
+                                            height:
+                                                (_kAfterRackToActionsGap *
+                                                        layoutScale)
+                                                    .clamp(
+                                                      4.0,
+                                                      _kAfterRackToActionsGap,
+                                                    ),
+                                          ),
+                                          _QuickActionCard(
+                                            label: 'CareMyPair',
+                                            highlight: true,
+                                            fullWidth: true,
+                                            iconAssetUrl: _kCareMyPairIconAsset,
+                                            iconWidth: (48 * layoutScale).clamp(
+                                              32.0,
+                                              48.0,
+                                            ),
+                                            iconHeight: (48 * layoutScale)
+                                                .clamp(32.0, 48.0),
+                                            cellHeight:
+                                                (_kQuickActionCellHeight *
+                                                        layoutScale)
+                                                    .clamp(52.0, 86.0),
+                                            onTap: () =>
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const CareMyPairPage(),
+                                                  ),
+                                                ),
+                                          ),
+                                          SizedBox(height: midSpacer),
+                                          Expanded(
+                                            flex: 1,
+                                            child: Align(
+                                              alignment: Alignment.bottomCenter,
+                                              child: SizedBox(
+                                                height: actionH,
+                                                child: Builder(
+                                                  builder: (_) {
+                                                    final rentIconW =
+                                                        (51 * layoutScale)
+                                                            .clamp(34.0, 51.0);
+                                                    final rentIconH =
+                                                        (48 * layoutScale)
+                                                            .clamp(32.0, 48.0);
+                                                    final rehomeIconW =
+                                                        (48 * layoutScale)
+                                                            .clamp(32.0, 48.0);
+                                                    final rehomeIconH =
+                                                        (41 * layoutScale)
+                                                            .clamp(26.0, 41.0);
 
-                                            return Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.stretch,
-                                              children: [
-                                                Expanded(
-                                                  child: _QuickActionCard(
-                                                    label: 'Rent\nMyPair',
-                                                    iconAssetUrl:
-                                                        _kRentMyPairIconAsset,
-                                                    iconWidth: rentIconW,
-                                                    iconHeight: rentIconH,
-                                                    cellHeight: actionH,
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                  width: (28 * layoutScale)
-                                                      .clamp(6.0, 28.0),
-                                                ),
-                                                Expanded(
-                                                  child: _QuickActionCard(
-                                                    label: 'Rehome\nMyPair',
-                                                    iconAssetUrl:
-                                                        _kRehomeMyPairIconAsset,
-                                                    iconWidth: rehomeIconW,
-                                                    iconHeight: rehomeIconH,
-                                                    cellHeight: actionH,
-                                                    onTap: () =>
-                                                        _openServiceFlow(
-                                                          title:
-                                                              'Select article for Rehome MyPair (Donate, Dispose)',
-                                                          allowedServiceTypes:
-                                                              const [
-                                                                'donate',
-                                                                'dispose',
-                                                              ],
+                                                    return Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .stretch,
+                                                      children: [
+                                                        Expanded(
+                                                          child: _QuickActionCard(
+                                                            label:
+                                                                'Rent\nMyPair',
+                                                            iconAssetUrl:
+                                                                _kRentMyPairIconAsset,
+                                                            iconWidth:
+                                                                rentIconW,
+                                                            iconHeight:
+                                                                rentIconH,
+                                                            cellHeight: actionH,
+                                                          ),
                                                         ),
-                                                  ),
+                                                        SizedBox(
+                                                          width:
+                                                              (28 * layoutScale)
+                                                                  .clamp(
+                                                                    6.0,
+                                                                    28.0,
+                                                                  ),
+                                                        ),
+                                                        Expanded(
+                                                          child: _QuickActionCard(
+                                                            label:
+                                                                'Rehome\nMyPair',
+                                                            iconAssetUrl:
+                                                                _kRehomeMyPairIconAsset,
+                                                            iconWidth:
+                                                                rehomeIconW,
+                                                            iconHeight:
+                                                                rehomeIconH,
+                                                            cellHeight: actionH,
+                                                            onTap: () => _openServiceFlow(
+                                                              title:
+                                                                  'Select article for Rehome MyPair (Donate, Dispose)',
+                                                              allowedServiceTypes:
+                                                                  const [
+                                                                    'donate',
+                                                                    'dispose',
+                                                                  ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  },
                                                 ),
-                                              ],
-                                            );
-                                          },
-                                        ),
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                    ],
+                                        ],
                                       );
                                     },
                                   ),
@@ -915,10 +955,7 @@ class _HomeProfileAvatarStack extends StatelessWidget {
   final String? imageUrl;
   final VoidCallback onTap;
 
-  const _HomeProfileAvatarStack({
-    required this.imageUrl,
-    required this.onTap,
-  });
+  const _HomeProfileAvatarStack({required this.imageUrl, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -960,11 +997,7 @@ class _HomeProfileAvatarStack extends StatelessWidget {
             Positioned(
               right: smallInset + smallStagger,
               bottom: 0,
-              child: _avatarRing(
-                radius: rSmall,
-                imageUrl: null,
-                isSmall: true,
-              ),
+              child: _avatarRing(radius: rSmall, imageUrl: null, isSmall: true),
             ),
           ],
         ),
@@ -1036,23 +1069,16 @@ class _HomeTopCard extends StatelessWidget {
     final horizontal = Responsive.horizontalPaddingOf(context);
     final headerHorizontal = (horizontal - 4).clamp(12.0, horizontal);
     final addressLine = _addressLineForHome(currentAddress);
+    final topPad = (76 * layoutScale).clamp(44.0, 88.0);
+    final bottomPad = (22 * layoutScale).clamp(10.0, 26.0);
+    const headerRadius = BorderRadius.only(
+      bottomLeft: Radius.circular(20),
+      bottomRight: Radius.circular(20),
+    );
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        headerHorizontal,
-        (76 * layoutScale).clamp(44.0, 88.0),
-        headerHorizontal,
-        (22 * layoutScale).clamp(10.0, 26.0),
-      ),
       decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: AssetImage(_kHomeHeaderBgAsset),
-          fit: BoxFit.fill,
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
+        borderRadius: headerRadius,
         boxShadow: const [
           BoxShadow(
             color: Color(0xFFABABAB),
@@ -1062,264 +1088,308 @@ class _HomeTopCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  'Hello, $greetingName!',
-                  textAlign: TextAlign.left,
-                  style: GoogleFonts.boldonse(
-                    fontSize:
-                        ((compact ? 50.0 : 50.0) * s).clamp(13.0, 24.0),
-                    fontWeight: FontWeight.w400,
-                    color: _kOnHeaderText,
-                    height: 1.1,
-                  ),
+      child: ClipRRect(
+        borderRadius: headerRadius,
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                _kHomeHeaderBgAsset,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, _, _) => Image.asset(
+                  'assets/images/bg.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
                 ),
               ),
-              _HomeHeaderBell(
-                onTap: () {
-                  final profileBloc = context.read<ProfileBloc>();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BlocProvider.value(
-                        value: profileBloc,
-                        child: const ProfilePage(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          SizedBox(
-            height: (_kHomeHeaderGreetingToLocation * s).clamp(2.0, 8.0),
-          ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: onLocationTap,
-                  behavior: HitTestBehavior.opaque,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: (32 * s).clamp(22.0, 32.0),
-                        height: (32 * s).clamp(22.0, 32.0),
-                        child: SvgPicture.asset(
-                          _kHomeMapPinSvgAsset,
-                          fit: BoxFit.contain,
-                          colorFilter: const ColorFilter.mode(
-                            _kHeaderIconTint,
-                            BlendMode.srcIn,
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, topPad, 0, bottomPad),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: headerHorizontal),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Hello, $greetingName!',
+                            textAlign: TextAlign.left,
+                            style: GoogleFonts.boldonse(
+                              fontSize: ((compact ? 50.0 : 50.0) * s).clamp(
+                                13.0,
+                                24.0,
+                              ),
+                              fontWeight: FontWeight.w400,
+                              color: _kOnHeaderText,
+                              height: 1.1,
+                            ),
                           ),
                         ),
+                        _HomeHeaderBell(
+                          onTap: () {
+                            final profileBloc = context.read<ProfileBloc>();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider.value(
+                                  value: profileBloc,
+                                  child: const ProfilePage(),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(
+                      height: (_kHomeHeaderGreetingToLocation * s).clamp(
+                        2.0,
+                        8.0,
                       ),
-                      SizedBox(width: (10 * s).clamp(4.0, 10.0)),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: onLocationTap,
+                            behavior: HitTestBehavior.opaque,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  'Home',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: (14 * s).clamp(10.0, 14.0),
-                                    fontWeight: FontWeight.w600,
-                                    color: _kOnHeaderText,
-                                    height: 1.15,
+                                SizedBox(
+                                  width: (32 * s).clamp(22.0, 32.0),
+                                  height: (32 * s).clamp(22.0, 32.0),
+                                  child: SvgPicture.asset(
+                                    _kHomeMapPinSvgAsset,
+                                    fit: BoxFit.contain,
+                                    colorFilter: const ColorFilter.mode(
+                                      _kHeaderIconTint,
+                                      BlendMode.srcIn,
+                                    ),
                                   ),
                                 ),
-                                SizedBox(width: (4 * s).clamp(2.0, 4.0)),
-                                SizedBox(
-                                  width: (14 * s).clamp(10.0, 14.0),
-                                  height: (14 * s).clamp(10.0, 14.0),
-                                  child: Image.network(
-                                    FigmaHomeAssets.chevronRight,
-                                    fit: BoxFit.contain,
-                                    color: _kHeaderIconTint,
-                                    colorBlendMode: BlendMode.srcIn,
-                                    errorBuilder: (_, _, _) => Icon(
-                                      Icons.chevron_right_rounded,
-                                      size: (16 * s).clamp(11.0, 16.0),
-                                      color: _kOnHeaderText,
-                                    ),
+                                SizedBox(width: (10 * s).clamp(4.0, 10.0)),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Home',
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: (14 * s).clamp(
+                                                10.0,
+                                                14.0,
+                                              ),
+                                              fontWeight: FontWeight.w600,
+                                              color: _kOnHeaderText,
+                                              height: 1.15,
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: (4 * s).clamp(2.0, 4.0),
+                                          ),
+                                          SizedBox(
+                                            width: (14 * s).clamp(10.0, 14.0),
+                                            height: (14 * s).clamp(10.0, 14.0),
+                                            child: Image.network(
+                                              FigmaHomeAssets.chevronRight,
+                                              fit: BoxFit.contain,
+                                              color: _kHeaderIconTint,
+                                              colorBlendMode: BlendMode.srcIn,
+                                              errorBuilder: (_, _, _) => Icon(
+                                                Icons.chevron_right_rounded,
+                                                size: (16 * s).clamp(
+                                                  11.0,
+                                                  16.0,
+                                                ),
+                                                color: _kOnHeaderText,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: (2 * s).clamp(1.0, 2.0)),
+                                      Text(
+                                        addressLine,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.montserrat(
+                                          fontSize:
+                                              ((compact ? 14.0 : 16.0) * s)
+                                                  .clamp(10.0, 16.0),
+                                          fontWeight: FontWeight.w300,
+                                          color: _kOnHeaderText,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: (2 * s).clamp(1.0, 2.0)),
-                            Text(
-                              addressLine,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.montserrat(
-                                fontSize:
-                                    ((compact ? 14.0 : 16.0) * s).clamp(
-                                      10.0,
-                                      16.0,
+                          ),
+                        ),
+                        SizedBox(width: (8 * s).clamp(6.0, 12.0)),
+                        BlocBuilder<ProfileBloc, ProfileState>(
+                          buildWhen: (prev, curr) =>
+                              curr is ProfileLoaded ||
+                              curr is ProfileUpdating ||
+                              curr is ProfileImageUploading,
+                          builder: (context, profileState) {
+                            final profile = profileState is ProfileLoaded
+                                ? profileState.profile
+                                : profileState is ProfileUpdating
+                                ? profileState.profile
+                                : profileState is ProfileImageUploading
+                                ? profileState.profile
+                                : null;
+                            final imageUrl = profile?.profileImage;
+                            return _HomeProfileAvatarStack(
+                              imageUrl: imageUrl,
+                              onTap: () {
+                                final profileBloc = context.read<ProfileBloc>();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => BlocProvider.value(
+                                      value: profileBloc,
+                                      child: const ProfilePage(),
                                     ),
-                                fontWeight: FontWeight.w300,
-                                color: _kOnHeaderText,
-                                height: 1.2,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: (14 * s).clamp(6.0, 18.0)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: (2 * s).clamp(0.0, 6.0),
+                      ),
+                      child: Container(
+                        height: (46 * s).clamp(32.0, 48.0),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: (16 * s).clamp(12.0, 20.0),
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: (24 * s).clamp(14.0, 24.0),
+                              height: (24 * s).clamp(14.0, 24.0),
+                              child: Image.network(
+                                FigmaHomeAssets.search,
+                                fit: BoxFit.contain,
+                                color: _kSearchHintColor,
+                                colorBlendMode: BlendMode.srcIn,
+                                errorBuilder: (_, _, _) => Icon(
+                                  Icons.search,
+                                  size: (24 * s).clamp(14.0, 24.0),
+                                  color: _kSearchHintColor,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 10 * s),
+                            Expanded(
+                              child: Text(
+                                'Search',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: (16 * s).clamp(10.0, 16.0),
+                                  fontWeight: FontWeight.w400,
+                                  color: _kSearchHintColor,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: (8 * s).clamp(6.0, 12.0)),
-              BlocBuilder<ProfileBloc, ProfileState>(
-                buildWhen: (prev, curr) =>
-                    curr is ProfileLoaded ||
-                    curr is ProfileUpdating ||
-                    curr is ProfileImageUploading,
-                builder: (context, profileState) {
-                  final profile = profileState is ProfileLoaded
-                      ? profileState.profile
-                      : profileState is ProfileUpdating
-                      ? profileState.profile
-                      : profileState is ProfileImageUploading
-                      ? profileState.profile
-                      : null;
-                  final imageUrl = profile?.profileImage;
-                  return _HomeProfileAvatarStack(
-                    imageUrl: imageUrl,
-                    onTap: () {
-                      final profileBloc = context.read<ProfileBloc>();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider.value(
-                            value: profileBloc,
-                            child: const ProfilePage(),
+                    ),
+                    SizedBox(
+                      height: (_kHomeHeaderSearchToStats * s).clamp(14.0, 30.0),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: (5 * s).clamp(3.0, 8.0),
+                            ),
+                            child: _StatItem(
+                              value: pairsInRackDisplay,
+                              labelLine1: 'Pairs in',
+                              labelLine2: 'your rack',
+                            ),
                           ),
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-          SizedBox(height: (14 * s).clamp(6.0, 18.0)),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: (2 * s).clamp(0.0, 6.0)),
-            child: Container(
-              height: (46 * s).clamp(32.0, 48.0),
-              padding: EdgeInsets.symmetric(horizontal: (16 * s).clamp(12.0, 20.0)),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              alignment: Alignment.centerLeft,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: (24 * s).clamp(14.0, 24.0),
-                    height: (24 * s).clamp(14.0, 24.0),
-                    child: Image.network(
-                      FigmaHomeAssets.search,
-                      fit: BoxFit.contain,
-                      color: _kSearchHintColor,
-                      colorBlendMode: BlendMode.srcIn,
-                      errorBuilder: (_, _, _) => Icon(
-                        Icons.search,
-                        size: (24 * s).clamp(14.0, 24.0),
-                        color: _kSearchHintColor,
-                      ),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: (5 * s).clamp(3.0, 8.0),
+                            ),
+                            child: const _StatItem(
+                              value: '05',
+                              labelLine1: 'Pairs',
+                              labelLine2: 'Donated',
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: (5 * s).clamp(3.0, 8.0),
+                            ),
+                            child: const _StatItem(
+                              value: '00',
+                              labelLine1: 'Pairs',
+                              labelLine2: 'Sold',
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              left: (5 * s).clamp(3.0, 8.0),
+                            ),
+                            child: const _StatItem(
+                              value: '02',
+                              labelLine1: 'Pairs in',
+                              labelLine2: 'Care',
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 10 * s),
-                  Expanded(
-                    child: Text(
-                      'Search',
-                      style: GoogleFonts.montserrat(
-                        fontSize: (16 * s).clamp(10.0, 16.0),
-                        fontWeight: FontWeight.w400,
-                        color: _kSearchHintColor,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(height: (_kHomeHeaderSearchToStats * s).clamp(14.0, 30.0)),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: (5 * s).clamp(3.0, 8.0),
-                  ),
-                  child: _StatItem(
-                    value: pairsInRackDisplay,
-                    labelLine1: 'Pairs in',
-                    labelLine2: 'your rack',
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: (5 * s).clamp(3.0, 8.0),
-                  ),
-                  child: const _StatItem(
-                    value: '05',
-                    labelLine1: 'Pairs',
-                    labelLine2: 'Donated',
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: (5 * s).clamp(3.0, 8.0),
-                  ),
-                  child: const _StatItem(
-                    value: '00',
-                    labelLine1: 'Pairs',
-                    labelLine2: 'Sold',
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: (5 * s).clamp(3.0, 8.0),
-                  ),
-                  child: const _StatItem(
-                    value: '02',
-                    labelLine1: 'Pairs in',
-                    labelLine2: 'Care',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1484,7 +1554,9 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
+    final s = (MediaQuery.sizeOf(context).width / 430)
+        .clamp(0.85, 1.15)
+        .toDouble();
     final isTwoLine = label.contains('\n');
     final textColor = highlight ? Colors.white : _kQuickActionMutedText;
     final resolvedHeight =
@@ -1540,11 +1612,12 @@ class _QuickActionCard extends StatelessWidget {
                     maxLines: 2,
                     textAlign: TextAlign.left,
                     style: GoogleFonts.boldonse(
-                      fontSize: ((MediaQuery.sizeOf(context).width < 360
-                              ? 14.0
-                              : 16.0) *
-                          s)
-                          .clamp(11.0, 16.0),
+                      fontSize:
+                          ((MediaQuery.sizeOf(context).width < 360
+                                      ? 14.0
+                                      : 16.0) *
+                                  s)
+                              .clamp(11.0, 16.0),
                       fontWeight: FontWeight.w400,
                       color: textColor,
                       height: isTwoLine ? 1.45 : 1.10,
@@ -1562,11 +1635,7 @@ class _QuickActionCard extends StatelessWidget {
   Widget _buildActionIcon(Color textColor) {
     final source = iconAssetUrl;
     if (source == null || source.isEmpty) {
-      return Icon(
-        Icons.widgets_outlined,
-        size: 24,
-        color: textColor,
-      );
+      return Icon(Icons.widgets_outlined, size: 24, color: textColor);
     }
 
     if (source.startsWith('http://') || source.startsWith('https://')) {
@@ -1575,11 +1644,8 @@ class _QuickActionCard extends StatelessWidget {
         fit: BoxFit.contain,
         color: textColor,
         colorBlendMode: BlendMode.srcIn,
-        errorBuilder: (_, _, _) => Icon(
-          Icons.widgets_outlined,
-          size: 24,
-          color: textColor,
-        ),
+        errorBuilder: (_, _, _) =>
+            Icon(Icons.widgets_outlined, size: 24, color: textColor),
       );
     }
 
