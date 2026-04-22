@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,21 +30,6 @@ import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 
-/// Header sweep gradient — Figma home (`335:1687`), palette from [AppColors] hero tokens.
-const SweepGradient _kHomeHeaderSweep = SweepGradient(
-  center: Alignment(0.22, -1.07),
-  startAngle: -0.55,
-  endAngle: 5.73,
-  colors: [
-    AppColors.footwearHeroEnd,
-    AppColors.footwearHeroMid,
-    AppColors.footwearHeroStart,
-    AppColors.footwearHeroStart,
-  ],
-  stops: [0.05, 0.44, 0.57, 1],
-  transform: GradientRotation(-0.55),
-);
-
 const Color _kOnHeaderText = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
@@ -51,14 +37,20 @@ const Color _kRackCardBorder = Color(0xFF0F6876);
 const Color _kRackCardBg = Color(0xFFF0F0F0);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
-const String _kBellIconUrl = FigmaHomeAssets.bell;
+const String _kNotificationBellBodySvgAsset =
+    'assets/images/allicons/notification1.svg';
+const String _kNotificationBellClapperSvgAsset =
+    'assets/images/allicons/notification2.svg';
+const String _kHomeMapPinSvgAsset = 'assets/images/allicons/map-pin.svg';
 const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
 const String _kRehomeMyPairIconAsset = 'assets/images/icons/home/rehomemypair.svg';
+const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
+const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 
 /// Vertical gaps inside the hero (greeting → location → search → stats).
-const double _kHomeHeaderGreetingToLocation = 24;
-const double _kHomeHeaderSearchToStats = 12;
+const double _kHomeHeaderGreetingToLocation = 0;
+const double _kHomeHeaderSearchToStats = 24;
 
 /// Section spacing below hero / between blocks (12–16px).
 const double _kSectionGap = 28;
@@ -78,8 +70,13 @@ double _homeUiScale(BuildContext context) {
 
 /// Space to leave above the dashboard’s floating bottom nav (home tab is non-scrollable).
 double _homeViewportBottomReserve(BuildContext context) {
-  final safe = MediaQuery.paddingOf(context).bottom;
-  return safe + FloatingGradientBottomNav.barHeight + 20;
+  final safe = MediaQuery.viewPaddingOf(context).bottom;
+  const navOuterVertical = 20.0; // matches [dashboardBottomNavOuterInsets] vertical
+  const gapAboveNav = 12.0;
+  return safe +
+      FloatingGradientBottomNav.barHeight +
+      navOuterVertical +
+      gapAboveNav;
 }
 
 /// Home Page — Figma `335:1687`; icons from [FigmaHomeAssets].
@@ -356,7 +353,7 @@ class _HomePageState extends State<HomePage> {
               statusBarIconBrightness: Brightness.light,
             ),
             child: Scaffold(
-              backgroundColor: const Color(0xFFF5F5F5),
+              backgroundColor: AppColors.background,
               body: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -424,7 +421,16 @@ class _HomePageState extends State<HomePage> {
                                     horizontal:
                                         Responsive.horizontalPaddingOf(context),
                                   ),
-                                  child: Column(
+                                  child: Builder(
+                                    builder: (context) {
+                                      final actionH =
+                                          (_kQuickActionCellHeight *
+                                                  layoutScale)
+                                              .clamp(44.0, 86.0);
+                                      final midSpacer =
+                                          (22 * layoutScale)
+                                              .clamp(3.0, 22.0);
+                                      return Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
@@ -432,7 +438,9 @@ class _HomePageState extends State<HomePage> {
                                         height: (_kSectionGap * layoutScale)
                                             .clamp(4.0, _kSectionGap),
                                       ),
-                                      Container(
+                                      Expanded(
+                                        flex: 2,
+                                        child: Container(
                                         width: double.infinity,
                                         padding: EdgeInsets.fromLTRB(
                                           12 * layoutScale,
@@ -450,7 +458,24 @@ class _HomePageState extends State<HomePage> {
                                             ),
                                           ),
                                         ),
-                                        child: Column(
+                                        child: LayoutBuilder(
+                                          builder: (context, rackInner) {
+                                            final innerH = rackInner.maxHeight;
+                                            final gapLoose =
+                                                (12 * uiScale * layoutScale)
+                                                    .clamp(2.0, 12.0);
+                                            final rackHeaderReserve =
+                                                innerH < 88 ? 40.0 : 46.0;
+                                            const minStrip = 1.0;
+                                            final gapTight = (innerH -
+                                                    rackHeaderReserve -
+                                                    minStrip)
+                                                .clamp(0.0, gapLoose);
+                                            final headerGap =
+                                                innerH < 88 ? gapTight : gapLoose;
+                                            final compactRackHeader =
+                                                innerH < 88;
+                                            return Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.stretch,
                                           children: [
@@ -460,22 +485,26 @@ class _HomePageState extends State<HomePage> {
                                               children: [
                                                 Expanded(
                                                   child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                          top: 2,
-                                                          left: 16,
-                                                          right: 4,
-                                                        ),
+                                                    padding: EdgeInsets.only(
+                                                      top: compactRackHeader
+                                                          ? 4
+                                                          : 10,
+                                                      left: 16,
+                                                      right: 4,
+                                                    ),
                                                     child: Text(
                                                       'My Rack',
                                                       style:
                                                           GoogleFonts.boldonse(
-                                                            fontSize: 16,
+                                                            fontSize:
+                                                                compactRackHeader
+                                                                    ? 14
+                                                                    : 16,
                                                             fontWeight:
                                                                 FontWeight.w400,
                                                             color:
                                                                 _kQuickActionMutedText,
-                                                            height: 1.1,
+                                                            height: 1.05,
                                                           ),
                                                     ),
                                                   ),
@@ -483,107 +512,135 @@ class _HomePageState extends State<HomePage> {
                                                 IconButton(
                                                   onPressed: _openArticleList,
                                                   tooltip: 'Digital Shoes Rack',
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        right: 12,
-                                                      ),
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                  style: IconButton.styleFrom(
+                                                    tapTargetSize:
+                                                        MaterialTapTargetSize
+                                                            .shrinkWrap,
+                                                    minimumSize: Size(
+                                                      compactRackHeader
+                                                          ? 36
+                                                          : 44,
+                                                      compactRackHeader
+                                                          ? 36
+                                                          : 44,
+                                                    ),
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                      right: 8,
+                                                    ),
+                                                  ),
                                                   alignment: Alignment.topRight,
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                        minWidth: 44,
-                                                        minHeight: 44,
-                                                      ),
                                                   icon: SizedBox(
-                                                    width: 24,
-                                                    height: 24,
-                                                    child: Image.network(
-                                                      FigmaHomeAssets.openRack,
+                                                    width: compactRackHeader
+                                                        ? 20
+                                                        : 24,
+                                                    height: compactRackHeader
+                                                        ? 20
+                                                        : 24,
+                                                    child: SvgPicture.asset(
+                                                      _kMyRackMaximizeSvgAsset,
                                                       fit: BoxFit.contain,
-                                                      color:
-                                                          _kQuickActionMutedText,
-                                                      colorBlendMode:
-                                                          BlendMode.srcIn,
-                                                      errorBuilder:
-                                                          (_, _, _) => Icon(
-                                                            Icons.open_in_full,
-                                                            size: 22,
-                                                            color:
-                                                                _kQuickActionMutedText,
-                                                          ),
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            SizedBox(height: 12 * uiScale),
-                                            SizedBox(
-                                              height: (80 * layoutScale).clamp(
-                                                42.0,
-                                                80.0,
-                                              ),
-                                              width: double.infinity,
-                                              child:
-                                                  _rackLoading &&
-                                                      _rackArticles == null
-                                                  ? const Center(
-                                                      child: SizedBox(
-                                                        width: 24,
-                                                        height: 24,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color:
-                                                                  AppColors.primary,
-                                                            ),
-                                                      ),
-                                                    )
-                                                  : _rackError != null
-                                                  ? Center(
-                                                      child: Text(
-                                                        _rackError!,
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        maxLines: 2,
-                                                        overflow:
-                                                            TextOverflow.ellipsis,
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color: AppColors
-                                                              .textTertiary,
-                                                        ),
-                                                      ),
-                                                    )
-                                                  : (_rackArticles == null ||
-                                                        _rackArticles!.isEmpty)
-                                                  ? Center(
-                                                      child: Text(
-                                                        'No pairs yet — tap ↗ to open your rack',
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color: AppColors
-                                                              .textTertiary,
-                                                        ),
-                                                      ),
-                                                    )
-                                                  : _RackThumbStrip(
-                                                      articles: _rackArticles!
-                                                          .take(3)
-                                                          .toList(),
-                                                      gap:
-                                                          _kRackThumbGap *
-                                                          layoutScale,
-                                                      onOpen:
-                                                          _openArticleDetails,
-                                                      articleImageUrl:
-                                                          _articleImageUrl,
-                                                      articleThumb:
-                                                          _articleThumb,
+                                            SizedBox(height: headerGap),
+                                            Expanded(
+                                              child: LayoutBuilder(
+                                                builder: (context, stripBox) {
+                                                  final idealStrip =
+                                                      (80 * layoutScale).clamp(
+                                                        42.0,
+                                                        80.0,
+                                                      );
+                                                  final stripH = math.max(
+                                                    1.0,
+                                                    math.min(
+                                                      idealStrip,
+                                                      stripBox.maxHeight,
                                                     ),
+                                                  );
+                                                  return SizedBox(
+                                                    height: stripH,
+                                                    width: double.infinity,
+                                                    child:
+                                                        _rackLoading &&
+                                                            _rackArticles ==
+                                                                null
+                                                        ? const Center(
+                                                            child: SizedBox(
+                                                              width: 24,
+                                                              height: 24,
+                                                              child:
+                                                                  CircularProgressIndicator(
+                                                                strokeWidth: 2,
+                                                                color: AppColors
+                                                                    .primary,
+                                                              ),
+                                                            ),
+                                                          )
+                                                        : _rackError != null
+                                                        ? Center(
+                                                            child: Text(
+                                                              _rackError!,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              maxLines: 2,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: AppColors
+                                                                    .textTertiary,
+                                                              ),
+                                                            ),
+                                                          )
+                                                        : (_rackArticles ==
+                                                                      null ||
+                                                                  _rackArticles!
+                                                                      .isEmpty)
+                                                        ? Center(
+                                                            child: Text(
+                                                              'No pairs yet — tap ↗ to open your rack',
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: AppColors
+                                                                    .textTertiary,
+                                                              ),
+                                                            ),
+                                                          )
+                                                        : _RackThumbStrip(
+                                                            articles:
+                                                                _rackArticles!
+                                                                    .take(3)
+                                                                    .toList(),
+                                                            gap:
+                                                                _kRackThumbGap *
+                                                                layoutScale,
+                                                            onOpen:
+                                                                _openArticleDetails,
+                                                            articleImageUrl:
+                                                                _articleImageUrl,
+                                                            articleThumb:
+                                                                _articleThumb,
+                                                          ),
+                                                  );
+                                                },
+                                              ),
                                             ),
                                           ],
+                                        );
+                                          },
                                         ),
+                                      ),
                                       ),
                                       SizedBox(
                                         height:
@@ -614,15 +671,15 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(
-                                        height:
-                                            (22 * layoutScale).clamp(3.0, 22.0),
-                                      ),
+                                      SizedBox(height: midSpacer),
                                       Expanded(
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            final narrowActions =
-                                                constraints.maxWidth < 360;
+                                        flex: 1,
+                                        child: Align(
+                                          alignment: Alignment.bottomCenter,
+                                          child: SizedBox(
+                                        height: actionH,
+                                        child: Builder(
+                                          builder: (_) {
                                             final rentIconW =
                                                 (51 * layoutScale).clamp(
                                                   34.0,
@@ -643,54 +700,10 @@ class _HomePageState extends State<HomePage> {
                                                   26.0,
                                                   41.0,
                                                 );
-                                            final actionH =
-                                                (_kQuickActionCellHeight *
-                                                        layoutScale)
-                                                    .clamp(44.0, 86.0);
-
-                                            if (narrowActions) {
-                                              return Column(
-                                                children: [
-                                                  Expanded(
-                                                    child: _QuickActionCard(
-                                                      label: 'Rent\nMyPair',
-                                                      iconAssetUrl:
-                                                          _kRentMyPairIconAsset,
-                                                      iconWidth: rentIconW,
-                                                      iconHeight: rentIconH,
-                                                      cellHeight: actionH,
-                                                    ),
-                                                  ),
-                                                  SizedBox(
-                                                    height:
-                                                        (12 * layoutScale)
-                                                            .clamp(3.0, 12.0),
-                                                  ),
-                                                  Expanded(
-                                                    child: _QuickActionCard(
-                                                      label: 'Rehome\nMyPair',
-                                                      iconAssetUrl:
-                                                          _kRehomeMyPairIconAsset,
-                                                      iconWidth: rehomeIconW,
-                                                      iconHeight: rehomeIconH,
-                                                      cellHeight: actionH,
-                                                      onTap: () =>
-                                                          _openServiceFlow(
-                                                            title:
-                                                                'Select article for Rehome MyPair (Donate, Dispose)',
-                                                            allowedServiceTypes:
-                                                                const [
-                                                                  'donate',
-                                                                  'dispose',
-                                                                ],
-                                                          ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            }
 
                                             return Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
                                               children: [
                                                 Expanded(
                                                   child: _QuickActionCard(
@@ -730,8 +743,12 @@ class _HomePageState extends State<HomePage> {
                                             );
                                           },
                                         ),
+                                          ),
+                                        ),
                                       ),
                                     ],
+                                      );
+                                    },
                                   ),
                                 ),
                               ),
@@ -741,54 +758,55 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                   ),
-                  Positioned(
-                    right: isCompact ? 10 : 14,
-                    bottom: isCompact ? 90 : 60,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(40),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ChatbotPage(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          width: fabSize,
-                          height: fabSize,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: const Alignment(1, 0.2),
-                              end: const Alignment(-0.4, 1),
-                              colors: [
-                                AppColors.primary,
-                                AppColors.footwearHeroEnd,
-                              ],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x1A000000),
-                                blurRadius: 4,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Image.asset(
-                                'assets/images/chat.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  // // Floating chatbot entry — pushes [ChatbotPage] for in-app support chat.
+                  // Positioned(
+                  //   right: isCompact ? 10 : 14,
+                  //   bottom: isCompact ? 90 : 60,
+                  //   child: Material(
+                  //     color: Colors.transparent,
+                  //     child: InkWell(
+                  //       borderRadius: BorderRadius.circular(40),
+                  //       onTap: () {
+                  //         Navigator.of(context).push(
+                  //           MaterialPageRoute(
+                  //             builder: (_) => const ChatbotPage(),
+                  //           ),
+                  //         );
+                  //       },
+                  //       child: Container(
+                  //         width: fabSize,
+                  //         height: fabSize,
+                  //         decoration: BoxDecoration(
+                  //           shape: BoxShape.circle,
+                  //           gradient: LinearGradient(
+                  //             begin: const Alignment(1, 0.2),
+                  //             end: const Alignment(-0.4, 1),
+                  //             colors: [
+                  //               AppColors.primary,
+                  //               AppColors.footwearHeroEnd,
+                  //             ],
+                  //           ),
+                  //           boxShadow: [
+                  //             BoxShadow(
+                  //               color: Color(0x1A000000),
+                  //               blurRadius: 4,
+                  //               offset: Offset(0, 4),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //         child: Center(
+                  //           child: Padding(
+                  //             padding: const EdgeInsets.all(12),
+                  //             child: Image.asset(
+                  //               'assets/images/allicons/chat.png',
+                  //               fit: BoxFit.contain,
+                  //             ),
+                  //           ),
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
@@ -799,97 +817,153 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Notification control + two overlapping profile avatars (home hero reference).
-class _ProfileAvatarCluster extends StatelessWidget {
-  final String? imageUrl;
+double _homeHeaderChromeScale(BuildContext context) {
+  return (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
+}
+
+/// Notification bell — top row with greeting (Figma row 1).
+class _HomeHeaderBell extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _ProfileAvatarCluster({required this.imageUrl, required this.onTap});
+  const _HomeHeaderBell({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final s = (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
-    final rLarge = 22.0 * s;
-    final rSmall = 13.0 * s;
-    final stackW = 94.0 * s;
-    final stackH = 54.0 * s;
-    final containerWidth = (75.0 * s).clamp(56.0, 75.0);
+    final s = _homeHeaderChromeScale(context);
+    final bellSize = (54.0 * s).clamp(48.0, 58.0);
+    final bellPadH = (12.0 * s).clamp(9.0, 14.0);
+    final bellPadV = (12.0 * s).clamp(9.0, 14.0);
+    final bellBodyW = (21.0 * s).clamp(17.0, 24.0);
+    final bellBodyH = (17.5 * s).clamp(14.0, 20.0);
+    final bellClapperW = (11.5 * s).clamp(9.0, 14.0);
+    final bellClapperH = (6.0 * s).clamp(5.0, 8.0);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: bellSize,
+        height: bellSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.14),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: bellPadH,
+                vertical: bellPadV,
+              ),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.38),
+                    Colors.white.withValues(alpha: 0.14),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  width: 1,
+                ),
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: bellBodyW,
+                  height: bellBodyH + bellClapperH + (2.0 * s),
+                  child: Stack(
+                    alignment: Alignment.topCenter,
+                    children: [
+                      SvgPicture.asset(
+                        _kNotificationBellBodySvgAsset,
+                        width: bellBodyW,
+                        height: bellBodyH,
+                        fit: BoxFit.contain,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        child: SvgPicture.asset(
+                          _kNotificationBellClapperSvgAsset,
+                          width: bellClapperW,
+                          height: bellClapperH,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Overlapping profile avatars — same row as location (Figma row 2).
+class _HomeProfileAvatarStack extends StatelessWidget {
+  final String? imageUrl;
+  final VoidCallback onTap;
+
+  const _HomeProfileAvatarStack({
+    required this.imageUrl,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _homeHeaderChromeScale(context);
+    final rLarge = 32.0 * s;
+    final rSmall = 20.0 * s;
+    final stackH = 84.0 * s;
+    final smallInset = (2 * s).clamp(0.0, 4.0);
+    // Large + small column almost tangent: tiny [kiss] only so borders read as touching, not stacked deep.
+    final kiss = (2 * s).clamp(0.0, 3.5);
+    final stackW = math.max(
+      2 * rLarge + 2 * rSmall + smallInset - kiss,
+      2 * rLarge + 6,
+    );
+    final smallStagger = (5 * s).clamp(3.0, 8.0);
 
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: containerWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        width: stackW,
+        height: stackH,
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              padding: const EdgeInsets.all(8),
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: const Color(0xFF13B9CF),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    spreadRadius: 0,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.notifications_none_rounded,
-                  color: Colors.white,
-                  size: 18,
-                  shadows: [
-                    Shadow(
-                      color: Colors.white.withValues(alpha: 0.35),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
+            Positioned(
+              left: 0,
+              top: (stackH - (rLarge * 2)) / 2,
+              child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
+            ),
+            Positioned(
+              right: smallInset,
+              top: 0,
+              child: _avatarRing(
+                radius: rSmall,
+                imageUrl: imageUrl,
+                isSmall: true,
               ),
             ),
-            SizedBox(height: 10 * s),
-            GestureDetector(
-              onTap: onTap,
-              child: SizedBox(
-                width: stackW,
-                height: stackH,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      left: 0,
-                      top: (stackH - (rLarge * 2)) / 2,
-                      child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
-                    ),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: _avatarRing(
-                        radius: rSmall,
-                        imageUrl: imageUrl,
-                        isSmall: true,
-                      ),
-                    ),
-                    Positioned(
-                      right: 4 * s,
-                      bottom: 0,
-                      child: _avatarRing(
-                        radius: rSmall,
-                        imageUrl: null,
-                        isSmall: true,
-                      ),
-                    ),
-                  ],
-                ),
+            Positioned(
+              right: smallInset + smallStagger,
+              bottom: 0,
+              child: _avatarRing(
+                radius: rSmall,
+                imageUrl: null,
+                isSmall: true,
               ),
             ),
           ],
@@ -924,7 +998,7 @@ class _ProfileAvatarCluster extends StatelessWidget {
             ? null
             : Icon(
                 Icons.person_rounded,
-                size: isSmall ? 12 : 24,
+                size: isSmall ? 18 : 34,
                 color: Colors.white,
               ),
       ),
@@ -960,17 +1034,21 @@ class _HomeTopCard extends StatelessWidget {
     final s = _homeUiScale(context) * layoutScale;
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
+    final headerHorizontal = (horizontal - 4).clamp(12.0, horizontal);
     final addressLine = _addressLineForHome(currentAddress);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        horizontal,
-        (86 * layoutScale).clamp(36.0, 86.0),
-        horizontal,
-        (26 * layoutScale).clamp(8.0, 26.0),
+        headerHorizontal,
+        (76 * layoutScale).clamp(44.0, 88.0),
+        headerHorizontal,
+        (22 * layoutScale).clamp(10.0, 26.0),
       ),
       decoration: BoxDecoration(
-        gradient: _kHomeHeaderSweep,
+        image: const DecorationImage(
+          image: AssetImage(_kHomeHeaderBgAsset),
+          fit: BoxFit.fill,
+        ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -988,111 +1066,121 @@ class _HomeTopCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hello, $greetingName!',
-                      textAlign: TextAlign.left,
-                      style: GoogleFonts.boldonse(
-                        fontSize:
-                            ((compact ? 20.0 : 24.0) * s).clamp(13.0, 24.0),
-                        fontWeight: FontWeight.w400,
-                        color: _kOnHeaderText,
-                        height: 1.1,
+                child: Text(
+                  'Hello, $greetingName!',
+                  textAlign: TextAlign.left,
+                  style: GoogleFonts.boldonse(
+                    fontSize:
+                        ((compact ? 50.0 : 50.0) * s).clamp(13.0, 24.0),
+                    fontWeight: FontWeight.w400,
+                    color: _kOnHeaderText,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+              _HomeHeaderBell(
+                onTap: () {
+                  final profileBloc = context.read<ProfileBloc>();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: profileBloc,
+                        child: const ProfilePage(),
                       ),
                     ),
-                    SizedBox(
-                      height: (_kHomeHeaderGreetingToLocation * s).clamp(6.0, 24.0),
-                    ),
-                    GestureDetector(
-                      onTap: onLocationTap,
-                      behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(top: 2 * s),
-                            child: SizedBox(
-                              width: (24 * s).clamp(14.0, 24.0),
-                              height: (24 * s).clamp(14.0, 24.0),
-                              child: Image.network(
-                                FigmaHomeAssets.mapPin,
-                                fit: BoxFit.contain,
-                                color: _kHeaderIconTint,
-                                colorBlendMode: BlendMode.srcIn,
-                                errorBuilder: (_, _, _) => Icon(
-                                  Icons.location_on_outlined,
-                                  color: _kOnHeaderText.withValues(alpha: 0.95),
-                                  size: (24 * s).clamp(14.0, 24.0),
-                                ),
-                              ),
-                            ),
+                  );
+                },
+              ),
+            ],
+          ),
+          SizedBox(
+            height: (_kHomeHeaderGreetingToLocation * s).clamp(2.0, 8.0),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: onLocationTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: (32 * s).clamp(22.0, 32.0),
+                        height: (32 * s).clamp(22.0, 32.0),
+                        child: SvgPicture.asset(
+                          _kHomeMapPinSvgAsset,
+                          fit: BoxFit.contain,
+                          colorFilter: const ColorFilter.mode(
+                            _kHeaderIconTint,
+                            BlendMode.srcIn,
                           ),
-                          SizedBox(width: (10 * s).clamp(4.0, 10.0)),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      ),
+                      SizedBox(width: (10 * s).clamp(4.0, 10.0)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Home',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: (14 * s).clamp(10.0, 14.0),
-                                        fontWeight: FontWeight.w600,
-                                        color: _kOnHeaderText,
-                                        height: 1.15,
-                                      ),
-                                    ),
-                                    SizedBox(width: (4 * s).clamp(2.0, 4.0)),
-                                    SizedBox(
-                                      width: (14 * s).clamp(10.0, 14.0),
-                                      height: (14 * s).clamp(10.0, 14.0),
-                                      child: Image.network(
-                                        FigmaHomeAssets.chevronRight,
-                                        fit: BoxFit.contain,
-                                        color: _kHeaderIconTint,
-                                        colorBlendMode: BlendMode.srcIn,
-                                        errorBuilder: (_, _, _) => Icon(
-                                          Icons.chevron_right_rounded,
-                                          size: (16 * s).clamp(11.0, 16.0),
-                                          color: _kOnHeaderText,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: (2 * s).clamp(1.0, 2.0)),
                                 Text(
-                                  addressLine,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                  'Home',
                                   style: GoogleFonts.montserrat(
-                                    fontSize:
-                                        ((compact ? 14.0 : 16.0) * s).clamp(
-                                          10.0,
-                                          16.0,
-                                        ),
-                                    fontWeight: FontWeight.w300,
+                                    fontSize: (14 * s).clamp(10.0, 14.0),
+                                    fontWeight: FontWeight.w600,
                                     color: _kOnHeaderText,
-                                    height: 1.2,
+                                    height: 1.15,
+                                  ),
+                                ),
+                                SizedBox(width: (4 * s).clamp(2.0, 4.0)),
+                                SizedBox(
+                                  width: (14 * s).clamp(10.0, 14.0),
+                                  height: (14 * s).clamp(10.0, 14.0),
+                                  child: Image.network(
+                                    FigmaHomeAssets.chevronRight,
+                                    fit: BoxFit.contain,
+                                    color: _kHeaderIconTint,
+                                    colorBlendMode: BlendMode.srcIn,
+                                    errorBuilder: (_, _, _) => Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: (16 * s).clamp(11.0, 16.0),
+                                      color: _kOnHeaderText,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            SizedBox(height: (2 * s).clamp(1.0, 2.0)),
+                            Text(
+                              addressLine,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.montserrat(
+                                fontSize:
+                                    ((compact ? 14.0 : 16.0) * s).clamp(
+                                      10.0,
+                                      16.0,
+                                    ),
+                                fontWeight: FontWeight.w300,
+                                color: _kOnHeaderText,
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              SizedBox(width: 12 * s),
+              SizedBox(width: (8 * s).clamp(6.0, 12.0)),
               BlocBuilder<ProfileBloc, ProfileState>(
                 buildWhen: (prev, curr) =>
                     curr is ProfileLoaded ||
@@ -1107,7 +1195,7 @@ class _HomeTopCard extends StatelessWidget {
                       ? profileState.profile
                       : null;
                   final imageUrl = profile?.profileImage;
-                  return _ProfileAvatarCluster(
+                  return _HomeProfileAvatarStack(
                     imageUrl: imageUrl,
                     onTap: () {
                       final profileBloc = context.read<ProfileBloc>();
@@ -1125,12 +1213,12 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: (18 * s).clamp(6.0, 18.0)),
+          SizedBox(height: (14 * s).clamp(6.0, 18.0)),
           Padding(
-            padding: EdgeInsets.symmetric(vertical: 2 * s),
+            padding: EdgeInsets.symmetric(vertical: (2 * s).clamp(0.0, 6.0)),
             child: Container(
-              height: (42 * s).clamp(28.0, 44.0),
-              padding: EdgeInsets.symmetric(horizontal: 18 * s),
+              height: (46 * s).clamp(32.0, 48.0),
+              padding: EdgeInsets.symmetric(horizontal: (16 * s).clamp(12.0, 20.0)),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
@@ -1176,37 +1264,57 @@ class _HomeTopCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: (_kHomeHeaderSearchToStats * s).clamp(4.0, 12.0)),
+          SizedBox(height: (_kHomeHeaderSearchToStats * s).clamp(14.0, 30.0)),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: _StatItem(
-                  value: pairsInRackDisplay,
-                  labelLine1: 'Pairs in',
-                  labelLine2: 'your rack',
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: _StatItem(
+                    value: pairsInRackDisplay,
+                    labelLine1: 'Pairs in',
+                    labelLine2: 'your rack',
+                  ),
                 ),
               ),
-              const Expanded(
-                child: _StatItem(
-                  value: '05',
-                  labelLine1: 'Pairs',
-                  labelLine2: 'Donated',
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: const _StatItem(
+                    value: '05',
+                    labelLine1: 'Pairs',
+                    labelLine2: 'Donated',
+                  ),
                 ),
               ),
-              const Expanded(
-                child: _StatItem(
-                  value: '00',
-                  labelLine1: 'Pairs',
-                  labelLine2: 'Sold',
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: const _StatItem(
+                    value: '00',
+                    labelLine1: 'Pairs',
+                    labelLine2: 'Sold',
+                  ),
                 ),
               ),
-              const Expanded(
-                child: _StatItem(
-                  value: '02',
-                  labelLine1: 'Pairs in',
-                  labelLine2: 'Care',
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: (5 * s).clamp(3.0, 8.0),
+                  ),
+                  child: const _StatItem(
+                    value: '02',
+                    labelLine1: 'Pairs in',
+                    labelLine2: 'Care',
+                  ),
                 ),
               ),
             ],
@@ -1240,33 +1348,47 @@ class _StatItem extends StatelessWidget {
       color: _kOnHeaderText,
       height: 1.15,
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.boldonse(
-            fontSize: valueSize,
-            fontWeight: FontWeight.w400,
-            color: _kOnHeaderText,
-            height: 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.boldonse(
+                    fontSize: valueSize,
+                    fontWeight: FontWeight.w400,
+                    color: _kOnHeaderText,
+                    height: 1,
+                  ),
+                ),
+                SizedBox(height: (11 * s).clamp(6.0, 14.0)),
+                Text(
+                  labelLine1,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
+                ),
+                Text(
+                  labelLine2,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
+                ),
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: 8 * s),
-        Text(
-          labelLine1,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          style: labelStyle,
-        ),
-        Text(
-          labelLine2,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          style: labelStyle,
-        ),
-      ],
+        );
+      },
     );
   }
 }

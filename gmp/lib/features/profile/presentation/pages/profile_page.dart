@@ -227,7 +227,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           borderRadius: const BorderRadius.vertical(
                             bottom: Radius.circular(22),
                           ),
-                          gradient: BgTheme.authMarketingSweep,
+                          image: const DecorationImage(
+                            image: AssetImage(BgTheme.backgroundImageAsset),
+                            fit: BoxFit.cover,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.22),

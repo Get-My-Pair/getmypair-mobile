@@ -49,19 +49,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(const AuthLoading());
 
     final result = await checkAuthStatus();
-    result.fold(
-      (failure) => emit(const AuthUnauthenticated()),
-      (isAuthenticated) async {
-        if (isAuthenticated) {
-          final userResult = await getCurrentUser();
-          userResult.fold(
-            (failure) => emit(const AuthUnauthenticated()),
-            (user) => emit(AuthAuthenticated(user)),
-          );
-        } else {
-          emit(const AuthUnauthenticated());
-        }
-      },
+    final isAuthenticated = result.fold((_) => false, (value) => value);
+    if (!isAuthenticated) {
+      emit(const AuthUnauthenticated());
+      return;
+    }
+
+    final userResult = await getCurrentUser();
+    userResult.fold(
+      (_) => emit(const AuthUnauthenticated()),
+      (user) => emit(AuthAuthenticated(user)),
     );
   }
 

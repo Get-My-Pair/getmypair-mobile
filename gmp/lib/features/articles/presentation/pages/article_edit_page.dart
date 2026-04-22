@@ -414,7 +414,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     PreferredSizeWidget? appBar,
   }) {
     return Scaffold(
-      backgroundColor: BgTheme.baseDeepTeal,
+      backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
       appBar: appBar,
       body: Stack(

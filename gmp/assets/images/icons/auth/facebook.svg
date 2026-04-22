@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Rounded square (not circular) brand tile -->
+  <rect x="1" y="1" width="22" height="22" rx="4.5" ry="4.5" fill="#1877F2"/>
+  <path fill="#ffffff" d="M13.602 20.5v-7.793h2.605l.415-3.2h-3.02V8.047c0-.81.224-1.36 1.387-1.36h1.473V3.757c-.255-.035-1.13-.11-2.145-.11-2.125 0-3.585 1.28-3.585 3.61v2.02H8.203v3.2h2.524v7.793h2.875z"/>
+</svg>

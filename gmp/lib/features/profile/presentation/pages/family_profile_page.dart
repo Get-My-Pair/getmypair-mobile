@@ -42,7 +42,10 @@ class FamilyProfilePage extends StatelessWidget {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: BgTheme.authMarketingSweep,
+                    image: const DecorationImage(
+                      image: AssetImage(BgTheme.backgroundImageAsset),
+                      fit: BoxFit.cover,
+                    ),
                     borderRadius: const BorderRadius.vertical(
                       bottom: Radius.circular(22),
                     ),

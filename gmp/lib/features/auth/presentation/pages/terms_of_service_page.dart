@@ -27,7 +27,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
         systemNavigationBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        backgroundColor: BgTheme.baseDeepTeal,
+        backgroundColor: Colors.transparent,
         body: Stack(
           fit: StackFit.expand,
           children: [

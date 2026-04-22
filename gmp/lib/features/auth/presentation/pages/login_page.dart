@@ -20,13 +20,6 @@ class _LoginPageState extends State<LoginPage> {
 
   static const String _kFlagImage =
       'https://www.figma.com/api/mcp/asset/f2924cb4-41d5-41dd-b684-6ae3ef3b751b';
-  static const String _kFacebookImage =
-      'https://www.figma.com/api/mcp/asset/a4f220b1-86c3-441a-b0cb-d5d538de7e3e';
-  static const String _kGoogleImage =
-      'https://www.figma.com/api/mcp/asset/711583d9-a333-4c61-af4e-0f17a59890c3';
-  static const String _kAppleImage =
-      'https://www.figma.com/api/mcp/asset/aa606515-5cd1-4dec-ba1d-a3f669c4086a';
-
   final CountryCode _selectedCountry = CountryCode.popularCountries[0];
   final TextEditingController _phoneController = TextEditingController();
 
@@ -283,9 +276,18 @@ class _LoginPageState extends State<LoginPage> {
                           spacing: 24,
                           runSpacing: 12,
                           children: const [
-                            _SocialImageTile(imageUrl: _kFacebookImage),
-                            _SocialImageTile(imageUrl: _kGoogleImage),
-                            _SocialImageTile(imageUrl: _kAppleImage),
+                            _SocialIconTile(
+                              icon: Icons.facebook_rounded,
+                              color: Color(0xFF1877F2),
+                            ),
+                            _SocialIconTile(
+                              icon: Icons.g_mobiledata_rounded,
+                              color: Color(0xFFDB4437),
+                            ),
+                            _SocialIconTile(
+                              icon: Icons.apple_rounded,
+                              color: Color(0xFF111111),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 36),
@@ -342,10 +344,11 @@ class _WelcomeRichText extends StatelessWidget {
   }
 }
 
-class _SocialImageTile extends StatelessWidget {
-  const _SocialImageTile({required this.imageUrl});
+class _SocialIconTile extends StatelessWidget {
+  const _SocialIconTile({required this.icon, required this.color});
 
-  final String imageUrl;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +362,10 @@ class _SocialImageTile extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
-        child: Image.network(imageUrl, fit: BoxFit.contain),
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: Icon(icon, color: color),
+        ),
       ),
     );
   }

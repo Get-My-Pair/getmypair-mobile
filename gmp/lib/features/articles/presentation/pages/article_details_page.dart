@@ -159,7 +159,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
 
     if (_loading) {
       return Scaffold(
-        backgroundColor: BgTheme.baseDeepTeal,
+        backgroundColor: Colors.transparent,
         extendBody: true,
         body: Stack(
           children: [
@@ -213,7 +213,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
 
     if (_error != null || _article == null) {
       return Scaffold(
-        backgroundColor: BgTheme.baseDeepTeal,
+        backgroundColor: Colors.transparent,
         extendBody: true,
         body: Stack(
           children: [
@@ -319,7 +319,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         );
 
     return Scaffold(
-      backgroundColor: BgTheme.baseDeepTeal,
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         clipBehavior: Clip.none,

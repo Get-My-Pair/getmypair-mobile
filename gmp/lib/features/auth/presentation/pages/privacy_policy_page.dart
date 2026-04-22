@@ -27,7 +27,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
         systemNavigationBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        backgroundColor: BgTheme.baseDeepTeal,
+        backgroundColor: Colors.transparent,
         body: Stack(
           fit: StackFit.expand,
           children: [

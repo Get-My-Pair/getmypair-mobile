@@ -236,7 +236,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         borderRadius: const BorderRadius.vertical(
                           bottom: Radius.circular(20),
                         ),
-                        gradient: BgTheme.authMarketingSweep,
+                        image: const DecorationImage(
+                          image: AssetImage(BgTheme.backgroundImageAsset),
+                          fit: BoxFit.cover,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFFABABAB),

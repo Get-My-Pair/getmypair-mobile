@@ -136,7 +136,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
     );
 
     return Scaffold(
-      backgroundColor: BgTheme.baseDeepTeal,
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         children: [

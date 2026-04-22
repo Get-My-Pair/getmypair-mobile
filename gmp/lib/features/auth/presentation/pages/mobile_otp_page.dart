@@ -23,6 +23,10 @@ class MobileOTPPage extends StatefulWidget {
 }
 
 class _MobileOTPPageState extends State<MobileOTPPage> {
+  static const String _kAuthBgAsset = 'assets/images/bg/auth.png';
+  static const String _kAuthFacebookIcon = 'assets/images/icons/auth/facebook.svg';
+  static const String _kAuthGoogleIcon = 'assets/images/icons/auth/google.svg';
+  static const String _kAuthAppleIcon = 'assets/images/icons/auth/apple.svg';
   static const Color _kPrimary = Color(0xFF062F35);
   static const Color _kAccent = Color(0xFF0F6876);
   /// Text/icons on the teal sweep (Figma: white).
@@ -30,13 +34,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   static const Color _kPanel = Color(0xFFD9D9D9);
   /// Secondary line under title (slightly softer than [_kPrimary]).
   static const Color _kBodyMuted = Color(0xFF456970);
-
-  static const String _kFacebookImage =
-      'https://www.figma.com/api/mcp/asset/a4f220b1-86c3-441a-b0cb-d5d538de7e3e';
-  static const String _kGoogleImage =
-      'https://www.figma.com/api/mcp/asset/711583d9-a333-4c61-af4e-0f17a59890c3';
-  static const String _kAppleImage =
-      'https://www.figma.com/api/mcp/asset/aa606515-5cd1-4dec-ba1d-a3f669c4086a';
 
   final TextEditingController _phoneController = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
@@ -247,34 +244,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Color(0xFF062F35)),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              // Extend gradient to panel start so corner cutouts keep matching color.
-              height: cardTop + panelRadius + 2,
-              child: const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: SweepGradient(
-                    center: Alignment(0.22, -1.07),
-                    startAngle: -0.55,
-                    endAngle: 5.73,
-                    colors: [
-                      Color(0xFF09E0FF),
-                      Color(0xFF0F6876),
-                      Color(0xFF08414A),
-                      Color(0xFF062F35),
-                      Color(0xFF062F35),
-                    ],
-                    stops: [0.05, 0.44, 0.53, 0.57, 1],
-                    transform: GradientRotation(-0.55),
-                  ),
-                ),
+            Positioned.fill(
+              child: Image.asset(
+                _kAuthBgAsset,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) =>
+                    Image.asset('assets/images/bg.png', fit: BoxFit.cover),
               ),
             ),
             Positioned(
@@ -540,13 +515,17 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             spacing: 48,
                             runSpacing: 12,
                             children: const [
-                              _SocialImageTile(
-                                imageUrl: _kFacebookImage,
+                              _SocialIconTile(
+                                assetPath: _kAuthFacebookIcon,
                                 contentInset: 0,
-                                innerScale: 1.28,
+                                innerScale: 1.1,
                               ),
-                              _SocialImageTile(imageUrl: _kGoogleImage),
-                              _SocialImageTile(imageUrl: _kAppleImage),
+                              _SocialIconTile(
+                                assetPath: _kAuthGoogleIcon,
+                              ),
+                              _SocialIconTile(
+                                assetPath: _kAuthAppleIcon,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 44),
@@ -730,16 +709,23 @@ class _WelcomeRichText extends StatelessWidget {
   }
 }
 
-class _SocialImageTile extends StatelessWidget {
-  const _SocialImageTile({
-    required this.imageUrl,
+class _SocialIconTile extends StatelessWidget {
+  const _SocialIconTile({
+    this.assetPath,
+    this.icon,
+    this.color,
     this.contentInset,
     this.innerScale = 1,
-  });
+  }) : assert(
+         assetPath != null || (icon != null && color != null),
+         'Provide either assetPath, or icon + color.',
+       );
 
   static const double _tile = 42;
 
-  final String imageUrl;
+  final String? assetPath;
+  final IconData? icon;
+  final Color? color;
 
   final double? contentInset;
 
@@ -749,8 +735,29 @@ class _SocialImageTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final pad = contentInset ?? (_tile * (7 / 49)).clamp(6.0, 14.0);
     final r = (_tile * (10 / 49)).clamp(8.0, 16.0);
-    final innerR = r - 2;
-    Widget logo = Image.network(imageUrl, fit: BoxFit.contain);
+    final iconSize = _tile - (pad * 2);
+    Widget logo = assetPath != null
+        ? SvgPicture.asset(
+            assetPath!,
+            width: iconSize,
+            height: iconSize,
+            fit: BoxFit.contain,
+            placeholderBuilder: (_) => SizedBox(
+              width: iconSize,
+              height: iconSize,
+              child: const Center(
+                child: SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                ),
+              ),
+            ),
+          )
+        : FittedBox(
+            fit: BoxFit.contain,
+            child: Icon(icon, color: color),
+          );
     if (innerScale != 1) {
       logo = Transform.scale(
         scale: innerScale,
@@ -765,10 +772,9 @@ class _SocialImageTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(r),
+        border: Border.all(color: const Color(0x12000000)),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(innerR),
-        clipBehavior: Clip.hardEdge,
+      child: Center(
         child: logo,
       ),
     );
@@ -810,12 +816,12 @@ class _SendingOtpProgress extends StatelessWidget {
               ),
               Center(
                 child: Text(
-                  'Sending...',
-                  style: GoogleFonts.montserrat(
-                    color: _MobileOTPPageState._kOnGradient,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  'Sending OTP...',
+                  //  style: GoogleFonts.boldonse(
+                  //       fontSize: (14.0 * scale).clamp(13.0, 16.0),
+                  //       fontWeight: FontWeight.w400,
+                  //       color: _kOnGradient,
+                  //   ),
                 ),
               ),
             ],

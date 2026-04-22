@@ -84,7 +84,10 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         borderRadius: const BorderRadius.vertical(
                           bottom: Radius.circular(22),
                         ),
-                        gradient: BgTheme.authMarketingSweep,
+                        image: const DecorationImage(
+                          image: AssetImage(BgTheme.backgroundImageAsset),
+                          fit: BoxFit.cover,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.22),
@@ -624,7 +627,7 @@ class _AddressFormPageState extends State<_AddressFormPage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: kProfileGradientHeaderSystemUi,
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: Colors.transparent,
         body: Column(
           children: [
             Expanded(
@@ -634,7 +637,10 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                   borderRadius: const BorderRadius.vertical(
                     bottom: Radius.circular(22),
                   ),
-                  gradient: BgTheme.authMarketingSweep,
+                  image: const DecorationImage(
+                    image: AssetImage(BgTheme.backgroundImageAsset),
+                    fit: BoxFit.cover,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.22),
