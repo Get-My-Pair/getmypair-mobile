@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart';
@@ -794,7 +795,12 @@ class _CobblerMapPin extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        const Icon(Icons.person, size: 34, color: Color(0xFF424242)),
+        SvgPicture.asset(
+          'assets/images/map-pin.svg',
+          width: 36,
+          height: 36,
+          fit: BoxFit.contain,
+        ),
       ],
     );
   }

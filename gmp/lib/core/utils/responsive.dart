@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// Responsive layout for **all** phone sizes.
@@ -126,8 +128,23 @@ class Responsive {
     return (shortest * factor).clamp(80.0, 260.0);
   }
 
+  /// Physical bottom inset from the window [View] (gesture bar, home indicator).
+  ///
+  /// Prefer this over [MediaQuery.padding] alone when building inside a subtree
+  /// whose padding was altered (e.g. [Scaffold.extendBody]), which some OEMs
+  /// still report differently from Motorola-class devices.
+  static double physicalBottomInsetOf(BuildContext context) {
+    final fromView = MediaQueryData.fromView(View.of(context));
+    return math.max(
+      fromView.viewPadding.bottom,
+      fromView.systemGestureInsets.bottom,
+    );
+  }
+
   /// Safe bottom inset (for FAB / bottom bars on notched devices).
   static double bottomInsetOf(BuildContext context) {
-    return MediaQuery.paddingOf(context).bottom;
+    final pad = MediaQuery.paddingOf(context).bottom;
+    final physical = physicalBottomInsetOf(context);
+    return math.max(pad, physical);
   }
 }
