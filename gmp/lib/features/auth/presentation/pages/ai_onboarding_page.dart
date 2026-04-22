@@ -25,12 +25,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
   static const Color _text = Color(0xFFDFE7E9);
   static const Color _mint = AppColors.onboardingTrulyFits;
 
-  static const String _orbAsset =
-      'https://www.figma.com/api/mcp/asset/95f21855-ca3e-4a72-b797-54cbc89cd676';
-
-  /// Wireframe orb over the gradient (~10–15% visible per mockup).
-  static const double _orbImageOpacity = 0.12;
-
   final PageController _controller = PageController();
   final TextEditingController _name = TextEditingController();
   final TextEditingController _age = TextEditingController();
@@ -111,9 +105,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final orbWidth = (screenWidth * 1.08).clamp(280.0, 420.0);
-
     final steps = <Widget>[
       _Step(
         text:
@@ -212,66 +203,13 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          RepaintBoundary(
-            child: Stack(
-              fit: StackFit.expand,
-              clipBehavior: Clip.none,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      // Keep the top area darker and transition to a lighter tone
-                      // toward the lower-right side for a side-flowing gradient look.
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: const [
-                        AppColors.footwearHeroStart,
-                        AppColors.footwearHeroMid,
-                        AppColors.footwearHeroEnd,
-                      ],
-                      stops: const [0.0, 0.52, 1.0],
-                    ),
-                  ),
-                  child: const SizedBox.expand(),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: MediaQuery.sizeOf(context).height * 0.14,
-                  child: IgnorePointer(
-                    child: Center(
-                      child: Container(
-                        width: orbWidth * 1.35,
-                        height: orbWidth * 1.35,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              AppColors.footwearHeroEnd.withValues(alpha: 0.14),
-                              AppColors.footwearHeroMid.withValues(alpha: 0.06),
-                              Colors.transparent,
-                            ],
-                            stops: const [0.0, 0.45, 1.0],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: const Alignment(0, .1),
-                  child: Opacity(
-                    opacity: _orbImageOpacity,
-                    child: ColorFiltered(
-                      colorFilter: const ColorFilter.mode(
-                        AppColors.secondaryLight,
-                        BlendMode.modulate,
-                      ),
-                      child: _SafeNetworkImage(_orbAsset, width: orbWidth),
-                    ),
-                  ),
-                ),
-              ],
+          const RepaintBoundary(
+            child: SizedBox.expand(
+              child: Image(
+                image: AssetImage('assets/images/bg/ai-onbording.png'),
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+              ),
             ),
           ),
           SafeArea(
@@ -548,24 +486,4 @@ class _Checks extends StatelessWidget {
   }
 }
 
-class _SafeNetworkImage extends StatelessWidget {
-  const _SafeNetworkImage(
-    this.url, {
-    this.width,
-  });
-
-  final String url;
-  final double? width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.network(
-      url,
-      width: width,
-      errorBuilder: (_, __, ___) => SizedBox(
-        width: width,
-      ),
-    );
-  }
-}
  

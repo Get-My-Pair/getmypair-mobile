@@ -107,6 +107,9 @@ flutter:
   # Assets
   assets:
     - assets/images/bg.png
+    - assets/images/bg/
+    - assets/images/bg/onbording.png
+    - assets/images/bg/ai-onbording.png
     - assets/images/bg/home.png
     - assets/images/bg/auth.png
     - assets/images/bg/floatbtn.png

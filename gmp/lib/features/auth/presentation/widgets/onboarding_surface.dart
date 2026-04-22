@@ -3,8 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../core/theme/app_gradients.dart';
-
 /// Subtle dot grid over the brand gradient (onboarding).
 class OnboardingDotLayer extends StatelessWidget {
   const OnboardingDotLayer({super.key});
@@ -34,55 +32,18 @@ class _DotGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Full-screen gradient used by splash + onboarding flows.
-/// Subtle slow drift + slight scale so the background feels alive.
-class OnboardingGradientBackdrop extends StatefulWidget {
+/// Full-screen image used by onboarding flows.
+class OnboardingGradientBackdrop extends StatelessWidget {
   const OnboardingGradientBackdrop({super.key});
 
   @override
-  State<OnboardingGradientBackdrop> createState() =>
-      _OnboardingGradientBackdropState();
-}
-
-class _OnboardingGradientBackdropState extends State<OnboardingGradientBackdrop>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _drift;
-
-  @override
-  void initState() {
-    super.initState();
-    _drift = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 24),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _drift.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _drift,
-        builder: (context, child) {
-          final t = _drift.value * 2 * math.pi;
-          final ox = 14 * math.sin(t);
-          final oy = 11 * math.cos(t * 0.88);
-          return Transform.translate(
-            offset: Offset(ox, oy),
-            child: Transform.scale(
-              scale: 1.09,
-              alignment: Alignment.center,
-              child: child,
-            ),
-          );
-        },
-        child: const DecoratedBox(
-          decoration: BoxDecoration(gradient: AppGradients.splashBackground),
+    return const RepaintBoundary(
+      child: SizedBox.expand(
+        child: Image(
+          image: AssetImage('assets/images/bg/onbording.png'),
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
         ),
       ),
     );
