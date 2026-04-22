@@ -95,7 +95,6 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
           fit: StackFit.expand,
           children: [
             const OnboardingGradientBackdrop(),
-            Positioned.fill(child: const OnboardingBrandWatermark()),
             Padding(
               padding: EdgeInsets.only(bottom: 120 + bottomInset),
               child: SafeArea(
