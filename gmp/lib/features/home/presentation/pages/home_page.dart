@@ -69,6 +69,22 @@ double _homeUiScale(BuildContext context) {
   return (w / Responsive.designFrameWidth).clamp(0.72, 1.0);
 }
 
+/// Responsive horizontal crop for header image to avoid side seams/gaps.
+/// Tuned for common mobile widths (10+ buckets).
+double _homeHeaderScaleXForWidth(double width) {
+  if (width <= 320) return 1.16;
+  if (width <= 340) return 1.14;
+  if (width <= 360) return 1.13;
+  if (width <= 375) return 1.12;
+  if (width <= 390) return 1.11;
+  if (width <= 400) return 1.10;
+  if (width <= 412) return 1.095;
+  if (width <= 430) return 1.09;
+  if (width <= 480) return 1.08;
+  if (width <= 520) return 1.07;
+  return 1.06;
+}
+
 /// Space to leave above the dashboard’s floating bottom nav (home tab is non-scrollable).
 double _homeViewportBottomReserve(BuildContext context) {
   final safe = MediaQuery.viewPaddingOf(context).bottom;
@@ -424,11 +440,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               Expanded(
                                 child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: Responsive.horizontalPaddingOf(
-                                      context,
-                                    ),
-                                  ),
+                                  padding: EdgeInsets.zero,
                                   child: Builder(
                                     builder: (context) {
                                       final actionH =
@@ -1064,11 +1076,13 @@ class _HomeTopCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 360;
+    final headerScaleX = _homeHeaderScaleXForWidth(width);
     final s = _homeUiScale(context) * layoutScale;
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
     final headerHorizontal = (horizontal - 4).clamp(12.0, horizontal);
     final addressLine = _addressLineForHome(currentAddress);
+    final imageBleed = (4.0 * s).clamp(2.0, 6.0);
     final topPad = (76 * layoutScale).clamp(44.0, 88.0);
     final bottomPad = (22 * layoutScale).clamp(10.0, 26.0);
     const headerRadius = BorderRadius.only(
@@ -1077,31 +1091,33 @@ class _HomeTopCard extends StatelessWidget {
     );
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: headerRadius,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0xFFABABAB),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
+      decoration: const BoxDecoration(),
       child: ClipRRect(
         borderRadius: headerRadius,
-        clipBehavior: Clip.antiAlias,
+        // Hard clip avoids sub-pixel anti-alias seams on side edges.
+        clipBehavior: Clip.hardEdge,
         child: Stack(
           children: [
-            Positioned.fill(
-              child: Image.asset(
-                _kHomeHeaderBgAsset,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                errorBuilder: (_, _, _) => Image.asset(
-                  'assets/images/bg.png',
+            Positioned(
+              top: -imageBleed,
+              left: 0,
+              right: 0,
+              bottom: -1,
+              child: Transform.scale(
+                // Crop transparent side pixels from the header asset.
+                scaleX: headerScaleX,
+                // Slight vertical overscan hides 1px seams on some DPR/width combos.
+                scaleY: 1.04,
+                alignment: Alignment.center,
+                child: Image.asset(
+                  _kHomeHeaderBgAsset,
                   fit: BoxFit.cover,
                   alignment: Alignment.topCenter,
+                  errorBuilder: (_, _, _) => Image.asset(
+                    'assets/images/bg.png',
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                  ),
                 ),
               ),
             ),
@@ -1285,13 +1301,13 @@ class _HomeTopCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          // boxShadow: [
+                          //   BoxShadow(
+                          //     color: Colors.black.withValues(alpha: 0.06),
+                          //     blurRadius: 8,
+                          //     offset: const Offset(0, 2),
+                          //   ),
+                          // ],
                         ),
                         alignment: Alignment.centerLeft,
                         child: Row(
