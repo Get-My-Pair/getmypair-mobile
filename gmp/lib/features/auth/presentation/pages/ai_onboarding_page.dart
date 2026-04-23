@@ -19,15 +19,16 @@ class AiOnboardingPage extends StatefulWidget {
   State<AiOnboardingPage> createState() => _AiOnboardingPageState();
 }
 
-class _AiOnboardingPageState extends State<AiOnboardingPage> {
+class _AiOnboardingPageState extends State<AiOnboardingPage>
+    with SingleTickerProviderStateMixin {
   static const int _pageCount = 7;
   static const Color _primary = AppColors.footwearHeroStart;
   static const Color _text = Color(0xFFDFE7E9);
-  static const Color _mint = AppColors.onboardingTrulyFits;
 
   final PageController _controller = PageController();
   final TextEditingController _name = TextEditingController();
   final TextEditingController _age = TextEditingController();
+  AnimationController? _bgGradientController;
 
   int _index = 0;
   String? _gender;
@@ -36,7 +37,22 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
   final Set<String> _troubles = <String>{};
 
   @override
+  void initState() {
+    super.initState();
+    _ensureBgGradientController();
+  }
+
+  void _ensureBgGradientController() {
+    _bgGradientController ??=
+        AnimationController(
+          vsync: this,
+          duration: const Duration(seconds: 6),
+        )..repeat(reverse: true);
+  }
+
+  @override
   void dispose() {
+    _bgGradientController?.dispose();
     _name.dispose();
     _age.dispose();
     _controller.dispose();
@@ -105,6 +121,8 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureBgGradientController();
+    final bgGradientController = _bgGradientController!;
     final steps = <Widget>[
       _Step(
         text:
@@ -203,12 +221,56 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const RepaintBoundary(
-            child: SizedBox.expand(
-              child: Image(
-                image: AssetImage('assets/images/bg/ai-onbording.png'),
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.high,
+          AnimatedBuilder(
+            animation: bgGradientController,
+            builder: (context, child) {
+              final t = bgGradientController.value;
+              final begin =
+                  Alignment.lerp(Alignment.topLeft, Alignment.bottomLeft, t)!;
+              final end =
+                  Alignment.lerp(Alignment.bottomRight, Alignment.topRight, t)!;
+              return DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: begin,
+                    end: end,
+                    colors: [
+                      Color.lerp(
+                        const Color(0xFF0B2E5F),
+                        const Color(0xFF1A4B85),
+                        t,
+                      )!,
+                      Color.lerp(
+                        const Color(0xFF2079B8),
+                        const Color(0xFF3A98D6),
+                        t,
+                      )!,
+                      Color.lerp(
+                        const Color(0xFF77D3F2),
+                        const Color(0xFFB0ECFF),
+                        t,
+                      )!,
+                    ],
+                    stops: const [0.0, 0.52, 1.0],
+                  ),
+                ),
+              );
+            },
+          ),
+          IgnorePointer(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: FractionallySizedBox(
+                widthFactor: 1,
+                child: Opacity(
+                  opacity: 0.55,
+                  child: Image.asset(
+                    'assets/images/bg/ai-onbording.png',
+                    fit: BoxFit.fitWidth,
+                    alignment: Alignment.topCenter,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
               ),
             ),
           ),
@@ -255,58 +317,31 @@ class _AiOnboardingPageState extends State<AiOnboardingPage> {
                     children: steps,
                   ),
                 ),
-                Material(
-                  color: _primary,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                      child: Row(
-                        children: [
-                          TextButton(
-                            onPressed: _index > 0 ? _prev : null,
-                            child: Text(
-                              'Prev',
-                              style: TextStyle(
-                                color: _index > 0 ? Colors.white : Colors.white38,
-                              ),
-                            ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(37, 14, 37, 20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _NavCircleButton(
+                          enabled: _index > 0,
+                          onTap: _prev,
+                          flipX: true,
+                        ),
+                        const SizedBox(width: 20),
+                        const Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: _BottomLine(),
                           ),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(_pageCount, (i) {
-                                final active = i == _index;
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 180),
-                                  width: active ? 18 : 6,
-                                  height: 6,
-                                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                                  decoration: BoxDecoration(
-                                    color: active
-                                        ? _mint
-                                        : Colors.white.withValues(alpha: .35),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                );
-                              }),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _canNext ? _next : null,
-                            child: Text(
-                              _index == _pageCount - 1 ? 'Done' : 'Next',
-                              style: TextStyle(
-                                color: _canNext ? _mint : Colors.white38,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 20),
+                        _NavCircleButton(
+                          enabled: _canNext,
+                          onTap: _next,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -393,6 +428,7 @@ class _Input extends StatelessWidget {
       controller: controller,
       keyboardType: numeric ? TextInputType.number : TextInputType.text,
       textInputAction: TextInputAction.done,
+      onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       onChanged: (_) => onChanged(),
       style: GoogleFonts.montserrat(
@@ -482,6 +518,67 @@ class _Checks extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _BottomLine extends StatelessWidget {
+  const _BottomLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 1,
+      color: const Color(0xFFDDE6E9),
+    );
+  }
+}
+
+class _NavCircleButton extends StatelessWidget {
+  const _NavCircleButton({
+    required this.enabled,
+    required this.onTap,
+    this.flipX = false,
+  });
+
+  final bool enabled;
+  final VoidCallback onTap;
+  final bool flipX;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = Icon(
+      flipX ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+      color: AppColors.primaryDark,
+      size: 28,
+    );
+
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: enabled ? onTap : null,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFDFE7E9),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: const Color(0xFF09DFFF),
+              width: 1,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x19000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(child: icon),
+        ),
+      ),
     );
   }
 }

@@ -316,42 +316,46 @@ class _OTPPageState extends State<OTPPage> {
                               builder: (context, state) {
                                 final isLoading = state is AuthLoading;
                                 final isEnabled = _otp.length == 6 && !isLoading;
-                                return ElevatedButton(
-                                  onPressed: isEnabled ? _verifyOtp : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _kAccent,
-                                    foregroundColor: _kOnGradient,
-                                    disabledBackgroundColor: _kAccent.withValues(alpha: 0.65),
-                                    disabledForegroundColor: _kOnGradient.withValues(alpha: 0.95),
-                                    elevation: 4,
-                                    shadowColor: Colors.black.withValues(alpha: 0.1),
-                                    side: const BorderSide(color: Color(0xFF09E0FF)),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(100),
+                                return SizedBox(
+                                  height: 48,
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: isEnabled ? _verifyOtp : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0F6876),
+                                      foregroundColor: _kOnGradient,
+                                      disabledBackgroundColor: const Color(0xFF0F6876),
+                                      disabledForegroundColor: _kOnGradient,
+                                      surfaceTintColor: Colors.transparent,
+                                      elevation: 4,
+                                      shadowColor: const Color(0x19000000),
+                                      side: const BorderSide(
+                                        width: 1,
+                                        color: Color(0xFF09DFFF),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(100),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 92, vertical: 10),
                                     ),
-                                    minimumSize: const Size(double.infinity, 52),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 14,
-                                    ),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(_kOnGradient),
+                                            ),
+                                          )
+                                        : Text(
+                                            'Verify OTP',
+                                            style: GoogleFonts.boldonse(
+                                        fontSize: (14.0 * scale).clamp(13.0, 16.0),
+                                        fontWeight: FontWeight.w400,
+                                        color: _kOnGradient,
+                                      ),
+                                          ),
                                   ),
-                                  child: isLoading
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(_kOnGradient),
-                                          ),
-                                        )
-                                      : Text(
-                                          'Verify OTP',
-                                          style: GoogleFonts.boldonse(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w400,
-                                            height: 1.05,
-                                          ),
-                                        ),
                                 );
                               },
                             ),
