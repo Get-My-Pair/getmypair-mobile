@@ -24,14 +24,17 @@ class MobileOTPPage extends StatefulWidget {
 
 class _MobileOTPPageState extends State<MobileOTPPage> {
   static const String _kAuthBgAsset = 'assets/images/bg/auth.png';
-  static const String _kAuthFacebookIcon = 'assets/images/icons/auth/facebook.svg';
+  static const String _kAuthFacebookIcon =
+      'assets/images/icons/auth/facebook.svg';
   static const String _kAuthGoogleIcon = 'assets/images/icons/auth/google.svg';
   static const String _kAuthAppleIcon = 'assets/images/icons/auth/apple.svg';
   static const Color _kPrimary = Color(0xFF062F35);
   static const Color _kAccent = Color(0xFF0F6876);
+
   /// Text/icons on the teal sweep (Figma: white).
   static const Color _kOnGradient = Color(0xFFFFFFFF);
   static const Color _kPanel = Color(0xFFD9D9D9);
+
   /// Secondary line under title (slightly softer than [_kPrimary]).
   static const Color _kBodyMuted = Color(0xFF456970);
 
@@ -57,7 +60,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   void _startSendingProgress() {
     _sendingProgressTimer?.cancel();
     setState(() => _sendingProgress = 0.08);
-    _sendingProgressTimer = Timer.periodic(const Duration(milliseconds: 180), (_) {
+    _sendingProgressTimer = Timer.periodic(const Duration(milliseconds: 180), (
+      _,
+    ) {
       if (!mounted || !_isSendingOtp) return;
       setState(() {
         if (_sendingProgress < 0.58) {
@@ -291,378 +296,523 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _kPanel,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(panelRadius),
+                  ),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(panelRadius)),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(panelRadius),
+                  ),
                   clipBehavior: Clip.hardEdge,
                   child: SafeArea(
                     top: false,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 62.0);
-                        return SingleChildScrollView(
+                        final horizontalPad = (constraints.maxWidth * 0.1)
+                            .clamp(20.0, 44.0);
+                        final compactScale = (constraints.maxHeight / 620.0)
+                            .clamp(0.72, 1.0);
+                        final topPad = (constraints.maxHeight * 0.08).clamp(
+                          20.0,
+                          50.0,
+                        );
+                        return Padding(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
                             topPad,
                             horizontalPad,
-                            24,
+                            (24.0 * compactScale).clamp(14.0, 24.0),
                           ),
                           child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Sign Up',
-                            style: GoogleFonts.boldonse(
-                              color: _kPrimary,
-                              fontSize: cardTitleSize,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          SizedBox(height: (16.0 * scale).clamp(14.0, 20.0)),
-                          Text(
-                            'Enter your phone number',
-                            style: GoogleFonts.montserrat(
-                              color: _kPrimary,
-                              fontSize: bodyTitleSize,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "We’ll text you a quick verification\ncode",
-                            style: GoogleFonts.montserrat(
-                              color: _kBodyMuted,
-                              fontSize: bodySize,
-                              fontWeight: FontWeight.w500,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              InkWell(
-                                onTap: _pickCountryCode,
-                                borderRadius: BorderRadius.circular(100),
-                                child: Container(
-                                  height: 48,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(100),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        _selectedCountry.flag,
-                                        style: const TextStyle(fontSize: 22, height: 1),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(maxWidth: 80),
-                                        child: Text(
-                                          _selectedCountry.dialCode,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.montserrat(
-                                            color: const Color(0x57000000),
-                                            fontSize: fieldTextSize - 1,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(Icons.keyboard_arrow_down, color: Color(0x57000000), size: 18),
-                                    ],
-                                  ),
+                              Text(
+                                'Sign Up',
+                                style: GoogleFonts.boldonse(
+                                  color: _kPrimary,
+                                  fontSize: cardTitleSize,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Container(
-                                  height: 48,
-                                  padding: const EdgeInsets.fromLTRB(16, 10, 18, 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(100),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                              SizedBox(
+                                height: (16.0 * scale).clamp(14.0, 20.0),
+                              ),
+                              Text(
+                                'Enter your phone number',
+                                style: GoogleFonts.montserrat(
+                                  color: _kPrimary,
+                                  fontSize: bodyTitleSize,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "We’ll text you a quick verification\ncode",
+                                style: GoogleFonts.montserrat(
+                                  color: _kBodyMuted,
+                                  fontSize: bodySize,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.2,
+                                ),
+                              ),
+                              SizedBox(
+                                height: (24.0 * compactScale).clamp(14.0, 24.0),
+                              ),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  const inputGap = 5.0;
+                                  final total = constraints.maxWidth - inputGap;
+                                  final codeWidth = (total * (110 / 343)).clamp(
+                                    98.0,
+                                    120.0,
+                                  );
+                                  final phoneWidth = total - codeWidth;
+                                  return Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 5),
-                                        child: SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: SvgPicture.asset(
-                                            'assets/images/phone.svg',
-                                            width: 18,
-                                            height: 18,
-                                            colorFilter: const ColorFilter.mode(
-                                              Color(0x66000000),
-                                              BlendMode.srcIn,
+                                      SizedBox(
+                                        width: codeWidth,
+                                        child: InkWell(
+                                          onTap: _pickCountryCode,
+                                          borderRadius: BorderRadius.circular(
+                                            100,
+                                          ),
+                                          child: Container(
+                                            height: 48,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(100),
+                                            ),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  _selectedCountry.flag,
+                                                  style: const TextStyle(
+                                                    fontSize: 22,
+                                                    height: 1,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    _selectedCountry.dialCode,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style:
+                                                        GoogleFonts.montserrat(
+                                                          color: const Color(
+                                                            0x57000000,
+                                                          ),
+                                                          fontSize:
+                                                              fieldTextSize - 1,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 1),
+                                                const Icon(
+                                                  Icons.keyboard_arrow_down,
+                                                  color: Color(0x57000000),
+                                                  size: 18,
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _phoneController,
-                                          focusNode: _phoneFocusNode,
-                                          keyboardType: TextInputType.phone,
-                                          textAlignVertical: TextAlignVertical.center,
-                                          maxLength: _maxNationalDigits,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter.digitsOnly,
-                                            LengthLimitingTextInputFormatter(_maxNationalDigits),
-                                          ],
-                                          onChanged: _validatePhone,
-                                          decoration: InputDecoration(
-                                            counterText: '',
-                                            hintText: 'Phone',
-                                            hintStyle: GoogleFonts.montserrat(
-                                              color: const Color(0x57000000),
-                                              fontSize: fieldTextSize,
+                                      const SizedBox(width: inputGap),
+                                      SizedBox(
+                                        width: phoneWidth,
+                                        child: Container(
+                                          height: 48,
+                                          padding: const EdgeInsets.fromLTRB(
+                                            16,
+                                            10,
+                                            18,
+                                            10,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              100,
                                             ),
-                                            filled: false,
-                                            fillColor: Colors.transparent,
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            disabledBorder: InputBorder.none,
-                                            errorBorder: InputBorder.none,
-                                            focusedErrorBorder: InputBorder.none,
-                                            contentPadding: const EdgeInsets.only(bottom: 1),
-                                            isDense: true,
                                           ),
-                                          style: GoogleFonts.montserrat(
-                                            color: _kPrimary,
-                                            fontSize: fieldTextSize,
-                                            height: 1.0,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_phoneError != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              _phoneError!,
-                              style: GoogleFonts.montserrat(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: (_isPhoneValid && !_isSendingOtp) ? _sendOtp : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _kAccent,
-                                foregroundColor: _kOnGradient,
-                                disabledBackgroundColor: _kAccent,
-                                disabledForegroundColor: _kOnGradient,
-                                surfaceTintColor: Colors.transparent,
-                                elevation: 4,
-                                // shadowColor: Colors.black.withValues(alpha: 0.1),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                                padding: EdgeInsets.zero,
-                              ),
-                              child: _isSendingOtp
-                                  ? _SendingOtpProgress(progress: _sendingProgress)
-                                  : Text(
-                                      'Send OTP',
-                                      style: GoogleFonts.boldonse(
-                                        fontSize: (14.0 * scale).clamp(13.0, 16.0),
-                                        fontWeight: FontWeight.w400,
-                                        color: _kOnGradient,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 42),
-                          Row(
-                            children: [
-                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 25),
-                                child: Text(
-                                  'or Sign Up with',
-                                  style: GoogleFonts.montserrat(
-                                    color: const Color(0x33000000),
-                                    fontSize: fieldTextSize,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                            ],
-                          ),
-                          const SizedBox(height: 22),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 48,
-                            runSpacing: 12,
-                            children: const [
-                              _SocialIconTile(
-                                assetPath: _kAuthFacebookIcon,
-                                contentInset: 0,
-                                innerScale: 1.1,
-                              ),
-                              _SocialIconTile(
-                                assetPath: _kAuthGoogleIcon,
-                              ),
-                              _SocialIconTile(
-                                assetPath: _kAuthAppleIcon,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 44),
-                        LayoutBuilder(
-                            builder: (context, constraints) {
-                              final w = constraints.maxWidth;
-                              final horizontalInset = (w * 0.042).clamp(10.0, 28.0);
-                              final verticalInset = (w * 0.018).clamp(6.0, 11.0);
-                              final tapSide = MediaQuery.textScalerOf(context)
-                                  .scale(40.0)
-                                  .clamp(40.0, 52.0);
-                              final blockMaxWidth = math.min(
-                                w - 2 * horizontalInset,
-                                420.0,
-                              );
-                              return Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: horizontalInset,
-                                  vertical: verticalInset,
-                                ),
-                                child: Center(
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(maxWidth: blockMaxWidth),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                      children: [
-                                        GestureDetector(
-                                          behavior: HitTestBehavior.opaque,
-                                          onTap: () =>
-                                              setState(() => _agreedToTerms = !_agreedToTerms),
-                                          child: SizedBox(
-                                            width: tapSide,
-                                            height: tapSide,
-                                            child: Center(
-                                              child: Container(
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              SizedBox(
                                                 width: 18,
                                                 height: 18,
-                                                decoration: BoxDecoration(
-                                                  color: _agreedToTerms
-                                                      ? _kPrimary
-                                                      : Colors.transparent,
-                                                  border: Border.all(
+                                                child: SvgPicture.asset(
+                                                  'assets/images/phone.svg',
+                                                  width: 18,
+                                                  height: 18,
+                                                  colorFilter:
+                                                      const ColorFilter.mode(
+                                                        Color(0x66000000),
+                                                        BlendMode.srcIn,
+                                                      ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: TextField(
+                                                  controller: _phoneController,
+                                                  focusNode: _phoneFocusNode,
+                                                  keyboardType:
+                                                      TextInputType.phone,
+                                                  textAlignVertical:
+                                                      TextAlignVertical.center,
+                                                  maxLength: _maxNationalDigits,
+                                                  inputFormatters: [
+                                                    FilteringTextInputFormatter
+                                                        .digitsOnly,
+                                                    LengthLimitingTextInputFormatter(
+                                                      _maxNationalDigits,
+                                                    ),
+                                                  ],
+                                                  onChanged: _validatePhone,
+                                                  decoration: InputDecoration(
+                                                    counterText: '',
+                                                    hintText: 'Phone',
+                                                    hintStyle:
+                                                        GoogleFonts.montserrat(
+                                                          color: const Color(
+                                                            0x57000000,
+                                                          ),
+                                                          fontSize:
+                                                              fieldTextSize,
+                                                        ),
+                                                    filled: false,
+                                                    fillColor:
+                                                        Colors.transparent,
+                                                    border: InputBorder.none,
+                                                    enabledBorder:
+                                                        InputBorder.none,
+                                                    focusedBorder:
+                                                        InputBorder.none,
+                                                    disabledBorder:
+                                                        InputBorder.none,
+                                                    errorBorder:
+                                                        InputBorder.none,
+                                                    focusedErrorBorder:
+                                                        InputBorder.none,
+                                                    contentPadding:
+                                                        EdgeInsets.zero,
+                                                    isDense: true,
+                                                  ),
+                                                  style: GoogleFonts.montserrat(
                                                     color: _kPrimary,
-                                                    width: 1.8,
+                                                    fontSize: fieldTextSize,
+                                                    height: 1.2,
                                                   ),
-                                                  borderRadius: BorderRadius.circular(2),
                                                 ),
-                                                child: _agreedToTerms
-                                                    ? const Icon(
-                                                        Icons.check,
-                                                        size: 11,
-                                                        color: Colors.white,
-                                                      )
-                                                    : null,
                                               ),
-                                            ),
+                                            ],
                                           ),
                                         ),
-                                        SizedBox(width: (w * 0.02).clamp(6.0, 10.0)),
-                                        Expanded(
-                                          child: FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            alignment: Alignment.centerLeft,
-                                            child: RichText(
-                                              textAlign: TextAlign.start,
-                                              maxLines: 1,
-                                              softWrap: false,
-                                              text: TextSpan(
-                                                style: GoogleFonts.montserrat(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w400,
-                                                  height: 1.35,
-                                                ),
-                                                children: [
-                                                  const TextSpan(
-                                                    text: 'I agree to the ',
-                                                    style: TextStyle(color: Color(0xFF898989)),
-                                                  ),
-                                                  WidgetSpan(
-                                                    alignment: PlaceholderAlignment.baseline,
-                                                    baseline: TextBaseline.alphabetic,
-                                                    child: GestureDetector(
-                                                      onTap: () => Navigator.of(context).push(
-                                                        MaterialPageRoute(
-                                                          builder: (_) =>
-                                                              const TermsOfServicePage(),
-                                                        ),
-                                                      ),
-                                                      child: Text(
-                                                        'Terms of Service',
-                                                        style: GoogleFonts.montserrat(
-                                                          color: _kPrimary,
-                                                          fontSize: 12,
-                                                          height: 1.35,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const TextSpan(
-                                                    text: ' and ',
-                                                    style: TextStyle(color: Color(0xFF898989)),
-                                                  ),
-                                                  WidgetSpan(
-                                                    alignment: PlaceholderAlignment.baseline,
-                                                    baseline: TextBaseline.alphabetic,
-                                                    child: GestureDetector(
-                                                      onTap: () => Navigator.of(context).push(
-                                                        MaterialPageRoute(
-                                                          builder: (_) =>
-                                                              const PrivacyPolicyPage(),
-                                                        ),
-                                                      ),
-                                                      child: Text(
-                                                        'Privacy Policy',
-                                                        style: GoogleFonts.montserrat(
-                                                          color: _kPrimary,
-                                                          fontSize: 12,
-                                                          height: 1.35,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                              if (_phoneError != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  _phoneError!,
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.red,
+                                    fontSize: 12,
                                   ),
                                 ),
-                              );
-                            },
+                              ],
+                              SizedBox(
+                                height: (24.0 * compactScale).clamp(14.0, 24.0),
+                              ),
+                              SizedBox(
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: (_isPhoneValid && !_isSendingOtp)
+                                      ? _sendOtp
+                                      : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _kAccent,
+                                    foregroundColor: _kOnGradient,
+                                    disabledBackgroundColor: _kAccent,
+                                    disabledForegroundColor: _kOnGradient,
+                                    surfaceTintColor: Colors.transparent,
+                                    elevation: 4,
+                                    // shadowColor: Colors.black.withValues(alpha: 0.1),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(100),
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: _isSendingOtp
+                                      ? _SendingOtpProgress(
+                                          progress: _sendingProgress,
+                                        )
+                                      : Text(
+                                          'Send OTP',
+                                          style: GoogleFonts.boldonse(
+                                            fontSize: (14.0 * scale).clamp(
+                                              13.0,
+                                              16.0,
+                                            ),
+                                            fontWeight: FontWeight.w400,
+                                            color: _kOnGradient,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              SizedBox(
+                                height: (42.0 * compactScale).clamp(22.0, 42.0),
+                              ),
+                              Row(
+                                children: [
+                                  const Expanded(
+                                    child: Divider(
+                                      color: Color(0x4D8D8D8D),
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 25,
+                                    ),
+                                    child: Text(
+                                      'or Sign Up with',
+                                      style: GoogleFonts.montserrat(
+                                        color: const Color(0x33000000),
+                                        fontSize: fieldTextSize,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ),
+                                  const Expanded(
+                                    child: Divider(
+                                      color: Color(0x4D8D8D8D),
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(
+                                height: (22.0 * compactScale).clamp(12.0, 22.0),
+                              ),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: (48.0 * compactScale).clamp(
+                                  24.0,
+                                  48.0,
+                                ),
+                                runSpacing: 12,
+                                children: const [
+                                  _SocialIconTile(
+                                    assetPath: _kAuthFacebookIcon,
+                                    contentInset: 6,
+                                    innerScale: 1.0,
+                                  ),
+                                  _SocialIconTile(assetPath: _kAuthGoogleIcon),
+                                  _SocialIconTile(assetPath: _kAuthAppleIcon),
+                                ],
+                              ),
+                              SizedBox(
+                                height: (44.0 * compactScale).clamp(20.0, 44.0),
+                              ),
+                              const Spacer(),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final w = constraints.maxWidth;
+                                  final horizontalInset = (w * 0.042).clamp(
+                                    10.0,
+                                    28.0,
+                                  );
+                                  final verticalInset = (w * 0.018).clamp(
+                                    6.0,
+                                    11.0,
+                                  );
+                                  final tapSide = MediaQuery.textScalerOf(
+                                    context,
+                                  ).scale(40.0).clamp(40.0, 52.0);
+                                  final blockMaxWidth = math.min(
+                                    w - 2 * horizontalInset,
+                                    420.0,
+                                  );
+                                  return Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: horizontalInset,
+                                      vertical: verticalInset,
+                                    ),
+                                    child: Center(
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: blockMaxWidth,
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onTap: () => setState(
+                                                () => _agreedToTerms =
+                                                    !_agreedToTerms,
+                                              ),
+                                              child: SizedBox(
+                                                width: tapSide,
+                                                height: tapSide,
+                                                child: Center(
+                                                  child: Container(
+                                                    width: 18,
+                                                    height: 18,
+                                                    decoration: BoxDecoration(
+                                                      color: _agreedToTerms
+                                                          ? _kPrimary
+                                                          : Colors.transparent,
+                                                      border: Border.all(
+                                                        color: _kPrimary,
+                                                        width: 1.8,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            2,
+                                                          ),
+                                                    ),
+                                                    child: _agreedToTerms
+                                                        ? const Icon(
+                                                            Icons.check,
+                                                            size: 11,
+                                                            color: Colors.white,
+                                                          )
+                                                        : null,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: (w * 0.02).clamp(
+                                                6.0,
+                                                10.0,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                alignment: Alignment.centerLeft,
+                                                child: RichText(
+                                                  textAlign: TextAlign.start,
+                                                  maxLines: 1,
+                                                  softWrap: false,
+                                                  text: TextSpan(
+                                                    style:
+                                                        GoogleFonts.montserrat(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w400,
+                                                          height: 1.35,
+                                                        ),
+                                                    children: [
+                                                      const TextSpan(
+                                                        text: 'I agree to the ',
+                                                        style: TextStyle(
+                                                          color: Color(
+                                                            0xFF898989,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      WidgetSpan(
+                                                        alignment:
+                                                            PlaceholderAlignment
+                                                                .baseline,
+                                                        baseline: TextBaseline
+                                                            .alphabetic,
+                                                        child: GestureDetector(
+                                                          onTap: () =>
+                                                              Navigator.of(
+                                                                context,
+                                                              ).push(
+                                                                MaterialPageRoute(
+                                                                  builder: (_) =>
+                                                                      const TermsOfServicePage(),
+                                                                ),
+                                                              ),
+                                                          child: Text(
+                                                            'Terms of Service',
+                                                            style:
+                                                                GoogleFonts.montserrat(
+                                                                  color:
+                                                                      _kPrimary,
+                                                                  fontSize: 12,
+                                                                  height: 1.35,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const TextSpan(
+                                                        text: ' and ',
+                                                        style: TextStyle(
+                                                          color: Color(
+                                                            0xFF898989,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      WidgetSpan(
+                                                        alignment:
+                                                            PlaceholderAlignment
+                                                                .baseline,
+                                                        baseline: TextBaseline
+                                                            .alphabetic,
+                                                        child: GestureDetector(
+                                                          onTap: () =>
+                                                              Navigator.of(
+                                                                context,
+                                                              ).push(
+                                                                MaterialPageRoute(
+                                                                  builder: (_) =>
+                                                                      const PrivacyPolicyPage(),
+                                                                ),
+                                                              ),
+                                                          child: Text(
+                                                            'Privacy Policy',
+                                                            style:
+                                                                GoogleFonts.montserrat(
+                                                                  color:
+                                                                      _kPrimary,
+                                                                  fontSize: 12,
+                                                                  height: 1.35,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                                               ],
-                      ),
-                    );
+                        );
                       },
                     ),
                   ),
@@ -774,9 +924,7 @@ class _SocialIconTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(r),
         border: Border.all(color: const Color(0x12000000)),
       ),
-      child: Center(
-        child: logo,
-      ),
+      child: Center(child: logo),
     );
   }
 }
@@ -786,6 +934,7 @@ class _SendingOtpProgress extends StatelessWidget {
 
   /// Deeper teal track (matches hero gradient end / button family).
   static const Color _progressTrack = Color(0xFF08414A);
+
   /// Lighter teal fill (same family as [_MobileOTPPageState._kAccent]).
   static const Color _progressFill = Color(0xFF12899B);
 
@@ -817,11 +966,11 @@ class _SendingOtpProgress extends StatelessWidget {
               Center(
                 child: Text(
                   'Sending OTP...',
-                  //  style: GoogleFonts.boldonse(
-                  //       fontSize: (14.0 * scale).clamp(13.0, 16.0),
-                  //       fontWeight: FontWeight.w400,
-                  //       color: _kOnGradient,
-                  //   ),
+                  style: GoogleFonts.boldonse(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFFDFE7E9),
+                  ),
                 ),
               ),
             ],
@@ -844,7 +993,8 @@ class _CountryCodePickerSheet extends StatefulWidget {
   final ValueChanged<CountryCode> onSelected;
 
   @override
-  State<_CountryCodePickerSheet> createState() => _CountryCodePickerSheetState();
+  State<_CountryCodePickerSheet> createState() =>
+      _CountryCodePickerSheetState();
 }
 
 class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
@@ -905,14 +1055,20 @@ class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
                   hintStyle: GoogleFonts.montserrat(
                     color: _sheetPrimary.withValues(alpha: 0.45),
                   ),
-                  prefixIcon: Icon(Icons.search, color: _sheetPrimary.withValues(alpha: 0.5)),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: _sheetPrimary.withValues(alpha: 0.5),
+                  ),
                   filled: true,
                   fillColor: Colors.grey.shade100,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
                 style: GoogleFonts.montserrat(
                   fontSize: 16,
@@ -924,7 +1080,8 @@ class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
               child: ListView.separated(
                 padding: const EdgeInsets.only(bottom: 16),
                 itemCount: _filtered.length,
-                separatorBuilder: (context, _) => Divider(height: 1, color: Colors.grey.shade300),
+                separatorBuilder: (context, _) =>
+                    Divider(height: 1, color: Colors.grey.shade300),
                 itemBuilder: (_, index) {
                   final c = _filtered[index];
                   final isSelected = c.code == widget.selected.code;

@@ -24,7 +24,7 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
   static const int _total = 3;
   static const List<_OnboardingSlide> _slides = [
     _OnboardingSlide(
-      body: 'Scan your feet to find your perfect size and discover\nfootwear that',
+      body: 'Scan your feet to find your\nperfect size and discover\nfootwear that',
       accent: 'truly fits!',
       textTop: 506,
       textLeft: 37,
@@ -144,11 +144,17 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
               right: 21,
               bottom: 26 + bottomInset,
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _PageTicks(current: _index),
-                  const SizedBox(width: 14),
-                  const Expanded(child: _BottomLine()),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 20),
+                  const Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: _BottomLine(),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
                   _NextButton(onTap: _next),
                 ],
               ),
@@ -209,10 +215,10 @@ class _OnboardingSlideView extends StatelessWidget {
     // makes tall narrow phones clip horizontally while short wide layouts stay OK.
     final s = math.min(sx, sy);
     final bodyStyle = GoogleFonts.montserrat(
-      fontSize: (24 * s).clamp(16.0, 28.0),
-      fontWeight: FontWeight.w200,
+      fontSize: (30 * s).clamp(16.0, 28.0),
+      fontWeight: FontWeight.w300,
       color: Colors.white,
-      height: 1.0,
+      height: 1.2,
       letterSpacing: 0,
     );
     final accentStyle = GoogleFonts.boldonse(
@@ -258,7 +264,7 @@ class _OnboardingSlideView extends StatelessWidget {
                   Text(
                     word,
                     textAlign: TextAlign.start,
-                    style: accentStyle.copyWith(height: 1.12),
+                    style: accentStyle.copyWith(height: 1.4),
                     softWrap: true,
                   ),
               ],
@@ -290,20 +296,22 @@ class _PageTicks extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final numStyle = GoogleFonts.boldonse(
-      fontSize: 12,
-      fontWeight: FontWeight.w400,
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
       color: const Color(0xFFDDE6E9),
       height: 1.0,
     );
-    const dotStyle = TextStyle(
-      fontSize: 14,
-      color: Color(0xFFDDE6E9),
-      height: 0.8,
-    );
 
     List<Widget> childrenFor(int i) {
-      final label = Text((i + 1).toString().padLeft(2, '0'), style: numStyle);
-      const dot = Text('•', style: dotStyle);
+      final label = Text(
+        (i + 1).toString().padLeft(2, '0'),
+        style: numStyle,
+        textHeightBehavior: const TextHeightBehavior(
+          applyHeightToFirstAscent: false,
+          applyHeightToLastDescent: false,
+        ),
+      );
+      const dot = _TickDot();
       if (i == 0) {
         return [label, const SizedBox(width: 12), dot, const SizedBox(width: 12), dot];
       }
@@ -318,7 +326,24 @@ class _PageTicks extends StatelessWidget {
       child: Row(
         key: ValueKey(current),
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: childrenFor(current),
+      ),
+    );
+  }
+}
+
+class _TickDot extends StatelessWidget {
+  const _TickDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: const BoxDecoration(
+        color: Color(0xFFDDE6E9),
+        shape: BoxShape.circle,
       ),
     );
   }
@@ -331,21 +356,31 @@ class _NextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFFDDE6E9),
-      shape: const CircleBorder(),
-      elevation: 3,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: const SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.primaryDark,
-            size: 28,
+    return InkWell(
+      customBorder: const CircleBorder(),
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFFDDE6E9),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFF09DFFF),
+            width: 1,
           ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 4,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppColors.primaryDark,
+          size: 28,
         ),
       ),
     );
