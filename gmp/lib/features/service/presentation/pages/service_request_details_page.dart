@@ -3,6 +3,7 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
@@ -142,17 +143,20 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
           if (!mounted) return;
           await _load();
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                decision == 'accept'
-                    ? 'You accepted the final service cost'
-                    : 'You rejected the final service cost — request cancelled',
-              ),
-              backgroundColor:
-                  decision == 'accept' ? AppColors.success : AppColors.error,
-            ),
-          );
+          if (decision == 'accept') {
+            await showAppFeedbackAlert(
+              context,
+              message: 'You accepted the final service cost',
+              type: AppFeedbackType.success,
+            );
+          } else {
+            await showAppFeedbackAlert(
+              context,
+              message:
+                  'You rejected the final service cost — request cancelled',
+              type: AppFeedbackType.warning,
+            );
+          }
         } catch (e) {
           if (!mounted) return;
           setState(() {
@@ -206,9 +210,11 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
           if (!mounted) return;
           await _load();
           if (!mounted) return;
-          ScaffoldMessenger.of(
+          await showAppFeedbackAlert(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Request cancelled')));
+            message: 'Request cancelled',
+            type: AppFeedbackType.success,
+          );
         } catch (e) {
           if (!mounted) return;
           setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

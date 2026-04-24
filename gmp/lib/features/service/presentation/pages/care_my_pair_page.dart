@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gmp/core/bgtheme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
@@ -6,20 +7,6 @@ import 'package:gmp/features/articles/presentation/pages/article_list_page.dart'
 
 class CareMyPairPage extends StatelessWidget {
   const CareMyPairPage({super.key});
-
-  static const SweepGradient _shellSweep = SweepGradient(
-    center: Alignment(0.22, -1.07),
-    startAngle: -0.55,
-    endAngle: 5.73,
-    colors: [
-      Color(0xFF09E0FF),
-      Color(0xFF0F6876),
-      Color(0xFF062F35),
-      Color(0xFF062F35),
-    ],
-    stops: [0.05, 0.44, 0.57, 1],
-    transform: GradientRotation(-0.55),
-  );
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -75,9 +62,7 @@ class CareMyPairPage extends StatelessWidget {
       extendBody: true,
       body: Stack(
         children: [
-          const Positioned.fill(
-            child: DecoratedBox(decoration: BoxDecoration(gradient: _shellSweep)),
-          ),
+          ...BgTheme.background(),
           SafeArea(
             bottom: false,
             child: Padding(

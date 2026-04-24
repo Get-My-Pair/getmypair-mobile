@@ -11,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -215,8 +216,10 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       await _updateAddressFromLatLng(latLng);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not get current location')),
+        await showAppFeedbackAlert(
+          context,
+          message: 'Could not get current location',
+          type: AppFeedbackType.failure,
         );
       }
     } finally {
@@ -860,8 +863,10 @@ class _ShoeCareBottomNav extends StatelessWidget {
             selected: false,
             icon: Icons.favorite_border_rounded,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Favorites coming soon')),
+              showAppFeedbackAlert(
+                context,
+                message: 'Favorites coming soon',
+                type: AppFeedbackType.info,
               );
             },
           ),
@@ -874,8 +879,10 @@ class _ShoeCareBottomNav extends StatelessWidget {
             selected: false,
             icon: Icons.shopping_cart_outlined,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cart coming soon')),
+              showAppFeedbackAlert(
+                context,
+                message: 'Cart coming soon',
+                type: AppFeedbackType.info,
               );
             },
           ),

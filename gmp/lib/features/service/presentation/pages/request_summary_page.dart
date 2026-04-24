@@ -4,6 +4,7 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
@@ -139,16 +140,14 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
               : null;
 
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                requestId != null
-                    ? 'Request created ($requestId)'
-                    : 'Request created',
-              ),
-              backgroundColor: AppColors.success,
-            ),
+          await showAppFeedbackAlert(
+            context,
+            message: requestId != null
+                ? 'Request created ($requestId)'
+                : 'Request created',
+            type: AppFeedbackType.success,
           );
+          if (!mounted) return;
           Navigator.pop(context, true);
         } catch (e) {
           if (!mounted) return;

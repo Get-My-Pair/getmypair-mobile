@@ -7,6 +7,7 @@ import '../../../../core/utils/responsive.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/gradient_page_shell.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -118,25 +119,19 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
     }
 
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select your date of birth'),
-          backgroundColor: AppColors.warning,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select your date of birth',
+        type: AppFeedbackType.warning,
       );
       return;
     }
 
     if (_selectedGender == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select your gender'),
-          backgroundColor: AppColors.warning,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select your gender',
+        type: AppFeedbackType.warning,
       );
       return;
     }
@@ -173,7 +168,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is AuthProfileCompleted || state is AuthAuthenticated) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
@@ -182,13 +177,10 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
             (route) => false,
           );
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+          await showAppFeedbackAlert(
+            context,
+            message: state.message,
+            type: AppFeedbackType.failure,
           );
         }
       },

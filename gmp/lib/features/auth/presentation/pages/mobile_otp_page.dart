@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -134,11 +135,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   void _sendOtp() {
     if (!_isPhoneValid) return;
     if (!_agreedToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please agree to Terms of Service and Privacy Policy'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      showAppFeedbackAlert(
+        context,
+        message: 'Please agree to Terms of Service and Privacy Policy',
+        type: AppFeedbackType.warning,
       );
       return;
     }
@@ -187,12 +187,16 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Clipboard.setData(ClipboardData(text: otp));
               Navigator.of(dialogContext).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('OTP copied to clipboard')),
+              if (!context.mounted) return;
+              await showAppFeedbackAlert(
+                context,
+                message: 'OTP copied to clipboard',
+                type: AppFeedbackType.success,
               );
+              if (!context.mounted) return;
               _openOtpPage(mobile, otp: otp);
             },
             child: const Text('Copy & Continue'),
@@ -240,12 +244,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
           } else if (state is AuthError) {
             setState(() => _isSendingOtp = false);
             _stopSendingProgress();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red.shade600,
-                behavior: SnackBarBehavior.floating,
-              ),
+            showAppFeedbackAlert(
+              context,
+              message: state.message,
+              type: AppFeedbackType.failure,
             );
           }
         },

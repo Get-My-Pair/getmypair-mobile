@@ -118,36 +118,36 @@ class FloatingGradientBottomNav extends StatelessWidget {
 /// at ~390px width they stay close to the original 80px side margins.
 EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
+  final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
   const minBarBody = 172.0;
   final side = ((w - minBarBody) * 0.5).clamp(16.0, 88.0);
-  return EdgeInsets.fromLTRB(side, 12, side, 8);
+  // Use a moderated bottom inset so bars stay comfortable above gesture/home
+  // areas without floating too high on devices with large safe insets.
+  final bottom = safeBottom <= 0
+      ? 6.0
+      : (safeBottom * 0.55 + 2.0).clamp(8.0, 22.0).toDouble();
+  return EdgeInsets.fromLTRB(side, 16, side, bottom);
 }
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
 /// Use on profile stack pages so Home / Rack / Profile match main navigation.
 class DashboardLinkedBottomNav extends StatelessWidget {
-  const DashboardLinkedBottomNav({
-    super.key,
-    this.selectedTabIndex = 2,
-  });
+  const DashboardLinkedBottomNav({super.key, this.selectedTabIndex = 2});
 
   /// Highlight while this route is visible (profile flow → 2).
   final int selectedTabIndex;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: dashboardBottomNavOuterInsets(context),
-        child: FloatingGradientBottomNav(
-          currentIndex: selectedTabIndex.clamp(0, 2),
-          onChanged: (i) {
-            final tab = i.clamp(0, 2);
-            customerDashboardTabIndex.value = tab;
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          },
-        ),
+    return Padding(
+      padding: dashboardBottomNavOuterInsets(context),
+      child: FloatingGradientBottomNav(
+        currentIndex: selectedTabIndex.clamp(0, 2),
+        onChanged: (i) {
+          final tab = i.clamp(0, 2);
+          customerDashboardTabIndex.value = tab;
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        },
       ),
     );
   }

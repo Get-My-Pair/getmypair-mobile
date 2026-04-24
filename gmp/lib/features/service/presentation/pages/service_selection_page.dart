@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
@@ -264,31 +265,37 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   Future<void> _submit() async {
     if (_submitting) return;
     if (_selectedService == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a service type')),
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a service type',
+        type: AppFeedbackType.warning,
       );
       return;
     }
     if (_selectedService!.value == 'maintenance' &&
         _selectedMaintenancePlan == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a maintenance plan')),
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a maintenance plan',
+        type: AppFeedbackType.warning,
       );
       return;
     }
     if (_selectedAddress == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a pickup address')),
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a pickup address',
+        type: AppFeedbackType.warning,
       );
       return;
     }
 
     final est = _resolvedEstimatedRupees();
     if (est == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not resolve price for this service'),
-        ),
+      await showAppFeedbackAlert(
+        context,
+        message: 'Could not resolve price for this service',
+        type: AppFeedbackType.failure,
       );
       return;
     }

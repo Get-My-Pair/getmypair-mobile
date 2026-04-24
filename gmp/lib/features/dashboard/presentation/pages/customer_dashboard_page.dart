@@ -107,20 +107,17 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
   Widget _buildBottomNav(BuildContext context) {
     final index = _currentIndex.clamp(0, _pages.length - 1);
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: dashboardBottomNavOuterInsets(context),
-        child: FloatingGradientBottomNav(
-          currentIndex: index,
-          onChanged: (i) {
-            final c = i.clamp(0, _pages.length - 1);
-            setState(() => _currentIndex = c);
-            if (customerDashboardTabIndex.value != c) {
-              customerDashboardTabIndex.value = c;
-            }
-          },
-        ),
+    return Padding(
+      padding: dashboardBottomNavOuterInsets(context),
+      child: FloatingGradientBottomNav(
+        currentIndex: index,
+        onChanged: (i) {
+          final c = i.clamp(0, _pages.length - 1);
+          setState(() => _currentIndex = c);
+          if (customerDashboardTabIndex.value != c) {
+            customerDashboardTabIndex.value = c;
+          }
+        },
       ),
     );
   }

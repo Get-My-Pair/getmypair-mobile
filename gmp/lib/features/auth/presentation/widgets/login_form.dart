@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -145,11 +146,10 @@ class _LoginFormState extends State<LoginForm> {
               // Forgot Password
               TextButton(
                 onPressed: () {
-                  // TODO: Implement forgot password
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Forgot password feature coming soon'),
-                    ),
+                  showAppFeedbackAlert(
+                    context,
+                    message: 'Forgot password feature coming soon',
+                    type: AppFeedbackType.info,
                   );
                 },
                 child: Text(

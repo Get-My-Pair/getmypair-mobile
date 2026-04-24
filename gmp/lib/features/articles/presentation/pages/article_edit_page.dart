@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
@@ -175,13 +176,13 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
-    tokenResult.fold(
-      (_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please sign in again'),
-            backgroundColor: AppColors.error,
-          ),
+    await tokenResult.fold(
+      (_) async {
+        if (!context.mounted) return;
+        await showAppFeedbackAlert(
+          context,
+          message: 'Please sign in again',
+          type: AppFeedbackType.failure,
         );
       },
       (token) async {
@@ -357,8 +358,10 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                   onPressed: _submitting
                       ? null
                       : () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Upload flow will be added in next step')),
+                          showAppFeedbackAlert(
+                            context,
+                            message: 'Upload flow will be added in next step',
+                            type: AppFeedbackType.info,
                           );
                         },
                   style: OutlinedButton.styleFrom(

@@ -425,24 +425,42 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              Center(
-                                child: Transform.rotate(
-                                  angle: -0.48,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: SizedBox(
-                                      width: Responsive.scaleDesignWidth(context, 165).clamp(210.0, 310.0),
-                                      height: Responsive.scaleDesignWidth(context, 135).clamp(100.0, 165.0),
-                                      child: imageUrl.isNotEmpty
-                                          ? Image.network(
-                                              imageUrl,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) => _placeholder(),
-                                            )
-                                          : _placeholder(),
+                              Builder(
+                                builder: (context) {
+                                  final screenW = MediaQuery.sizeOf(context).width;
+                                  final maxImgW =
+                                      (screenW - 2 * hPad - 32).clamp(140.0, 220.0);
+                                  final maxImgH =
+                                      (maxImgW * 0.62).clamp(96.0, 148.0);
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 4,
                                     ),
-                                  ),
-                                ),
+                                    child: Center(
+                                      child: Transform.rotate(
+                                        angle: -0.48,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: SizedBox(
+                                            width: maxImgW,
+                                            height: maxImgH,
+                                            child: imageUrl.isNotEmpty
+                                                ? Image.network(
+                                                    imageUrl,
+                                                    fit: BoxFit.contain,
+                                                    alignment: Alignment.center,
+                                                    errorBuilder:
+                                                        (context, error, stackTrace) =>
+                                                            _placeholder(),
+                                                  )
+                                                : _placeholder(),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                               SizedBox(height: Responsive.scaleDesignWidth(context, 30)),
                               Container(

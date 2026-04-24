@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -47,24 +48,21 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _initAndLoad() async {
     final result = await di.sl<GetValidAccessToken>().call();
     if (!mounted) return;
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         if (failure is AuthenticationFailure) {
           context.read<AuthBloc>().add(const AuthSessionExpired());
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(failure.message),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
+        if (!context.mounted) return;
+        await showAppFeedbackAlert(
+          context,
+          message: failure.message,
+          type: AppFeedbackType.failure,
         );
       },
-      (token) {
+      (token) async {
+        if (!mounted) return;
         setState(() => _accessToken = token);
         context.read<ProfileBloc>().add(ProfileLoadRequested(token));
       },
@@ -126,17 +124,12 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       },
       child: BlocConsumer<ProfileBloc, ProfileState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is ProfileError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+            await showAppFeedbackAlert(
+              context,
+              message: state.message,
+              type: AppFeedbackType.failure,
             );
           }
         },

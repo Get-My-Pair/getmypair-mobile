@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -140,11 +141,14 @@ class _OTPPageState extends State<OTPPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Clipboard.setData(ClipboardData(text: otp));
               Navigator.of(dialogContext).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('OTP copied to clipboard')),
+              if (!context.mounted) return;
+              await showAppFeedbackAlert(
+                context,
+                message: 'OTP copied to clipboard',
+                type: AppFeedbackType.success,
               );
             },
             child: const Text('Copy & Close'),
@@ -169,15 +173,14 @@ class _OTPPageState extends State<OTPPage> {
 
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is AuthOTPVerified) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Phone verified successfully!'),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
+            await showAppFeedbackAlert(
+              context,
+              message: 'Phone verified successfully!',
+              type: AppFeedbackType.success,
             );
+            if (!context.mounted) return;
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
                 builder: (_) => AiOnboardingPage(
@@ -191,21 +194,17 @@ class _OTPPageState extends State<OTPPage> {
             if (state.otp != null && state.otp!.isNotEmpty) {
               _showOtpDialog(context, state.otp!);
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('OTP sent successfully'),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
+              await showAppFeedbackAlert(
+                context,
+                message: 'OTP sent successfully',
+                type: AppFeedbackType.success,
               );
             }
           } else if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
+            await showAppFeedbackAlert(
+              context,
+              message: state.message,
+              type: AppFeedbackType.failure,
             );
           }
         },

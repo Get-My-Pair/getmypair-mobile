@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
@@ -39,11 +40,18 @@ class _ArticleListPageState extends State<ArticleListPage> {
   bool _loading = true;
   String? _filterCategory;
   String _searchQuery = '';
+  final ScrollController _rackScrollController = ScrollController();
 
   static const Color _rackTeal = Color(0xFF0F6876);
   static const Color _rackTealPrimary = Color(0xFF11999E);
   static const Color _rackDark = Color(0xFF062F35);
   static const Color _panelBg = Color(0xFFF0F0F0);
+  static const String _plusIconSvg = '''
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 5V19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M5 12H19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+''';
 
   static const List<Map<String, String>> _filterTabs = [
     {'value': 'formal', 'label': 'Formals'},
@@ -57,6 +65,12 @@ class _ArticleListPageState extends State<ArticleListPage> {
   void initState() {
     super.initState();
     _loadArticles();
+  }
+
+  @override
+  void dispose() {
+    _rackScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadArticles() async {
@@ -128,6 +142,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
   @override
   Widget build(BuildContext context) {
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    final topInset = (58.0 * uiScale).clamp(34.0, 70.0);
     const panelRadius = BorderRadius.only(
       topLeft: Radius.circular(20),
       topRight: Radius.circular(20),
@@ -144,7 +162,12 @@ class _ArticleListPageState extends State<ArticleListPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 75, 10, 0),
+              padding: EdgeInsets.fromLTRB(
+                horizontalInset,
+                topInset,
+                horizontalInset,
+                0,
+              ),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: _panelBg,
@@ -162,10 +185,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   child: _loading
                       ? _buildLoading()
                       : _error != null
-                          ? _buildError()
-                          : (_articles?.isEmpty ?? true)
-                              ? _buildEmpty()
-                              : _buildRackBody(),
+                      ? _buildError()
+                      : (_articles?.isEmpty ?? true)
+                      ? _buildEmpty()
+                      : _buildRackBody(),
                 ),
               ),
             ),
@@ -177,8 +200,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
               bottom: 0,
               child: DashboardLinkedBottomNav(selectedTabIndex: 1),
             ),
-          if (!widget.showBottomBar)
-            SizedBox(height: bottomSafe),
+          if (!widget.showBottomBar) SizedBox(height: bottomSafe),
         ],
       ),
     );
@@ -193,7 +215,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
           const SizedBox(height: 16),
           Text(
             'Loading your rack...',
-            style: GoogleFonts.montserrat(fontSize: 14, color: AppColors.textSecondary),
+            style: GoogleFonts.montserrat(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -212,7 +237,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(fontSize: 15, color: AppColors.textSecondary),
+              style: GoogleFonts.montserrat(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -237,7 +265,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.checkroom_outlined, size: 64, color: AppColors.textTertiary),
+            Icon(
+              Icons.checkroom_outlined,
+              size: 64,
+              color: AppColors.textTertiary,
+            ),
             const SizedBox(height: 20),
             Text(
               'Your rack is empty',
@@ -252,7 +284,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
             Text(
               'Add your first pair',
               textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(fontSize: 14, color: AppColors.textTertiary),
+              style: GoogleFonts.montserrat(
+                fontSize: 14,
+                color: AppColors.textTertiary,
+              ),
             ),
             const SizedBox(height: 28),
             FilledButton.icon(
@@ -273,12 +308,27 @@ class _ArticleListPageState extends State<ArticleListPage> {
   Widget _buildRackBody() {
     final list = _filteredArticles;
     final rowCount = (list.length + 2) ~/ 3;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final headerHInset = (12.0 * uiScale).clamp(10.0, 20.0);
+    final titleLeftInset = (headerHInset - 4).clamp(6.0, 16.0);
+    final topTitleGap = (10.0 * uiScale).clamp(8.0, 14.0);
+    final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
+    const plusSize = 48.0;
+    const searchHeight = 42.0;
+    final filtersHeight = (30.0 * uiScale).clamp(28.0, 36.0);
+    final sectionGap = (10.0 * uiScale).clamp(8.0, 14.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+          padding: EdgeInsets.fromLTRB(
+            titleLeftInset,
+            topTitleGap,
+            headerHInset,
+            0,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -286,16 +336,23 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   children: [
                     IconButton(
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                       onPressed: () => Navigator.maybePop(context),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: _rackDark),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 20,
+                        color: _rackDark,
+                      ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 2),
                     Text(
                       'My Rack',
                       style: GoogleFonts.boldonse(
                         color: _rackDark,
-                        fontSize: 22,
+                        fontSize: titleSize,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -308,23 +365,36 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   onTap: () => _navigateToCreate(context),
                   borderRadius: BorderRadius.circular(24),
                   child: Container(
-                    width: 46,
-                    height: 46,
+                    width: plusSize,
+                    height: plusSize,
                     decoration: ShapeDecoration(
                       color: const Color(0x33DFE7E9),
                       shape: RoundedRectangleBorder(
-                        side: const BorderSide(width: 1, color: _rackTealPrimary),
+                        side: const BorderSide(
+                          width: 1,
+                          color: _rackTealPrimary,
+                        ),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       shadows: const [
                         BoxShadow(
-                          color: Color(0x2E000000),
+                          color: Color(0x2D000000),
                           blurRadius: 4,
                           offset: Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.add_rounded, color: _rackDark, size: 22),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: SvgPicture.string(
+                        _plusIconSvg,
+                        fit: BoxFit.contain,
+                        colorFilter: const ColorFilter.mode(
+                          _rackDark,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -333,22 +403,27 @@ class _ArticleListPageState extends State<ArticleListPage> {
         ),
         if (_isServiceFlowMode)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+            padding: EdgeInsets.fromLTRB(
+              headerHInset + 4,
+              4,
+              headerHInset + 4,
+              2,
+            ),
             child: Text(
               widget.serviceFlowTitle ?? 'Select an article to continue',
               style: GoogleFonts.montserrat(
-                fontSize: 13,
+                fontSize: (13.0 * uiScale).clamp(12.0, 15.0),
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary,
               ),
             ),
           ),
-        const SizedBox(height: 12),
+        SizedBox(height: (12.0 * uiScale).clamp(8.0, 14.0)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: headerHInset),
           child: Container(
-            height: 42,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            height: searchHeight,
+            padding: const EdgeInsets.only(top: 9, left: 33, right: 34, bottom: 9),
             decoration: ShapeDecoration(
               color: Colors.white,
               shape: RoundedRectangleBorder(
@@ -358,50 +433,80 @@ class _ArticleListPageState extends State<ArticleListPage> {
             ),
             child: TextField(
               onChanged: (value) => setState(() => _searchQuery = value),
-              style: GoogleFonts.montserrat(fontSize: 16, color: Colors.black87),
+              style: GoogleFonts.montserrat(
+                fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
+                color: Colors.black87,
+              ),
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
                 hintText: 'Search',
                 hintStyle: GoogleFonts.montserrat(
                   color: Colors.black.withValues(alpha: 0.34),
-                  fontSize: 16,
+                  fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
                   fontWeight: FontWeight.w400,
                 ),
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  color: Colors.black.withValues(alpha: 0.34),
-                  size: 22,
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 24,
+                  minHeight: 24,
                 ),
-                suffixIconConstraints: const BoxConstraints(minWidth: 52),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 1,
-                      height: 16,
-                      color: Colors.black.withValues(alpha: 0.2),
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/images/search.svg',
+                      width: 24,
+                      height: 24,
+                      colorFilter: ColorFilter.mode(
+                        Colors.black.withValues(alpha: 0.34),
+                        BlendMode.srcIn,
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      Icons.tune_rounded,
-                      color: Colors.black.withValues(alpha: 0.34),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                  ],
+                  ),
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 24,
+                  minHeight: 24,
+                ),
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 1,
+                        height: 24,
+                        color: Colors.black.withValues(alpha: 0.18),
+                      ),
+                      const SizedBox(width: 10),
+                      SvgPicture.asset(
+                        'assets/images/filter.svg',
+                        width: 24,
+                        height: 24,
+                        colorFilter: ColorFilter.mode(
+                          Colors.black.withValues(alpha: 0.34),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: sectionGap),
         SizedBox(
-          height: 30,
+          height: filtersHeight,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: headerHInset),
             itemCount: _filterTabs.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, i) {
@@ -416,7 +521,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
             },
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: (8.0 * uiScale).clamp(6.0, 10.0)),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadArticles,
@@ -426,7 +531,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 ? ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
+                      SizedBox(
+                        height: MediaQuery.sizeOf(context).height * 0.18,
+                      ),
                       Center(
                         child: Text(
                           'No shoes match',
@@ -438,32 +545,61 @@ class _ArticleListPageState extends State<ArticleListPage> {
                       ),
                     ],
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 2, 12, 24),
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    itemCount: rowCount,
-                    itemBuilder: (context, rowIndex) {
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: rowIndex == rowCount - 1 ? 0 : 10),
-                        child: _RackRow(
-                          children: List.generate(3, (colIndex) {
-                            final itemIndex = rowIndex * 3 + colIndex;
-                            if (itemIndex >= list.length) return const SizedBox.shrink();
-                            final article = list[itemIndex];
-                            return _RackGridItem(
-                              article: article,
-                              imageUrl: _imageUrl(article.thumbnailImage),
-                              onTap: () {
-                                if (_isServiceFlowMode) {
-                                  _navigateToServiceSelection(context, article);
-                                } else {
-                                  _navigateToDetails(context, article);
-                                }
-                              },
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final spacing = (10.0 * uiScale).clamp(8.0, 14.0);
+                      final barMargin = (8.0 * uiScale).clamp(6.0, 14.0);
+                      return RawScrollbar(
+                        controller: _rackScrollController,
+                        thumbVisibility: true,
+                        thickness: 7,
+                        radius: const Radius.circular(3.5),
+                        mainAxisMargin: barMargin,
+                        crossAxisMargin: 2,
+                        thumbColor: Colors.black.withValues(alpha: 0.50),
+                        child: ListView.builder(
+                          controller: _rackScrollController,
+                          padding: EdgeInsets.fromLTRB(
+                            headerHInset,
+                            2,
+                            headerHInset,
+                            (24.0 * uiScale).clamp(20.0, 30.0),
+                          ),
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          itemCount: rowCount,
+                          itemBuilder: (context, rowIndex) {
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom: rowIndex == rowCount - 1 ? 0 : spacing,
+                              ),
+                              child: _RackRow(
+                                uiScale: uiScale,
+                                children: List.generate(3, (colIndex) {
+                                  final itemIndex = rowIndex * 3 + colIndex;
+                                  if (itemIndex >= list.length) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final article = list[itemIndex];
+                                  return _RackGridItem(
+                                    article: article,
+                                    imageUrl: _imageUrl(article.thumbnailImage),
+                                    onTap: () {
+                                      if (_isServiceFlowMode) {
+                                        _navigateToServiceSelection(
+                                          context,
+                                          article,
+                                        );
+                                      } else {
+                                        _navigateToDetails(context, article);
+                                      }
+                                    },
+                                  );
+                                }),
+                              ),
                             );
-                          }),
+                          },
                         ),
                       );
                     },
@@ -477,71 +613,34 @@ class _ArticleListPageState extends State<ArticleListPage> {
   void _navigateToDetails(BuildContext context, Article article) {
     Navigator.of(context)
         .push(
-      MaterialPageRoute(
-        builder: (_) => ArticleDetailsPage(articleId: article.id),
-      ),
-    )
+          MaterialPageRoute(
+            builder: (_) => ArticleDetailsPage(articleId: article.id),
+          ),
+        )
         .then((_) => _loadArticles());
   }
 
   void _navigateToCreate(BuildContext context) {
     Navigator.of(context)
-        .push(
-      MaterialPageRoute(builder: (_) => const ArticleCreatePage()),
-    )
+        .push(MaterialPageRoute(builder: (_) => const ArticleCreatePage()))
         .then((_) => _loadArticles());
   }
 
   void _navigateToServiceSelection(BuildContext context, Article article) {
     Navigator.of(context)
         .push<bool>(
-      MaterialPageRoute(
-        builder: (_) => ServiceSelectionPage(
-          articleId: article.id,
-          allowedServiceTypes: widget.serviceFlowAllowedTypes,
-        ),
-      ),
-    )
-        .then((created) {
-      if (created == true && mounted) {
-        Navigator.maybePop(context, true);
-      }
-    });
-  }
-}
-
-class _RackRow extends StatelessWidget {
-  final List<Widget> children;
-
-  const _RackRow({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 104,
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F0),
-        borderRadius: BorderRadius.circular(10),
-        border: Border(
-          bottom: BorderSide(
-            color: _ArticleListPageState._rackTealPrimary,
-            width: 3,
-          ),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: List.generate(3, (index) {
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: index < children.length ? children[index] : const SizedBox.shrink(),
+          MaterialPageRoute(
+            builder: (_) => ServiceSelectionPage(
+              articleId: article.id,
+              allowedServiceTypes: widget.serviceFlowAllowedTypes,
             ),
-          );
-        }),
-      ),
-    );
+          ),
+        )
+        .then((created) {
+          if (created == true && mounted) {
+            Navigator.maybePop(context, true);
+          }
+        });
   }
 }
 
@@ -566,45 +665,49 @@ class _RackGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = _displayLabel(article);
+    final uiScale = (MediaQuery.sizeOf(context).width / 390)
+        .clamp(0.84, 1.12)
+        .toDouble();
+    final nameSize = (12.5 * uiScale).clamp(11.0, 14.0);
+    final labelGap = (6.0 * uiScale).clamp(4.0, 8.0);
+    final panelPad = (6.0 * uiScale).clamp(4.0, 8.0);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            const SizedBox(height: 2),
-            Expanded(
-              child: imageUrl.isNotEmpty
-                  ? Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Image.network(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            panelPad,
+            panelPad,
+            panelPad,
+            panelPad - 1,
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
                         imageUrl,
                         fit: BoxFit.contain,
                         errorBuilder: (_, _, _) => _rackThumbPlaceholder(),
-                      ),
-                    )
-                  : _rackThumbPlaceholder(),
-            ),
-            const SizedBox(height: 4),
-            SizedBox(
-              height: 18,
-              child: Center(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.boldonse(
-                    color: const Color(0xFF11899B),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w400,
-                  ),
+                      )
+                    : _rackThumbPlaceholder(),
+              ),
+              SizedBox(height: labelGap),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.boldonse(
+                  color: const Color(0xFF11899B),
+                  fontSize: nameSize,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -616,6 +719,47 @@ class _RackGridItem extends StatelessWidget {
         Icons.checkroom_outlined,
         color: AppColors.textTertiary.withValues(alpha: 0.5),
         size: 32,
+      ),
+    );
+  }
+}
+
+class _RackRow extends StatelessWidget {
+  final List<Widget> children;
+  final double uiScale;
+
+  const _RackRow({required this.children, required this.uiScale});
+
+  @override
+  Widget build(BuildContext context) {
+    final borderRadius = (10.0 * uiScale).clamp(8.0, 12.0);
+    final rowPad = (8.0 * uiScale).clamp(6.0, 10.0);
+    final childGap = (4.0 * uiScale).clamp(2.0, 6.0);
+
+    return AspectRatio(
+      aspectRatio: 3.08,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(rowPad, rowPad, rowPad, rowPad - 1),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: const Border(
+            bottom: BorderSide(
+              color: _ArticleListPageState._rackTealPrimary,
+              width: 2.5,
+            ),
+          ),
+        ),
+        child: Row(
+          children: List.generate(3, (index) {
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: childGap),
+                child: children[index],
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -647,7 +791,10 @@ class _FilterChipPill extends StatelessWidget {
           decoration: ShapeDecoration(
             color: Colors.white,
             shape: RoundedRectangleBorder(
-              side: BorderSide(width: selected ? 1.4 : 1, color: selected ? _teal : _chipBorder),
+              side: BorderSide(
+                width: selected ? 1.4 : 1,
+                color: selected ? _teal : _chipBorder,
+              ),
               borderRadius: BorderRadius.circular(100),
             ),
           ),
@@ -665,6 +812,7 @@ class _FilterChipPill extends StatelessWidget {
     );
   }
 }
+
 /*
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
