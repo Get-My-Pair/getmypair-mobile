@@ -116,7 +116,14 @@ flutter:
     - assets/images/
     - assets/images/allicons/
     - assets/images/phone.svg
+    - assets/images/img/caremypair/
     - assets/images/icons/
+    - assets/images/icons/caremypair/
+    - assets/images/icons/caremypair/rmp.svg
+    - assets/images/icons/caremypair/mmp.svg
+    - assets/images/icons/caremypair/wmp.svg
+    - assets/images/icons/myrack/
+    - assets/images/icons/myrack/filter.svg
     - assets/images/icons/auth/
     - assets/images/icons/auth/apple.svg
     - assets/images/icons/auth/google.svg

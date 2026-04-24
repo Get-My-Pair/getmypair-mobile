@@ -423,81 +423,63 @@ class _ArticleListPageState extends State<ArticleListPage> {
           padding: EdgeInsets.symmetric(horizontal: headerHInset),
           child: Container(
             height: searchHeight,
-            padding: const EdgeInsets.only(top: 9, left: 33, right: 34, bottom: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: ShapeDecoration(
               color: Colors.white,
               shape: RoundedRectangleBorder(
-                side: const BorderSide(width: 1, color: _rackDark),
+                side: const BorderSide(width: 1, color: Color(0xFF09E0FF)),
                 borderRadius: BorderRadius.circular(100),
               ),
             ),
-            child: TextField(
-              onChanged: (value) => setState(() => _searchQuery = value),
-              style: GoogleFonts.montserrat(
-                fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                color: Colors.black87,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: 'Search',
-                hintStyle: GoogleFonts.montserrat(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
                   color: Colors.black.withValues(alpha: 0.34),
-                  fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                  fontWeight: FontWeight.w400,
+                  size: 22,
                 ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 24,
-                  minHeight: 24,
-                ),
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: Center(
-                    child: SvgPicture.asset(
-                      'assets/images/search.svg',
-                      width: 24,
-                      height: 24,
-                      colorFilter: ColorFilter.mode(
-                        Colors.black.withValues(alpha: 0.34),
-                        BlendMode.srcIn,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    textAlignVertical: TextAlignVertical.center,
+                    style: GoogleFonts.montserrat(
+                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      isCollapsed: false,
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 9),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      hintText: 'Search',
+                      hintStyle: GoogleFonts.montserrat(
+                        color: Colors.black.withValues(alpha: 0.34),
+                        fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ),
                 ),
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: 24,
-                  minHeight: 24,
-                ),
-                suffixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 1,
-                        height: 24,
-                        color: Colors.black.withValues(alpha: 0.18),
-                      ),
-                      const SizedBox(width: 10),
-                      SvgPicture.asset(
-                        'assets/images/filter.svg',
-                        width: 24,
-                        height: 24,
-                        colorFilter: ColorFilter.mode(
-                          Colors.black.withValues(alpha: 0.34),
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 8),
+                SvgPicture.asset(
+                  'assets/images/icons/myrack/filter.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.34),
+                    BlendMode.srcIn,
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -1392,41 +1374,63 @@ class _ArticleListPageState extends State<ArticleListPage> {
             padding: EdgeInsets.symmetric(horizontal: hPad),
             child: Container(
               height: 42,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: ShapeDecoration(
                 color: Colors.white,
                 shape: RoundedRectangleBorder(
-                  side: const BorderSide(width: 1, color: _rackDark),
+                  side: const BorderSide(width: 1, color: Color(0xFF09E0FF)),
                   borderRadius: BorderRadius.circular(100),
                 ),
               ),
-              child: TextField(
-                onChanged: (v) => setState(() => _searchQuery = v),
-                style: GoogleFonts.montserrat(
-                  fontSize: Responsive.fontSize(context, 16),
-                  color: Colors.black87,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  hintText: 'Search',
-                  hintStyle: GoogleFonts.montserrat(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    fontSize: Responsive.fontSize(context, 16),
-                    fontWeight: FontWeight.w400,
-                  ),
-                  prefixIcon: Icon(
+              child: Row(
+                children: [
+                  Icon(
                     Icons.search_rounded,
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: Colors.black.withValues(alpha: 0.34),
                     size: 22,
                   ),
-                  suffixIcon: Icon(
-                    Icons.tune_rounded,
-                    color: Colors.black.withValues(alpha: 0.35),
-                    size: 22,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      textAlignVertical: TextAlignVertical.center,
+                      style: GoogleFonts.montserrat(
+                        fontSize: Responsive.fontSize(context, 16),
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        isCollapsed: false,
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        hintText: 'Search',
+                        hintStyle: GoogleFonts.montserrat(
+                          color: Colors.black.withValues(alpha: 0.34),
+                          fontSize: Responsive.fontSize(context, 16),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  SvgPicture.asset(
+                    'assets/images/icons/myrack/filter.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withValues(alpha: 0.34),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

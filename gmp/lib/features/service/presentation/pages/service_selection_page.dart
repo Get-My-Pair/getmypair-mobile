@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
 import 'package:gmp/features/profile/domain/usecases/get_user_profile.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
@@ -28,11 +32,17 @@ class MaintenancePlanData {
 class ServiceSelectionPage extends StatefulWidget {
   final String articleId;
   final List<String>? allowedServiceTypes;
+  final String? articleName;
+  final String? articleImageUrl;
+  final String? flowPageTitle;
 
   const ServiceSelectionPage({
     super.key,
     required this.articleId,
     this.allowedServiceTypes,
+    this.articleName,
+    this.articleImageUrl,
+    this.flowPageTitle,
   });
 
   @override
@@ -44,16 +54,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   static const int kMaxProofVideos = 3;
   static const int kRepairEstimateRupees = 1000;
   static const int kWashEstimateRupees = 300;
-  static const List<String> _repairPickupDays = [
-    '23rd Monday',
-    '24th Tuesday',
-    '25th Wednesday',
-  ];
-  static const List<String> _repairPickupSlots = [
-    '11:00 AM',
-    '11:30 AM',
-    '12:00 PM',
-  ];
 
   static const List<MaintenancePlanData> _maintenancePlans = [
     MaintenancePlanData(id: '1m', label: '1 month', priceRupees: 299),
@@ -79,6 +79,87 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   final List<XFile> _proofImages = [];
   final List<XFile> _proofVideos = [];
   final ImagePicker _picker = ImagePicker();
+
+  String get _singleFlowType {
+    if (_visibleOptions.isEmpty) return 'repair';
+    return _visibleOptions.first.value;
+  }
+
+  String get _issuePrompt {
+    switch (_singleFlowType) {
+      case 'maintenance':
+        return 'Please describe the maintenance needed for your footwear';
+      case 'wash':
+        return 'Please describe the cleaning needed for your footwear';
+      default:
+        return 'Please describe the problem with your footwear';
+    }
+  }
+
+  String get _issueHint {
+    switch (_singleFlowType) {
+      case 'maintenance':
+        return 'Type maintenance details';
+      case 'wash':
+        return 'Type wash details';
+      default:
+        return 'Type Here';
+    }
+  }
+
+  String get _uploadPrompt {
+    switch (_singleFlowType) {
+      case 'maintenance':
+        return 'Upload photos to show current condition';
+      case 'wash':
+        return 'Upload photos to show dirt/stains';
+      default:
+        return 'Upload photos to show us the problem';
+    }
+  }
+
+  List<DateTime> get _pickupDays {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    return List.generate(3, (index) => start.add(Duration(days: index)));
+  }
+
+  List<String> get _pickupDayLabels =>
+      _pickupDays.map((d) => '${d.day}${_dayOrdinal(d.day)} ${DateFormat('EEEE').format(d)}').toList();
+
+  List<DateTime> get _pickupSlotDateTimes {
+    final selectedDay = _pickupDays[_selectedPickupDay.clamp(0, _pickupDays.length - 1)];
+    final now = DateTime.now();
+    final isToday = selectedDay.year == now.year &&
+        selectedDay.month == now.month &&
+        selectedDay.day == now.day;
+
+    DateTime base;
+    if (isToday) {
+      final roundedMinutes = now.minute < 30 ? 30 : 60;
+      base = DateTime(now.year, now.month, now.day, now.hour, 0).add(Duration(minutes: roundedMinutes));
+    } else {
+      base = DateTime(selectedDay.year, selectedDay.month, selectedDay.day, 9, 0);
+    }
+    return List.generate(9, (index) => base.add(Duration(minutes: 30 * index)));
+  }
+
+  List<String> get _pickupSlotLabels =>
+      _pickupSlotDateTimes.map((d) => DateFormat('h:mm a').format(d)).toList();
+
+  String _dayOrdinal(int day) {
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
+    }
+  }
 
   static const List<ServiceOptionData> _options = [
     ServiceOptionData(
@@ -120,13 +201,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     return _options.where((o) => allowedSet.contains(o.value)).toList();
   }
 
-  bool get _isRepairOnlyFlow =>
-      _visibleOptions.length == 1 && _visibleOptions.first.value == 'repair';
+  bool get _isSingleServiceFlow => _visibleOptions.length == 1;
 
   @override
   void initState() {
     super.initState();
-    if (_isRepairOnlyFlow) {
+    if (_isSingleServiceFlow) {
       _selectedService = _visibleOptions.first;
     }
     _load();
@@ -163,7 +243,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             _selectedAddress = profile.addresses.isNotEmpty
                 ? profile.addresses.first
                 : null;
-            if (_isRepairOnlyFlow && _selectedService == null) {
+            if (_isSingleServiceFlow && _selectedService == null) {
               _selectedService = _visibleOptions.first;
             }
             _loading = false;
@@ -227,6 +307,21 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     }
   }
 
+  Future<void> _takePicture() async {
+    if (_proofImages.length >= kMaxProofImages) return;
+    final photo = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
+    if (photo != null && mounted) {
+      setState(() {
+        if (_proofImages.length < kMaxProofImages) {
+          _proofImages.add(photo);
+        }
+      });
+    }
+  }
+
   void _removeImage(int index) {
     setState(() => _proofImages.removeAt(index));
   }
@@ -253,7 +348,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       case 'wash':
         return kWashEstimateRupees;
       case 'maintenance':
-        return _selectedMaintenancePlan?.priceRupees;
+        return (_selectedMaintenancePlan ?? _maintenancePlans.first).priceRupees;
       case 'donate':
       case 'dispose':
         return 0;
@@ -273,7 +368,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       return;
     }
     if (_selectedService!.value == 'maintenance' &&
-        _selectedMaintenancePlan == null) {
+        _selectedMaintenancePlan == null &&
+        !_isSingleServiceFlow) {
       await showAppFeedbackAlert(
         context,
         message: 'Please select a maintenance plan',
@@ -315,9 +411,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               : _problemController.text.trim(),
           pickupModeLabel: _homePickup ? 'Home Pickup' : 'Cobblers Nearby',
           pickupScheduleLabel:
-              '${_repairPickupDays[_selectedPickupDay]}, ${_repairPickupSlots[_selectedPickupSlot]}',
+              '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
           maintenancePlan: _selectedService!.value == 'maintenance'
-              ? _selectedMaintenancePlan
+              ? (_selectedMaintenancePlan ?? _maintenancePlans.first)
               : null,
         ),
       ),
@@ -332,6 +428,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   @override
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
+
+    if (_isSingleServiceFlow) {
+      return _buildRepairOnlyPage();
+    }
 
     if (_loading) {
       return GradientPageShell(
@@ -352,13 +452,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
     return GradientPageShell(
       appBar: buildGradientAppBar(
-        title: _isRepairOnlyFlow ? 'RepairMyPair' : 'Select Service',
+        title: _isSingleServiceFlow
+            ? (widget.flowPageTitle ?? 'RepairMyPair')
+            : 'Select Service',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: _submitting
               ? null
               : () {
-                  if (_isRepairOnlyFlow && _repairStep > 0) {
+                  if (_isSingleServiceFlow && _repairStep > 0) {
                     setState(() => _repairStep -= 1);
                     return;
                   }
@@ -374,9 +476,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           ),
         ],
       ),
-      body: _isRepairOnlyFlow
-          ? _buildRepairFlowBody(horizontal)
-          : ListView(
+      body: ListView(
         padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
         children: [
           if (_error != null) ...[
@@ -481,6 +581,612 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     );
   }
 
+  Widget _buildRepairOnlyPage() {
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    const panelRadius = BorderRadius.only(
+      topLeft: Radius.circular(20),
+      topRight: Radius.circular(20),
+      bottomLeft: Radius.circular(50),
+      bottomRight: Radius.circular(50),
+    );
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      extendBody: true,
+      body: Stack(
+        children: [
+          ...BgTheme.background(),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 58, 10, 0),
+              child: DecoratedBox(
+                decoration: const ShapeDecoration(
+                  color: Color(0xFFF0F0F0),
+                  shape: RoundedRectangleBorder(borderRadius: panelRadius),
+                  shadows: [
+                    BoxShadow(
+                      color: Color(0x19000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: panelRadius,
+                  child: _loading
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Color(0xFF11999E)),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                          children: [
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: _submitting
+                                      ? null
+                                      : () {
+                                          if (_repairStep > 0) {
+                                            setState(() => _repairStep -= 1);
+                                            return;
+                                          }
+                                          Navigator.pop(context);
+                                        },
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Color(0xFF062F35),
+                                    size: 22,
+                                  ),
+                                ),
+                                Text(
+                                  widget.flowPageTitle ?? 'RepairMyPair',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            if (_repairStep == 0 &&
+                                (widget.articleName ?? '').trim().isNotEmpty)
+                              Column(
+                                children: [
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      widget.articleName!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.boldonse(
+                                        color: const Color(0xFF11899B),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      widget.articleName!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  SizedBox(
+                                    width: 230,
+                                    height: 96,
+                                    child: Center(
+                                      child: (widget.articleImageUrl ?? '').isEmpty
+                                          ? const Icon(
+                                              Icons.checkroom_outlined,
+                                              color: Color(0xFF8D8D8D),
+                                              size: 58,
+                                            )
+                                          : Image.network(
+                                              widget.articleImageUrl!,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (_, _, _) => const Icon(
+                                                Icons.checkroom_outlined,
+                                                color: Color(0xFF8D8D8D),
+                                                size: 58,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            const SizedBox(height: 14),
+                            if (_repairStep == 0) ...[
+                              Text(
+                                _issuePrompt,
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              TextField(
+                                controller: _problemController,
+                                minLines: 4,
+                                maxLines: 4,
+                                decoration: InputDecoration(
+                                  hintText: _issueHint,
+                                  hintStyle: GoogleFonts.montserrat(
+                                    color: const Color(0xFFABABAB),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white.withValues(alpha: 0.10),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      width: 1,
+                                      color: Color(0x7F12899B),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      width: 1,
+                                      color: Color(0x7F12899B),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      width: 1.2,
+                                      color: Color(0xFF12899B),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _uploadPrompt,
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              InkWell(
+                                onTap: _submitting ? null : _pickImages,
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  height: 101,
+                                  alignment: Alignment.center,
+                                  decoration: ShapeDecoration(
+                                    color: Colors.white.withValues(alpha: 0.10),
+                                    shape: RoundedRectangleBorder(
+                                      side: const BorderSide(
+                                        width: 1,
+                                        color: Color(0x7F12899B),
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: _submitting ? null : _pickImages,
+                                        child: Text(
+                                          'Upload Photos ',
+                                          style: GoogleFonts.boldonse(
+                                            color: const Color(0xFF12899B),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        'or',
+                                        style: GoogleFonts.boldonse(
+                                          color: const Color(0xFFABABAB),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: _submitting ? null : _takePicture,
+                                        child: Text(
+                                          ' Take Pictures',
+                                          style: GoogleFonts.boldonse(
+                                            color: const Color(0xFF12899B),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'How would you like to send us your footwear?',
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _repairPickupPill(
+                                      label: 'Home Pickup',
+                                      selected: _homePickup,
+                                      onTap: () => setState(() => _homePickup = true),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _repairPickupPill(
+                                      label: 'Cobblers Nearby',
+                                      selected: !_homePickup,
+                                      onTap: () => setState(() => _homePickup = false),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 22),
+                              Center(
+                                child: SizedBox(
+                                  width: 164,
+                                  height: 48,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.centerRight,
+                                        end: Alignment.centerLeft,
+                                        colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                                      ),
+                                      borderRadius: BorderRadius.circular(100),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x19000000),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextButton(
+                                      onPressed: _submitting
+                                          ? null
+                                          : () => setState(() => _repairStep = 1),
+                                      style: TextButton.styleFrom(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Next',
+                                            style: GoogleFonts.boldonse(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 20),
+                                          const Icon(
+                                            Icons.arrow_forward_ios_rounded,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
+                              Text(
+                                'Home Pickup',
+                                style: GoogleFonts.boldonse(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Please choose a time slot from the options below',
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Row(
+                                children: [
+                                  Text(
+                                    _pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)],
+                                    style: GoogleFonts.boldonse(
+                                      color: const Color(0xFF11899B),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.calendar_month_outlined,
+                                    color: Color(0xFF12899B),
+                                    size: 18,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _pickupSlotLabels.length,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                  childAspectRatio: 2.1,
+                                ),
+                                itemBuilder: (_, index) {
+                                  final selected = _selectedPickupSlot == index;
+                                  return InkWell(
+                                    onTap: _submitting
+                                        ? null
+                                        : () => setState(() => _selectedPickupSlot = index),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      decoration: ShapeDecoration(
+                                        color: const Color(0xFFDFE7E9),
+                                        shape: RoundedRectangleBorder(
+                                          side: BorderSide(
+                                            width: 1,
+                                            color: selected
+                                                ? const Color(0xFF0CADC5)
+                                                : const Color(0xFF0F6876),
+                                          ),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _pickupSlotLabels[index],
+                                        style: GoogleFonts.boldonse(
+                                          color: const Color(0xFF12899B),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Pickup Address',
+                                style: GoogleFonts.boldonse(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: const Color(0xFF11899B)),
+                                      ),
+                                      child: const Icon(
+                                        Icons.home_outlined,
+                                        color: Color(0xFF11899B),
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _selectedAddress?.addressLine1.isNotEmpty == true
+                                                ? _selectedAddress!.addressLine1
+                                                : 'Home',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.montserrat(
+                                              color: const Color(0xFF12899B),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 1),
+                                          Text(
+                                            _selectedAddress == null
+                                                ? 'No address selected'
+                                                : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.montserrat(
+                                              color: const Color(0xFF4E7F8A),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: _submitting ? null : _pickAddress,
+                                      borderRadius: BorderRadius.circular(100),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF11899B),
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                        child: Text(
+                                          'Change',
+                                          style: GoogleFonts.boldonse(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 42),
+                              Center(
+                                child: SizedBox(
+                                  width: 164,
+                                  height: 48,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.centerRight,
+                                        end: Alignment.centerLeft,
+                                        colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                                      ),
+                                      borderRadius: BorderRadius.circular(100),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x19000000),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextButton(
+                                      onPressed: _submitting ? null : _submit,
+                                      style: TextButton.styleFrom(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                      ),
+                                      child: _submitting
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'Next',
+                                                  style: GoogleFonts.boldonse(
+                                                    color: Colors.white,
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w400,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 20),
+                                                const Icon(
+                                                  Icons.arrow_forward_ios_rounded,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ),
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
+          ),
+          SizedBox(height: bottomSafe),
+        ],
+      ),
+    );
+  }
+
+  Widget _repairPickupPill({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(100),
+      child: Container(
+        height: 48,
+        alignment: Alignment.center,
+        decoration: ShapeDecoration(
+          color: const Color(0xFFDFE7E9),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(
+              width: 1,
+              color: selected ? const Color(0xFF0CADC5) : const Color(0xFF0F6876),
+            ),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          shadows: const [
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 4,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.boldonse(
+            color: const Color(0xFF062F35),
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRepairFlowBody(double horizontal) {
     return ListView(
       padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
@@ -500,14 +1206,70 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
           ),
         ],
-        Row(
-          children: [
-            _stepBadge('1', _repairStep == 0),
-            const SizedBox(width: 8),
-            _stepBadge('2', _repairStep == 1),
-          ],
-        ),
-        const SizedBox(height: 14),
+        if ((widget.articleName ?? '').trim().isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.articleName!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.articleName!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 116,
+                  height: 72,
+                  child: (widget.articleImageUrl ?? '').isEmpty
+                      ? const Icon(
+                          Icons.checkroom_outlined,
+                          color: AppColors.textTertiary,
+                          size: 52,
+                        )
+                      : Image.network(
+                          widget.articleImageUrl!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.checkroom_outlined,
+                            color: AppColors.textTertiary,
+                            size: 52,
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (_repairStep == 0) ...[
           _sectionTitle(
             'Repair details',
@@ -624,12 +1386,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: List.generate(_repairPickupDays.length, (index) {
+            children: List.generate(_pickupDayLabels.length, (index) {
               final selected = _selectedPickupDay == index;
               return ChoiceChip(
-                label: Text(_repairPickupDays[index]),
+                label: Text(_pickupDayLabels[index]),
                 selected: selected,
-                onSelected: _submitting ? null : (_) => setState(() => _selectedPickupDay = index),
+                onSelected: _submitting
+                    ? null
+                    : (_) => setState(() {
+                        _selectedPickupDay = index;
+                        _selectedPickupSlot = 0;
+                      }),
               );
             }),
           ),
@@ -637,10 +1404,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: List.generate(_repairPickupSlots.length, (index) {
+            children: List.generate(_pickupSlotLabels.length, (index) {
               final selected = _selectedPickupSlot == index;
               return ChoiceChip(
-                label: Text(_repairPickupSlots[index]),
+                label: Text(_pickupSlotLabels[index]),
                 selected: selected,
                 onSelected: _submitting ? null : (_) => setState(() => _selectedPickupSlot = index),
               );

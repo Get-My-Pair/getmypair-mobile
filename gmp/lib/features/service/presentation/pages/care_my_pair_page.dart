@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
-import 'package:gmp/features/articles/presentation/pages/article_list_page.dart';
+import 'package:gmp/features/service/presentation/pages/maintain_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/pages/repair_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/pages/wash_my_pair_page.dart';
 
 class CareMyPairPage extends StatelessWidget {
   const CareMyPairPage({super.key});
@@ -18,18 +21,15 @@ class CareMyPairPage extends StatelessWidget {
   static const List<_VideoCardData> _videos = [
     _VideoCardData(
       title: 'Suede Saver: How to Clean and Protect Suede Shoes',
-      image:
-          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80',
+      image: 'assets/images/img/caremypair/vid13.png',
     ),
     _VideoCardData(
       title: 'Everyday Shoe Care Hacks Using Household Items',
-      image:
-          'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?auto=format&fit=crop&w=900&q=80',
+      image: 'assets/images/img/caremypair/vid2.png',
     ),
     _VideoCardData(
       title: 'Odor-Free Feet: How to De-Stink Your Shoes Naturally',
-      image:
-          'https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?auto=format&fit=crop&w=900&q=80',
+      image: 'assets/images/img/caremypair/vid13.png',
     ),
   ];
 
@@ -37,20 +37,17 @@ class CareMyPairPage extends StatelessWidget {
     _ArticleCardData(
       title: 'Quick Shoe Refresh: 5-Min DIY Care at Home',
       summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image:
-          'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=900&q=80',
+      image: 'assets/images/img/caremypair/air1.png',
     ),
     _ArticleCardData(
       title: 'Make Your Shoes Last Longer',
       summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image:
-          'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=900&q=80',
+      image: 'assets/images/img/caremypair/air23.png',
     ),
     _ArticleCardData(
       title: 'Revive Old Sneakers: Deep Clean at Home',
       summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image:
-          'https://images.unsplash.com/photo-1607522370275-f14206abe5d3?auto=format&fit=crop&w=900&q=80',
+      image: 'assets/images/img/caremypair/air23.png',
     ),
   ];
 
@@ -66,7 +63,7 @@ class CareMyPairPage extends StatelessWidget {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+              padding: const EdgeInsets.fromLTRB(10, 58, 10, 0),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),
@@ -92,7 +89,7 @@ class CareMyPairPage extends StatelessWidget {
                       const SizedBox(height: 10),
                       _PrimaryServiceCard(
                         label: 'RepairMyPair',
-                        onTap: () => _openFlow(context, title: 'RepairMyPair', allowedTypes: const ['repair']),
+                        onTap: () => _openRepairPage(context),
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -100,24 +97,16 @@ class CareMyPairPage extends StatelessWidget {
                           Expanded(
                             child: _SecondaryServiceCard(
                               label: 'Maintain\nMyPair',
-                              icon: Icons.handyman_outlined,
-                              onTap: () => _openFlow(
-                                context,
-                                title: 'Maintain MyPair',
-                                allowedTypes: const ['maintenance'],
-                              ),
+                              iconAsset: 'assets/images/icons/caremypair/mmp.svg',
+                              onTap: () => _openMaintainPage(context),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _SecondaryServiceCard(
                               label: 'Wash\nMyPair',
-                              icon: Icons.local_laundry_service_outlined,
-                              onTap: () => _openFlow(
-                                context,
-                                title: 'Wash MyPair',
-                                allowedTypes: const ['wash'],
-                              ),
+                              iconAsset: 'assets/images/icons/caremypair/wmp.svg',
+                              onTap: () => _openWashPage(context),
                             ),
                           ),
                         ],
@@ -187,18 +176,25 @@ class CareMyPairPage extends StatelessWidget {
     );
   }
 
-  void _openFlow(
-    BuildContext context, {
-    required String title,
-    required List<String> allowedTypes,
-  }) {
+  void _openMaintainPage(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ArticleListPage(
-          serviceFlowAllowedTypes: allowedTypes,
-          serviceFlowTitle: 'Select article for $title',
-        ),
+        builder: (_) => const MaintainMyPairPage(),
       ),
+    );
+  }
+
+  void _openWashPage(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const WashMyPairPage(),
+      ),
+    );
+  }
+
+  void _openRepairPage(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const RepairMyPairPage()),
     );
   }
 }
@@ -262,6 +258,7 @@ class _SearchBar extends StatelessWidget {
 }
 
 class _PrimaryServiceCard extends StatelessWidget {
+  static const double _cardHeight = 72;
   final String label;
   final VoidCallback onTap;
 
@@ -275,7 +272,8 @@ class _PrimaryServiceCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          height: _cardHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF062F35), Color(0xFF1CCAE5)],
@@ -285,11 +283,17 @@ class _PrimaryServiceCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.build_rounded, color: Colors.white, size: 26),
-              const SizedBox(width: 12),
+              SvgPicture.asset(
+                'assets/images/icons/caremypair/rmp.svg',
+                width: 42,
+                height: 42,
+              ),
+              const SizedBox(width: 14),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: GoogleFonts.boldonse(
                   color: Colors.white,
                   fontSize: 16,
@@ -305,13 +309,14 @@ class _PrimaryServiceCard extends StatelessWidget {
 }
 
 class _SecondaryServiceCard extends StatelessWidget {
+  static const double _cardHeight = 72;
   final String label;
-  final IconData icon;
+  final String iconAsset;
   final VoidCallback onTap;
 
   const _SecondaryServiceCard({
     required this.label,
-    required this.icon,
+    required this.iconAsset,
     required this.onTap,
   });
 
@@ -323,7 +328,8 @@ class _SecondaryServiceCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          height: _cardHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: const Color(0xFFDFE7E9),
             borderRadius: BorderRadius.circular(6),
@@ -331,8 +337,12 @@ class _SecondaryServiceCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, color: const Color(0xFF062F35), size: 26),
-              const SizedBox(width: 8),
+              SvgPicture.asset(
+                iconAsset,
+                width: 38,
+                height: 38,
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   label,
@@ -372,11 +382,19 @@ class _VideoCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              data.image,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(color: Colors.grey.shade400),
-            ),
+            data.image.startsWith('http')
+                ? Image.network(
+                    data.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        Container(color: Colors.grey.shade400),
+                  )
+                : Image.asset(
+                    data.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) =>
+                        Container(color: Colors.grey.shade400),
+                  ),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -439,17 +457,29 @@ class _ArticleCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-            child: Image.network(
-              data.image,
-              width: 134,
-              height: 64,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                width: 134,
-                height: 64,
-                color: Colors.grey.shade300,
-              ),
-            ),
+            child: data.image.startsWith('http')
+                ? Image.network(
+                    data.image,
+                    width: 134,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 134,
+                      height: 64,
+                      color: Colors.grey.shade300,
+                    ),
+                  )
+                : Image.asset(
+                    data.image,
+                    width: 134,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 134,
+                      height: 64,
+                      color: Colors.grey.shade300,
+                    ),
+                  ),
           ),
           Expanded(
             child: Padding(

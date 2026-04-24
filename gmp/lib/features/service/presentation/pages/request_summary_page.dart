@@ -5,7 +5,9 @@ import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
+import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -51,6 +53,33 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   bool _submitting = false;
   String? _error;
   Article? _article;
+
+  bool get _isStyledSingleServiceSummary =>
+      widget.service.value == 'repair' ||
+      widget.service.value == 'maintenance' ||
+      widget.service.value == 'wash';
+
+  String get _flowPageTitle {
+    switch (widget.service.value) {
+      case 'maintenance':
+        return 'MaintainMyPair';
+      case 'wash':
+        return 'WashMyPair';
+      default:
+        return 'RepairMyPair';
+    }
+  }
+
+  String get _serviceDisplayTitle {
+    switch (widget.service.value) {
+      case 'maintenance':
+        return 'Maintain My Pair';
+      case 'wash':
+        return 'Wash My Pair';
+      default:
+        return 'Repair My Pair';
+    }
+  }
 
   @override
   void initState() {
@@ -167,7 +196,10 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   @override
   Widget build(BuildContext context) {
     final horizontal = Responsive.horizontalPaddingOf(context);
-    final isRepairFlow = widget.service.value == 'repair';
+    if (_isStyledSingleServiceSummary) {
+      return _buildRepairSummaryPage();
+    }
+
     return GradientPageShell(
       appBar: buildGradientAppBar(
         title: 'RepairMyPair',
@@ -182,8 +214,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           ? const Center(
               child: CircularProgressIndicator(color: Colors.white),
             )
-          : isRepairFlow
-          ? _buildRepairSummaryBody(horizontal)
           : ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
               children: [
@@ -414,142 +444,207 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 
-  Widget _buildRepairSummaryBody(double horizontal) {
+  Widget _buildRepairSummaryPage() {
     final footwearName = _article == null
         ? 'Loading...'
         : '${_article!.brand} ${_article!.model}';
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final problemText = widget.problemDescription?.trim().isNotEmpty == true
         ? widget.problemDescription!.trim()
         : 'Lorem ipsum dolor sit amet consectetur. Ut vitae libero lorem tincidunt egestas congue. Enim ultricies luctus porta ut.';
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-      children: [
-        if (_error != null) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.error),
+    const panelRadius = BorderRadius.only(
+      topLeft: Radius.circular(20),
+      topRight: Radius.circular(20),
+      bottomLeft: Radius.circular(50),
+      bottomRight: Radius.circular(50),
+    );
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      extendBody: true,
+      body: Stack(
+        children: [
+          ...BgTheme.background(),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 58, 10, 0),
+              child: DecoratedBox(
+                decoration: const ShapeDecoration(
+                  color: Color(0xFFF0F0F0),
+                  shape: RoundedRectangleBorder(borderRadius: panelRadius),
+                  shadows: [
+                    BoxShadow(
+                      color: Color(0x19000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: panelRadius,
+                  child: _loading
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Color(0xFF11999E)),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                          children: [
+                            Row(
+                              children: [
+                                IconButton(
+                                  onPressed: _submitting ? null : () => Navigator.pop(context),
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Color(0xFF062F35),
+                                    size: 22,
+                                  ),
+                                ),
+                                Text(
+                                  _flowPageTitle,
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Summary',
+                              style: GoogleFonts.boldonse(
+                                color: const Color(0xFF062F35),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            _summaryLine('Type of service:', _serviceDisplayTitle),
+                            _summaryLine('Name of my footwear:', footwearName),
+                            _summaryLine(
+                              'Pickup scheduled on:',
+                              widget.pickupScheduleLabel ?? 'Not specified',
+                            ),
+                            _summaryLine(
+                              'Estimation cost:',
+                              '₹${widget.estimatedCostRupees}',
+                            ),
+                            _summaryLine('Problem described:', ''),
+                            const SizedBox(height: 2),
+                            Text(
+                              problemText,
+                              style: GoogleFonts.montserrat(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildProofPreviewStrip(),
+                            const SizedBox(height: 24),
+                            Center(
+                              child: SizedBox(
+                                width: 237,
+                                height: 48,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.centerRight,
+                                      end: Alignment.centerLeft,
+                                      colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(100),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x19000000),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: TextButton(
+                                    onPressed: _submitting || _article == null
+                                        ? null
+                                        : _confirmRequest,
+                                    style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(100),
+                                      ),
+                                    ),
+                                    child: _submitting
+                                        ? const SizedBox(
+                                            height: 22,
+                                            width: 22,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Request Quotation',
+                                            style: GoogleFonts.boldonse(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
             ),
-            child: Text(
-              _error!,
-              style: const TextStyle(
-                color: AppColors.error,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-        Text(
-          'Summary',
-          style: GoogleFonts.montserrat(
-            color: const Color(0xFF083C45),
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 10),
-        _summaryLine('Type of service:', 'Repair My Pair'),
-        _summaryLine('Name of my footwear:', footwearName),
-        _summaryLine(
-          'Pickup scheduled on:',
-          widget.pickupScheduleLabel ?? 'Not specified',
-        ),
-        _summaryLine('Problem described:', ''),
-        const SizedBox(height: 2),
-        Text(
-          problemText,
-          style: GoogleFonts.montserrat(
-            color: const Color(0xFF5A5A5A),
-            fontSize: 12.5,
-            height: 1.25,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildProofPreviewStrip(),
-        const SizedBox(height: 16),
-        if (_submitting)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: Text(
-              'Uploading proof and creating request…',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        Center(
-          child: SizedBox(
-            width: 170,
-            height: 42,
-            child: ElevatedButton(
-              onPressed: _submitting || _article == null ? null : _confirmRequest,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0A6070),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
+                            if (_error != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                _error!,
+                                style: GoogleFonts.montserrat(
+                                  color: AppColors.error,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                 ),
               ),
-              child: _submitting
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Text(
-                      'RequestQuotation',
-                      style: GoogleFonts.montserrat(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
             ),
           ),
-        ),
-        if (_article == null) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _loadArticle,
-            child: const Text('Retry loading article'),
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
+          SizedBox(height: bottomSafe),
         ],
-      ],
+      ),
     );
   }
 
   Widget _summaryLine(String key, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 140,
-            child: Text(
-              key,
-              style: GoogleFonts.montserrat(
-                color: const Color(0xFF0A859A),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
+          Text(
+            key,
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFF12899B),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
             ),
           ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               value,
               style: GoogleFonts.montserrat(
-                color: const Color(0xFF3F3F3F),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ),
@@ -569,7 +664,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(2),
                 child: SizedBox(
-                  height: 78,
+                  height: 104,
                   child: FutureBuilder(
                     future: images[index].readAsBytes(),
                     builder: (context, snap) {
@@ -586,7 +681,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         }
         return Expanded(
           child: Container(
-            height: 78,
+            height: 104,
             margin: EdgeInsets.only(right: index == 0 ? 4 : 0),
             color: const Color(0xFFD6D6D6),
           ),

@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
@@ -211,14 +213,12 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                       icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
                     ),
                     const SizedBox(width: 6),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Add New Footwear',
-                        style: TextStyle(
+                        style: GoogleFonts.boldonse(
                           color: Colors.white,
-                          fontSize: 32,
-                          height: 1.1,
-                          fontFamily: _headingFontFamily,
+                          fontSize: 24,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -324,45 +324,38 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     TextInputType? keyboardType,
     TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
-    return TextFormField(
-      controller: ctrl,
-      keyboardType: keyboardType,
-      textCapitalization: textCapitalization,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 16,
-        fontFamily: _contentFontFamily,
-      ),
-      decoration: InputDecoration(
-        labelText: hint,
-        labelStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontFamily: _contentFontFamily,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 6),
+          child: Text(
+            hint,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+              fontFamily: _contentFontFamily,
+            ),
+          ),
         ),
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        hintText: '',
-        hintStyle: const TextStyle(color: Colors.white70, fontSize: 16),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+        _glassInputShell(
+          child: TextFormField(
+            controller: ctrl,
+            keyboardType: keyboardType,
+            textCapitalization: textCapitalization,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: _contentFontFamily,
+            ),
+            decoration: _glassInputDecoration(),
+            validator: (v) {
+              if (hint.startsWith('Purchase')) return null;
+              return (v == null || v.trim().isEmpty) ? 'Required' : null;
+            },
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      ),
-      validator: (v) {
-        if (hint.startsWith('Purchase')) return null;
-        return (v == null || v.trim().isEmpty) ? 'Required' : null;
-      },
+      ],
     );
   }
 
@@ -381,34 +374,20 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             ),
           ),
         ),
-        DropdownButtonFormField<String>(
-          value: _brand,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+        _glassInputShell(
+          child: DropdownButtonFormField<String>(
+            value: _brand,
+            decoration: _glassInputDecoration(),
+            dropdownColor: const Color(0xFF0D5B68),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: _contentFontFamily,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            iconEnabledColor: Colors.white,
+            items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+            onChanged: (v) => setState(() => _brand = v ?? _brands.first),
           ),
-          dropdownColor: const Color(0xFF0D5B68),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontFamily: _contentFontFamily,
-          ),
-          iconEnabledColor: Colors.white,
-          items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-          onChanged: (v) => setState(() => _brand = v ?? _brands.first),
         ),
       ],
     );
@@ -429,34 +408,20 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             ),
           ),
         ),
-        DropdownButtonFormField<String>(
-          value: _model,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+        _glassInputShell(
+          child: DropdownButtonFormField<String>(
+            value: _model,
+            decoration: _glassInputDecoration(),
+            dropdownColor: const Color(0xFF0D5B68),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: _contentFontFamily,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            iconEnabledColor: Colors.white,
+            items: _models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+            onChanged: (v) => setState(() => _model = v ?? _models.first),
           ),
-          dropdownColor: const Color(0xFF0D5B68),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontFamily: _contentFontFamily,
-          ),
-          iconEnabledColor: Colors.white,
-          items: _models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-          onChanged: (v) => setState(() => _model = v ?? _models.first),
         ),
       ],
     );
@@ -494,40 +459,37 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             ),
           ),
         ),
-        InkWell(
-          onTap: _submitting ? null : _openPurchaseYearPicker,
-          borderRadius: BorderRadius.circular(100),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(100),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _purchaseYear?.toString() ?? 'Not specified',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: _purchaseYear != null ? Colors.white : Colors.white70,
-                      fontFamily: _contentFontFamily,
+        _glassInputShell(
+          child: InkWell(
+            onTap: _submitting ? null : _openPurchaseYearPicker,
+            borderRadius: BorderRadius.circular(100),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _purchaseYear?.toString() ?? 'Not specified',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: _purchaseYear != null ? Colors.white : Colors.white70,
+                        fontFamily: _contentFontFamily,
+                      ),
                     ),
                   ),
-                ),
-                if (_purchaseYear != null)
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 20, color: Colors.white70),
-                    onPressed: _submitting ? null : () => setState(() => _purchaseYear = null),
-                    style: IconButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(32, 32),
-                    ),
-                  )
-                else
-                  const Icon(Icons.calendar_today_outlined, size: 20, color: Colors.white),
-              ],
+                  if (_purchaseYear != null)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 20, color: Colors.white70),
+                      onPressed: _submitting ? null : () => setState(() => _purchaseYear = null),
+                      style: IconButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(32, 32),
+                      ),
+                    )
+                  else
+                    const Icon(Icons.calendar_today_outlined, size: 20, color: Colors.white),
+                ],
+              ),
             ),
           ),
         ),
@@ -555,36 +517,59 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             ),
           ),
         ),
-        DropdownButtonFormField<String>(
-          value: value,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+        _glassInputShell(
+          child: DropdownButtonFormField<String>(
+            value: value,
+            decoration: _glassInputDecoration(),
+            dropdownColor: const Color(0xFF0D5B68),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: _contentFontFamily,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
-              borderSide: const BorderSide(color: Color(0xFF09DFFF), width: 1.2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            iconEnabledColor: Colors.white,
+            items: items.map((e) => DropdownMenuItem(value: e['value'], child: Text(e['label']!))).toList(),
+            onChanged: onChanged,
           ),
-          dropdownColor: const Color(0xFF0D5B68),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontFamily: _contentFontFamily,
-          ),
-          iconEnabledColor: Colors.white,
-          items: items.map((e) => DropdownMenuItem(value: e['value'], child: Text(e['label']!))).toList(),
-          onChanged: onChanged,
         ),
       ],
+    );
+  }
+
+  Widget _glassInputShell({required Widget child}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(100),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _glassInputDecoration() {
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.transparent,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     );
   }
 
