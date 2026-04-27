@@ -46,7 +46,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     _bgGradientController ??=
         AnimationController(
           vsync: this,
-          duration: const Duration(seconds: 6),
+          duration: const Duration(milliseconds: 3000),
         )..repeat(reverse: true);
   }
 
@@ -236,22 +236,52 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                     end: end,
                     colors: [
                       Color.lerp(
-                        const Color(0xFF0B2E5F),
-                        const Color(0xFF1A4B85),
+                        const Color(0xFF061F40),
+                        const Color(0xFF12355F),
                         t,
                       )!,
                       Color.lerp(
-                        const Color(0xFF2079B8),
-                        const Color(0xFF3A98D6),
+                        const Color(0xFF16517C),
+                        const Color(0xFF2A73A5),
                         t,
                       )!,
                       Color.lerp(
-                        const Color(0xFF77D3F2),
-                        const Color(0xFFB0ECFF),
+                        const Color(0xFF4EA8C5),
+                        const Color(0xFF82CDE4),
                         t,
                       )!,
                     ],
                     stops: const [0.0, 0.52, 1.0],
+                  ),
+                ),
+              );
+            },
+          ),
+          AnimatedBuilder(
+            animation: bgGradientController,
+            builder: (context, child) {
+              final t = bgGradientController.value;
+              final glowA = Color.lerp(
+                const Color(0x66B8EEFF),
+                const Color(0x3D8AD7F2),
+                t,
+              )!;
+              final glowB = Color.lerp(
+                const Color(0x3D59BFE8),
+                const Color(0x6678D8FF),
+                t,
+              )!;
+              return DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.lerp(
+                      const Alignment(-0.7, -0.95),
+                      const Alignment(0.75, -0.8),
+                      t,
+                    )!,
+                    radius: 1.1,
+                    colors: [glowA, glowB, Colors.transparent],
+                    stops: const [0.0, 0.45, 1.0],
                   ),
                 ),
               );

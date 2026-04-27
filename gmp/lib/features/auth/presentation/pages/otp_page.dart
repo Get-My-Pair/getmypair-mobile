@@ -47,7 +47,10 @@ class _OTPPageState extends State<OTPPage> {
   String _otp = '';
   int _resendCountdown = 60;
   Timer? _timer;
+  Timer? _verifyingProgressTimer;
   bool _canResend = false;
+  bool _isVerifyingOtp = false;
+  double _verifyingProgress = 0.0;
 
   @override
   void initState() {
@@ -62,6 +65,7 @@ class _OTPPageState extends State<OTPPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _verifyingProgressTimer?.cancel();
     super.dispose();
   }
 
@@ -105,9 +109,34 @@ class _OTPPageState extends State<OTPPage> {
     return '${minutes.toString().padLeft(1, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
+  void _startVerifyingProgress() {
+    _verifyingProgressTimer?.cancel();
+    setState(() => _verifyingProgress = 0.08);
+    _verifyingProgressTimer = Timer.periodic(const Duration(milliseconds: 180), (_) {
+      if (!mounted || !_isVerifyingOtp) return;
+      setState(() {
+        if (_verifyingProgress < 0.58) {
+          _verifyingProgress += 0.04;
+        } else if (_verifyingProgress < 0.84) {
+          _verifyingProgress += 0.01;
+        }
+      });
+    });
+  }
+
+  void _stopVerifyingProgress() {
+    _verifyingProgressTimer?.cancel();
+    _verifyingProgressTimer = null;
+    if (mounted) {
+      setState(() => _verifyingProgress = 0.0);
+    }
+  }
+
   void _verifyOtp() {
-    if (_otp.length != 6) return;
+    if (_otp.length != 6 || _isVerifyingOtp) return;
     FocusScope.of(context).unfocus();
+    setState(() => _isVerifyingOtp = true);
+    _startVerifyingProgress();
     context.read<AuthBloc>().add(AuthVerifyOTP(mobile: widget.mobile, otp: _otp));
   }
 
@@ -175,6 +204,8 @@ class _OTPPageState extends State<OTPPage> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) async {
           if (state is AuthOTPVerified) {
+            setState(() => _isVerifyingOtp = false);
+            _stopVerifyingProgress();
             await showAppFeedbackAlert(
               context,
               message: 'Phone verified successfully!',
@@ -201,6 +232,8 @@ class _OTPPageState extends State<OTPPage> {
               );
             }
           } else if (state is AuthError) {
+            setState(() => _isVerifyingOtp = false);
+            _stopVerifyingProgress();
             await showAppFeedbackAlert(
               context,
               message: state.message,
@@ -313,8 +346,7 @@ class _OTPPageState extends State<OTPPage> {
                             const SizedBox(height: 24),
                             BlocBuilder<AuthBloc, AuthState>(
                               builder: (context, state) {
-                                final isLoading = state is AuthLoading;
-                                final isEnabled = _otp.length == 6 && !isLoading;
+                                final isEnabled = _otp.length == 6 && !_isVerifyingOtp;
                                 return SizedBox(
                                   height: 48,
                                   width: double.infinity,
@@ -328,24 +360,13 @@ class _OTPPageState extends State<OTPPage> {
                                       surfaceTintColor: Colors.transparent,
                                       elevation: 4,
                                       shadowColor: const Color(0x19000000),
-                                      side: const BorderSide(
-                                        width: 1,
-                                        color: Color(0xFF09DFFF),
-                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(100),
                                       ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 92, vertical: 10),
+                                      padding: EdgeInsets.zero,
                                     ),
-                                    child: isLoading
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(_kOnGradient),
-                                            ),
-                                          )
+                                    child: _isVerifyingOtp
+                                        ? _VerifyOtpProgress(progress: _verifyingProgress)
                                         : Text(
                                             'Verify OTP',
                                             style: GoogleFonts.boldonse(
@@ -371,6 +392,55 @@ class _OTPPageState extends State<OTPPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _VerifyOtpProgress extends StatelessWidget {
+  const _VerifyOtpProgress({required this.progress});
+
+  static const Color _progressTrack = Color(0xFF08414A);
+  static const Color _progressFill = Color(0xFF12899B);
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fillWidth = constraints.maxWidth * progress.clamp(0.0, 1.0);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(100),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(color: _progressTrack),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  curve: Curves.easeOut,
+                  width: fillWidth,
+                  decoration: BoxDecoration(
+                    color: _progressFill,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  'Verifying OTP...',
+                  style: GoogleFonts.boldonse(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFFDFE7E9),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
