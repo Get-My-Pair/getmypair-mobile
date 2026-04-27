@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/features/auth/presentation/pages/onboarding/onboarding_bottom_progress.dart';
 import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_page.dart';
 
 import 'profile_completion_page.dart';
+
+/// Display fonts (e.g. Boldonse) use tall metrics; without this, labels can clip in Material buttons.
+const TextHeightBehavior _kOnboardingButtonTextHeight = TextHeightBehavior(
+  applyHeightToFirstAscent: false,
+  applyHeightToLastDescent: false,
+);
 
 class AiOnboardingPage extends StatefulWidget {
   const AiOnboardingPage({
@@ -22,8 +29,6 @@ class AiOnboardingPage extends StatefulWidget {
 class _AiOnboardingPageState extends State<AiOnboardingPage>
     with SingleTickerProviderStateMixin {
   static const int _pageCount = 7;
-  static const Color _primary = AppColors.footwearHeroStart;
-  static const Color _text = Color(0xFFDFE7E9);
 
   final PageController _controller = PageController();
   final TextEditingController _name = TextEditingController();
@@ -148,12 +153,41 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: ['Female', 'Male', 'Other'].map((g) {
-                return ChoiceChip(
-                  label: Text(g),
-                  selected: _gender == g,
-                  onSelected: (_) => setState(() => _gender = g),
-                  selectedColor: AppColors.footwearHeroMid,
+                final selected = _gender == g;
+                return ElevatedButton(
+                  onPressed: () => setState(() => _gender = g),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selected
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.15),
+                    foregroundColor: selected
+                        ? const Color(0xFF12899B)
+                        : const Color(0xFFDFE7E9),
+                    elevation: selected ? 2 : 0,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    side: const BorderSide(
+                      color: Color(0xFF09DFFF),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    g,
+                    textHeightBehavior: _kOnboardingButtonTextHeight,
+                    style: GoogleFonts.boldonse(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      height: 1.2,
+                    ),
+                  ),
                 );
               }).toList(),
             ),
@@ -204,13 +238,35 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
             ElevatedButton(
               onPressed: _cameraAllowed ? null : _onCameraTap,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                foregroundColor: _text,
+                backgroundColor: _cameraAllowed
+                    ? const Color(0xFFABABAB)
+                    : Colors.white,
+                foregroundColor: _cameraAllowed
+                    ? const Color(0xFF5A5A5A)
+                    : const Color(0xFF12899B),
+                elevation: 2,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(100),
                 ),
+                side: const BorderSide(
+                  color: Color(0xFF09DFFF),
+                  width: 1,
+                ),
               ),
-              child: Text(_cameraAllowed ? 'Camera Allowed' : 'Allow Camera Access'),
+              child: Text(
+                _cameraAllowed ? 'Camera Allowed' : 'Allow Camera Access',
+                textAlign: TextAlign.center,
+                textHeightBehavior: _kOnboardingButtonTextHeight,
+                style: GoogleFonts.boldonse(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 1.2,
+                ),
+              ),
             ),
           ],
         ),
@@ -360,10 +416,13 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                           flipX: true,
                         ),
                         const SizedBox(width: 20),
-                        const Expanded(
+                        Expanded(
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: _BottomLine(),
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: OnboardingBottomProgress(
+                              currentIndex: _index,
+                              totalSteps: _pageCount,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 20),
@@ -470,9 +529,26 @@ class _Input extends StatelessWidget {
         hintStyle: TextStyle(color: Colors.white.withValues(alpha: .55)),
         filled: true,
         fillColor: Colors.black.withValues(alpha: .18),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(999),
           borderSide: BorderSide(color: Colors.white.withValues(alpha: .25)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: .25)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: .45)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: Colors.red.withValues(alpha: .6)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: Colors.red.withValues(alpha: .8)),
         ),
       ),
     );
@@ -496,70 +572,72 @@ class _Checks extends StatelessWidget {
     final optionSize = screenWidth < 360 ? 20.0 : 24.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: options.map((option) {
-        final active = selected.contains(option);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: InkWell(
-            onTap: () {
-              if (active) {
-                selected.remove(option);
-              } else {
-                selected.add(option);
-              }
-              onChanged();
-            },
-            child: Row(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: const Color(0xFFDFE7E9),
-                      width: 3,
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                    color: active
-                        ? const Color(0xFFDFE7E9).withValues(alpha: .2)
-                        : Colors.transparent,
-                  ),
-                  child: active
-                      ? const Icon(
-                          Icons.check,
-                          color: Color(0xFFDFE7E9),
-                          size: 22,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: Text(
-                    option,
-                    style: GoogleFonts.boldonse(
-                      color: const Color(0xFFDFE7E9),
-                      fontSize: optionSize,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      children: [
+        Text(
+          'Choose multiple options',
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFFDFE7E9).withValues(alpha: 0.8),
+            fontSize: screenWidth < 360 ? 14.0 : 15.0,
+            fontWeight: FontWeight.w400,
+            height: 1.35,
           ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _BottomLine extends StatelessWidget {
-  const _BottomLine();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 1,
-      color: const Color(0xFFDDE6E9),
+        ),
+        const SizedBox(height: 18),
+        ...options.map((option) {
+          final active = selected.contains(option);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: () {
+                if (active) {
+                  selected.remove(option);
+                } else {
+                  selected.add(option);
+                }
+                onChanged();
+              },
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: const Color(0xFFDFE7E9),
+                        width: 3,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                      color: active
+                          ? const Color(0xFFDFE7E9).withValues(alpha: .2)
+                          : Colors.transparent,
+                    ),
+                    child: active
+                        ? const Icon(
+                            Icons.check,
+                            color: Color(0xFFDFE7E9),
+                            size: 22,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Text(
+                      option,
+                      textHeightBehavior: _kOnboardingButtonTextHeight,
+                      style: GoogleFonts.boldonse(
+                        color: const Color(0xFFDFE7E9),
+                        fontSize: optionSize,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

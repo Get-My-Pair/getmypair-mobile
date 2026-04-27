@@ -34,7 +34,8 @@ const Color _kOnHeaderText = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
 const Color _kRackCardBorder = Color(0xFF0F6876);
-const Color _kRackCardBg = Color(0xFFE8E8E8);
+/// Visible grey panel behind “My Rack” (distinct from scaffold / quick tiles).
+const Color _kRackCardBg = Color(0xFFE2E5E8);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 const String _kNotificationBellBodySvgAsset =
@@ -400,48 +401,48 @@ class _HomePageState extends State<HomePage> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _HomeTopCard(
-                                userName: userName,
-                                currentAddress: _currentAddress,
-                                pairsInRackDisplay: _pairsInRackDisplay,
-                                layoutScale: layoutScale,
-                                onLocationTap: () async {
-                                  final profile = userProfileFromProfileState(
-                                    context.read<ProfileBloc>().state,
-                                  );
-                                  final authState = context
-                                      .read<AuthBloc>()
-                                      .state;
-                                  final selected = await Navigator.of(context)
-                                      .push<String>(
-                                        MaterialPageRoute(
-                                          builder: (_) => SelectLocationPage(
-                                            profileBloc: context
-                                                .read<ProfileBloc>(),
-                                            initialAddress: _currentAddress,
-                                            mapPinDisplayName:
-                                                mapPinDisplayNameFrom(
-                                                  profile,
-                                                  authState,
-                                                ),
-                                            mapPinProfileImageRef:
-                                                profile?.profileImage,
+                                  userName: userName,
+                                  currentAddress: _currentAddress,
+                                  pairsInRackDisplay: _pairsInRackDisplay,
+                                  layoutScale: layoutScale,
+                                  onLocationTap: () async {
+                                    final profile = userProfileFromProfileState(
+                                      context.read<ProfileBloc>().state,
+                                    );
+                                    final authState = context
+                                        .read<AuthBloc>()
+                                        .state;
+                                    final selected = await Navigator.of(context)
+                                        .push<String>(
+                                          MaterialPageRoute(
+                                            builder: (_) => SelectLocationPage(
+                                              profileBloc: context
+                                                  .read<ProfileBloc>(),
+                                              initialAddress: _currentAddress,
+                                              mapPinDisplayName:
+                                                  mapPinDisplayNameFrom(
+                                                    profile,
+                                                    authState,
+                                                  ),
+                                              mapPinProfileImageRef:
+                                                  profile?.profileImage,
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                  if (selected != null && mounted) {
-                                    final addressText =
-                                        _looksLikeLatLong(selected)
-                                        ? await _latLongToAddress(selected)
-                                        : selected.startsWith('📍')
-                                        ? selected
-                                        : '📍 $selected';
-                                    if (mounted) {
-                                      setState(
-                                        () => _currentAddress = addressText,
-                                      );
+                                        );
+                                    if (selected != null && mounted) {
+                                      final addressText =
+                                          _looksLikeLatLong(selected)
+                                          ? await _latLongToAddress(selected)
+                                          : selected.startsWith('📍')
+                                          ? selected
+                                          : '📍 $selected';
+                                      if (mounted) {
+                                        setState(
+                                          () => _currentAddress = addressText,
+                                        );
+                                      }
                                     }
-                                  }
-                                },
+                                  },
                               ),
                               Expanded(
                                 child: Padding(
@@ -862,13 +863,13 @@ class _HomeHeaderBell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = _homeHeaderChromeScale(context);
-    final bellSize = (40.0 * s).clamp(34.0, 44.0);
-    final bellPadH = (8.0 * s).clamp(6.0, 10.0);
-    final bellPadV = (8.0 * s).clamp(6.0, 10.0);
-    final bellBodyW = (15.0 * s).clamp(11.5, 17.0);
-    final bellBodyH = (12.5 * s).clamp(10.0, 14.5);
-    final bellClapperW = (7.8 * s).clamp(6.0, 9.0);
-    final bellClapperH = (4.6 * s).clamp(3.5, 5.6);
+    final bellSize = (44.0 * s).clamp(38.0, 50.0);
+    final bellPadH = (8.5 * s).clamp(7.0, 11.0);
+    final bellPadV = (8.5 * s).clamp(7.0, 11.0);
+    final bellBodyW = (17.0 * s).clamp(13.0, 19.0);
+    final bellBodyH = (14.0 * s).clamp(11.0, 16.5);
+    final bellClapperW = (8.8 * s).clamp(6.8, 10.5);
+    final bellClapperH = (5.2 * s).clamp(4.0, 6.4);
 
     return GestureDetector(
       onTap: onTap,
@@ -879,15 +880,21 @@ class _HomeHeaderBell extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.14),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.22),
+              blurRadius: 1,
+              spreadRadius: -0.5,
+              offset: const Offset(0, -0.5),
             ),
           ],
         ),
         child: ClipOval(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: bellPadH,
@@ -899,13 +906,14 @@ class _HomeHeaderBell extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withValues(alpha: 0.38),
-                    Colors.white.withValues(alpha: 0.14),
+                    Colors.white.withValues(alpha: 0.45),
+                    Colors.white.withValues(alpha: 0.12),
                   ],
+                  stops: const [0.0, 1.0],
                 ),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.55),
-                  width: 1,
+                  color: Colors.white.withValues(alpha: 0.65),
+                  width: 1.25,
                 ),
               ),
               child: Center(
@@ -1053,7 +1061,7 @@ class _HomeTopCard extends StatelessWidget {
     final headerScaleX = _homeHeaderScaleXForWidth(width);
     final s = _homeUiScale(context) * layoutScale;
     final deviceIconScale = (shortestSide / 390).clamp(0.82, 1.35).toDouble();
-    final locationIconSize = (20 * s * deviceIconScale).clamp(18.0, 32.0);
+    final locationIconSize = (20 * s * deviceIconScale).clamp(15.0, 28.0);
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
     final headerHorizontal = (horizontal - 4).clamp(12.0, horizontal);
@@ -1402,8 +1410,8 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = _homeUiScale(context);
     final narrow = MediaQuery.sizeOf(context).width < 360;
-    final valueSize = ((narrow ? 28.0 : 32.0) * s).clamp(22.0, 32.0);
-    final labelSize = (14 * s).clamp(10.0, 14.0);
+    final valueSize = ((narrow ? 22.0 : 26.0) * s).clamp(18.0, 28.0);
+    final labelSize = (12 * s).clamp(9.0, 12.0);
     final labelStyle = GoogleFonts.montserrat(
       fontSize: labelSize,
       fontWeight: FontWeight.w400,
@@ -1431,7 +1439,7 @@ class _StatItem extends StatelessWidget {
                     height: 1,
                   ),
                 ),
-                SizedBox(height: (11 * s).clamp(6.0, 14.0)),
+                SizedBox(height: (9 * s).clamp(5.0, 12.0)),
                 Text(
                   labelLine1,
                   textAlign: TextAlign.center,

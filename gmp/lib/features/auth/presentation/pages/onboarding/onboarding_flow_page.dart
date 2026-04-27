@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../widgets/onboarding_surface.dart';
+import 'onboarding_bottom_progress.dart';
 import '../mobile_otp_page.dart';
 
 /// Three-step onboarding matching Figma nodes:
@@ -148,10 +149,13 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
                 children: [
                   _PageTicks(current: _index),
                   const SizedBox(width: 20),
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: _BottomLine(),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: OnboardingBottomProgress(
+                        currentIndex: _index,
+                        totalSteps: _total,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -272,18 +276,6 @@ class _OnboardingSlideView extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _BottomLine extends StatelessWidget {
-  const _BottomLine();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 1,
-      color: const Color(0xFFDDE6E9),
     );
   }
 }
