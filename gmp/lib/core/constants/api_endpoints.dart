@@ -36,8 +36,8 @@ class ApiEndpoints {
   static String get me => '$baseUrl$apiPrefix/me';
 
   // User Profile endpoints (getmypair-api: server/src/routes/userProfile.routes.js)
+  // Profile row is created by POST /api/auth/complete-profile (see completeProfile above), not here.
   static const String userProfilePrefix = '/api/user/profile';
-  static String get userProfileCreate => '$baseUrl$userProfilePrefix/create';
   static String get userProfileMe => '$baseUrl$userProfilePrefix/me';
   static String get userProfileUpdate => '$baseUrl$userProfilePrefix/update';
   static String get userProfileUploadImage =>
