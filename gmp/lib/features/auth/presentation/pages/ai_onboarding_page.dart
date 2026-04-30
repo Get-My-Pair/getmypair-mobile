@@ -131,7 +131,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     final steps = <Widget>[
       _Step(
         text:
-            "Welcome, Collector!\n\nI’m your AI friend XXX!\n\nI’m here to help you nail the perfect fit, discover brands that work for you, and vibe with your style.\n\nBut first let’s get to know you better!",
+            "Welcome, Collector!\n\nI’m your AI friend KIX!\n\nI’m here to help you nail the perfect fit, discover brands that work for you, and vibe with your style.\n\nBut first let’s get to know you better!",
         title: 'What should we call you?\nDo you go by a nickname?',
         child: _Input(
           controller: _name,
