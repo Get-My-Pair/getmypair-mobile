@@ -61,7 +61,7 @@ class ManageDevicesPage extends StatelessWidget {
                 ),
                 margin: const EdgeInsets.only(bottom: 14),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(h, statusTop + 72, h, 112),
+                  padding: EdgeInsets.fromLTRB(h, statusTop + 30, h, 112),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

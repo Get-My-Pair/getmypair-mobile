@@ -266,8 +266,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               18.0,
                               28.0,
                             );
-                            final topPadding = (statusTop + (64 * layoutScale))
-                                .clamp(statusTop + 32, statusTop + 72);
+                            final topPadding = statusTop + 30;
                             final bottomPadding = (20 * layoutScale).clamp(
                               4.0,
                               18.0,

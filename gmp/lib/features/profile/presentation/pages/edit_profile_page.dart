@@ -340,10 +340,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           var contentScale = uiScale.clamp(0.48, 1.08);
                           for (var i = 0; i < 22; i++) {
                             final padTop =
-                                (statusTop + (72 * contentScale)).clamp(
-                              statusTop + 26,
-                              statusTop + 80,
-                            );
+                                statusTop + 30;
                             final padBottom =
                                 (72 * contentScale).clamp(22.0, 84.0);
                             final innerH =
@@ -361,10 +358,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           contentScale = contentScale.clamp(0.44, uiScale);
 
                           final padTop =
-                              (statusTop + (72 * contentScale)).clamp(
-                            statusTop + 26,
-                            statusTop + 80,
-                          );
+                              statusTop + 30;
                           final padBottom =
                               (72 * contentScale).clamp(22.0, 84.0);
 

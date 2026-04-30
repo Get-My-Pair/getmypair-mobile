@@ -109,7 +109,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           controller: _scrollController,
                           padding: EdgeInsets.fromLTRB(
                             20,
-                            statusTop + 72,
+                            statusTop + 30,
                             20,
                             112,
                           ),
@@ -695,7 +695,7 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                       controller: _formScrollController,
                       padding: EdgeInsets.fromLTRB(
                         20,
-                        statusTop + 72,
+                        statusTop + 30,
                         20,
                         164 + bottomInset,
                       ),

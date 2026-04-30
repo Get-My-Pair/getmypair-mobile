@@ -469,7 +469,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 58, 10, 0),
+              padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),

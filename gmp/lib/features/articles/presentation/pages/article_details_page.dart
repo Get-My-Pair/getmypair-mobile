@@ -173,7 +173,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                 children: [
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 75, 10, 0),
+                      padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
                       child: DecoratedBox(
                         decoration: ShapeDecoration(
                           color: _panelBg,
@@ -227,7 +227,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                 children: [
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 75, 10, 0),
+                      padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
                       child: DecoratedBox(
                         decoration: ShapeDecoration(
                           color: _panelBg,
@@ -333,7 +333,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
               children: [
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 75, 10, 0),
+                    padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
                     child: DecoratedBox(
                       decoration: ShapeDecoration(
                         color: _panelBg,

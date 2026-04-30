@@ -34,7 +34,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
             ...BgTheme.background(),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 80, 8, 10),
+                padding: const EdgeInsets.fromLTRB(20, 30, 8, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

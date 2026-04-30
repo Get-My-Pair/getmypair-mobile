@@ -204,7 +204,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: EdgeInsets.fromLTRB(horizontal, 75, horizontal, 28),
+                padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 28),
                 children: [
                 Row(
                   children: [

@@ -320,7 +320,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: EdgeInsets.fromLTRB(horizontal, 75, horizontal, 24),
+            padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 24),
             children: [
               if (_error != null) ...[
                 Container(

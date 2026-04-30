@@ -78,10 +78,7 @@ class FamilyProfilePage extends StatelessWidget {
                       final horizontalLeft = (20 * widthScale).clamp(16.0, 22.0);
                       final horizontalRight =
                           (25 * widthScale).clamp(18.0, 28.0);
-                      final topPadding = (statusTop + (64 * layoutScale)).clamp(
-                        statusTop + 32,
-                        statusTop + 72,
-                      );
+                      final topPadding = statusTop + 30;
                       final bottomPadding = (20 * layoutScale).clamp(4.0, 18.0);
                       final titleSize = (21 * layoutScale).clamp(15.0, 21.0);
 

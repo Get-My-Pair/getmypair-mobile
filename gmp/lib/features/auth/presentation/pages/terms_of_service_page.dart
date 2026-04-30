@@ -40,7 +40,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   horizontalPadding,
-                  (80 * (MediaQuery.sizeOf(context).height / 844)).clamp(48.0, 80.0),
+                  (30 * (MediaQuery.sizeOf(context).height / 844)).clamp(30.0, 30.0),
                   8,
                   10,
                 ),

@@ -145,7 +145,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
-    final topInset = (58.0 * uiScale).clamp(34.0, 70.0);
+    final topInset = 30.0;
     const panelRadius = BorderRadius.only(
       topLeft: Radius.circular(20),
       topRight: Radius.circular(20),
