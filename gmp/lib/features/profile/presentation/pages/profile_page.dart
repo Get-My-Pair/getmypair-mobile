@@ -212,6 +212,14 @@ class _ProfilePageState extends State<ProfilePage> {
             value: kProfileGradientHeaderSystemUi,
             child: Scaffold(
               extendBody: true,
+              bottomNavigationBar: widget.showBottomNav
+                  ? DashboardLinkedBottomNav(
+                      selectedTabIndex: 2,
+                      onProfileTabWhenCannotPop: token.isNotEmpty
+                          ? () => _openEditProfile(context, profile, token)
+                          : null,
+                    )
+                  : null,
               body: SafeArea(
                 top: false,
                 bottom: false,
@@ -441,18 +449,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                     ),
-                    if (widget.showBottomNav) const SizedBox(height: 14),
-                    if (widget.showBottomNav)
-                      DashboardLinkedBottomNav(
-                        selectedTabIndex: 2,
-                        onProfileTabWhenCannotPop: token.isNotEmpty
-                            ? () => _openEditProfile(
-                                  context,
-                                  profile,
-                                  token,
-                                )
-                            : null,
-                      ),
                   ],
                 ),
               ),

@@ -124,15 +124,15 @@ class FloatingGradientBottomNav extends StatelessWidget {
 EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
   final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
-  const minBarBody = 172.0;
-  final side = ((w - minBarBody) * 0.5).clamp(16.0, 88.0);
+  const minBarBody = 266.0;
+  final side = ((w - minBarBody) * 0.5).clamp(12.0, 62.0);
   // Scale bottom inset with width + safe-area so spacing feels consistent
   // across compact phones and larger screens.
   final widthFactor = ((w - 320.0) / 160.0).clamp(0.0, 1.0);
-  final baseBottom = 6.0 + (widthFactor * 4.0);
+  final baseBottom = 26.0 + (widthFactor * 10.0);
   final bottom = safeBottom <= 0
       ? baseBottom
-      : (baseBottom + (safeBottom * 0.65)).clamp(10.0, 28.0).toDouble();
+      : (baseBottom + (safeBottom * 1.0)).clamp(28.0, 56.0).toDouble();
   return EdgeInsets.fromLTRB(side, 16, side, bottom);
 }
 
