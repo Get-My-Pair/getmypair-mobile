@@ -52,7 +52,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: 10,
+            horizontal: 12,
             vertical: (barHeight - hitSize) / 2,
           ),
           child: LayoutBuilder(
@@ -62,9 +62,12 @@ class FloatingGradientBottomNav extends StatelessWidget {
               final dynamicHitSize = slotWidth.clamp(28.0, hitSize).toDouble();
               final iconBase = (dynamicHitSize * 0.50).clamp(14.0, 22.0).toDouble();
               return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(tabCount, (i) {
                   final selected = i == currentIndex;
-                  return Expanded(
+                  return SizedBox(
+                    width: dynamicHitSize,
+                    height: hitSize,
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -119,13 +122,13 @@ class FloatingGradientBottomNav extends StatelessWidget {
 /// Outer padding around [FloatingGradientBottomNav] on [CustomerDashboardPage]
 /// and on pushed stack pages that use [DashboardLinkedBottomNav].
 ///
-/// Horizontal insets scale down on narrow devices so the pill does not overflow;
-/// at ~390px width they stay close to the original 80px side margins.
+/// Horizontal insets scale down on narrow devices so the pill does not overflow,
+/// while keeping the bar visibly wider on most phones.
 EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
   final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
-  const minBarBody = 266.0;
-  final side = ((w - minBarBody) * 0.5).clamp(12.0, 62.0);
+  const minBarBody = 240.0;
+  final side = ((w - minBarBody) * 0.5).clamp(20.0, 72.0);
   // Scale bottom inset with width + safe-area so spacing feels consistent
   // across compact phones and larger screens.
   final widthFactor = ((w - 320.0) / 160.0).clamp(0.0, 1.0);
