@@ -184,15 +184,82 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return parts.first;
   }
 
+  /// Vertical space needed by the form at [scale], mirroring clamps in [build].
+  double _estimateEditProfileColumnHeight(double scale) {
+    double sx(double v, double lo, double hi) => (v * scale).clamp(lo, hi);
+
+    var h = 0.0;
+    h += sx(100, 72, 100);
+    h += sx(20, 10, 22);
+    for (var i = 0; i < 5; i++) {
+      h += sx(15, 11, 14);
+      h += sx(8, 4, 8);
+      final v = sx(11, 7, 11);
+      final t = sx(14, 11, 14);
+      final hasSuffix = i == 4;
+      final icon = hasSuffix ? sx(32, 24, 32) : 0.0;
+      final base = 2 * v + t * 1.28;
+      h += (hasSuffix ? (base > icon ? base : icon) : base) + 6;
+      h += sx(12, 7, 14);
+    }
+    h += sx(18, 10, 20);
+    h += sx(15, 11, 14);
+    h += sx(8, 4, 8);
+    h += sx(14, 11, 14) * 1.2;
+    h += sx(20, 8, 16);
+    h += sx(15, 11, 14);
+    h += sx(6, 3, 6);
+    h += sx(14, 11, 14) * 1.2;
+    h += sx(16, 10, 20);
+    // Matches article create primary pill (height ~50, scaled).
+    h += sx(50, 44, 52);
+    return h;
+  }
+
+  Future<void> _saveChanges() async {
+    FocusScope.of(context).unfocus();
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    if (name.isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please enter your full name.',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
+    if (!mounted) return;
+    context.read<ProfileBloc>().add(
+          ProfileUpdateRequested(
+            accessToken: widget.accessToken,
+            name: name,
+            email: email.isEmpty ? null : email,
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ProfileBloc, ProfileState>(
+      listenWhen: (previous, current) {
+        if (current is ProfileError) return true;
+        if (previous is ProfileUpdating && current is ProfileLoaded) return true;
+        return false;
+      },
       listener: (context, state) async {
         if (state is ProfileError) {
           await showAppFeedbackAlert(
             context,
             message: state.message,
             type: AppFeedbackType.failure,
+          );
+          return;
+        }
+        if (state is ProfileLoaded) {
+          await showAppFeedbackAlert(
+            context,
+            message: 'Your profile has been updated.',
+            type: AppFeedbackType.success,
           );
         }
       },
@@ -213,6 +280,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
             : null;
 
         final statusTop = MediaQuery.paddingOf(context).top;
+        final size = MediaQuery.sizeOf(context);
+        final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
+        final shortestSide = size.shortestSide;
+        final widthScale = (size.width / 390.0).clamp(0.82, 1.04);
+        final heightScale = (size.height / 844.0).clamp(0.54, 1.0);
+        final textScaleTightness = (1.06 / deviceTextScale).clamp(0.82, 1.04);
+        final deviceClassScale = shortestSide < 360
+            ? 0.90
+            : shortestSide > 430
+            ? 1.04
+            : 1.0;
+        final heightComfortScale = size.height < 760
+            ? 0.92
+            : size.height > 900
+            ? 1.05
+            : 1.0;
+        final layoutScale = (widthScale < heightScale ? widthScale : heightScale) *
+            textScaleTightness *
+            deviceClassScale *
+            heightComfortScale;
+        final uiScale = layoutScale.clamp(0.50, 1.08);
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: kProfileGradientHeaderSystemUi,
@@ -245,94 +333,202 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ),
                         ],
                       ),
-                      child: SingleChildScrollView(
-                        // Status bar inset; keep the last fields above the bottom bar.
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          statusTop + 20,
-                          20,
-                          112,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(
-                              profile,
-                              avatarImage,
-                              isLoading,
-                              state,
+                      // No scrolling: shrink spacing, padding, and control sizes until
+                      // the column fits the available height (see [_estimateEditProfileColumnHeight]).
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          var contentScale = uiScale.clamp(0.48, 1.08);
+                          for (var i = 0; i < 22; i++) {
+                            final padTop =
+                                (statusTop + (72 * contentScale)).clamp(
+                              statusTop + 26,
+                              statusTop + 80,
+                            );
+                            final padBottom =
+                                (72 * contentScale).clamp(22.0, 84.0);
+                            final innerH =
+                                constraints.maxHeight - padTop - padBottom;
+                            if (innerH <= 80) break;
+                            final need =
+                                _estimateEditProfileColumnHeight(contentScale);
+                            if (need <= innerH - 2) break;
+                            contentScale *= (innerH / need) * 0.995;
+                            if (contentScale < 0.44) {
+                              contentScale = 0.44;
+                              break;
+                            }
+                          }
+                          contentScale = contentScale.clamp(0.44, uiScale);
+
+                          final padTop =
+                              (statusTop + (72 * contentScale)).clamp(
+                            statusTop + 26,
+                            statusTop + 80,
+                          );
+                          final padBottom =
+                              (72 * contentScale).clamp(22.0, 84.0);
+
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              (18 * contentScale).clamp(12.0, 18.0),
+                              padTop,
+                              (18 * contentScale).clamp(12.0, 18.0),
+                              padBottom,
                             ),
-                            const SizedBox(height: 26),
-                            _buildLabel('Full Name'),
-                            const SizedBox(height: 8),
-                            _profileField(controller: _nameController),
-                            const SizedBox(height: 18),
-                            _buildLabel('Nick Name'),
-                            const SizedBox(height: 8),
-                            _profileField(
-                              controller: _nickNameController,
-                              readOnly: true,
-                            ),
-                            const SizedBox(height: 18),
-                            _buildLabel('Phone Number'),
-                            const SizedBox(height: 8),
-                            _profileField(
-                              controller: _phoneController,
-                              readOnly: true,
-                            ),
-                            const SizedBox(height: 18),
-                            _buildLabel('E-Mail Address'),
-                            const SizedBox(height: 8),
-                            _profileField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                            const SizedBox(height: 18),
-                            _buildLabel('Password'),
-                            const SizedBox(height: 8),
-                            _profileField(
-                              controller: _passwordController,
-                              readOnly: true,
-                              obscureText: !_showPassword,
-                              suffix: IconButton(
-                                onPressed: () => setState(
-                                  () => _showPassword = !_showPassword,
-                                ),
-                                splashRadius: 18,
-                                icon: Icon(
-                                  _showPassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: const Color(0xCCFFFFFF),
-                                  size: 22,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 22),
-                            _buildLabel('Foot Size Chart'),
-                            const SizedBox(height: 10),
-                            Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: _footMetricChip('US:10')),
-                                const SizedBox(width: 10),
-                                Expanded(child: _footMetricChip('UK:09')),
-                                const SizedBox(width: 10),
-                                Expanded(child: _footMetricChip('EURO:41')),
+                                _buildHeader(
+                                  profile,
+                                  avatarImage,
+                                  isLoading,
+                                  state,
+                                  contentScale,
+                                ),
+                                SizedBox(
+                                  height: (20 * contentScale).clamp(10.0, 22.0),
+                                ),
+                                _buildLabel('Full Name', contentScale),
+                                SizedBox(
+                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                ),
+                                _profileField(
+                                  controller: _nameController,
+                                  scale: contentScale,
+                                ),
+                                SizedBox(
+                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                ),
+                                _buildLabel('Nick Name', contentScale),
+                                SizedBox(
+                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                ),
+                                _profileField(
+                                  controller: _nickNameController,
+                                  readOnly: true,
+                                  scale: contentScale,
+                                ),
+                                SizedBox(
+                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                ),
+                                _buildLabel('Phone Number', contentScale),
+                                SizedBox(
+                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                ),
+                                _profileField(
+                                  controller: _phoneController,
+                                  readOnly: true,
+                                  scale: contentScale,
+                                ),
+                                SizedBox(
+                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                ),
+                                _buildLabel('E-Mail Address', contentScale),
+                                SizedBox(
+                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                ),
+                                _profileField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  scale: contentScale,
+                                ),
+                                SizedBox(
+                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                ),
+                                _buildLabel('Password', contentScale),
+                                SizedBox(
+                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                ),
+                                _profileField(
+                                  controller: _passwordController,
+                                  readOnly: true,
+                                  obscureText: !_showPassword,
+                                  scale: contentScale,
+                                  suffix: IconButton(
+                                    onPressed: () => setState(
+                                      () => _showPassword = !_showPassword,
+                                    ),
+                                    splashRadius:
+                                        (18 * contentScale).clamp(12.0, 18.0),
+                                    icon: Icon(
+                                      _showPassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: const Color(0xCCFFFFFF),
+                                      size: (22 * contentScale)
+                                          .clamp(16.0, 22.0),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height:
+                                      (18 * contentScale).clamp(10.0, 20.0),
+                                ),
+                                _buildLabel('Foot Size Chart', contentScale),
+                                SizedBox(
+                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                ),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _footMetricChip(
+                                        'US:10',
+                                        contentScale,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: (8 * contentScale)
+                                          .clamp(4.0, 8.0),
+                                    ),
+                                    Expanded(
+                                      child: _footMetricChip(
+                                        'UK:09',
+                                        contentScale,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: (8 * contentScale)
+                                          .clamp(4.0, 8.0),
+                                    ),
+                                    Expanded(
+                                      child: _footMetricChip(
+                                        'EURO:41',
+                                        contentScale,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(
+                                  height: (20 * contentScale).clamp(8.0, 16.0),
+                                ),
+                                _buildLabel('Foot Abnormality', contentScale),
+                                SizedBox(
+                                  height: (6 * contentScale).clamp(3.0, 6.0),
+                                ),
+                                Text(
+                                  'Wide Foot',
+                                  style: GoogleFonts.boldonse(
+                                    fontSize: (14 * contentScale)
+                                        .clamp(11.0, 14.0),
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(
+                                  height:
+                                      (16 * contentScale).clamp(10.0, 20.0),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: _buildSaveChangesButton(
+                                    scale: contentScale,
+                                    isBusy: isLoading,
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 22),
-                            _buildLabel('Foot Abnormality'),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Wide Foot',
-                              style: GoogleFonts.boldonse(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -351,36 +547,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
     ImageProvider<Object>? avatarImage,
     bool isLoading,
     ProfileState state,
+    double scale,
   ) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Padding(
-            // Align with the reference header rhythm (title + avatar cluster).
-            padding: const EdgeInsets.only(top: 28),
-            child: Text(
-              'Edit Profile',
-              style: GoogleFonts.boldonse(
-                color: const Color(0xFFDFE7E9),
-                fontSize: 24,
-                fontWeight: FontWeight.w400,
-                height: 1,
-              ),
+          child: Text(
+            'Edit Profile',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFFDFE7E9),
+              fontSize: (22 * scale).clamp(16.0, 22.0),
+              fontWeight: FontWeight.w400,
+              height: 1,
             ),
           ),
         ),
         SizedBox(
-          width: 112,
-          height: 110,
+          width: (102 * scale).clamp(72.0, 102.0),
+          height: (100 * scale).clamp(72.0, 100.0),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                top: 6,
+                top: (6 * scale).clamp(3.0, 6.0),
                 right: 0,
                 child: CircleAvatar(
-                  radius: 39.5,
+                  radius: (35.0 * scale).clamp(24.0, 35.0),
                   backgroundColor: const Color(0x33FFFFFF),
                   backgroundImage: avatarImage,
                   child: avatarImage == null
@@ -389,7 +585,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ? profile.name[0].toUpperCase()
                               : 'U',
                           style: GoogleFonts.boldonse(
-                            fontSize: 20,
+                            fontSize: (18 * scale).clamp(12.0, 18.0),
                             color: Colors.white,
                             fontWeight: FontWeight.w400,
                           ),
@@ -423,23 +619,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
               Positioned(
-                right: 4,
-                top: 56,
+                left: 1,
+                top: 40,
                 child: InkWell(
                   onTap: isLoading ? null : _pickAndUploadImage,
                   borderRadius: BorderRadius.circular(24),
                   child: Container(
-                    height: 46,
-                    width: 46,
+                    height: (42 * scale).clamp(30.0, 42.0),
+                    width: (42 * scale).clamp(30.0, 42.0),
                     decoration: BoxDecoration(
                       color: const Color(0xCC0E8EA4),
                       border: Border.all(color: const Color(0x4DFFFFFF)),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.camera_alt_outlined,
                       color: Colors.white,
-                      size: 18,
+                      size: (16 * scale).clamp(11.0, 16.0),
                     ),
                   ),
                 ),
@@ -451,11 +647,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(String text, double scale) {
     return Text(
       text,
       style: GoogleFonts.montserrat(
-        fontSize: 16,
+        fontSize: (15 * scale).clamp(11.0, 14.0),
         fontWeight: FontWeight.w400,
         color: Colors.white,
         height: 1,
@@ -469,6 +665,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     bool obscureText = false,
     Widget? suffix,
     TextInputType? keyboardType,
+    double scale = 1.0,
   }) {
     return TextFormField(
       controller: controller,
@@ -476,7 +673,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       obscureText: obscureText,
       keyboardType: keyboardType,
       style: GoogleFonts.montserrat(
-        fontSize: 16,
+        fontSize: (14 * scale).clamp(11.0, 14.0),
         fontWeight: FontWeight.w500,
         color: const Color(0xF2FFFFFF),
       ),
@@ -484,14 +681,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
         filled: true,
         fillColor: readOnly ? _inputFillReadOnly : _inputFill,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 26,
-          vertical: 11,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: (20 * scale).clamp(13.0, 20.0),
+          vertical: (11 * scale).clamp(7.0, 11.0),
         ),
         suffixIcon: suffix,
-        suffixIconConstraints: const BoxConstraints(
-          minHeight: 36,
-          minWidth: 44,
+        suffixIconConstraints: BoxConstraints(
+          minHeight: (32 * scale).clamp(24.0, 32.0),
+          minWidth: (38 * scale).clamp(28.0, 38.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(100),
@@ -509,17 +706,67 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _footMetricChip(String value) {
+  Widget _footMetricChip(String value, double scale) {
     return Container(
       alignment: Alignment.centerLeft,
       child: Text(
         value,
         style: GoogleFonts.boldonse(
-          fontSize: 14,
+          fontSize: (12 * scale).clamp(10.0, 12.0),
           fontWeight: FontWeight.w400,
           color: Colors.white,
         ),
       ),
+    );
+  }
+
+  /// Same visual language as [ArticleCreatePage] primary actions (white pill, cyan border, Boldonse).
+  Widget _buildSaveChangesButton({
+    required double scale,
+    required bool isBusy,
+  }) {
+    const teal = Color(0xFF12899B);
+    const cyanBorder = Color(0xFF09DFFF);
+    final fontSize = (14 * scale).clamp(12.0, 14.0);
+    final btnHeight = (50 * scale).clamp(44.0, 52.0);
+    final indicator = (22 * scale).clamp(18.0, 22.0);
+
+    return ElevatedButton(
+      onPressed: isBusy ? null : _saveChanges,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: teal,
+        disabledBackgroundColor: Colors.white,
+        disabledForegroundColor: teal,
+        elevation: 2,
+        shadowColor: Colors.black26,
+        padding: EdgeInsets.symmetric(
+          horizontal: (24 * scale).clamp(18.0, 28.0),
+        ),
+        minimumSize: Size(0, btnHeight),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(100),
+          side: const BorderSide(color: cyanBorder, width: 1),
+        ),
+      ),
+      child: isBusy
+          ? SizedBox(
+              width: indicator,
+              height: indicator,
+              child: const CircularProgressIndicator(
+                color: teal,
+                strokeWidth: 2,
+              ),
+            )
+          : Text(
+              'Save Changes',
+              style: GoogleFonts.boldonse(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w400,
+                color: teal,
+              ),
+            ),
     );
   }
 }

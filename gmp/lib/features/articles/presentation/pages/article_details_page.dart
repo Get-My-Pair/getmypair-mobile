@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
@@ -303,7 +306,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
 
     final a = _article!;
     final imageUrl = _imageUrl(a.thumbnailImage);
-    final hPad = Responsive.horizontalPaddingOf(context);
     final swatchColor = _parseColorHex(a.color) ?? const Color(0xFF11253F);
 
     TextStyle boldonse(double base) => GoogleFonts.boldonse(
@@ -358,243 +360,13 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                           bottomLeft: Radius.circular(50),
                           bottomRight: Radius.circular(50),
                         ),
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                                    onPressed: () => Navigator.pop(context),
-                                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22, color: _rackDark),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                                        onPressed: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Share coming soon')),
-                                          );
-                                        },
-                                        icon: const Icon(Icons.ios_share_rounded, size: 24, color: _rackDark),
-                                      ),
-                                      PopupMenuButton<String>(
-                                        icon: const Icon(Icons.more_horiz_rounded, size: 26, color: _rackDark),
-                                        onSelected: (v) async {
-                                          if (v == 'edit') {
-                                            await Navigator.of(context).push(
-                                              MaterialPageRoute(builder: (_) => ArticleEditPage(articleId: a.id)),
-                                            );
-                                            if (mounted) _load();
-                                          } else if (v == 'delete') {
-                                            await _deleteArticle();
-                                          }
-                                        },
-                                        itemBuilder: (ctx) => [
-                                          const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                          const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                a.brand.isNotEmpty ? a.brand : 'Shoe',
-                                style: GoogleFonts.boldonse(
-                                  color: _rackTealAccent,
-                                  fontSize: Responsive.fontSize(context, 24),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                a.model.isNotEmpty ? a.model : '—',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.black,
-                                  fontSize: Responsive.fontSize(context, 20),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Builder(
-                                builder: (context) {
-                                  final screenW = MediaQuery.sizeOf(context).width;
-                                  final maxImgW =
-                                      (screenW - 2 * hPad - 32).clamp(140.0, 220.0);
-                                  final maxImgH =
-                                      (maxImgW * 0.62).clamp(96.0, 148.0);
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 4,
-                                    ),
-                                    child: Center(
-                                      child: Transform.rotate(
-                                        angle: -0.48,
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: SizedBox(
-                                            width: maxImgW,
-                                            height: maxImgH,
-                                            child: imageUrl.isNotEmpty
-                                                ? Image.network(
-                                                    imageUrl,
-                                                    fit: BoxFit.contain,
-                                                    alignment: Alignment.center,
-                                                    errorBuilder:
-                                                        (context, error, stackTrace) =>
-                                                            _placeholder(),
-                                                  )
-                                                : _placeholder(),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              SizedBox(height: Responsive.scaleDesignWidth(context, 30)),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.only(bottom: 14),
-                                decoration: ShapeDecoration(
-                                  shape: RoundedRectangleBorder(
-                                    side: BorderSide(
-                                      width: 1,
-                                      color: Colors.black.withValues(alpha: 0.2),
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: _statPair(
-                                        context,
-                                        value: '—',
-                                        label: 'Size',
-                                        valueStyle: boldonse(16),
-                                        labelStyle: montserrat(16),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: _statColorColumn(
-                                        context,
-                                        swatchColor: swatchColor,
-                                        colorName: a.color.isNotEmpty ? a.color : '—',
-                                        labelStyle: montserrat(16),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: _statPair(
-                                        context,
-                                        value: a.purchaseYear?.toString() ?? '—',
-                                        label: 'Purchased',
-                                        valueStyle: boldonse(16),
-                                        labelStyle: montserrat(16),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: _statPair(
-                                      context,
-                                      value: _categoryLabel(a.category),
-                                      label: 'Category',
-                                      valueStyle: boldonse(16),
-                                      labelStyle: montserrat(16),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: _statPair(
-                                      context,
-                                      value: '—',
-                                      label: 'Last wear',
-                                      valueStyle: boldonse(16),
-                                      labelStyle: montserrat(16),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: const Color(0xFF09DFFF)),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x19000000),
-                                      blurRadius: 4,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Last sent to shoe care',
-                                        style: montserrat(16),
-                                      ),
-                                    ),
-                                    Text(
-                                      '—',
-                                      textAlign: TextAlign.right,
-                                      style: boldonse(16),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _gradientPillButton(
-                                      label: 'Rehome',
-                                      onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Rehome coming soon')),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: _outlinedPillButton(
-                                      label: 'Rent',
-                                      onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Rent coming soon')),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Condition: ${_conditionLabel(a.condition)}',
-                                style: montserrat(14, color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
+                        child: _buildFixedResponsiveContent(
+                          context,
+                          article: a,
+                          imageUrl: imageUrl,
+                          swatchColor: swatchColor,
+                          boldonse: boldonse,
+                          montserrat: montserrat,
                         ),
                       ),
                     ),
@@ -612,6 +384,284 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFixedResponsiveContent(
+    BuildContext context, {
+    required Article article,
+    required String imageUrl,
+    required Color swatchColor,
+    required TextStyle Function(double) boldonse,
+    required TextStyle Function(double, {Color? color}) montserrat,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const designWidth = 390.0;
+        const designHeight = 740.0;
+        final widthRatio = constraints.maxWidth / designWidth;
+        final heightRatio = constraints.maxHeight / designHeight;
+        final scale = math.min(widthRatio, heightRatio).clamp(0.58, 1.0);
+
+        final contentWidth = designWidth * scale;
+        final padX = 24.0 * scale;
+        final padTop = 10.0 * scale;
+        final padBottom = 18.0 * scale;
+        final headerGap = 8.0 * scale;
+        final titleGap = 4.0 * scale;
+        final imageGap = 14.0 * scale;
+        final sectionGap = 18.0 * scale;
+        final buttonGap = 14.0 * scale;
+
+        final imageWidth = (220.0 * scale).clamp(124.0, 240.0);
+        final imageHeight = imageWidth * 0.62;
+        final swatchSize = (34.0 * scale).clamp(22.0, 34.0);
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: contentWidth,
+            height: constraints.maxHeight,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(padX, padTop, padX, padBottom),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(
+                          minWidth: 34 * scale,
+                          minHeight: 34 * scale,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: (22 * scale).clamp(16.0, 22.0),
+                          color: _rackDark,
+                        ),
+                      ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(
+                          minWidth: 34 * scale,
+                          minHeight: 34 * scale,
+                        ),
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ArticleEditPage(articleId: article.id),
+                            ),
+                          );
+                          if (mounted) _load();
+                        },
+                        icon: SvgPicture.asset(
+                          'assets/images/icons/profile/edit.svg',
+                          width: (20 * scale).clamp(14.0, 20.0),
+                          height: (20 * scale).clamp(14.0, 20.0),
+                          colorFilter: const ColorFilter.mode(_rackTealAccent, BlendMode.srcIn),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: headerGap),
+                  Text(
+                    article.brand.isNotEmpty ? article.brand : 'Shoe',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.boldonse(
+                      color: _rackTealAccent,
+                      fontSize: (24 * scale).clamp(14.0, 24.0),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  SizedBox(height: titleGap),
+                  Text(
+                    article.model.isNotEmpty ? article.model : '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.montserrat(
+                      color: Colors.black,
+                      fontSize: (20 * scale).clamp(12.0, 20.0),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  SizedBox(height: imageGap),
+                  Expanded(
+                    child: Center(
+                      child: Transform.rotate(
+                        angle: -0.48,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: SizedBox(
+                            width: imageWidth,
+                            height: imageHeight,
+                            child: imageUrl.isNotEmpty
+                                ? Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.contain,
+                                    alignment: Alignment.center,
+                                    errorBuilder: (context, error, stackTrace) => _placeholder(),
+                                  )
+                                : _placeholder(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: sectionGap),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.only(bottom: 12 * scale),
+                    decoration: ShapeDecoration(
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(
+                          width: 1,
+                          color: Colors.black.withValues(alpha: 0.2),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: _statPair(
+                            context,
+                            value: '—',
+                            label: 'Size',
+                            valueStyle: boldonse(16 * scale),
+                            labelStyle: montserrat(16 * scale),
+                          ),
+                        ),
+                        Expanded(
+                          child: _statColorColumn(
+                            context,
+                            swatchColor: swatchColor,
+                            colorName: article.color.isNotEmpty ? article.color : '—',
+                            labelStyle: montserrat(16 * scale),
+                            swatchSize: swatchSize,
+                          ),
+                        ),
+                        Expanded(
+                          child: _statPair(
+                            context,
+                            value: article.purchaseYear?.toString() ?? '—',
+                            label: 'Purchased',
+                            valueStyle: boldonse(16 * scale),
+                            labelStyle: montserrat(16 * scale),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: sectionGap),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: _statPair(
+                          context,
+                          value: _categoryLabel(article.category),
+                          label: 'Category',
+                          valueStyle: boldonse(16 * scale),
+                          labelStyle: montserrat(16 * scale),
+                        ),
+                      ),
+                      Expanded(
+                        child: _statPair(
+                          context,
+                          value: '—',
+                          label: 'Last Wear',
+                          valueStyle: boldonse(16 * scale),
+                          labelStyle: montserrat(16 * scale),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: sectionGap),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 14 * scale, vertical: 10 * scale),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF09DFFF)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x19000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Last sent to shoe care',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: montserrat(15 * scale),
+                          ),
+                        ),
+                        SizedBox(width: 10 * scale),
+                        Text(
+                          '—',
+                          textAlign: TextAlign.right,
+                          style: boldonse(15 * scale),
+                        ),
+                        SizedBox(width: 6 * scale),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: (22 * scale).clamp(14.0, 22.0),
+                          color: _rackTeal,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: sectionGap),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _gradientPillButton(
+                          label: 'Rehome',
+                          height: 59 * scale,
+                          onTap: () {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(const SnackBar(content: Text('Rehome coming soon')));
+                          },
+                        ),
+                      ),
+                      SizedBox(width: buttonGap),
+                      Expanded(
+                        child: _outlinedPillButton(
+                          label: 'Rent',
+                          height: 59 * scale,
+                          onTap: () {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(const SnackBar(content: Text('Rent coming soon')));
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12 * scale),
+                  Text(
+                    'Condition: ${_conditionLabel(article.condition)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: montserrat(14 * scale, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -637,14 +687,15 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     required Color swatchColor,
     required String colorName,
     required TextStyle labelStyle,
+    double swatchSize = 34,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 34,
-          height: 34,
+          width: swatchSize,
+          height: swatchSize,
           decoration: ShapeDecoration(
             color: swatchColor,
             shape: const OvalBorder(),
@@ -662,14 +713,18 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     );
   }
 
-  Widget _gradientPillButton({required String label, required VoidCallback onTap}) {
+  Widget _gradientPillButton({
+    required String label,
+    required VoidCallback onTap,
+    double height = 59,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Ink(
-          height: 59,
+          height: height,
           decoration: ShapeDecoration(
             gradient: const LinearGradient(
               begin: Alignment(1, 0.5),
@@ -700,7 +755,11 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     );
   }
 
-  Widget _outlinedPillButton({required String label, required VoidCallback onTap}) {
+  Widget _outlinedPillButton({
+    required String label,
+    required VoidCallback onTap,
+    double height = 59,
+  }) {
     return Material(
       color: const Color(0xFFDFE7E9),
       borderRadius: BorderRadius.circular(10),
@@ -708,7 +767,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: 59,
+          height: height,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),

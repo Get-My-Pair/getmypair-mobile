@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,6 +20,7 @@ import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
+import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
 import 'family_profile_page.dart';
 import 'manage_devices_page.dart';
@@ -203,6 +206,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           final statusTop = MediaQuery.paddingOf(context).top;
+          final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
 
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: kProfileGradientHeaderSystemUi,
@@ -215,7 +219,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Expanded(
                       child: Container(
-                    margin: const EdgeInsets.only(bottom: 95),
                         decoration: BoxDecoration(
                           borderRadius: const BorderRadius.vertical(
                             bottom: Radius.circular(22),
@@ -232,129 +235,224 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ],
                         ),
-                        child: SingleChildScrollView(
-                          // Status bar inset + same 86px rhythm as Home hero; reduced bottom reserve for lower logout placement.
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            statusTop + 86,
-                            40,
-                            88,
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final widthScale = (constraints.maxWidth / 390)
+                                .clamp(0.84, 1.06);
+                            final heightScale = (constraints.maxHeight / 760)
+                                .clamp(0.58, 1.0);
+                            final textScaleTightness = (1.08 / deviceTextScale)
+                                .clamp(0.82, 1.04);
+                            final layoutScale = (math.min(
+                              widthScale,
+                              heightScale,
+                            ) *
+                                    textScaleTightness)
+                                .clamp(0.58, 1.0);
+
+                            final horizontalLeft = (20 * widthScale).clamp(
+                              16.0,
+                              22.0,
+                            );
+                            final horizontalRight = (25 * widthScale).clamp(
+                              18.0,
+                              28.0,
+                            );
+                            final topPadding = (statusTop + (64 * layoutScale))
+                                .clamp(statusTop + 32, statusTop + 72);
+                            final bottomPadding = (20 * layoutScale).clamp(
+                              4.0,
+                              18.0,
+                            );
+                            final titleSize = (21 * layoutScale).clamp(
+                              15.0,
+                              21.0,
+                            );
+                            final subtitleSize = (14 * layoutScale).clamp(
+                              11.0,
+                              14.0,
+                            );
+
+                            return Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                horizontalLeft,
+                                topPadding,
+                                horizontalRight,
+                                bottomPadding,
+                              ),
+                              child: Column(
                                 children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          profile.name,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.boldonse(
-                                            fontSize: 24,
-                                            height: 1.02,
-                                            color: const Color(0xFFDFE7E9),
-                                          ),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              profile.name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.boldonse(
+                                                fontSize: titleSize,
+                                                height: 1.02,
+                                                color: const Color(0xFFDFE7E9),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              height: (8 * layoutScale).clamp(
+                                                4.0,
+                                                8.0,
+                                              ),
+                                            ),
+                                            Text(
+                                              _subtitleLine(profile),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.montserrat(
+                                                fontSize: subtitleSize,
+                                                fontWeight: FontWeight.w400,
+                                                color: const Color(0xFFDFE7E9),
+                                                height: 1.1,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          _subtitleLine(profile),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.montserrat(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w400,
-                                            color: const Color(0xFFDFE7E9),
-                                            height: 1.1,
-                                          ),
+                                      ),
+                                      SizedBox(
+                                        width: (12 * layoutScale).clamp(
+                                          6.0,
+                                          12.0,
                                         ),
-                                      ],
+                                      ),
+                                      _OverlappingAvatarCluster(
+                                        profile: profile,
+                                        scale: (layoutScale * 0.9).clamp(
+                                          0.68,
+                                          1.0,
+                                        ),
+                                        onTap: token.isNotEmpty
+                                            ? () => _openEditProfile(
+                                                  context,
+                                                  profile,
+                                                  token,
+                                                )
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                    height: (16 * layoutScale).clamp(
+                                      4.0,
+                                      16.0,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  _OverlappingAvatarCluster(profile: profile),
-                                ],
-                              ),
-                              const SizedBox(height: 28),
-                              _MenuSection(
-                                children: [
-                                  _GradientMenuTile(
-                                    icon: Icons.account_circle_outlined,
-                                    title: 'Family Profile',
-                                    onTap: () => _openFamilyProfile(
-                                      context,
-                                      profile,
-                                      token,
+                                  _MenuSection(
+                                    scale: layoutScale,
+                                    children: [
+                                      _GradientMenuTile(
+                                        icon: Icons.account_circle_outlined,
+                                        title: 'Family Profile',
+                                        scale: layoutScale,
+                                        onTap: () => _openFamilyProfile(
+                                          context,
+                                          profile,
+                                          token,
+                                        ),
+                                      ),
+                                      _GradientMenuTile(
+                                        icon: Icons.notifications_none_rounded,
+                                        title: 'Notifications',
+                                        scale: layoutScale,
+                                        onTap: () {},
+                                      ),
+                                      _GradientMenuTile(
+                                        icon: Icons.location_on_outlined,
+                                        title: 'Location',
+                                        scale: layoutScale,
+                                        onTap: () => _openSavedAddresses(
+                                          context,
+                                          profile,
+                                          token,
+                                        ),
+                                      ),
+                                      _GradientMenuTile(
+                                        icon: Icons.credit_card_outlined,
+                                        title: 'Payment',
+                                        scale: layoutScale,
+                                        onTap: () {},
+                                      ),
+                                      _GradientMenuTile(
+                                        icon: Icons.devices_other_outlined,
+                                        title: 'Manage Devices',
+                                        scale: layoutScale,
+                                        onTap: () => _openManageDevices(context),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                    height: (10 * layoutScale).clamp(
+                                      3.0,
+                                      10.0,
                                     ),
                                   ),
-                                  _GradientMenuTile(
-                                    icon: Icons.notifications_none_rounded,
-                                    title: 'Notifications',
-                                    onTap: () {},
+                                  _MenuSection(
+                                    scale: layoutScale,
+                                    children: [
+                                      _GradientMenuTile(
+                                        icon: Icons.help_outline_rounded,
+                                        title: 'FAQ',
+                                        scale: layoutScale,
+                                        onTap: () {},
+                                      ),
+                                      _GradientMenuTile(
+                                        icon: Icons.error_outline_rounded,
+                                        title: 'Terms & Conditions',
+                                        scale: layoutScale,
+                                        onTap: () {},
+                                      ),
+                                      _GradientMenuTile(
+                                        icon: Icons.workspace_premium_outlined,
+                                        title: 'License',
+                                        scale: layoutScale,
+                                        onTap: () {},
+                                      ),
+                                    ],
                                   ),
-                                  _GradientMenuTile(
-                                    icon: Icons.location_on_outlined,
-                                    title: 'Location',
-                                    onTap: () => _openSavedAddresses(
-                                      context,
-                                      profile,
-                                      token,
-                                    ),
-                                  ),
-                                  _GradientMenuTile(
-                                    icon: Icons.credit_card_outlined,
-                                    title: 'Payment',
-                                    onTap: () {},
-                                  ),
-                                  _GradientMenuTile(
-                                    icon: Icons.devices_other_outlined,
-                                    title: 'Manage Devices',
-                                    onTap: () => _openManageDevices(context),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 18),
-                              _MenuSection(
-                                children: [
-                                  _GradientMenuTile(
-                                    icon: Icons.help_outline_rounded,
-                                    title: 'FAQ',
-                                    onTap: () {},
-                                  ),
-                                  _GradientMenuTile(
-                                    icon: Icons.error_outline_rounded,
-                                    title: 'Terms & Conditions',
-                                    onTap: () {},
-                                  ),
-                                  _GradientMenuTile(
-                                    icon: Icons.workspace_premium_outlined,
-                                    title: 'License',
-                                    onTap: () {},
+                                  const Spacer(),
+                                  _MenuSection(
+                                    scale: layoutScale,
+                                    showDivider: false,
+                                    children: [
+                                      _GradientMenuTile(
+                                        icon: Icons.logout_rounded,
+                                        title: 'Log Out',
+                                        scale: layoutScale,
+                                        onTap: _logout,
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 18),
-                              _MenuSection(
-                                children: [
-                                  _GradientMenuTile(
-                                    icon: Icons.logout_rounded,
-                                    title: 'Log Out',
-                                    onTap: _logout,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ),
                     if (widget.showBottomNav) const SizedBox(height: 14),
                     if (widget.showBottomNav)
-                      const DashboardLinkedBottomNav(selectedTabIndex: 2),
+                      DashboardLinkedBottomNav(
+                        selectedTabIndex: 2,
+                        onProfileTabWhenCannotPop: token.isNotEmpty
+                            ? () => _openEditProfile(
+                                  context,
+                                  profile,
+                                  token,
+                                )
+                            : null,
+                      ),
                   ],
                 ),
               ),
@@ -403,20 +501,50 @@ class _ProfilePageState extends State<ProfilePage> {
       MaterialPageRoute(builder: (_) => const ManageDevicesPage()),
     );
   }
+
+  void _openEditProfile(
+    BuildContext context,
+    UserProfile profile,
+    String token,
+  ) {
+    if (token.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => BlocProvider.value(
+          value: context.read<ProfileBloc>(),
+          child: EditProfilePage(profile: profile, accessToken: token),
+        ),
+      ),
+    );
+  }
 }
 
 class _OverlappingAvatarCluster extends StatelessWidget {
-  const _OverlappingAvatarCluster({required this.profile});
+  const _OverlappingAvatarCluster({
+    required this.profile,
+    this.scale = 1.0,
+    this.onTap,
+  });
 
   final UserProfile profile;
-
-  static const _border = BorderSide(color: Colors.white, width: 2);
+  final double scale;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 156,
-      height: 92,
+    final clusterW = (156 * scale).clamp(112.0, 156.0);
+    final clusterH = (92 * scale).clamp(68.0, 92.0);
+    final smallRadius = (22 * scale).clamp(16.0, 22.0);
+    final mainRadius = (39.5 * scale).clamp(28.0, 39.5);
+    final border = BorderSide(
+      color: Colors.white,
+      width: (2 * scale).clamp(1.3, 2.0),
+    );
+
+    final cluster = SizedBox(
+      width: clusterW,
+      height: clusterH,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -424,41 +552,55 @@ class _OverlappingAvatarCluster extends StatelessWidget {
             right: 0,
             top: 0,
             child: _RingAvatar(
-              radius: 22,
-              border: _border,
-              child: _smallFill(Icons.person, 14),
+              radius: smallRadius,
+              border: border,
+              child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
             ),
           ),
           Positioned(
-            right: 31,
-            top: 6,
+            right: (31 * scale).clamp(20.0, 31.0),
+            top: (6 * scale).clamp(3.0, 6.0),
             child: _RingAvatar(
-              radius: 39.5,
-              border: _border,
+              radius: mainRadius,
+              border: BorderSide.none,
               child: profile.profileImage != null
                   ? ClipOval(
                       child: Image.network(
                         profile.profileImage!,
-                        width: 79,
-                        height: 79,
+                        width: mainRadius * 2,
+                        height: mainRadius * 2,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) =>
-                            _initialsAvatar(profile, 39.5),
+                            _initialsAvatar(profile, mainRadius),
                       ),
                     )
-                  : _initialsAvatar(profile, 39.5),
+                  : _initialsAvatar(profile, mainRadius),
             ),
           ),
           Positioned(
             right: 0,
             bottom: 0,
             child: _RingAvatar(
-              radius: 22,
-              border: _border,
-              child: _smallFill(Icons.child_care_outlined, 18),
+              radius: smallRadius,
+              border: border,
+              child: _smallFill(
+                Icons.child_care_outlined,
+                (18 * scale).clamp(12.0, 18.0),
+              ),
             ),
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return cluster;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: cluster,
       ),
     );
   }
@@ -522,13 +664,20 @@ class _GradientMenuTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.scale = 1.0,
   });
 
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+  final double scale;
   @override
   Widget build(BuildContext context) {
+    final vPad = (10 * scale).clamp(4.0, 13.0);
+    final iconSize = (20 * scale).clamp(16.0, 24.0);
+    final textSize = (14 * scale).clamp(11.0, 16.0);
+    final gap = (10 * scale).clamp(6.0, 14.0);
+    final chevronSize = (22 * scale).clamp(16.0, 25.0);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -537,27 +686,32 @@ class _GradientMenuTile extends StatelessWidget {
         splashColor: Colors.white24,
         highlightColor: Colors.white10,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.white, size: 24),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
+          padding: EdgeInsets.symmetric(vertical: vPad),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: (30 * scale).clamp(22.0, 38.0),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: iconSize),
+                SizedBox(width: gap),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.montserrat(
+                      fontSize: textSize,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.white.withValues(alpha: 0.96),
-                size: 26,
-              ),
-            ],
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withValues(alpha: 0.96),
+                  size: chevronSize,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -566,24 +720,37 @@ class _GradientMenuTile extends StatelessWidget {
 }
 
 class _GradientSectionDivider extends StatelessWidget {
-  const _GradientSectionDivider();
+  const _GradientSectionDivider({this.scale = 1.0});
+
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: (7 * scale).clamp(3.0, 7.0)),
       child: Container(height: 1, color: Colors.white.withValues(alpha: 0.42)),
     );
   }
 }
 
 class _MenuSection extends StatelessWidget {
-  const _MenuSection({required this.children});
+  const _MenuSection({
+    required this.children,
+    this.scale = 1.0,
+    this.showDivider = true,
+  });
 
   final List<Widget> children;
+  final double scale;
+  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [...children, const _GradientSectionDivider()]);
+    return Column(
+      children: [
+        ...children,
+        if (showDivider) _GradientSectionDivider(scale: scale),
+      ],
+    );
   }
 }

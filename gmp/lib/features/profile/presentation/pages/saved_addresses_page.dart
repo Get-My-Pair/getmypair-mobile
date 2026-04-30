@@ -31,11 +31,13 @@ class SavedAddressesPage extends StatefulWidget {
 
 class _SavedAddressesPageState extends State<SavedAddressesPage> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   bool _showAllAddresses = false;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -96,16 +98,24 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           ),
                         ],
                       ),
-                      child: SingleChildScrollView(
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          statusTop + 24,
-                          20,
-                          112,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                      child: RawScrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        trackVisibility: false,
+                        radius: const Radius.circular(3.5),
+                        thickness: 7,
+                        thumbColor: const Color(0x80000000),
+                        child: SingleChildScrollView(
+                          controller: _scrollController,
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            statusTop + 72,
+                            20,
+                            112,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                             Text(
                               'Location',
                               style: GoogleFonts.boldonse(
@@ -206,7 +216,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                 ),
                             ],
                             const SizedBox(height: 24),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -226,8 +237,9 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
       height: 42,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(100),
+        borderRadius: BorderRadius.circular(999),
       ),
+      clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
       child: TextField(
         controller: _searchController,
@@ -246,7 +258,23 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
             fontWeight: FontWeight.w400,
             color: const Color(0x57000000),
           ),
-          prefixIcon: const Icon(Icons.search, color: Color(0x57000000)),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 11, 2, 11),
+            child: SvgPicture.asset(
+              'assets/images/search.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                Color(0xFF000000),
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 48,
+            minHeight: 42,
+          ),
+          contentPadding: const EdgeInsets.only(left: 4, right: 14),
         ),
       ),
     );
@@ -338,31 +366,33 @@ class _ActionCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 84),
+        constraints: const BoxConstraints(minHeight: 74),
         decoration: BoxDecoration(
           color: const Color(0x33D9D9D9),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
         ),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SvgPicture.asset(
               iconAsset,
-              width: 24,
-              height: 24,
+              width: 20,
+              height: 20,
               colorFilter: const ColorFilter.mode(
                 Colors.white,
                 BlendMode.srcIn,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.montserrat(
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.w400,
                 color: Colors.white,
               ),
@@ -408,25 +438,25 @@ class _AddressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: const Color(0x33D9D9D9),
               borderRadius: BorderRadius.circular(5),
               border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(11),
+              padding: const EdgeInsets.all(10),
               child: SvgPicture.asset(
                 isHome
                     ? 'assets/images/icons/profile/home.svg'
@@ -444,6 +474,7 @@ class _AddressRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       _label,
@@ -451,6 +482,7 @@ class _AddressRow extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
+                        height: 1.0,
                       ),
                     ),
                     const Spacer(),
@@ -517,14 +549,14 @@ class _AddressRow extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 1),
                 Text(
                   _fullAddress,
                   style: GoogleFonts.montserrat(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w400,
                     color: Colors.white,
-                    height: 1.25,
+                    height: 1.26,
                   ),
                 ),
               ],
@@ -560,6 +592,7 @@ class _AddressFormPageState extends State<_AddressFormPage> {
   late final TextEditingController _pincode;
   late final TextEditingController _saveAs;
   final _formKey = GlobalKey<FormState>();
+  final ScrollController _formScrollController = ScrollController();
   bool _useAccountDetails = false;
 
   @override
@@ -583,6 +616,7 @@ class _AddressFormPageState extends State<_AddressFormPage> {
     _state.dispose();
     _pincode.dispose();
     _saveAs.dispose();
+    _formScrollController.dispose();
     super.dispose();
   }
 
@@ -627,7 +661,6 @@ class _AddressFormPageState extends State<_AddressFormPage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: kProfileGradientHeaderSystemUi,
       child: Scaffold(
-        backgroundColor: Colors.transparent,
         body: Column(
           children: [
             Expanded(
@@ -651,33 +684,53 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                 ),
                 child: Form(
                   key: _formKey,
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(20, statusTop + 16, 20, 120),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        InkWell(
-                          onTap: () => Navigator.of(context).pop(),
-                          borderRadius: BorderRadius.circular(20),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Color(0xFFDFE7E9),
-                              size: 20,
+                  child: RawScrollbar(
+                    controller: _formScrollController,
+                    thumbVisibility: true,
+                    trackVisibility: false,
+                    radius: const Radius.circular(3.5),
+                    thickness: 7,
+                    thumbColor: const Color(0x80000000),
+                    child: SingleChildScrollView(
+                      controller: _formScrollController,
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        statusTop + 72,
+                        20,
+                        164 + bottomInset,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            InkWell(
+                              onTap: () => Navigator.of(context).pop(),
+                              borderRadius: BorderRadius.circular(20),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: Color(0xFFDFE7E9),
+                                  size: 20,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          previewAddress.isNotEmpty
-                              ? previewAddress
-                              : 'Enter address details',
-                          style: GoogleFonts.montserrat(
-                            color: const Color(0xFFDFE7E9),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                previewAddress.isNotEmpty
+                                    ? previewAddress
+                                    : 'Enter address details',
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFFDFE7E9),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 18),
                         _buildSectionTitle('Receiver Details'),
@@ -789,33 +842,41 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                           ),
                         ),
                         const SizedBox(height: 28),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: OutlinedButton(
-                            onPressed: _submit,
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              side: const BorderSide(color: Color(0xFF09DFFF)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(100),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: _submit,
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                side: const BorderSide(color: Color(0xFF09DFFF)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                elevation: 2,
+                                shadowColor: Colors.black26,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                               ),
-                              elevation: 2,
-                              shadowColor: Colors.black26,
-                            ),
-                            child: Text(
-                              widget.existing != null
-                                  ? 'Update Address'
-                                  : 'Save Address',
-                              style: GoogleFonts.boldonse(
-                                fontWeight: FontWeight.w400,
-                                fontSize: 14,
-                                color: const Color(0xFF12899B),
+                              child: Text(
+                                widget.existing != null
+                                    ? 'Update Address'
+                                    : 'Save Address',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.boldonse(
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 14,
+                                  color: const Color(0xFF12899B),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -848,7 +909,10 @@ class _AddressFormPageState extends State<_AddressFormPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.78),
+          width: 0.9,
+        ),
       ),
       child: child,
     );
@@ -863,45 +927,67 @@ class _AddressFormPageState extends State<_AddressFormPage> {
     Color? hintColor,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: ctrl,
-      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-      style: GoogleFonts.montserrat(
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        color: textColor,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.montserrat(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: textColor,
-        ),
-        hintText: hint,
-        hintStyle: GoogleFonts.montserrat(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: hintColor ?? Colors.black54,
-        ),
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.8),
-            width: 1.5,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.montserrat(
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color: textColor,
           ),
         ),
-        errorStyle: GoogleFonts.montserrat(color: const Color(0xFFFFB4B4)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      ),
-      validator:
-          validator ?? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: ctrl,
+          keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+          style: GoogleFonts.montserrat(
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color: textColor,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.montserrat(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              color: hintColor ?? Colors.black54,
+            ),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.55),
+                width: 0.8,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.55),
+                width: 0.8,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(999),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.75),
+                width: 1.0,
+              ),
+            ),
+            errorStyle: GoogleFonts.montserrat(color: const Color(0xFFFFB4B4)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 10,
+            ),
+          ),
+          validator:
+              validator ??
+              (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+        ),
+      ],
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/bgtheme.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 
@@ -28,37 +30,27 @@ class ManageDevicesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final thisDeviceLabel = _isPhone() ? 'Android' : _deviceLabel();
     final h = Responsive.horizontalPaddingOf(context);
+    final statusTop = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           children: [
             Expanded(
               child: Container(
                 width: double.infinity,
-                decoration: const ShapeDecoration(
-                  gradient: SweepGradient(
-                    center: Alignment(0.22, -1.07),
-                    startAngle: -0.55,
-                    endAngle: 5.73,
-                    colors: [
-                      Color(0xFF09E0FF),
-                      Color(0xFF0F6876),
-                      Color(0xFF062F35),
-                      Color(0xFF062F35),
-                    ],
-                    stops: [0.05, 0.44, 0.57, 1.0],
-                    transform: GradientRotation(-0.55),
+                decoration: BoxDecoration(
+                  image: const DecorationImage(
+                    image: AssetImage(BgTheme.backgroundImageAsset),
+                    fit: BoxFit.cover,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
                   ),
-                  shadows: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Color(0xFFABABAB),
                       blurRadius: 12,
@@ -67,8 +59,9 @@ class ManageDevicesPage extends StatelessWidget {
                     ),
                   ],
                 ),
+                margin: const EdgeInsets.only(bottom: 14),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(h, 44, h, 112),
+                  padding: EdgeInsets.fromLTRB(h, statusTop + 72, h, 112),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -76,18 +69,21 @@ class ManageDevicesPage extends StatelessWidget {
                         'Manage Devices',
                         style: GoogleFonts.boldonse(
                           color: const Color(0xFFDFE7E9),
-                          fontSize: 24,
+                          fontSize: 25,
                           fontWeight: FontWeight.w400,
+                          height: 1.18,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Text(
                         'Devices you\'re currently logged in on. Remove one to sign out from it',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.montserrat(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          height: 1.3,
+                          height: 1.2,
                         ),
                       ),
                       const SizedBox(height: 42),
@@ -101,8 +97,9 @@ class ManageDevicesPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       _DeviceRow(
-                        icon: Icons.phone_android,
+                        iconAsset: 'assets/images/icons/profile/smartphone.svg',
                         label: thisDeviceLabel,
+                        showTopDivider: false,
                       ),
                       const SizedBox(height: 24),
                       Text(
@@ -115,11 +112,12 @@ class ManageDevicesPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       const _DeviceRow(
-                        icon: Icons.desktop_windows,
+                        iconAsset: 'assets/images/icons/profile/monitor.svg',
                         label: 'Desktop',
+                        showTopDivider: false,
                       ),
                       const _DeviceRow(
-                        icon: Icons.watch,
+                        iconAsset: 'assets/images/icons/profile/watch.svg',
                         label: 'Smart Watch',
                         showTopDivider: false,
                       ),
@@ -137,12 +135,12 @@ class ManageDevicesPage extends StatelessWidget {
 }
 
 class _DeviceRow extends StatelessWidget {
-  final IconData icon;
+  final String iconAsset;
   final String label;
   final bool showTopDivider;
 
   const _DeviceRow({
-    required this.icon,
+    required this.iconAsset,
     required this.label,
     this.showTopDivider = true,
   });
@@ -166,28 +164,44 @@ class _DeviceRow extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Text(
-                label,
-                style: GoogleFonts.montserrat(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w400,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            children: [
+              SvgPicture.asset(
+                iconAsset,
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
                 ),
               ),
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-                color: Color(0xFF71F5FF),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
               ),
-            ),
-          ],
+              IconButton(
+                onPressed: () {},
+                icon: SvgPicture.asset(
+                  'assets/images/icons/profile/trash-2.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF71F5FF),
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -25,6 +25,7 @@ class MobileOTPPage extends StatefulWidget {
 
 class _MobileOTPPageState extends State<MobileOTPPage> {
   static const String _kAuthBgAsset = 'assets/images/bg/auth.png';
+  static const String _kAuthBgFallbackAsset = 'assets/images/bg.png';
   static const String _kAuthFacebookIcon = 'assets/images/icons/auth/facebook.svg';
   static const String _kAuthGoogleIcon = 'assets/images/icons/auth/google.svg';
   static const String _kAuthAppleIcon = 'assets/images/icons/auth/apple.svg';
@@ -216,18 +217,24 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final scale = (size.width / Responsive.designFrameWidth).clamp(0.88, 1.14);
-    final titleSize = (34.0 * scale).clamp(28.0, 39.0);
-    final welcomeSize = (24.0 * scale).clamp(18.0, 28.0);
-    final panelRadius = (28.0 * scale).clamp(20.0, 32.0);
-    final cardTitleSize = (24.0 * scale).clamp(21.0, 28.0);
-    final bodyTitleSize = (20.0 * scale).clamp(17.0, 24.0);
-    final bodySize = (20.0 * scale).clamp(16.0, 22.0);
-    final fieldTextSize = (16.0 * scale).clamp(14.0, 18.0);
+    final widthScale = (size.width / Responsive.designFrameWidth).clamp(0.88, 1.14);
+    final heightScale = (size.height / 852.0).clamp(0.74, 1.08);
+    final textScaleTightness = (1.06 / MediaQuery.textScalerOf(context).scale(1.0)).clamp(
+      0.84,
+      1.04,
+    );
+    final scale = (math.min(widthScale, heightScale) * textScaleTightness).clamp(0.72, 1.08);
+    final titleSize = (34.0 * scale).clamp(24.0, 39.0);
+    final welcomeSize = (24.0 * scale).clamp(16.0, 28.0);
+    final panelRadius = (28.0 * scale).clamp(18.0, 32.0);
+    final cardTitleSize = (24.0 * scale).clamp(18.0, 28.0);
+    final bodyTitleSize = (20.0 * scale).clamp(15.0, 24.0);
+    final bodySize = (20.0 * scale).clamp(14.0, 22.0);
+    final fieldTextSize = (16.0 * scale).clamp(13.0, 18.0);
     final topInset = MediaQuery.paddingOf(context).top;
     // Keep hero responsive across short/tall phones.
     // Previous 0.95 factor made this almost always hit max height.
-    final headerSweepHeight = (size.height * 0.30).clamp(170.0, 230.0);
+    final headerSweepHeight = (size.height * 0.28).clamp(150.0, 230.0);
     final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
@@ -258,8 +265,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               child: Image.asset(
                 _kAuthBgAsset,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    Image.asset('assets/images/bg.png', fit: BoxFit.cover),
+                errorBuilder: (_, _, _) => Image.asset(
+                  _kAuthBgFallbackAsset,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             Positioned(
@@ -310,8 +319,8 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                     top: false,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 62.0);
+                        final horizontalPad = (constraints.maxWidth * 0.1).clamp(16.0, 44.0);
+                        final topPad = (constraints.maxHeight * 0.08).clamp(24.0, 62.0);
                         return SingleChildScrollView(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
@@ -709,27 +718,34 @@ class _WelcomeRichText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        style: GoogleFonts.montserrat(
-          color: _MobileOTPPageState._kOnGradient,
-          fontSize: 24,
-          fontWeight: FontWeight.w200,
-          height: 1.2,
-        ),
-        children: [
-          const TextSpan(text: 'Welcome to your '),
-          TextSpan(
-            text: 'solecial hub',
-            style: GoogleFonts.montserrat(
-              color: _MobileOTPPageState._kOnGradient,
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-              fontStyle: FontStyle.italic,
-            ),
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text.rich(
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.visible,
+        TextSpan(
+          style: GoogleFonts.montserrat(
+            color: _MobileOTPPageState._kOnGradient,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w200,
+            height: 1.2,
           ),
-        ],
+          children: [
+            const TextSpan(text: 'Welcome to your '),
+            TextSpan(
+              text: 'solecial hub',
+              style: GoogleFonts.montserrat(
+                color: _MobileOTPPageState._kOnGradient,
+                fontSize: fontSize,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

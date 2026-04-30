@@ -55,55 +55,60 @@ class FloatingGradientBottomNav extends StatelessWidget {
             horizontal: 10,
             vertical: (barHeight - hitSize) / 2,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(svgIcons.length, (i) {
-              final selected = i == currentIndex;
-              // Use fixed-width cells so `spaceBetween` can increase the gap between items.
-              return SizedBox(
-                width: hitSize,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => onChanged(i),
-                    customBorder: const CircleBorder(),
-                    splashColor: Colors.white24,
-                    highlightColor: Colors.white10,
-                    child: Center(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOutCubic,
-                        width: hitSize,
-                        height: hitSize,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: selected ? Colors.white : Colors.transparent,
-                          boxShadow: selected
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.12),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: SvgPicture.asset(
-                          svgIcons[i],
-                          width: i == 2 ? 23 : 22,
-                          height: i == 2 ? 23 : 22,
-                          colorFilter: ColorFilter.mode(
-                            selected ? selectedIconColor : Colors.white,
-                            BlendMode.srcIn,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final tabCount = svgIcons.length;
+              final slotWidth = constraints.maxWidth / tabCount;
+              final dynamicHitSize = slotWidth.clamp(28.0, hitSize).toDouble();
+              final iconBase = (dynamicHitSize * 0.50).clamp(14.0, 22.0).toDouble();
+              return Row(
+                children: List.generate(tabCount, (i) {
+                  final selected = i == currentIndex;
+                  return Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => onChanged(i),
+                        customBorder: const CircleBorder(),
+                        splashColor: Colors.white24,
+                        highlightColor: Colors.white10,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOutCubic,
+                            width: dynamicHitSize,
+                            height: dynamicHitSize,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: selected ? Colors.white : Colors.transparent,
+                              boxShadow: selected
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.12),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: SvgPicture.asset(
+                              svgIcons[i],
+                              width: i == 2 ? iconBase + 1 : iconBase,
+                              height: i == 2 ? iconBase + 1 : iconBase,
+                              colorFilter: ColorFilter.mode(
+                                selected ? selectedIconColor : Colors.white,
+                                BlendMode.srcIn,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
               );
-            }),
+            },
           ),
         ),
       ),
@@ -121,21 +126,31 @@ EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
   final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
   const minBarBody = 172.0;
   final side = ((w - minBarBody) * 0.5).clamp(16.0, 88.0);
-  // Use a moderated bottom inset so bars stay comfortable above gesture/home
-  // areas without floating too high on devices with large safe insets.
+  // Scale bottom inset with width + safe-area so spacing feels consistent
+  // across compact phones and larger screens.
+  final widthFactor = ((w - 320.0) / 160.0).clamp(0.0, 1.0);
+  final baseBottom = 6.0 + (widthFactor * 4.0);
   final bottom = safeBottom <= 0
-      ? 6.0
-      : (safeBottom * 0.55 + 2.0).clamp(8.0, 22.0).toDouble();
+      ? baseBottom
+      : (baseBottom + (safeBottom * 0.65)).clamp(10.0, 28.0).toDouble();
   return EdgeInsets.fromLTRB(side, 16, side, bottom);
 }
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
 /// Use on profile stack pages so Home / Rack / Profile match main navigation.
 class DashboardLinkedBottomNav extends StatelessWidget {
-  const DashboardLinkedBottomNav({super.key, this.selectedTabIndex = 2});
+  const DashboardLinkedBottomNav({
+    super.key,
+    this.selectedTabIndex = 2,
+    this.onProfileTabWhenCannotPop,
+  });
 
   /// Highlight while this route is visible (profile flow → 2).
   final int selectedTabIndex;
+
+  /// When the user taps Profile (tab 2) and this navigator cannot pop, run this
+  /// instead of only syncing tab — e.g. open Edit Profile from the root profile screen.
+  final VoidCallback? onProfileTabWhenCannotPop;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +161,14 @@ class DashboardLinkedBottomNav extends StatelessWidget {
         onChanged: (i) {
           final tab = i.clamp(0, 2);
           customerDashboardTabIndex.value = tab;
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          final nav = Navigator.of(context);
+          if (tab == 2 &&
+              onProfileTabWhenCannotPop != null &&
+              !nav.canPop()) {
+            onProfileTabWhenCannotPop!();
+            return;
+          }
+          nav.popUntil((route) => route.isFirst);
         },
       ),
     );

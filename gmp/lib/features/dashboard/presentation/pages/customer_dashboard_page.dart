@@ -97,7 +97,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                 index: _currentIndex.clamp(0, _pages.length - 1),
                 children: _pages,
               ),
-              bottomNavigationBar: _buildBottomNav(context),
+              bottomNavigationBar: _buildBottomNav(innerContext),
             );
           },
         ),
@@ -113,6 +113,20 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         currentIndex: index,
         onChanged: (i) {
           final c = i.clamp(0, _pages.length - 1);
+          if (c == 2) {
+            if (_currentIndex != 2) {
+              final profileBloc = context.read<ProfileBloc>();
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BlocProvider.value(
+                    value: profileBloc,
+                    child: const ProfilePage(),
+                  ),
+                ),
+              );
+            }
+            return;
+          }
           setState(() => _currentIndex = c);
           if (customerDashboardTabIndex.value != c) {
             customerDashboardTabIndex.value = c;

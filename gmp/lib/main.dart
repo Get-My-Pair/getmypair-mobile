@@ -24,6 +24,21 @@ class MyApp extends StatelessWidget {
         title: 'GetMyPair',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          // Clamp accessibility text scaling to a safe responsive range
+          // to avoid layout overflows on compact devices.
+          final scaledMediaQuery = mediaQuery.copyWith(
+            textScaler: mediaQuery.textScaler.clamp(
+              minScaleFactor: 0.9,
+              maxScaleFactor: 1.15,
+            ),
+          );
+          return MediaQuery(
+            data: scaledMediaQuery,
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         home: const SplashScreen(),
         onGenerateRoute: AppRoutes.generateRoute,
       ),

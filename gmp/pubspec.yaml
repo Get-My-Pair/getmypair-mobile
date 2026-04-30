@@ -135,10 +135,13 @@ flutter:
     - assets/images/icons/profile/
     - assets/images/icons/profile/edit.svg
     - assets/images/icons/profile/home.svg
+    - assets/images/icons/profile/monitor.svg
     - assets/images/icons/profile/navigation.svg
     - assets/images/icons/profile/plus-square.svg
+    - assets/images/icons/profile/smartphone.svg
     - assets/images/icons/profile/trash-2.svg
     - assets/images/icons/profile/toggle-left.svg
+    - assets/images/icons/profile/watch.svg
     - assets/images/icons/home.svg
     - assets/images/icons/shoe.svg
     - assets/images/icons/profile.svg

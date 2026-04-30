@@ -34,6 +34,7 @@ class OTPPage extends StatefulWidget {
 
 class _OTPPageState extends State<OTPPage> {
   static const String _kAuthBgAsset = 'assets/images/bg/auth.png';
+  static const String _kAuthBgFallbackAsset = 'assets/images/bg.png';
   static const Color _kPrimary = Color(0xFF062F35);
   static const Color _kAccent = Color(0xFF0F6876);
   static const Color _kOnGradient = Color(0xFFFFFFFF);
@@ -194,11 +195,19 @@ class _OTPPageState extends State<OTPPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final scale = (size.width / 393.0).clamp(0.88, 1.14);
+    final widthScale = (size.width / 393.0).clamp(0.88, 1.14);
+    final heightScale = (size.height / 852.0).clamp(0.72, 1.08);
+    final textScaleTightness = (1.06 / MediaQuery.textScalerOf(context).scale(1.0)).clamp(
+      0.84,
+      1.04,
+    );
+    final scale = (math.min(widthScale, heightScale) * textScaleTightness).clamp(0.70, 1.08);
     final topInset = MediaQuery.paddingOf(context).top;
-    final headerSweepHeight = (size.height * 0.95).clamp(148.0, 260.0);
+    final headerSweepHeight = (size.height * 0.28).clamp(145.0, 230.0);
     final panelRadius = (28.0 * scale).clamp(20.0, 32.0);
     final cardTop = topInset + headerSweepHeight;
+    final verifyTitleSize = (24.0 * scale).clamp(18.0, 26.0);
+    final verifySubSize = (20.0 * scale).clamp(14.0, 21.0);
 
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
@@ -248,8 +257,10 @@ class _OTPPageState extends State<OTPPage> {
               child: Image.asset(
                 _kAuthBgAsset,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    Image.asset('assets/images/bg.png', fit: BoxFit.cover),
+                errorBuilder: (_, _, _) => Image.asset(
+                  _kAuthBgFallbackAsset,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             Positioned(
@@ -300,8 +311,8 @@ class _OTPPageState extends State<OTPPage> {
                     top: false,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 60.0);
+                        final horizontalPad = (constraints.maxWidth * 0.1).clamp(16.0, 44.0);
+                        final topPad = (constraints.maxHeight * 0.08).clamp(22.0, 60.0);
                         return SingleChildScrollView(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
@@ -318,20 +329,22 @@ class _OTPPageState extends State<OTPPage> {
                               'Verify Phone',
                               style: GoogleFonts.boldonse(
                                 color: _kPrimary,
-                                fontSize: 24,
+                                fontSize: verifyTitleSize,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            SizedBox(height: (18.0 * scale).clamp(12.0, 20.0)),
                             Text(
                               'Code sent to $_displayPhoneNumber',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.montserrat(
                                 color: _kPrimary,
-                                fontSize: 20,
+                                fontSize: verifySubSize,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            SizedBox(height: (18.0 * scale).clamp(12.0, 20.0)),
                             _OtpCard(
                               initialOtpValue: _initialOtpValue,
                               countdownText: _resendCountdown > 0
@@ -550,27 +563,32 @@ class _OtpCard extends StatelessWidget {
                         color: const Color(0x66DFE7E9),
                         borderRadius: BorderRadius.circular(100),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.schedule_rounded,
-                            size: 16,
-                            color: Colors.black.withValues(alpha: 0.34),
-                          ),
-                          const SizedBox(width: 14),
-                          Text(
-                            countdownText,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.montserrat(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: canResend
-                                  ? AppColors.primary
-                                  : Colors.black.withValues(alpha: 0.34),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 16,
+                              color: Colors.black.withValues(alpha: 0.34),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 10),
+                            Text(
+                              countdownText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: canResend
+                                    ? AppColors.primary
+                                    : Colors.black.withValues(alpha: 0.34),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -589,27 +607,34 @@ class _WelcomeRichText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        style: GoogleFonts.montserrat(
-          color: _OTPPageState._kOnGradient,
-          fontSize: 24,
-          fontWeight: FontWeight.w200,
-          height: 1.2,
-        ),
-        children: [
-          const TextSpan(text: 'Welcome to your '),
-          TextSpan(
-            text: 'solecial hub',
-            style: GoogleFonts.montserrat(
-              color: _OTPPageState._kOnGradient,
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-              fontStyle: FontStyle.italic,
-            ),
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text.rich(
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.visible,
+        TextSpan(
+          style: GoogleFonts.montserrat(
+            color: _OTPPageState._kOnGradient,
+            fontSize: 24,
+            fontWeight: FontWeight.w200,
+            height: 1.2,
           ),
-        ],
+          children: [
+            const TextSpan(text: 'Welcome to your '),
+            TextSpan(
+              text: 'solecial hub',
+              style: GoogleFonts.montserrat(
+                color: _OTPPageState._kOnGradient,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

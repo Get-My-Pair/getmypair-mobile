@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/utils/responsive.dart';
 
 class TermsOfServicePage extends StatefulWidget {
   const TermsOfServicePage({super.key});
@@ -21,6 +22,9 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
 
   @override
   Widget build(BuildContext context) {
+    final horizontalPadding = Responsive.horizontalPaddingOf(context);
+    final titleFont = Responsive.fontSizeClamped(context, 24, min: 20, max: 24);
+    final subtitleFont = Responsive.fontSizeClamped(context, 12, min: 11, max: 13);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
@@ -34,7 +38,12 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
             ...BgTheme.background(),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 80, 8, 10),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  (80 * (MediaQuery.sizeOf(context).height / 844)).clamp(48.0, 80.0),
+                  8,
+                  10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -42,7 +51,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
                       'Terms of Services',
                       style: GoogleFonts.boldonse(
                         color: const Color(0xFFDFE7E9),
-                        fontSize: 24,
+                        fontSize: titleFont,
                         fontWeight: FontWeight.w400,
                         height: 1.0,
                       ),
@@ -52,7 +61,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
                       'Last Updated March 2026',
                       style: GoogleFonts.montserrat(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: subtitleFont,
                         fontWeight: FontWeight.w300,
                         height: 1.0,
                       ),
@@ -68,7 +77,10 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
                         thumbColor: const Color(0x80000000),
                         child: SingleChildScrollView(
                           controller: _scrollController,
-                          padding: const EdgeInsets.only(right: 20, bottom: 24),
+                          padding: EdgeInsets.only(
+                            right: Responsive.horizontalPaddingOf(context),
+                            bottom: 24,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
@@ -155,6 +167,8 @@ class _TermsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sectionTitleFont = Responsive.fontSizeClamped(context, 24, min: 18, max: 24);
+    final sectionBodyFont = Responsive.fontSizeClamped(context, 14, min: 12, max: 14);
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -164,7 +178,7 @@ class _TermsSection extends StatelessWidget {
             '$number. $title',
             style: GoogleFonts.montserrat(
               color: const Color(0xFFDFE7E9),
-              fontSize: 24,
+              fontSize: sectionTitleFont,
               fontWeight: FontWeight.w300,
               height: 1.0,
             ),
@@ -174,7 +188,7 @@ class _TermsSection extends StatelessWidget {
             body,
             style: GoogleFonts.montserrat(
               color: const Color(0xFFDFE7E9),
-              fontSize: 14,
+              fontSize: sectionBodyFont,
               fontWeight: FontWeight.w500,
               height: 1.0,
             ),
