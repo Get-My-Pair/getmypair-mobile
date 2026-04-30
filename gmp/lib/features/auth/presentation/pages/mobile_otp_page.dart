@@ -234,7 +234,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     final topInset = MediaQuery.paddingOf(context).top;
     // Keep hero responsive across short/tall phones.
     // Previous 0.95 factor made this almost always hit max height.
-    final headerSweepHeight = (size.height * 0.28).clamp(150.0, 230.0);
+    final headerSweepHeight = (size.height * 0.25).clamp(132.0, 205.0);
     final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
@@ -319,14 +319,21 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                     top: false,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
+                        final squeeze = (constraints.maxHeight / 640).clamp(0.72, 1.0);
                         final horizontalPad = (constraints.maxWidth * 0.1).clamp(16.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.08).clamp(24.0, 62.0);
-                        return SingleChildScrollView(
+                        final topPad = (constraints.maxHeight * 0.06 * squeeze).clamp(8.0, 48.0);
+                        final verticalGapXs = constraints.maxHeight * 0.012 * squeeze;
+                        final verticalGapSm = constraints.maxHeight * 0.02 * squeeze;
+                        final verticalGapMd = constraints.maxHeight * 0.032 * squeeze;
+                        final verticalGapLg = constraints.maxHeight * 0.05 * squeeze;
+                        final controlHeight = constraints.maxHeight * 0.082 * squeeze;
+                        final iconTileSize = constraints.maxWidth * 0.13;
+                        return Padding(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
                             topPad,
                             horizontalPad,
-                            24,
+                            verticalGapMd.clamp(10.0, 30.0),
                           ),
                           child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -339,7 +346,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               fontWeight: FontWeight.w400,
                             ),
                           ),
-                          SizedBox(height: (16.0 * scale).clamp(14.0, 20.0)),
+                          SizedBox(height: verticalGapSm.clamp(10.0, 20.0)),
                           Text(
                             'Enter your phone number',
                             style: GoogleFonts.montserrat(
@@ -348,7 +355,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: verticalGapXs.clamp(4.0, 12.0)),
                           Text(
                             "We’ll text you a quick verification\ncode",
                             style: GoogleFonts.montserrat(
@@ -358,12 +365,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               height: 1.2,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: verticalGapMd.clamp(12.0, 28.0)),
                           LayoutBuilder(
                             builder: (context, constraints) {
-                              const inputGap = 5.0;
+                              final inputGap = (constraints.maxWidth * 0.014).clamp(4.0, 10.0);
                               final total = constraints.maxWidth - inputGap;
-                              final codeWidth = (total * (110 / 343)).clamp(98.0, 120.0);
+                              final codeWidth = total * 0.32;
                               final phoneWidth = total - codeWidth;
                               return Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -374,10 +381,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                       onTap: _pickCountryCode,
                                       borderRadius: BorderRadius.circular(100),
                                       child: Container(
-                                        height: 48,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
+                                        height: controlHeight.clamp(38.0, 50.0),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: (constraints.maxWidth * 0.03).clamp(8.0, 14.0),
+                                          vertical: (constraints.maxWidth * 0.014).clamp(3.0, 8.0),
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
@@ -388,9 +395,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                           children: [
                                             Text(
                                               _selectedCountry.flag,
-                                              style: const TextStyle(fontSize: 22, height: 1),
+                                            style: TextStyle(
+                                              fontSize: (constraints.maxWidth * 0.06).clamp(16.0, 24.0),
+                                              height: 1,
                                             ),
-                                            const SizedBox(width: 6),
+                                            ),
+                                            SizedBox(width: (constraints.maxWidth * 0.016).clamp(4.0, 8.0)),
                                             Expanded(
                                               child: Text(
                                                 _selectedCountry.dialCode,
@@ -403,23 +413,28 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                                 ),
                                               ),
                                             ),
-                                            const SizedBox(width: 1),
-                                            const Icon(
+                                            SizedBox(width: (constraints.maxWidth * 0.004).clamp(1.0, 4.0)),
+                                            Icon(
                                               Icons.keyboard_arrow_down,
                                               color: Color(0x57000000),
-                                              size: 18,
+                                              size: (constraints.maxWidth * 0.05).clamp(14.0, 20.0),
                                             ),
                                           ],
                                         ),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: inputGap),
+                                  SizedBox(width: inputGap),
                                   SizedBox(
                                     width: phoneWidth,
                                     child: Container(
-                                      height: 48,
-                                      padding: const EdgeInsets.fromLTRB(16, 10, 18, 10),
+                                      height: controlHeight.clamp(38.0, 50.0),
+                                      padding: EdgeInsets.fromLTRB(
+                                        (constraints.maxWidth * 0.046).clamp(10.0, 18.0),
+                                        (constraints.maxWidth * 0.02).clamp(4.0, 9.0),
+                                        (constraints.maxWidth * 0.05).clamp(12.0, 20.0),
+                                        (constraints.maxWidth * 0.02).clamp(4.0, 9.0),
+                                      ),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(100),
@@ -428,19 +443,19 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                         crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
                                           SizedBox(
-                                            width: 18,
-                                            height: 18,
+                                            width: (constraints.maxWidth * 0.052).clamp(14.0, 20.0),
+                                            height: (constraints.maxWidth * 0.052).clamp(14.0, 20.0),
                                             child: SvgPicture.asset(
                                               'assets/images/phone.svg',
-                                              width: 18,
-                                              height: 18,
+                                              width: (constraints.maxWidth * 0.052).clamp(14.0, 20.0),
+                                              height: (constraints.maxWidth * 0.052).clamp(14.0, 20.0),
                                               colorFilter: const ColorFilter.mode(
                                                 Color(0x66000000),
                                                 BlendMode.srcIn,
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 10),
+                                          SizedBox(width: (constraints.maxWidth * 0.03).clamp(6.0, 12.0)),
                                           Expanded(
                                             child: TextField(
                                               controller: _phoneController,
@@ -489,7 +504,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             },
                           ),
                           if (_phoneError != null) ...[
-                            const SizedBox(height: 8),
+                            SizedBox(height: verticalGapXs.clamp(4.0, 10.0)),
                             Text(
                               _phoneError!,
                               style: GoogleFonts.montserrat(
@@ -498,40 +513,64 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               ),
                             ),
                           ],
-                          const SizedBox(height: 24),
+                          SizedBox(height: verticalGapMd.clamp(12.0, 28.0)),
                           SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: (_isPhoneValid && !_isSendingOtp) ? _sendOtp : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _kAccent,
-                                foregroundColor: _kOnGradient,
-                                disabledBackgroundColor: _kAccent,
-                                disabledForegroundColor: _kOnGradient,
-                                surfaceTintColor: Colors.transparent,
-                                elevation: 4,
-                                // shadowColor: Colors.black.withValues(alpha: 0.1),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                                padding: EdgeInsets.zero,
+                            height: controlHeight.clamp(42.0, 56.0),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(100),
+                                gradient: const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [Color(0xFF12899B), Color(0xFF09E0FF)],
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x1A000000),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              child: _isSendingOtp
-                                  ? _SendingOtpProgress(progress: _sendingProgress)
-                                  : Text(
-                                      'Send OTP',
-                                      style: GoogleFonts.boldonse(
-                                        fontSize: (14.0 * scale).clamp(13.0, 16.0),
-                                        fontWeight: FontWeight.w400,
-                                        color: _kOnGradient,
-                                      ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(1),
+                                child: ElevatedButton(
+                                  onPressed: (_isPhoneValid && !_isSendingOtp) ? _sendOtp : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _kAccent,
+                                    foregroundColor: _kOnGradient,
+                                    disabledBackgroundColor: _kAccent,
+                                    disabledForegroundColor: _kOnGradient,
+                                    surfaceTintColor: Colors.transparent,
+                                    elevation: 0,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(100),
                                     ),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: _isSendingOtp
+                                      ? _SendingOtpProgress(progress: _sendingProgress)
+                                      : Text(
+                                          'Send OTP',
+                                          style: GoogleFonts.boldonse(
+                                            fontSize: (14.0 * scale).clamp(13.0, 16.0),
+                                            fontWeight: FontWeight.w400,
+                                            color: _kOnGradient,
+                                          ),
+                                        ),
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 42),
+                          SizedBox(height: verticalGapLg.clamp(12.0, 34.0)),
                           Row(
                             children: [
                               const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 25),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (constraints.maxWidth * 0.07).clamp(12.0, 30.0),
+                                ),
                                 child: Text(
                                   'or Sign Up with',
                                   style: GoogleFonts.montserrat(
@@ -544,26 +583,29 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
                             ],
                           ),
-                          const SizedBox(height: 22),
+                          SizedBox(height: verticalGapSm.clamp(22.0, 38.0)),
                           Wrap(
                             alignment: WrapAlignment.center,
-                            spacing: 48,
-                            runSpacing: 12,
-                            children: const [
+                            spacing: (constraints.maxWidth * 0.14).clamp(16.0, 48.0),
+                            runSpacing: verticalGapSm.clamp(8.0, 18.0),
+                            children: [
                               _SocialIconTile(
                                 assetPath: _kAuthFacebookIcon,
                                 contentInset: 6,
                                 innerScale: 1.0,
+                                tileSize: iconTileSize.clamp(36.0, 48.0),
                               ),
                               _SocialIconTile(
                                 assetPath: _kAuthGoogleIcon,
+                                tileSize: iconTileSize.clamp(36.0, 48.0),
                               ),
                               _SocialIconTile(
                                 assetPath: _kAuthAppleIcon,
+                                tileSize: iconTileSize.clamp(36.0, 48.0),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 44),
+                          SizedBox(height: verticalGapLg.clamp(30.0, 50.0)),
                         LayoutBuilder(
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
@@ -695,6 +737,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               );
                             },
                           ),
+                          const Spacer(),
                                                ],
                       ),
                     );
@@ -758,12 +801,11 @@ class _SocialIconTile extends StatelessWidget {
     this.color,
     this.contentInset,
     this.innerScale = 1,
+    required this.tileSize,
   }) : assert(
          assetPath != null || (icon != null && color != null),
          'Provide either assetPath, or icon + color.',
        );
-
-  static const double _tile = 42;
 
   final String? assetPath;
   final IconData? icon;
@@ -772,12 +814,13 @@ class _SocialIconTile extends StatelessWidget {
   final double? contentInset;
 
   final double innerScale;
+  final double tileSize;
 
   @override
   Widget build(BuildContext context) {
-    final pad = contentInset ?? (_tile * (7 / 49)).clamp(6.0, 14.0);
-    final r = (_tile * (10 / 49)).clamp(8.0, 16.0);
-    final iconSize = _tile - (pad * 2);
+    final pad = contentInset ?? (tileSize * 0.145).clamp(4.0, 12.0);
+    final r = (tileSize * 0.2).clamp(6.0, 16.0);
+    final iconSize = tileSize - (pad * 2);
     Widget logo = assetPath != null
         ? SvgPicture.asset(
             assetPath!,
@@ -808,8 +851,8 @@ class _SocialIconTile extends StatelessWidget {
       );
     }
     return Container(
-      width: _tile,
-      height: _tile,
+      width: tileSize,
+      height: tileSize,
       padding: EdgeInsets.all(pad),
       decoration: BoxDecoration(
         color: Colors.white,

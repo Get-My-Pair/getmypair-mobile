@@ -206,6 +206,8 @@ class _OTPPageState extends State<OTPPage> {
     final headerSweepHeight = (size.height * 0.28).clamp(145.0, 230.0);
     final panelRadius = (28.0 * scale).clamp(20.0, 32.0);
     final cardTop = topInset + headerSweepHeight;
+    final helloSize = (34.0 * scale).clamp(24.0, 39.0);
+    final welcomeSize = (24.0 * scale).clamp(16.0, 28.0);
     final verifyTitleSize = (24.0 * scale).clamp(18.0, 26.0);
     final verifySubSize = (20.0 * scale).clamp(14.0, 21.0);
 
@@ -282,12 +284,12 @@ class _OTPPageState extends State<OTPPage> {
                           'Hello!',
                           style: GoogleFonts.boldonse(
                             color: _kOnGradient,
-                            fontSize: 56 * 0.607,
+                            fontSize: helloSize,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        const _WelcomeRichText(),
+                        SizedBox(height: (size.height * 0.012).clamp(6.0, 12.0)),
+                        _WelcomeRichText(fontSize: welcomeSize),
                       ],
                     ),
                   ),
@@ -311,14 +313,18 @@ class _OTPPageState extends State<OTPPage> {
                     top: false,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
+                        final squeeze = (constraints.maxHeight / 560).clamp(0.76, 1.0);
                         final horizontalPad = (constraints.maxWidth * 0.1).clamp(16.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.08).clamp(22.0, 60.0);
-                        return SingleChildScrollView(
+                        final topPad = (constraints.maxHeight * 0.08 * squeeze).clamp(12.0, 60.0);
+                        final verticalGapSm = constraints.maxHeight * 0.02 * squeeze;
+                        final verticalGapMd = constraints.maxHeight * 0.032 * squeeze;
+                        final controlHeight = constraints.maxHeight * 0.082 * squeeze;
+                        return Padding(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
                             topPad,
                             horizontalPad,
-                            24,
+                            verticalGapMd.clamp(10.0, 30.0),
                           ),
                           child: Form(
                         key: _formKey,
@@ -333,7 +339,7 @@ class _OTPPageState extends State<OTPPage> {
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
-                            SizedBox(height: (18.0 * scale).clamp(12.0, 20.0)),
+                            SizedBox(height: verticalGapSm.clamp(10.0, 20.0)),
                             Text(
                               'Code sent to $_displayPhoneNumber',
                               maxLines: 1,
@@ -344,54 +350,75 @@ class _OTPPageState extends State<OTPPage> {
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
-                            SizedBox(height: (18.0 * scale).clamp(12.0, 20.0)),
+                            SizedBox(height: verticalGapSm.clamp(10.0, 20.0)),
                             _OtpCard(
                               initialOtpValue: _initialOtpValue,
                               countdownText: _resendCountdown > 0
                                   ? 'Code expires in ${_formatTime(_resendCountdown)}'
-                                  : 'Code expired - tap to resend',
+                                  : 'Code expired - Tap to resend',
                               canResend: _canResend,
                               clockIconUrl: _kClockIconUrl,
                               onTapTimer: _resendOtp,
                               onChanged: (value) => setState(() => _otp = value),
                               onCompleted: (value) => setState(() => _otp = value),
                             ),
-                            const SizedBox(height: 24),
+                            SizedBox(height: verticalGapMd.clamp(12.0, 28.0)),
                             BlocBuilder<AuthBloc, AuthState>(
                               builder: (context, state) {
                                 final isEnabled = _otp.length == 6 && !_isVerifyingOtp;
                                 return SizedBox(
-                                  height: 48,
+                                  height: controlHeight.clamp(42.0, 56.0),
                                   width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: isEnabled ? _verifyOtp : null,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0F6876),
-                                      foregroundColor: _kOnGradient,
-                                      disabledBackgroundColor: const Color(0xFF0F6876),
-                                      disabledForegroundColor: _kOnGradient,
-                                      surfaceTintColor: Colors.transparent,
-                                      elevation: 4,
-                                      shadowColor: const Color(0x19000000),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(100),
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(100),
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        colors: [Color(0xFF12899B), Color(0xFF09E0FF)],
                                       ),
-                                      padding: EdgeInsets.zero,
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x1A000000),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
                                     ),
-                                    child: _isVerifyingOtp
-                                        ? _VerifyOtpProgress(progress: _verifyingProgress)
-                                        : Text(
-                                            'Verify OTP',
-                                            style: GoogleFonts.boldonse(
-                                        fontSize: (14.0 * scale).clamp(13.0, 16.0),
-                                        fontWeight: FontWeight.w400,
-                                        color: _kOnGradient,
-                                      ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(1),
+                                      child: ElevatedButton(
+                                        onPressed: isEnabled ? _verifyOtp : null,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF0F6876),
+                                          foregroundColor: _kOnGradient,
+                                          disabledBackgroundColor: const Color(0xFF0F6876),
+                                          disabledForegroundColor: _kOnGradient,
+                                          surfaceTintColor: Colors.transparent,
+                                          elevation: 0,
+                                          shadowColor: Colors.transparent,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(100),
                                           ),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                        child: _isVerifyingOtp
+                                            ? _VerifyOtpProgress(progress: _verifyingProgress)
+                                            : Text(
+                                                'Verify OTP',
+                                                style: GoogleFonts.boldonse(
+                                                  fontSize: (14.0 * scale).clamp(13.0, 16.0),
+                                                  fontWeight: FontWeight.w400,
+                                                  color: _kOnGradient,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
                             ),
+                            const Spacer(),
                           ],
                         ),
                       ),
@@ -481,17 +508,15 @@ class _OtpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const cardMaxWidth = 346.0;
-        const padH = 15.0;
-        const padV = 20.0;
-        const titleToOtp = 24.0;
-        const otpToTimer = 50.0;
-        const cellW = 36.0;
-        const cellH = 48.0;
-        const cellGap = 20.0;
-        const otpRowTargetW = 6 * cellW + 5 * cellGap;
-
-        final cardWidth = math.min(cardMaxWidth, constraints.maxWidth);
+        final cardWidth = constraints.maxWidth;
+        final padH = (cardWidth * 0.045).clamp(10.0, 18.0);
+        final padV = (cardWidth * 0.058).clamp(12.0, 24.0);
+        final titleToOtp = (cardWidth * 0.07).clamp(12.0, 24.0);
+        final otpToTimer = (cardWidth * 0.14).clamp(22.0, 50.0);
+        final cellW = (cardWidth * 0.1).clamp(24.0, 36.0);
+        final cellH = (cardWidth * 0.13).clamp(34.0, 48.0);
+        final cellGap = (cardWidth * 0.05).clamp(8.0, 20.0);
+        final otpRowTargetW = 6 * cellW + 5 * cellGap;
         final innerW = cardWidth - padH * 2;
         final scale = innerW < otpRowTargetW ? innerW / otpRowTargetW : 1.0;
         final pinW = cellW * scale;
@@ -503,10 +528,10 @@ class _OtpCard extends StatelessWidget {
           child: SizedBox(
             width: cardWidth,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: padH, vertical: padV),
+              padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular((cardWidth * 0.06).clamp(12.0, 22.0)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -517,7 +542,7 @@ class _OtpCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: GoogleFonts.montserrat(
                       color: _OTPPageState._kPrimary,
-                      fontSize: 20,
+                      fontSize: (cardWidth * 0.055).clamp(14.0, 20.0),
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -544,7 +569,7 @@ class _OtpCard extends StatelessWidget {
                       completeBorderColor: _OTPPageState._kOtpBorder,
                       focusedBorderColor: AppColors.border,
                       textStyle: GoogleFonts.montserrat(
-                        fontSize: 20,
+                        fontSize: (cardWidth * 0.055).clamp(14.0, 20.0),
                         fontWeight: FontWeight.w600,
                         color: _OTPPageState._kPrimary,
                       ),
@@ -558,7 +583,10 @@ class _OtpCard extends StatelessWidget {
                     onTap: canResend ? onTapTimer : null,
                     borderRadius: BorderRadius.circular(100),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: (cardWidth * 0.06).clamp(10.0, 20.0),
+                        vertical: (cardWidth * 0.03).clamp(6.0, 10.0),
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0x66DFE7E9),
                         borderRadius: BorderRadius.circular(100),
@@ -570,17 +598,17 @@ class _OtpCard extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.schedule_rounded,
-                              size: 16,
+                              size: (cardWidth * 0.045).clamp(12.0, 16.0),
                               color: Colors.black.withValues(alpha: 0.34),
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: (cardWidth * 0.03).clamp(6.0, 10.0)),
                             Text(
                               countdownText,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.montserrat(
-                                fontSize: 14,
+                                fontSize: (cardWidth * 0.04).clamp(11.0, 14.0),
                                 fontWeight: FontWeight.w400,
                                 color: canResend
                                     ? AppColors.primary
@@ -603,7 +631,9 @@ class _OtpCard extends StatelessWidget {
 }
 
 class _WelcomeRichText extends StatelessWidget {
-  const _WelcomeRichText();
+  const _WelcomeRichText({required this.fontSize});
+
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -617,7 +647,7 @@ class _WelcomeRichText extends StatelessWidget {
         TextSpan(
           style: GoogleFonts.montserrat(
             color: _OTPPageState._kOnGradient,
-            fontSize: 24,
+            fontSize: fontSize,
             fontWeight: FontWeight.w200,
             height: 1.2,
           ),
@@ -627,7 +657,7 @@ class _WelcomeRichText extends StatelessWidget {
               text: 'solecial hub',
               style: GoogleFonts.montserrat(
                 color: _OTPPageState._kOnGradient,
-                fontSize: 24,
+                fontSize: fontSize,
                 fontWeight: FontWeight.w600,
                 height: 1.2,
                 fontStyle: FontStyle.italic,
