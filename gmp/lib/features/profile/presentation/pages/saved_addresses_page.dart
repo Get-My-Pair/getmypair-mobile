@@ -742,6 +742,12 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                                 children: [
                                   Checkbox(
                                     value: _useAccountDetails,
+                                    visualDensity: const VisualDensity(
+                                      horizontal: -4,
+                                      vertical: -4,
+                                    ),
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                     side: BorderSide(
                                       color: Colors.white.withValues(alpha: 0.9),
                                     ),
@@ -769,9 +775,9 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                               ),
                               Divider(
                                 color: Colors.white.withValues(alpha: 0.3),
-                                height: 14,
+                                height: 8,
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 4),
                               _field(
                                 _receiverName,
                                 'Receiver name*',
@@ -788,6 +794,7 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                                 textColor: Colors.white,
                                 hintColor: Colors.white.withValues(alpha: 0.5),
                               ),
+                              const SizedBox(height: 8),
                             ],
                           ),
                         ),
@@ -841,7 +848,7 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                           child: SizedBox(
@@ -939,53 +946,67 @@ class _AddressFormPageState extends State<_AddressFormPage> {
           ),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: ctrl,
-          keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-          style: GoogleFonts.montserrat(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: textColor,
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withValues(alpha: 0.72),
+                Colors.white.withValues(alpha: 0.45),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.20),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.montserrat(
-              fontSize: 16,
+          padding: const EdgeInsets.all(1),
+          child: TextFormField(
+            controller: ctrl,
+            keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+            style: GoogleFonts.montserrat(
+              fontSize: 14,
               fontWeight: FontWeight.w400,
-              color: hintColor ?? Colors.black54,
+              color: textColor,
             ),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(999),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.55),
-                width: 0.8,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.montserrat(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: hintColor ?? Colors.black54,
+              ),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(999),
+                borderSide: BorderSide.none,
+              ),
+              errorStyle: GoogleFonts.montserrat(
+                color: const Color(0xFFFFB4B4),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
               ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(999),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.55),
-                width: 0.8,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(999),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.75),
-                width: 1.0,
-              ),
-            ),
-            errorStyle: GoogleFonts.montserrat(color: const Color(0xFFFFB4B4)),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 10,
-            ),
+            validator:
+                validator ??
+                (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
-          validator:
-              validator ??
-              (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
         ),
       ],
     );

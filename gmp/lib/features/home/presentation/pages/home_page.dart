@@ -52,10 +52,10 @@ const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 
 /// Vertical gaps inside the hero (greeting → location → search → stats).
 const double _kHomeHeaderGreetingToLocation = 0;
-const double _kHomeHeaderSearchToStats = 24;
+const double _kHomeHeaderSearchToStats = 20;
 
 /// Section spacing below hero / between blocks (12–16px).
-const double _kSectionGap = 28;
+const double _kSectionGap = 22;
 const double _kRackThumbGap = 8;
 
 /// Extra breathing room between "My Rack" and quick action tiles.
@@ -90,11 +90,10 @@ double _homeHeaderScaleXForWidth(double width) {
 double _homeViewportBottomReserve(BuildContext context) {
   final size = MediaQuery.sizeOf(context);
   final navInsets = dashboardBottomNavOuterInsets(context);
-  final gapAboveNav = (size.height * 0.01).clamp(6.0, 12.0);
+  final gapAboveNav = (size.height * 0.006).clamp(3.0, 8.0);
   // Match the actual nav footprint used by dashboard pages so content spacing
   // is consistent across devices.
   return FloatingGradientBottomNav.barHeight +
-      navInsets.top +
       navInsets.bottom +
       gapAboveNav;
 }
@@ -458,27 +457,21 @@ class _HomePageState extends State<HomePage> {
                                   child: LayoutBuilder(
                                     builder: (context, bodyConstraints) {
                                       final bodyH = bodyConstraints.maxHeight;
-                                      final topGap = (bodyH * 0.035).clamp(
-                                        4.0,
+                                      final topGap = (bodyH * 0.03).clamp(
+                                        7.0,
                                         16.0,
                                       );
-                                      final rackHeight = (bodyH * 0.37).clamp(
-                                        118.0,
-                                        170.0,
+                                      const rackHeight = 155.0;
+                                      final uniformCardGap = (bodyH * 0.026)
+                                          .clamp(10.0, 16.0);
+                                      final careCardH = (bodyH * 0.2).clamp(
+                                        56.0,
+                                        96.0,
                                       );
-                                      final gapAfterRack = (bodyH * 0.028)
-                                          .clamp(8.0, 16.0);
-                                      final careCardH = (bodyH * 0.18).clamp(
-                                        50.0,
-                                        88.0,
-                                      );
-                                      final midSpacer = (bodyH * 0.03).clamp(
-                                        6.0,
-                                        18.0,
-                                      );
-                                      final actionH = (bodyH * 0.18).clamp(
-                                        50.0,
-                                        88.0,
+                                      final midSpacer = uniformCardGap;
+                                      final actionH = (bodyH * 0.2).clamp(
+                                        56.0,
+                                        96.0,
                                       );
                                       return Column(
                                         crossAxisAlignment:
@@ -489,206 +482,136 @@ class _HomePageState extends State<HomePage> {
                                             height: rackHeight,
                                             child: Container(
                                               width: double.infinity,
-                                              padding: EdgeInsets.fromLTRB(
-                                                6 * layoutScale,
-                                                (2 * layoutScale).clamp(1.0, 4.0),
-                                                6 * layoutScale,
-                                                (2 * layoutScale).clamp(1.0, 4.0),
+                                              padding: const EdgeInsets.fromLTRB(
+                                                14,
+                                                12,
+                                                14,
+                                                8,
                                               ),
                                               decoration: BoxDecoration(
                                                 color: _kRackCardBg,
                                                 borderRadius:
                                                     BorderRadius.circular(10),
-                                                border: const Border(
-                                                  bottom: BorderSide(
-                                                    color: _kRackCardBorder,
-                                                    width: 3,
-                                                  ),
+                                                border: Border.all(
+                                                  color: _kRackCardBorder,
+                                                  width: 3,
                                                 ),
                                               ),
-                                              child: LayoutBuilder(
-                                                builder: (context, rackInner) {
-                                                  final innerH =
-                                                      rackInner.maxHeight;
-                                                  final compactRackHeader =
-                                                      innerH < 130;
-                                                  final headerGap = (innerH *
-                                                          (compactRackHeader
-                                                              ? 0.03
-                                                              : 0.04))
-                                                      .clamp(3.0, 9.0);
-                                                  final rackTitleTop = innerH *
-                                                      (compactRackHeader
-                                                          ? 0.03
-                                                          : 0.06);
-                                                  return Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .stretch,
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.stretch,
+                                                children: [
+                                                  Row(
                                                     children: [
-                                                      Row(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Expanded(
-                                                            child: Padding(
-                                                              padding:
-                                                                  EdgeInsets.only(
-                                                                    top:
-                                                                        rackTitleTop,
-                                                                    left: 16,
-                                                                    right: 4,
-                                                                  ),
-                                                              child: Text(
-                                                                'My Rack',
-                                                                style: GoogleFonts.boldonse(
-                                                                  fontSize:
-                                                                      compactRackHeader
-                                                                      ? 14
-                                                                      : 16,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w400,
-                                                                  color:
-                                                                      _kQuickActionMutedText,
-                                                                  height: 1.05,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          IconButton(
-                                                            onPressed:
-                                                                _openArticleList,
-                                                            tooltip:
-                                                                'Digital Shoes Rack',
-                                                            visualDensity:
-                                                                VisualDensity
-                                                                    .compact,
-                                                            style: IconButton.styleFrom(
-                                                              tapTargetSize:
-                                                                  MaterialTapTargetSize
-                                                                      .shrinkWrap,
-                                                              minimumSize: Size(
-                                                                compactRackHeader
-                                                                    ? 32
-                                                                    : 40,
-                                                                compactRackHeader
-                                                                    ? 32
-                                                                    : 40,
-                                                              ),
-                                                              padding:
-                                                                  const EdgeInsets.only(
-                                                                    right: 6,
-                                                                  ),
-                                                            ),
-                                                            alignment: Alignment
-                                                                .topRight,
-                                                            icon: SizedBox(
-                                                              width:
-                                                                  compactRackHeader
-                                                                  ? 16
-                                                                  : 20,
-                                                              height:
-                                                                  compactRackHeader
-                                                                  ? 16
-                                                                  : 20,
-                                                              child: SvgPicture.asset(
-                                                                _kMyRackMaximizeSvgAsset,
-                                                                fit: BoxFit
-                                                                    .contain,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
+                                                      Text(
+                                                        'My Rack',
+                                                        style: GoogleFonts.boldonse(
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w400,
+                                                          color:
+                                                              const Color(0xFF062F35),
+                                                        ),
                                                       ),
+                                                      const Spacer(),
                                                       SizedBox(
-                                                        height: headerGap,
+                                                        width: 24,
+                                                        height: 24,
+                                                        child: IconButton(
+                                                          onPressed:
+                                                              _openArticleList,
+                                                          tooltip:
+                                                              'Digital Shoes Rack',
+                                                          padding:
+                                                              EdgeInsets.zero,
+                                                          constraints:
+                                                              const BoxConstraints(
+                                                                minWidth: 24,
+                                                                minHeight: 24,
+                                                              ),
+                                                          icon: SvgPicture.asset(
+                                                            _kMyRackMaximizeSvgAsset,
+                                                            fit: BoxFit.contain,
+                                                          ),
+                                                        ),
                                                       ),
-                                                      Expanded(
-                                                        child:
-                                                            _rackLoading &&
-                                                                _rackArticles ==
-                                                                    null
-                                                            ? const Center(
-                                                                child: SizedBox(
-                                                                  width: 24,
-                                                                  height: 24,
-                                                                  child: CircularProgressIndicator(
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  Expanded(
+                                                    child:
+                                                        _rackLoading &&
+                                                            _rackArticles ==
+                                                                null
+                                                        ? const Center(
+                                                            child: SizedBox(
+                                                              width: 24,
+                                                              height: 24,
+                                                              child:
+                                                                  CircularProgressIndicator(
                                                                     strokeWidth:
                                                                         2,
                                                                     color: AppColors
                                                                         .primary,
                                                                   ),
-                                                                ),
-                                                              )
-                                                            : _rackError != null
-                                                            ? Center(
-                                                                child: Text(
-                                                                  _rackError!,
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                  maxLines: 2,
-                                                                  overflow:
-                                                                      TextOverflow
-                                                                          .ellipsis,
-                                                                  style: TextStyle(
+                                                            ),
+                                                          )
+                                                        : _rackError != null
+                                                        ? Center(
+                                                            child: Text(
+                                                              _rackError!,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              maxLines: 2,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style:
+                                                                  const TextStyle(
                                                                     fontSize:
                                                                         12,
                                                                     color: AppColors
                                                                         .textTertiary,
                                                                   ),
-                                                                ),
-                                                              )
-                                                            : (_rackArticles ==
-                                                                          null ||
-                                                                      _rackArticles!
-                                                                          .isEmpty)
-                                                            ? Center(
-                                                                child: Text(
-                                                                  'No pairs yet — tap ↗ to open your rack',
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                  style: TextStyle(
-                                                                    fontSize:
-                                                                        12,
-                                                                    color: AppColors
-                                                                        .textTertiary,
-                                                                  ),
-                                                                ),
-                                                              )
-                                                            : _RackThumbStrip(
-                                                                articles:
-                                                                    _rackArticles!
-                                                                        .take(
-                                                                          3,
-                                                                        )
-                                                                        .toList(),
-                                                                gap: (_kRackThumbGap *
-                                                                        layoutScale)
-                                                                    .clamp(
-                                                                      6.0,
-                                                                      12.0,
-                                                                    ),
-                                                                onOpen:
-                                                                    _openArticleDetails,
-                                                                articleImageUrl:
-                                                                    _articleImageUrl,
-                                                                articleThumb:
-                                                                    _articleThumb,
+                                                            ),
+                                                          )
+                                                        : (_rackArticles ==
+                                                                      null ||
+                                                                  _rackArticles!
+                                                                      .isEmpty)
+                                                        ? const Center(
+                                                            child: Text(
+                                                              'No pairs yet — tap ↗ to open your rack',
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color: AppColors
+                                                                    .textTertiary,
                                                               ),
-                                                      ),
-                                                    ],
-                                                  );
-                                                },
+                                                            ),
+                                                          )
+                                                        : _RackThumbStrip(
+                                                            articles:
+                                                                _rackArticles!
+                                                                    .take(3)
+                                                                    .toList(),
+                                                            gap: 10,
+                                                            onOpen:
+                                                                _openArticleDetails,
+                                                            articleImageUrl:
+                                                                _articleImageUrl,
+                                                            articleThumb:
+                                                                _articleThumb,
+                                                          ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ),
-                                          SizedBox(
-                                            height: gapAfterRack,
-                                          ),
+                                          SizedBox(height: uniformCardGap),
                                           _QuickActionCard(
                                             label: 'CareMyPair',
                                             highlight: true,
@@ -1063,18 +986,27 @@ class _HomeTopCard extends StatelessWidget {
     final locationIconSize = (20 * s * deviceIconScale).clamp(15.0, 28.0);
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
-    final headerHorizontal = (horizontal - 4).clamp(12.0, horizontal);
+    final headerHorizontal = (horizontal - 2).clamp(14.0, horizontal);
     final addressLine = _addressLineForHome(currentAddress);
     final imageBleed = (4.0 * s).clamp(2.0, 6.0);
-    final topPad = (76 * layoutScale).clamp(44.0, 88.0);
-    final bottomPad = (22 * layoutScale).clamp(10.0, 26.0);
+    final topPad = (66 * layoutScale).clamp(40.0, 76.0);
+    final bottomPad = (20 * layoutScale).clamp(10.0, 24.0);
     const headerRadius = BorderRadius.only(
       bottomLeft: Radius.circular(20),
       bottomRight: Radius.circular(20),
     );
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(),
+      decoration: const BoxDecoration(
+        borderRadius: headerRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
       child: ClipRRect(
         borderRadius: headerRadius,
         // Hard clip avoids sub-pixel anti-alias seams on side edges.
@@ -1119,9 +1051,9 @@ class _HomeTopCard extends StatelessWidget {
                             'Hello, $greetingName!',
                             textAlign: TextAlign.left,
                             style: GoogleFonts.boldonse(
-                              fontSize: ((compact ? 50.0 : 50.0) * s).clamp(
+                              fontSize: ((compact ? 46.0 : 48.0) * s).clamp(
                                 13.0,
-                                24.0,
+                                23.0,
                               ),
                               fontWeight: FontWeight.w400,
                               color: _kOnHeaderText,
@@ -1220,7 +1152,7 @@ class _HomeTopCard extends StatelessWidget {
                                       SizedBox(height: (2 * s).clamp(1.0, 2.0)),
                                       Text(
                                         addressLine,
-                                        maxLines: 2,
+                                        maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.montserrat(
                                           fontSize:
@@ -1271,7 +1203,7 @@ class _HomeTopCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: (14 * s).clamp(6.0, 18.0)),
+                    SizedBox(height: (12 * s).clamp(6.0, 16.0)),
                     Padding(
                       padding: EdgeInsets.symmetric(
                         vertical: (2 * s).clamp(0.0, 6.0),
@@ -1410,7 +1342,7 @@ class _StatItem extends StatelessWidget {
     final s = _homeUiScale(context);
     final narrow = MediaQuery.sizeOf(context).width < 360;
     final valueSize = ((narrow ? 22.0 : 26.0) * s).clamp(18.0, 28.0);
-    final labelSize = (12 * s).clamp(9.0, 12.0);
+    final labelSize = (11.5 * s).clamp(9.0, 12.0);
     final labelStyle = GoogleFonts.montserrat(
       fontSize: labelSize,
       fontWeight: FontWeight.w400,
@@ -1438,7 +1370,7 @@ class _StatItem extends StatelessWidget {
                     height: 1,
                   ),
                 ),
-                SizedBox(height: (9 * s).clamp(5.0, 12.0)),
+                SizedBox(height: (7 * s).clamp(4.0, 10.0)),
                 Text(
                   labelLine1,
                   textAlign: TextAlign.center,
@@ -1480,8 +1412,8 @@ class _RackThumbStrip extends StatelessWidget {
   final Widget Function(String url) articleThumb;
 
   /// Reference frame for [FittedBox]; keeps three-up rows readable on phones.
-  static const double _kThumbW = 160;
-  static const double _kThumbH = 102;
+  static const double _kThumbW = 124;
+  static const double _kThumbH = 66;
 
   @override
   Widget build(BuildContext context) {
@@ -1576,7 +1508,7 @@ class _QuickActionCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           height: resolvedHeight,
           padding: padding,
@@ -1592,7 +1524,7 @@ class _QuickActionCard extends StatelessWidget {
                     ],
                   )
                 : null,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           alignment: Alignment.center,
           child: Row(
@@ -1622,7 +1554,7 @@ class _QuickActionCard extends StatelessWidget {
                               .clamp(11.0, 16.0),
                       fontWeight: FontWeight.w400,
                       color: textColor,
-                      height: isTwoLine ? 1.45 : 1.10,
+                      height: isTwoLine ? 1.25 : 1.08,
                     ),
                   ),
                 ),

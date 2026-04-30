@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,10 +11,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/bgtheme.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../core/utils/responsive.dart';
-import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../profile/domain/entities/user_profile.dart';
@@ -81,6 +83,9 @@ class SelectLocationPage extends StatefulWidget {
 
 class _SelectLocationPageState extends State<SelectLocationPage> {
   static const LatLng _defaultCenter = LatLng(13.0827, 80.2707); // Chennai
+  static const double _initialZoom = 15.5;
+  static const double _minZoom = 3.0;
+  static const double _maxZoom = 19.0;
 
   static const Color _titleNavy = Color(0xFF004D4D);
   static const Color _searchBorderBlue = Color(0xFF7EC8E3);
@@ -106,6 +111,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   String _address = 'Loading address...';
   bool _isLoadingAddress = false;
   bool _isLoadingCurrent = false;
+  bool _isSatelliteView = true;
+  double _currentZoom = _initialZoom;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -158,7 +165,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       final latLng = LatLng(position.latitude, position.longitude);
       if (!mounted) return;
       setState(() => _markerPosition = latLng);
-      _mapController.move(latLng, 15.5);
+      _mapController.move(latLng, _currentZoom);
       _updateAddressFromLatLng(latLng);
     } catch (e) {
       if (!mounted) return;
@@ -212,7 +219,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       );
       final latLng = LatLng(position.latitude, position.longitude);
       setState(() => _markerPosition = latLng);
-      _mapController.move(latLng, 15.5);
+      _mapController.move(latLng, _currentZoom);
       await _updateAddressFromLatLng(latLng);
     } catch (e) {
       if (mounted) {
@@ -232,6 +239,42 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         ? '${_markerPosition.latitude}, ${_markerPosition.longitude}'
         : _address;
     Navigator.of(context).pop(result);
+  }
+
+  void _showAddressActions() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: _titleNavy),
+              title: const Text('Edit'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _searchController.text = _address;
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: const Text('Delete'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                setState(() {
+                  _address = 'Selected location';
+                  _searchController.clear();
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showFilterSheet() {
@@ -265,6 +308,18 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         ),
       ),
     );
+  }
+
+  void _zoomIn() {
+    final nextZoom = (_currentZoom + 1).clamp(_minZoom, _maxZoom);
+    _mapController.move(_markerPosition, nextZoom);
+    setState(() => _currentZoom = nextZoom);
+  }
+
+  void _zoomOut() {
+    final nextZoom = (_currentZoom - 1).clamp(_minZoom, _maxZoom);
+    _mapController.move(_markerPosition, nextZoom);
+    setState(() => _currentZoom = nextZoom);
   }
 
   Widget _sheetRow(String name, String rating) {
@@ -320,6 +375,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   Widget build(BuildContext context) {
     final hPad = Responsive.horizontalPaddingOf(context).clamp(12.0, 20.0);
     final bottomSafe = Responsive.bottomInsetOf(context);
+    final bottomNavReserve = FloatingGradientBottomNav.barHeight + 12 + bottomSafe;
     final isCompact = MediaQuery.sizeOf(context).width < 360;
     final authState = context.read<AuthBloc>().state;
     final userDisplayName = (widget.mapPinDisplayName != null &&
@@ -334,8 +390,19 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       body: Stack(
         clipBehavior: Clip.none,
         children: [
-          const Positioned.fill(
-            child: DecoratedBox(decoration: BoxDecoration(gradient: _shellSweep)),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage(BgTheme.backgroundImageAsset),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.14),
+                    BlendMode.darken,
+                  ),
+                ),
+              ),
+            ),
           ),
           SafeArea(
             bottom: false,
@@ -345,19 +412,23 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(10, 8, 10, 0),
                     child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(22),
                           topRight: Radius.circular(22),
                           bottomLeft: Radius.circular(36),
                           bottomRight: Radius.circular(36),
                         ),
-                        boxShadow: [
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.45),
+                          width: 1.1,
+                        ),
+                        boxShadow: const [
                           BoxShadow(
-                            color: Color(0x19000000),
-                            blurRadius: 12,
-                            offset: Offset(0, 4),
+                            color: Color(0x29000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 8),
                           ),
                         ],
                       ),
@@ -380,7 +451,11 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                                       onPressed: () => Navigator.of(context).maybePop(),
-                                      icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: _titleNavy),
+                                      icon: const Icon(
+                                        Icons.arrow_back_ios_new_rounded,
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
                                     )
                                   else
                                     const SizedBox(width: 8),
@@ -390,14 +465,14 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.boldonse(
-                                        color: _titleNavy,
+                                        color: Colors.white,
                                         fontSize: Responsive.fontSize(context, isCompact ? 19 : 22),
                                         fontWeight: FontWeight.w400,
                                       ),
                                     ),
                                   ),
                                   Material(
-                                    color: Colors.white,
+                                    color: Colors.white.withValues(alpha: 0.95),
                                     elevation: 2,
                                     shadowColor: Colors.black26,
                                     shape: const CircleBorder(),
@@ -412,56 +487,107 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                                 padding: EdgeInsets.all(10),
                                                 child: CircularProgressIndicator(strokeWidth: 2, color: _titleNavy),
                                               )
-                                            : Icon(Icons.add, color: _titleNavy, size: 26),
+                                            : Icon(Icons.add, color: _tealButton, size: 26),
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: hPad),
                               child: Row(
                                 children: [
                                   Expanded(
-                                    child: Container(
-                                      height: 46,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(100),
-                                        border: Border.all(color: _searchBorderBlue, width: 1.5),
-                                      ),
-                                      child: TextField(
-                                        controller: _searchController,
-                                        onChanged: (_) => setState(() {}),
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: Responsive.fontSize(context, 15),
-                                          color: Colors.black87,
-                                        ),
-                                        decoration: InputDecoration(
-                                          isDense: true,
-                                          border: InputBorder.none,
-                                          hintText: 'Search',
-                                          hintStyle: GoogleFonts.montserrat(
-                                            color: Colors.black.withValues(alpha: 0.35),
-                                            fontSize: Responsive.fontSize(context, 15),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(100),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                        child: Container(
+                                          height: 48,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.92),
+                                            borderRadius: BorderRadius.circular(100),
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 1.6,
+                                            ),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Color(0x22000000),
+                                                blurRadius: 10,
+                                                offset: Offset(0, 3),
+                                              ),
+                                            ],
                                           ),
-                                          prefixIcon: Icon(
-                                            Icons.search_rounded,
-                                            color: Colors.black.withValues(alpha: 0.35),
-                                            size: 22,
+                                          child: TextField(
+                                            controller: _searchController,
+                                            onChanged: (_) => setState(() {}),
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: Responsive.fontSize(context, 15),
+                                              color: Color(0xFF0A2429),
+                                            ),
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              border: InputBorder.none,
+                                              hintText: 'Search',
+                                              hintStyle: GoogleFonts.montserrat(
+                                                color: AppColors.textSecondary,
+                                                fontSize: Responsive.fontSize(context, 15),
+                                              ),
+                                              prefixIcon: const Icon(
+                                                Icons.search_rounded,
+                                                color: Color(0xFF15808D),
+                                                size: 22,
+                                              ),
+                                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                            ),
                                           ),
-                                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
                                         ),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 10),
                                   Material(
-                                    color: _tealButton,
+                                    color: (_isSatelliteView == true)
+                                        ? const Color(0xFF0F6876)
+                                        : Colors.white.withValues(alpha: 0.92),
                                     borderRadius: BorderRadius.circular(12),
+                                    shadowColor: Colors.black45,
+                                    elevation: 2,
+                                    child: InkWell(
+                                      onTap: () => setState(
+                                        () => _isSatelliteView = !(_isSatelliteView == true),
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: SizedBox(
+                                        width: isCompact ? 72 : 84,
+                                        height: isCompact ? 44 : 48,
+                                        child: Center(
+                                          child: Text(
+                                            (_isSatelliteView == true) ? 'Map' : 'Sat',
+                                            style: GoogleFonts.montserrat(
+                                              color: (_isSatelliteView == true)
+                                                  ? Colors.white
+                                                  : const Color(0xFF0A2429),
+                                              fontSize: Responsive.fontSize(
+                                                context,
+                                                isCompact ? 12 : 13,
+                                              ),
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Material(
+                                    color: const Color(0xFF0F6876),
+                                    borderRadius: BorderRadius.circular(12),
+                                    elevation: 2,
                                     child: InkWell(
                                       onTap: _showFilterSheet,
                                       borderRadius: BorderRadius.circular(12),
@@ -493,7 +619,12 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                         mapController: _mapController,
                                         options: MapOptions(
                                           initialCenter: _markerPosition,
-                                          initialZoom: 15.5,
+                                          initialZoom: _initialZoom,
+                                          onPositionChanged: (position, hasGesture) {
+                                            final zoom = position.zoom;
+                                            if (zoom == null) return;
+                                            _currentZoom = zoom;
+                                          },
                                           onTap: (_, latLng) {
                                             setState(() => _markerPosition = latLng);
                                             _updateAddressFromLatLng(latLng);
@@ -501,9 +632,14 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                         ),
                                         children: [
                                           TileLayer(
-                                            urlTemplate:
-                                                'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                                            subdomains: const ['a', 'b', 'c', 'd'],
+                                            // Toggle between normal map and satellite map.
+                                            urlTemplate: (_isSatelliteView == true)
+                                                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                                                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                                            subdomains: (_isSatelliteView == true)
+                                                ? const <String>[]
+                                                : const ['a', 'b', 'c', 'd'],
+                                            maxZoom: 19,
                                             userAgentPackageName: 'com.getmypair.app',
                                           ),
                                           CircleLayer(
@@ -542,46 +678,103 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                           ],
                                         ),
                                       ),
+                                      Positioned(
+                                        right: 10,
+                                        top: 10,
+                                        child: Column(
+                                          children: [
+                                            _ZoomButton(
+                                              icon: Icons.add_rounded,
+                                              onTap: _zoomIn,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            _ZoomButton(
+                                              icon: Icons.remove_rounded,
+                                              onTap: _zoomOut,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                               ),
                             ),
                             Padding(
-                              padding: EdgeInsets.fromLTRB(hPad, 10, hPad, 14),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _isLoadingAddress ? 'Loading address…' : _address,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: Responsive.fontSize(context, 12),
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
+                              padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.35),
                                   ),
-                                  const SizedBox(width: 10),
-                                  FilledButton(
-                                    onPressed: _confirmLocation,
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: _tealButton,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Text(
+                                          _isLoadingAddress ? 'Loading address…' : _address,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.left,
+                                          style: GoogleFonts.montserrat(
+                                            fontSize: Responsive.fontSize(context, 12),
+                                            color: Colors.white.withValues(alpha: 0.95),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    child: Text(
-                                      'Confirm',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: Responsive.fontSize(context, 14),
-                                        fontWeight: FontWeight.w600,
+                                    PopupMenuButton<String>(
+                                      tooltip: 'More',
+                                      icon: const Icon(
+                                        Icons.more_vert_rounded,
+                                        color: Colors.white,
+                                      ),
+                                      onSelected: (value) {
+                                        if (value == 'edit') {
+                                          _showAddressActions();
+                                        } else if (value == 'delete') {
+                                          setState(() => _address = 'Selected location');
+                                        }
+                                      },
+                                      itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          child: Text('Edit'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 6),
+                                    FilledButton(
+                                      onPressed: _confirmLocation,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: _tealButton,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Confirm',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: Responsive.fontSize(context, 14),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -590,7 +783,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                     ),
                   ),
                 ),
-                SizedBox(height: 72 + bottomSafe),
+                SizedBox(height: bottomNavReserve),
               ],
             ),
           ),
@@ -602,14 +795,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: _ShoeCareBottomNav(
-                  profileBloc: widget.profileBloc,
-                  onHome: () => Navigator.of(context).maybePop(),
-                  onShoeRack: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => const ArticleListPage()),
-                    );
-                  },
+                child: DashboardLinkedBottomNav(
+                  selectedTabIndex: 0,
                 ),
               ),
             ),
@@ -637,6 +824,37 @@ class _RingLabel extends StatelessWidget {
           Shadow(color: Colors.white, blurRadius: 4),
           Shadow(color: Colors.white, blurRadius: 2),
         ],
+      ),
+    );
+  }
+}
+
+class _ZoomButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ZoomButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.9),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(
+            icon,
+            color: const Color(0xFF062F35),
+            size: 22,
+          ),
+        ),
       ),
     );
   }
@@ -894,7 +1112,7 @@ class _ShoeCareBottomNav extends StatelessWidget {
                 MaterialPageRoute<void>(
                   builder: (_) => BlocProvider.value(
                     value: profileBloc,
-                    child: const ProfilePage(),
+                    child: ProfilePage(),
                   ),
                 ),
               );

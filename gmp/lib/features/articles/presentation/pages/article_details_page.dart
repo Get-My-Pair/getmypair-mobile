@@ -78,11 +78,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     return '$base/uploads/$path';
   }
 
-  static String _conditionLabel(String c) {
-    if (c.isEmpty) return '—';
-    return c[0].toUpperCase() + c.substring(1).toLowerCase();
-  }
-
   static String _categoryLabel(String c) {
     const map = {
       'sports_shoe': 'Sports shoe',
@@ -401,7 +396,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         const designHeight = 740.0;
         final widthRatio = constraints.maxWidth / designWidth;
         final heightRatio = constraints.maxHeight / designHeight;
-        final scale = math.min(widthRatio, heightRatio).clamp(0.58, 1.0);
+        final scale = math.min(widthRatio, heightRatio).clamp(0.5, 1.0);
 
         final contentWidth = designWidth * scale;
         final padX = 24.0 * scale;
@@ -415,7 +410,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
 
         final imageWidth = (220.0 * scale).clamp(124.0, 240.0);
         final imageHeight = imageWidth * 0.62;
-        final swatchSize = (34.0 * scale).clamp(22.0, 34.0);
+        final swatchSize = (28.0 * scale).clamp(18.0, 28.0);
 
         return Align(
           alignment: Alignment.topCenter,
@@ -430,17 +425,20 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(
-                          minWidth: 34 * scale,
-                          minHeight: 34 * scale,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: (22 * scale).clamp(16.0, 22.0),
-                          color: _rackDark,
+                      Transform.translate(
+                        offset: Offset(-6 * scale, 0),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(
+                            minWidth: 34 * scale,
+                            minHeight: 34 * scale,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(
+                            Icons.west_rounded,
+                            size: (24 * scale).clamp(16.0, 24.0),
+                            color: AppColors.secondary,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -492,12 +490,12 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   Expanded(
                     child: Center(
                       child: Transform.rotate(
-                        angle: -0.48,
+                        angle: -0.36,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: SizedBox(
-                            width: imageWidth,
-                            height: imageHeight,
+                            width: (imageWidth * 1.08).clamp(130.0, 260.0),
+                            height: (imageHeight * 1.08).clamp(82.0, 170.0),
                             child: imageUrl.isNotEmpty
                                 ? Image.network(
                                     imageUrl,
@@ -515,9 +513,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.only(bottom: 12 * scale),
-                    decoration: ShapeDecoration(
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
                           width: 1,
                           color: Colors.black.withValues(alpha: 0.2),
                         ),
@@ -557,28 +555,34 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                     ),
                   ),
                   SizedBox(height: sectionGap),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: _statPair(
-                          context,
-                          value: _categoryLabel(article.category),
-                          label: 'Category',
-                          valueStyle: boldonse(16 * scale),
-                          labelStyle: montserrat(16 * scale),
+                  IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _statPair(
+                            context,
+                            value: _categoryLabel(article.category),
+                            label: 'Category',
+                            valueStyle: boldonse(16 * scale),
+                            labelStyle: montserrat(16 * scale),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: _statPair(
-                          context,
-                          value: '—',
-                          label: 'Last Wear',
-                          valueStyle: boldonse(16 * scale),
-                          labelStyle: montserrat(16 * scale),
+                        Container(
+                          width: 1,
+                          color: Colors.black.withValues(alpha: 0.2),
+                          margin: EdgeInsets.symmetric(vertical: 2 * scale),
                         ),
-                      ),
-                    ],
+                        Expanded(
+                          child: _statPair(
+                            context,
+                            value: article.purchaseYear?.toString() ?? '—',
+                            label: 'Last Year',
+                            valueStyle: boldonse(16 * scale),
+                            labelStyle: montserrat(16 * scale),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   SizedBox(height: sectionGap),
                   Container(
@@ -586,37 +590,53 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                     padding: EdgeInsets.symmetric(horizontal: 14 * scale, vertical: 10 * scale),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF09DFFF)),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.transparent, width: 1.2),
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          AppColors.secondary.withValues(alpha: 0.22),
+                          AppColors.primary.withValues(alpha: 0.18),
+                        ],
+                      ),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x19000000),
-                          blurRadius: 4,
+                          color: Color(0x220A2429),
+                          blurRadius: 8,
                           offset: Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Text(
-                            'Last sent to shoe care',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: montserrat(15 * scale),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Last sent to shoe care',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: montserrat(14 * scale, color: AppColors.textSecondary),
+                              ),
+                              SizedBox(height: 4 * scale),
+                              Text(
+                                '—',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: boldonse(14 * scale),
+                              ),
+                            ],
                           ),
                         ),
                         SizedBox(width: 10 * scale),
-                        Text(
-                          '—',
-                          textAlign: TextAlign.right,
-                          style: boldonse(15 * scale),
-                        ),
-                        SizedBox(width: 6 * scale),
                         Icon(
                           Icons.chevron_right_rounded,
                           size: (22 * scale).clamp(14.0, 22.0),
-                          color: _rackTeal,
+                          color: AppColors.textSecondary,
                         ),
                       ],
                     ),
@@ -648,13 +668,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         ),
                       ),
                     ],
-                  ),
-                  SizedBox(height: 12 * scale),
-                  Text(
-                    'Condition: ${_conditionLabel(article.condition)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: montserrat(14 * scale, color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -726,12 +739,8 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         child: Ink(
           height: height,
           decoration: ShapeDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment(1, 0.5),
-              end: Alignment(0, 0.5),
-              colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-            ),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            color: AppColors.primaryLight,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(height / 2)),
             shadows: const [
               BoxShadow(
                 color: Color(0x19000000),
@@ -762,16 +771,16 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   }) {
     return Material(
       color: const Color(0xFFDFE7E9),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(height / 2),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(height / 2),
         child: Container(
           height: height,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF0F6876)),
+            borderRadius: BorderRadius.circular(height / 2),
+            border: Border.all(color: AppColors.primary),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x19000000),

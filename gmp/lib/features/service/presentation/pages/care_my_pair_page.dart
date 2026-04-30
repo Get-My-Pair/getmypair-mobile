@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/service/presentation/pages/maintain_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/pages/repair_my_pair_page.dart';
@@ -75,9 +74,9 @@ class CareMyPairPage extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 120),
                     children: [
                       _Header(onBack: () => Navigator.maybePop(context)),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       _SearchBar(),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
                       Text(
                         'Our Services',
                         style: GoogleFonts.boldonse(
@@ -98,6 +97,7 @@ class CareMyPairPage extends StatelessWidget {
                             child: _SecondaryServiceCard(
                               label: 'Maintain\nMyPair',
                               iconAsset: 'assets/images/icons/caremypair/mmp.svg',
+                              iconSize: 44,
                               onTap: () => _openMaintainPage(context),
                             ),
                           ),
@@ -111,7 +111,7 @@ class CareMyPairPage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 20),
                       Text(
                         'DIY Solutions',
                         style: GoogleFonts.boldonse(
@@ -210,8 +210,11 @@ class _Header extends StatelessWidget {
       children: [
         IconButton(
           onPressed: onBack,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 24, height: 24),
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35), size: 22),
         ),
+        const SizedBox(width: 6),
         Text(
           'CareMyPair',
           style: GoogleFonts.boldonse(
@@ -229,29 +232,50 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFF09E0FF)),
-          borderRadius: BorderRadius.circular(100),
+      height: 38,
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(100),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF09E0FF), Color(0xFF1CCAE5)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search_rounded, color: Colors.black.withValues(alpha: 0.34), size: 22),
-          const SizedBox(width: 8),
-          Text(
-            'Search',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(
-              color: Colors.black.withValues(alpha: 0.34),
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF09E0FF).withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Icon(
+                Icons.manage_search_rounded,
+                color: Colors.black.withValues(alpha: 0.4),
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Search',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(
+                  color: Colors.black.withValues(alpha: 0.34),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -312,11 +336,13 @@ class _SecondaryServiceCard extends StatelessWidget {
   static const double _cardHeight = 72;
   final String label;
   final String iconAsset;
+  final double iconSize;
   final VoidCallback onTap;
 
   const _SecondaryServiceCard({
     required this.label,
     required this.iconAsset,
+    this.iconSize = 38,
     required this.onTap,
   });
 
@@ -339,8 +365,8 @@ class _SecondaryServiceCard extends StatelessWidget {
             children: [
               SvgPicture.asset(
                 iconAsset,
-                width: 38,
-                height: 38,
+                width: iconSize,
+                height: iconSize,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -348,7 +374,8 @@ class _SecondaryServiceCard extends StatelessWidget {
                   label,
                   style: GoogleFonts.boldonse(
                     color: const Color(0xFF062F35),
-                    fontSize: 16,
+                    fontSize: 17,
+                    height: 1.25,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -451,70 +478,101 @@ class _ArticleCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: const Color(0xFFE2E2E2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-            child: data.image.startsWith('http')
-                ? Image.network(
-                    data.image,
-                    width: 134,
-                    height: 64,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 134,
-                      height: 64,
-                      color: Colors.grey.shade300,
-                    ),
-                  )
-                : Image.asset(
-                    data.image,
-                    width: 134,
-                    height: 64,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      width: 134,
-                      height: 64,
-                      color: Colors.grey.shade300,
-                    ),
-                  ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Expanded(
-                    child: Text(
-                      data.summary,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF929292),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                  child: data.image.startsWith('http')
+                      ? Image.network(
+                          data.image,
+                          width: 134,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            width: 134,
+                            height: 64,
+                            color: Colors.grey.shade300,
+                          ),
+                        )
+                      : Image.asset(
+                          data.image,
+                          width: 134,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            width: 134,
+                            height: 64,
+                            color: Colors.grey.shade300,
+                          ),
+                        ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.montserrat(
+                            color: Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Expanded(
+                          child: Text(
+                            data.summary,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF929292),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Container(
+                  height: 26,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.white],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

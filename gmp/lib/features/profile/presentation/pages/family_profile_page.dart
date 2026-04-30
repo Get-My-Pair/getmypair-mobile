@@ -73,14 +73,14 @@ class FamilyProfilePage extends StatelessWidget {
                             heightScale,
                           ) *
                           textScaleTightness)
-                          .clamp(0.58, 1.0);
+                          .clamp(0.82, 1.0);
 
-                      final horizontalLeft = (20 * widthScale).clamp(16.0, 22.0);
+                      final horizontalLeft = (22 * widthScale).clamp(18.0, 24.0);
                       final horizontalRight =
-                          (25 * widthScale).clamp(18.0, 28.0);
-                      final topPadding = statusTop + 30;
+                          (22 * widthScale).clamp(18.0, 24.0);
+                      final topPadding = statusTop + 42;
                       final bottomPadding = (20 * layoutScale).clamp(4.0, 18.0);
-                      final titleSize = (21 * layoutScale).clamp(15.0, 21.0);
+                      const titleSize = 24.0;
 
                       return Padding(
                         padding: EdgeInsets.fromLTRB(
@@ -111,11 +111,11 @@ class FamilyProfilePage extends StatelessWidget {
                                 ),
                                 _AvatarCluster(
                                   profile: profile,
-                                  scale: (layoutScale * 0.9).clamp(0.68, 1.0),
+                                  scale: layoutScale,
                                 ),
                               ],
                             ),
-                            SizedBox(height: (16 * layoutScale).clamp(10.0, 16.0)),
+                            SizedBox(height: (28 * layoutScale).clamp(20.0, 28.0)),
                             Expanded(
                               child: SingleChildScrollView(
                                 physics: const ClampingScrollPhysics(),
@@ -183,7 +183,7 @@ class _FamilyRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: (20 * scale).clamp(14.0, 20.0)),
+          padding: EdgeInsets.symmetric(vertical: (22 * scale).clamp(18.0, 24.0)),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
@@ -195,7 +195,7 @@ class _FamilyRow extends StatelessWidget {
                 child: Text(
                   title,
                   style: GoogleFonts.montserrat(
-                    fontSize: (17 * scale).clamp(13.0, 17.0),
+                    fontSize: (17 * scale).clamp(16.0, 18.0),
                     fontWeight: FontWeight.w400,
                     color: Colors.white,
                     height: 1,
@@ -205,7 +205,7 @@ class _FamilyRow extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 color: Colors.white.withValues(alpha: 0.96),
-                size: (24 * scale).clamp(18.0, 24.0),
+                size: (30 * scale).clamp(24.0, 30.0),
               ),
             ],
           ),

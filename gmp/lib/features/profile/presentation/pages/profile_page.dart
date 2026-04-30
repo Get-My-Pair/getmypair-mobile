@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../core/errors/failures.dart';
@@ -212,14 +213,6 @@ class _ProfilePageState extends State<ProfilePage> {
             value: kProfileGradientHeaderSystemUi,
             child: Scaffold(
               extendBody: true,
-              bottomNavigationBar: widget.showBottomNav
-                  ? DashboardLinkedBottomNav(
-                      selectedTabIndex: 2,
-                      onProfileTabWhenCannotPop: token.isNotEmpty
-                          ? () => _openEditProfile(context, profile, token)
-                          : null,
-                    )
-                  : null,
               body: SafeArea(
                 top: false,
                 bottom: false,
@@ -227,24 +220,24 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Expanded(
                       child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.vertical(
-                            bottom: Radius.circular(22),
-                          ),
-                          image: const DecorationImage(
-                            image: AssetImage(BgTheme.backgroundImageAsset),
-                            fit: BoxFit.cover,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.22),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
+                          decoration: BoxDecoration(
+                            borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(22),
                             ),
-                          ],
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
+                            image: const DecorationImage(
+                              image: AssetImage(BgTheme.backgroundImageAsset),
+                              fit: BoxFit.cover,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.22),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
                             final widthScale = (constraints.maxWidth / 390)
                                 .clamp(0.84, 1.06);
                             final heightScale = (constraints.maxHeight / 760)
@@ -262,33 +255,30 @@ class _ProfilePageState extends State<ProfilePage> {
                               16.0,
                               22.0,
                             );
-                            final horizontalRight = (25 * widthScale).clamp(
-                              18.0,
-                              28.0,
+                            final horizontalRight = (20 * widthScale).clamp(
+                              16.0,
+                              22.0,
                             );
-                            final topPadding = statusTop + 30;
+                            final topPadding = statusTop + 22;
                             final bottomPadding = (20 * layoutScale).clamp(
                               4.0,
                               18.0,
                             );
-                            final titleSize = (21 * layoutScale).clamp(
-                              15.0,
-                              21.0,
-                            );
+                            const titleSize = 24.0;
                             final subtitleSize = (14 * layoutScale).clamp(
                               11.0,
                               14.0,
                             );
 
-                            return Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                horizontalLeft,
-                                topPadding,
-                                horizontalRight,
-                                bottomPadding,
-                              ),
-                              child: Column(
-                                children: [
+                              return Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  horizontalLeft,
+                                  topPadding,
+                                  horizontalRight,
+                                  bottomPadding,
+                                ),
+                                child: Column(
+                                  children: [
                                   Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -300,11 +290,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                           children: [
                                             Text(
                                               profile.name,
-                                              maxLines: 2,
+                                              maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: GoogleFonts.boldonse(
                                                 fontSize: titleSize,
-                                                height: 1.02,
+                                                fontWeight: FontWeight.w400,
                                                 color: const Color(0xFFDFE7E9),
                                               ),
                                             ),
@@ -360,7 +350,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                     scale: layoutScale,
                                     children: [
                                       _GradientMenuTile(
-                                        icon: Icons.account_circle_outlined,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/familyprofile.svg',
                                         title: 'Family Profile',
                                         scale: layoutScale,
                                         onTap: () => _openFamilyProfile(
@@ -370,13 +361,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ),
                                       ),
                                       _GradientMenuTile(
-                                        icon: Icons.notifications_none_rounded,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/bell.svg',
                                         title: 'Notifications',
                                         scale: layoutScale,
                                         onTap: () {},
                                       ),
                                       _GradientMenuTile(
-                                        icon: Icons.location_on_outlined,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/location.svg',
                                         title: 'Location',
                                         scale: layoutScale,
                                         onTap: () => _openSavedAddresses(
@@ -386,13 +379,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ),
                                       ),
                                       _GradientMenuTile(
-                                        icon: Icons.credit_card_outlined,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/payment.svg',
                                         title: 'Payment',
                                         scale: layoutScale,
                                         onTap: () {},
                                       ),
                                       _GradientMenuTile(
-                                        icon: Icons.devices_other_outlined,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/managedevice.svg',
                                         title: 'Manage Devices',
                                         scale: layoutScale,
                                         onTap: () => _openManageDevices(context),
@@ -409,24 +404,30 @@ class _ProfilePageState extends State<ProfilePage> {
                                     scale: layoutScale,
                                     children: [
                                       _GradientMenuTile(
-                                        icon: Icons.help_outline_rounded,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/faq.svg',
                                         title: 'FAQ',
                                         scale: layoutScale,
                                         onTap: () {},
                                       ),
                                       _GradientMenuTile(
-                                        icon: Icons.error_outline_rounded,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/termscondition.svg',
                                         title: 'Terms & Conditions',
                                         scale: layoutScale,
                                         onTap: () {},
                                       ),
                                       _GradientMenuTile(
-                                        icon: Icons.workspace_premium_outlined,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/license.svg',
                                         title: 'License',
                                         scale: layoutScale,
                                         onTap: () {},
                                       ),
                                     ],
+                                  ),
+                                  SizedBox(
+                                    height: (8 * layoutScale).clamp(4.0, 12.0),
                                   ),
                                   const Spacer(),
                                   _MenuSection(
@@ -434,20 +435,30 @@ class _ProfilePageState extends State<ProfilePage> {
                                     showDivider: false,
                                     children: [
                                       _GradientMenuTile(
-                                        icon: Icons.logout_rounded,
+                                        iconAssetPath:
+                                            'assets/images/icons/profile/log-out.svg',
                                         title: 'Log Out',
                                         scale: layoutScale,
                                         onTap: _logout,
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            );
-                          },
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
                     ),
+                    if (widget.showBottomNav) ...[
+                      const SizedBox(height: 14),
+                      DashboardLinkedBottomNav(
+                        selectedTabIndex: 2,
+                        onProfileTabWhenCannotPop: token.isNotEmpty
+                            ? () => _openEditProfile(context, profile, token)
+                            : null,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -656,13 +667,15 @@ class _RingAvatar extends StatelessWidget {
 
 class _GradientMenuTile extends StatelessWidget {
   const _GradientMenuTile({
-    required this.icon,
+    this.icon,
+    this.iconAssetPath,
     required this.title,
     required this.onTap,
     this.scale = 1.0,
-  });
+  }) : assert(icon != null || iconAssetPath != null);
 
-  final IconData icon;
+  final IconData? icon;
+  final String? iconAssetPath;
   final String title;
   final VoidCallback onTap;
   final double scale;
@@ -688,7 +701,21 @@ class _GradientMenuTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, color: Colors.white, size: iconSize),
+                if (iconAssetPath != null)
+                  SvgPicture.asset(
+                    iconAssetPath!,
+                    width: iconSize,
+                    height: iconSize,
+                    fit: BoxFit.contain,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                    errorBuilder: (_, __, ___) =>
+                        Icon(Icons.circle_outlined, color: Colors.white, size: iconSize),
+                  )
+                else
+                  Icon(icon, color: Colors.white, size: iconSize),
                 SizedBox(width: gap),
                 Expanded(
                   child: Text(

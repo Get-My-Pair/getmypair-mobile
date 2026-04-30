@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
+import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
@@ -314,9 +315,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
     final titleLeftInset = (headerHInset - 4).clamp(6.0, 16.0);
     final topTitleGap = (10.0 * uiScale).clamp(8.0, 14.0);
     final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
-    const plusSize = 48.0;
+    const plusSize = 42.0;
     const searchHeight = 42.0;
-    final filtersHeight = (30.0 * uiScale).clamp(28.0, 36.0);
+    final filtersHeight = (28.0 * uiScale).clamp(26.0, 32.0);
     final sectionGap = (10.0 * uiScale).clamp(8.0, 14.0);
 
     return Column(
@@ -340,7 +341,15 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         minWidth: 40,
                         minHeight: 40,
                       ),
-                      onPressed: () => Navigator.maybePop(context),
+                      onPressed: () {
+                        final nav = Navigator.of(context);
+                        if (nav.canPop()) {
+                          nav.pop();
+                          return;
+                        }
+                        customerDashboardTabIndex.value = 0;
+                        nav.popUntil((route) => route.isFirst);
+                      },
                       icon: const Icon(
                         Icons.arrow_back_ios_new_rounded,
                         size: 20,
@@ -367,31 +376,36 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   child: Container(
                     width: plusSize,
                     height: plusSize,
-                    decoration: ShapeDecoration(
-                      color: const Color(0x33DFE7E9),
-                      shape: RoundedRectangleBorder(
-                        side: const BorderSide(
-                          width: 1,
-                          color: _rackTealPrimary,
-                        ),
-                        borderRadius: BorderRadius.circular(24),
+                    padding: const EdgeInsets.all(1.4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF09E0FF), Color(0xFF0F6876)],
                       ),
-                      shadows: const [
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: const [
                         BoxShadow(
-                          color: Color(0x2D000000),
-                          blurRadius: 4,
+                          color: Color(0x3A000000),
+                          blurRadius: 8,
                           offset: Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SvgPicture.string(
-                        _plusIconSvg,
-                        fit: BoxFit.contain,
-                        colorFilter: const ColorFilter.mode(
-                          _rackDark,
-                          BlendMode.srcIn,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF6F7),
+                        borderRadius: BorderRadius.circular(22.6),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: SvgPicture.string(
+                          _plusIconSvg,
+                          fit: BoxFit.contain,
+                          colorFilter: const ColorFilter.mode(
+                            _rackDark,
+                            BlendMode.srcIn,
+                          ),
                         ),
                       ),
                     ),
@@ -418,68 +432,86 @@ class _ArticleListPageState extends State<ArticleListPage> {
               ),
             ),
           ),
-        SizedBox(height: (12.0 * uiScale).clamp(8.0, 14.0)),
+        SizedBox(height: (16.0 * uiScale).clamp(12.0, 20.0)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: headerHInset),
           child: Container(
             height: searchHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: ShapeDecoration(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(width: 1, color: Color(0xFF09E0FF)),
-                borderRadius: BorderRadius.circular(100),
+            padding: const EdgeInsets.all(1.2),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [Color(0xFF09E0FF), Color(0xFF0F6876)],
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.search_rounded,
-                  color: Colors.black.withValues(alpha: 0.34),
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    textAlignVertical: TextAlignVertical.center,
-                    style: GoogleFonts.montserrat(
-                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      isCollapsed: false,
-                      filled: false,
-                      fillColor: Colors.transparent,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                      hintText: 'Search',
-                      hintStyle: GoogleFonts.montserrat(
-                        color: Colors.black.withValues(alpha: 0.34),
-                        fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SvgPicture.asset(
-                  'assets/images/icons/myrack/filter.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: ColorFilter.mode(
-                    Colors.black.withValues(alpha: 0.34),
-                    BlendMode.srcIn,
-                  ),
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x22000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
                 ),
               ],
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.manage_search_rounded,
+                      color: Color(0xFF0F6876),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        onChanged: (value) => setState(() => _searchQuery = value),
+                        textAlignVertical: TextAlignVertical.center,
+                        style: GoogleFonts.montserrat(
+                          fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          isCollapsed: false,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 9),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          hintText: 'Search',
+                          hintStyle: GoogleFonts.montserrat(
+                            color: Colors.black.withValues(alpha: 0.34),
+                            fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SvgPicture.asset(
+                      'assets/images/icons/myrack/filter.svg',
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF0F6876),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -588,6 +620,16 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   ),
           ),
         ),
+        Container(
+          height: (16.0 * uiScale).clamp(12.0, 20.0),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(18),
+              topRight: Radius.circular(18),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -651,7 +693,7 @@ class _RackGridItem extends StatelessWidget {
         .clamp(0.84, 1.12)
         .toDouble();
     final nameSize = (12.5 * uiScale).clamp(11.0, 14.0);
-    final labelGap = (6.0 * uiScale).clamp(4.0, 8.0);
+    final labelGap = (3.0 * uiScale).clamp(2.0, 5.0);
     final panelPad = (6.0 * uiScale).clamp(4.0, 8.0);
     return Material(
       color: Colors.transparent,
@@ -686,6 +728,7 @@ class _RackGridItem extends StatelessWidget {
                   color: const Color(0xFF11899B),
                   fontSize: nameSize,
                   fontWeight: FontWeight.w400,
+                  height: 1.0,
                 ),
               ),
             ],
@@ -720,28 +763,45 @@ class _RackRow extends StatelessWidget {
 
     return AspectRatio(
       aspectRatio: 3.08,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(rowPad, rowPad, rowPad, rowPad - 1),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: const Border(
-            bottom: BorderSide(
-              color: _ArticleListPageState._rackTealPrimary,
-              width: 2.5,
+      child: Stack(
+        children: [
+          Container(
+            padding: EdgeInsets.fromLTRB(rowPad, rowPad, rowPad, rowPad - 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F0F0),
+              borderRadius: BorderRadius.circular(borderRadius),
+            ),
+            child: Row(
+              children: List.generate(3, (index) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: childGap),
+                    child: children[index],
+                  ),
+                );
+              }),
             ),
           ),
-        ),
-        child: Row(
-          children: List.generate(3, (index) {
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: childGap),
-                child: children[index],
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              height: 2.5,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(10),
+                  bottomRight: Radius.circular(10),
+                ),
+                gradient: const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xFF09E0FF), Color(0xFF11999E), Color(0xFF0F6876)],
+                ),
               ),
-            );
-          }),
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -769,7 +829,7 @@ class _FilterChipPill extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(100),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1.5),
           decoration: ShapeDecoration(
             color: Colors.white,
             shape: RoundedRectangleBorder(
@@ -785,8 +845,9 @@ class _FilterChipPill extends StatelessWidget {
             label,
             style: GoogleFonts.montserrat(
               color: const Color(0xFF1A1A1A),
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
+              height: 1.0,
             ),
           ),
         ),

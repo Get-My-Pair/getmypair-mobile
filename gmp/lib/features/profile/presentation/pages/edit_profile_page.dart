@@ -443,14 +443,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                       () => _showPassword = !_showPassword,
                                     ),
                                     splashRadius:
-                                        (18 * contentScale).clamp(12.0, 18.0),
+                                        (22 * contentScale).clamp(14.0, 22.0),
                                     icon: Icon(
                                       _showPassword
                                           ? Icons.visibility_off_outlined
                                           : Icons.visibility_outlined,
                                       color: const Color(0xCCFFFFFF),
-                                      size: (22 * contentScale)
-                                          .clamp(16.0, 22.0),
+                                      size: (24 * contentScale)
+                                          .clamp(18.0, 24.0),
                                     ),
                                   ),
                                 ),
@@ -617,10 +617,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 top: 40,
                 child: InkWell(
                   onTap: isLoading ? null : _pickAndUploadImage,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(28),
                   child: Container(
-                    height: (42 * scale).clamp(30.0, 42.0),
-                    width: (42 * scale).clamp(30.0, 42.0),
+                    height: (48 * scale).clamp(34.0, 48.0),
+                    width: (48 * scale).clamp(34.0, 48.0),
                     decoration: BoxDecoration(
                       color: const Color(0xCC0E8EA4),
                       border: Border.all(color: const Color(0x4DFFFFFF)),
@@ -629,7 +629,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: Icon(
                       Icons.camera_alt_outlined,
                       color: Colors.white,
-                      size: (16 * scale).clamp(11.0, 16.0),
+                      size: (20 * scale).clamp(13.0, 20.0),
                     ),
                   ),
                 ),
@@ -661,40 +661,61 @@ class _EditProfilePageState extends State<EditProfilePage> {
     TextInputType? keyboardType,
     double scale = 1.0,
   }) {
-    return TextFormField(
-      controller: controller,
-      readOnly: readOnly,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: GoogleFonts.montserrat(
-        fontSize: (14 * scale).clamp(11.0, 14.0),
-        fontWeight: FontWeight.w500,
-        color: const Color(0xF2FFFFFF),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(100),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xBFFFFFFF),
+            Colors.white.withValues(alpha: 0.45),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.20),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: readOnly ? _inputFillReadOnly : _inputFill,
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: (20 * scale).clamp(13.0, 20.0),
-          vertical: (11 * scale).clamp(7.0, 11.0),
+      padding: const EdgeInsets.all(1),
+      child: TextFormField(
+        controller: controller,
+        readOnly: readOnly,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        style: GoogleFonts.montserrat(
+          fontSize: (13 * scale).clamp(10.0, 13.0),
+          fontWeight: FontWeight.w500,
+          color: const Color(0xF2FFFFFF),
         ),
-        suffixIcon: suffix,
-        suffixIconConstraints: BoxConstraints(
-          minHeight: (32 * scale).clamp(24.0, 32.0),
-          minWidth: (38 * scale).clamp(28.0, 38.0),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: const BorderSide(color: _inputBorder, width: 0.9),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: const BorderSide(color: _inputBorderFocused, width: 1.1),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(100),
-          borderSide: const BorderSide(color: _inputBorder),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: readOnly ? _inputFillReadOnly : _inputFill,
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: (18 * scale).clamp(12.0, 18.0),
+            vertical: (10 * scale).clamp(7.0, 10.0),
+          ),
+          suffixIcon: suffix,
+          suffixIconConstraints: BoxConstraints(
+            minHeight: (34 * scale).clamp(24.0, 34.0),
+            minWidth: (40 * scale).clamp(28.0, 40.0),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(100),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(100),
+            borderSide: BorderSide.none,
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(100),
+            borderSide: BorderSide.none,
+          ),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
@@ -21,6 +22,8 @@ class ArticleEditPage extends StatefulWidget {
 }
 
 class _ArticleEditPageState extends State<ArticleEditPage> {
+  static const String _headingFontFamily = 'Boldonse';
+  static const String _contentFontFamily = 'Montserrat';
   final _formKey = GlobalKey<FormState>();
 
   Article? _article;
@@ -307,21 +310,36 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     final horizontal = Responsive.horizontalPaddingOf(context);
 
     return _buildWithBg(
-      appBar: buildGradientAppBar(
-        title: 'Edit Footwear',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _submitting ? null : () => Navigator.pop(context),
-        ),
-        automaticallyImplyLeading: false,
-        centerTitle: false,
-      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
           child: ListView(
             padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 24),
             children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: _submitting ? null : () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Edit Footwear',
+                      style: GoogleFonts.boldonse(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
               if (_error != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -353,7 +371,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
               ),
               const SizedBox(height: 22),
               SizedBox(
-                height: 48,
+                height: 50,
                 child: OutlinedButton(
                   onPressed: _submitting
                       ? null
@@ -371,14 +389,18 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(100),
                     ),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontFamily: _headingFontFamily,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                   child: const Text('Upload Footwear'),
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 24),
               SizedBox(
-                height: 48,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: _submitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
@@ -391,7 +413,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(100),
                     ),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontFamily: _headingFontFamily,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                   child: _submitting
                       ? const SizedBox(
@@ -435,7 +461,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
       child: TextFormField(
         initialValue: _model,
         textCapitalization: TextCapitalization.words,
-        style: const TextStyle(fontSize: 16, color: Colors.white),
+        style: const TextStyle(
+          fontSize: 16,
+          color: Colors.white,
+          fontFamily: _contentFontFamily,
+        ),
         decoration: _glassInputDecoration(hintText: 'Nike Shoes'),
         onChanged: (v) => _model = v.trim(),
         validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -450,7 +480,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         value: _brand,
         iconEnabledColor: Colors.white,
         dropdownColor: const Color(0xFF0C5B67),
-        style: const TextStyle(color: Colors.white, fontSize: 16),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontFamily: _contentFontFamily,
+        ),
         decoration: _glassInputDecoration(),
         items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
         onChanged: (v) => setState(() => _brand = v ?? _brands.first),
@@ -470,6 +504,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w400,
+              fontFamily: _contentFontFamily,
             ),
           ),
         ),
@@ -481,7 +516,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   InputDecoration _glassInputDecoration({String? hintText, Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: const TextStyle(color: Colors.white70, fontSize: 16),
+      hintStyle: const TextStyle(
+        color: Colors.white70,
+        fontSize: 16,
+        fontFamily: _contentFontFamily,
+      ),
       filled: true,
       fillColor: Colors.white.withOpacity(0.10),
       errorStyle: const TextStyle(color: Colors.white),
@@ -518,7 +557,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         value: value,
         iconEnabledColor: Colors.white,
         dropdownColor: const Color(0xFF0C5B67),
-        style: const TextStyle(color: Colors.white, fontSize: 16),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontFamily: _contentFontFamily,
+        ),
         decoration: _glassInputDecoration(),
         items: items
             .map(
@@ -539,7 +582,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
       child: TextFormField(
         initialValue: _color,
         textCapitalization: TextCapitalization.words,
-        style: const TextStyle(fontSize: 16, color: Colors.white),
+        style: const TextStyle(
+          fontSize: 16,
+          color: Colors.white,
+          fontFamily: _contentFontFamily,
+        ),
         decoration: _glassInputDecoration(hintText: 'Denim'),
         onChanged: (v) => _color = v.trim(),
         validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -570,7 +617,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
           ),
           child: Text(
             _purchaseYear?.toString() ?? '2023',
-            style: const TextStyle(fontSize: 16, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+              fontFamily: _contentFontFamily,
+            ),
           ),
         ),
       ),

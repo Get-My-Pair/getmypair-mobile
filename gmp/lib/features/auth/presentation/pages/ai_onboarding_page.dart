@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/features/auth/presentation/pages/onboarding/onboarding_bottom_progress.dart';
@@ -33,6 +37,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   final PageController _controller = PageController();
   final TextEditingController _name = TextEditingController();
   final TextEditingController _age = TextEditingController();
+  final FlutterTts _tts = FlutterTts();
   AnimationController? _bgGradientController;
 
   int _index = 0;
@@ -40,11 +45,233 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   bool _cameraAllowed = false;
   final Set<String> _rack = <String>{};
   final Set<String> _troubles = <String>{};
+  bool _isSpeaking = false;
+  bool _ttsReady = false;
+  String? _ttsError;
+  String? _selectedVoiceName;
 
   @override
   void initState() {
     super.initState();
     _ensureBgGradientController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_initTts()));
+  }
+
+  Future<void> _initTts() async {
+    if (kIsWeb) {
+      if (mounted) {
+        setState(() {
+          _ttsReady = false;
+          _ttsError = null;
+        });
+      }
+      return;
+    }
+    try {
+      await _tts.awaitSpeakCompletion(true);
+      await _tts.setLanguage('en-US');
+      await _tts.setSpeechRate(0.48);
+      await _tts.setVolume(1.0);
+      await _tts.setPitch(1.0);
+      await _setPreferredFemaleVoice();
+      _tts.setCompletionHandler(() {
+        if (mounted) setState(() => _isSpeaking = false);
+      });
+      _tts.setCancelHandler(() {
+        if (mounted) setState(() => _isSpeaking = false);
+      });
+      _tts.setErrorHandler((msg) {
+        if (mounted) {
+          setState(() {
+            _isSpeaking = false;
+            _ttsError = msg;
+          });
+        }
+      });
+      if (mounted) {
+        setState(() {
+          _ttsReady = true;
+          _ttsError = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _ttsReady = false;
+          _ttsError = 'Text-to-speech is not available on this device';
+        });
+      }
+    }
+  }
+
+  Future<void> _setPreferredFemaleVoice() async {
+    try {
+      final voices = await _tts.getVoices;
+      if (voices is! List || voices.isEmpty) return;
+
+      final candidates = voices.whereType<Map>().toList();
+      if (candidates.isEmpty) return;
+
+      final preferredNameHints = <String>[
+        'female',
+        'woman',
+        'samantha',
+        'victoria',
+        'karen',
+        'moira',
+        'allison',
+        'ava',
+        'aria',
+        'jenny',
+        'zira',
+        'hazel',
+      ];
+
+      Map? selected;
+      for (final voice in candidates) {
+        final locale = (voice['locale'] ?? '').toString().toLowerCase();
+        final name = (voice['name'] ?? '').toString().toLowerCase();
+        final isEnglishUs = locale.contains('en-us') || locale.contains('en_us');
+        final isPreferredName = preferredNameHints.any(name.contains);
+        if (isEnglishUs && isPreferredName) {
+          selected = voice;
+          break;
+        }
+      }
+
+      selected ??= candidates.firstWhere(
+        (voice) {
+          final locale = (voice['locale'] ?? '').toString().toLowerCase();
+          final name = (voice['name'] ?? '').toString().toLowerCase();
+          final isEnglishUs = locale.contains('en-us') || locale.contains('en_us');
+          final isPreferredName = preferredNameHints.any(name.contains);
+          return isEnglishUs && isPreferredName;
+        },
+        orElse: () => candidates.firstWhere(
+          (voice) {
+            final locale = (voice['locale'] ?? '').toString().toLowerCase();
+            return locale.contains('en-us') || locale.contains('en_us');
+          },
+          orElse: () => candidates.first,
+        ),
+      );
+
+      final selectedName = (selected['name'] ?? '').toString();
+      final selectedLocale = (selected['locale'] ?? '').toString();
+
+      if (selectedName.isEmpty || selectedLocale.isEmpty) return;
+
+      await _tts.setVoice({'name': selectedName, 'locale': selectedLocale});
+
+      if (mounted) {
+        setState(() {
+          _selectedVoiceName = selectedName;
+        });
+      }
+    } catch (_) {
+      // Keep default system voice if a specific female voice is unavailable.
+    }
+  }
+
+  String _normalizeForSpeech(String raw) {
+    return raw.replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  String _speakableContentFor(int index) {
+    final nickname = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
+    switch (index) {
+      case 0:
+        return _normalizeForSpeech(
+          "Welcome, Collector! I'm your AI friend KIX! I'm here to help you nail the perfect fit, "
+          "discover brands that work for you, and vibe with your style. But first let's get to know you better! "
+          "What should we call you? Do you go by a nickname?",
+        );
+      case 1:
+        return _normalizeForSpeech(
+          "$nickname! That's a great name!! "
+          "Now, let's get to know your age and gender...",
+        );
+      case 2:
+        return _normalizeForSpeech(
+          "Awesome! Let's start setting up the rack... "
+          "Is this rack just for you, or are we setting it up for your loved ones too?",
+        );
+      case 3:
+        return _normalizeForSpeech(
+          "Kids rack, huh? That's awesome! We get to style you all up. "
+          "But first, let's get you sorted before the others. "
+          "What shoe troubles do you run into most?",
+        );
+      case 4:
+        return _normalizeForSpeech(
+          'Looks like your size is US 10, UK 09, EU 41. '
+          'And it seems like you have wide feet. Not to worry we know the right brands that will fit you. '
+          "Before that let's understand your kids needs too...",
+        );
+      case 5:
+        return _normalizeForSpeech(
+          'That sounds really frustrating. we get it, and we are here to help fix those fit struggles. '
+          "Let's get to know your foot type and size!",
+        );
+      case 6:
+        return _normalizeForSpeech(
+          'That sounds really frustrating. we get it, and we are here to help fix those fit struggles. '
+          "Let's get to know your foot type and size! "
+          'When you are ready, use the button below to allow camera access so we can help measure your feet.',
+        );
+      default:
+        return '';
+    }
+  }
+
+  Future<void> _stopSpeaking() async {
+    try {
+      await _tts.stop();
+    } catch (_) {}
+    if (mounted) setState(() => _isSpeaking = false);
+  }
+
+  Future<void> _safeStopTts() async {
+    try {
+      await _tts.stop();
+    } catch (_) {}
+  }
+
+  Future<void> _toggleVoice() async {
+    if (!_ttsReady) return;
+    if (_isSpeaking) {
+      await _stopSpeaking();
+      return;
+    }
+    final text = _speakableContentFor(_index);
+    if (text.isEmpty) return;
+    setState(() => _isSpeaking = true);
+    try {
+      final result = await _tts.speak(text);
+      if (result != 1 && mounted) {
+        setState(() => _isSpeaking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to play voice on this device'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isSpeaking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to play voice on this device'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _onPageChanged(int i) async {
+    await _stopSpeaking();
+    if (!mounted) return;
+    setState(() => _index = i);
   }
 
   void _ensureBgGradientController() {
@@ -57,6 +284,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   @override
   void dispose() {
+    unawaited(_safeStopTts());
     _bgGradientController?.dispose();
     _name.dispose();
     _age.dispose();
@@ -368,28 +596,46 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                   child: Row(
                     children: [
                       const Spacer(),
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(
-                            color: AppColors.footwearHeroStart.withValues(alpha: 0.35),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                      Tooltip(
+                        message: _ttsError ??
+                            (_isSpeaking
+                                ? 'Stop reading aloud'
+                                : _selectedVoiceName == null
+                                    ? 'Read this screen aloud'
+                                    : 'Read this screen aloud (${_selectedVoiceName!})'),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: _ttsReady ? () => unawaited(_toggleVoice()) : null,
+                            child: Opacity(
+                              opacity: _ttsReady ? 1 : 0.45,
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                  border: Border.all(
+                                    color: AppColors.footwearHeroStart.withValues(alpha: 0.35),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _isSpeaking ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  size: 28,
+                                  color: AppColors.footwearHeroStart,
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.pause,
-                          size: 16,
-                          color: AppColors.footwearHeroStart,
+                          ),
                         ),
                       ),
                     ],
@@ -399,7 +645,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                   child: PageView(
                     controller: _controller,
                     physics: const NeverScrollableScrollPhysics(),
-                    onPageChanged: (i) => setState(() => _index = i),
+                    onPageChanged: (i) => unawaited(_onPageChanged(i)),
                     children: steps,
                   ),
                 ),

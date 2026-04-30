@@ -77,8 +77,6 @@ class ManageDevicesPage extends StatelessWidget {
                       const SizedBox(height: 12),
                       Text(
                         'Devices you\'re currently logged in on. Remove one to sign out from it',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.montserrat(
                           color: Colors.white,
                           fontSize: 12,
@@ -163,9 +161,9 @@ class _DeviceRow extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: 40),
           child: Row(
             children: [
               SvgPicture.asset(
@@ -195,7 +193,7 @@ class _DeviceRow extends StatelessWidget {
                   width: 20,
                   height: 20,
                   colorFilter: const ColorFilter.mode(
-                    Color(0xFF71F5FF),
+                    Colors.white,
                     BlendMode.srcIn,
                   ),
                 ),
