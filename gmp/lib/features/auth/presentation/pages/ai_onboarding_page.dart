@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -45,10 +46,33 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   bool _cameraAllowed = false;
   final Set<String> _rack = <String>{};
   final Set<String> _troubles = <String>{};
-  bool _isSpeaking = false;
   bool _ttsReady = false;
   String? _ttsError;
   String? _selectedVoiceName;
+
+  /// True while audio is actively playing (not paused).
+  bool _ttsPlaying = false;
+
+  /// True after user paused mid-utterance (resume uses same full text).
+  bool _ttsPaused = false;
+
+  /// Full utterance for the current page (used for Android resume after pause).
+  String _fullUtterance = '';
+
+  /// Read-along caption uses the same string as TTS.
+  String _captionText = '';
+
+  int? _captionHighlightStart;
+  int? _captionHighlightEnd;
+
+  /// Android: progress offsets are relative to the current segment; sum prior segments here.
+  int _androidSpeakSegmentBase = 0;
+
+  /// Android: start index of the last reported word in the current segment (used when pause truncates text).
+  int _androidLastWordStart = 0;
+
+  bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   @override
   void initState() {
@@ -74,17 +98,69 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);
       await _setPreferredFemaleVoice();
+      _tts.setStartHandler(() {
+        if (!mounted) return;
+        setState(() {
+          _ttsPlaying = true;
+          _ttsPaused = false;
+        });
+      });
+      _tts.setProgressHandler((String _, int start, int end, String _) {
+        if (!mounted) return;
+        setState(() {
+          _androidLastWordStart = start;
+          final base = _isAndroid ? _androidSpeakSegmentBase : 0;
+          _captionHighlightStart = base + start;
+          _captionHighlightEnd = base + end;
+        });
+      });
+      _tts.setPauseHandler(() {
+        if (!mounted) return;
+        setState(() {
+          _ttsPlaying = false;
+          _ttsPaused = true;
+          if (_isAndroid) {
+            _androidSpeakSegmentBase += _androidLastWordStart;
+          }
+        });
+      });
+      _tts.setContinueHandler(() {
+        if (!mounted) return;
+        setState(() {
+          _ttsPlaying = true;
+          _ttsPaused = false;
+        });
+      });
       _tts.setCompletionHandler(() {
-        if (mounted) setState(() => _isSpeaking = false);
+        if (!mounted) return;
+        setState(() {
+          _ttsPlaying = false;
+          _ttsPaused = false;
+          _captionHighlightStart = null;
+          _captionHighlightEnd = null;
+          _androidSpeakSegmentBase = 0;
+          _androidLastWordStart = 0;
+        });
       });
       _tts.setCancelHandler(() {
-        if (mounted) setState(() => _isSpeaking = false);
+        if (!mounted) return;
+        setState(() {
+          _ttsPlaying = false;
+          _ttsPaused = false;
+          _captionHighlightStart = null;
+          _captionHighlightEnd = null;
+          _androidSpeakSegmentBase = 0;
+          _androidLastWordStart = 0;
+        });
       });
       _tts.setErrorHandler((msg) {
         if (mounted) {
           setState(() {
-            _isSpeaking = false;
+            _ttsPlaying = false;
+            _ttsPaused = false;
             _ttsError = msg;
+            _captionHighlightStart = null;
+            _captionHighlightEnd = null;
           });
         }
       });
@@ -92,7 +168,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         setState(() {
           _ttsReady = true;
           _ttsError = null;
+          _captionText = _speakableContentFor(_index);
         });
+        unawaited(_autoSpeakCurrentPage());
       }
     } catch (_) {
       if (mounted) {
@@ -228,7 +306,16 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     try {
       await _tts.stop();
     } catch (_) {}
-    if (mounted) setState(() => _isSpeaking = false);
+    if (mounted) {
+      setState(() {
+        _ttsPlaying = false;
+        _ttsPaused = false;
+        _captionHighlightStart = null;
+        _captionHighlightEnd = null;
+        _androidSpeakSegmentBase = 0;
+        _androidLastWordStart = 0;
+      });
+    }
   }
 
   Future<void> _safeStopTts() async {
@@ -237,19 +324,20 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     } catch (_) {}
   }
 
-  Future<void> _toggleVoice() async {
-    if (!_ttsReady) return;
-    if (_isSpeaking) {
-      await _stopSpeaking();
-      return;
-    }
+  Future<void> _autoSpeakCurrentPage() async {
+    if (!_ttsReady || !mounted) return;
     final text = _speakableContentFor(_index);
     if (text.isEmpty) return;
-    setState(() => _isSpeaking = true);
+    _fullUtterance = text;
+    _androidSpeakSegmentBase = 0;
+    _androidLastWordStart = 0;
     try {
       final result = await _tts.speak(text);
       if (result != 1 && mounted) {
-        setState(() => _isSpeaking = false);
+        setState(() {
+          _ttsPlaying = false;
+          _ttsPaused = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Unable to play voice on this device'),
@@ -258,7 +346,10 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _isSpeaking = false);
+        setState(() {
+          _ttsPlaying = false;
+          _ttsPaused = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Unable to play voice on this device'),
@@ -268,10 +359,73 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     }
   }
 
+  Future<void> _replayUtteranceFromStart() async {
+    if (!_ttsReady) return;
+    final text = _speakableContentFor(_index);
+    if (text.isEmpty) return;
+    await _stopSpeaking();
+    if (!mounted) return;
+    setState(() {
+      _fullUtterance = text;
+      _captionText = text;
+      _captionHighlightStart = null;
+      _captionHighlightEnd = null;
+      _androidSpeakSegmentBase = 0;
+      _androidLastWordStart = 0;
+    });
+    unawaited(_autoSpeakCurrentPage());
+  }
+
+  Future<void> _onVoiceControlTap() async {
+    if (!_ttsReady) return;
+    if (_ttsPlaying) {
+      try {
+        await _tts.pause();
+      } catch (_) {}
+      return;
+    }
+    if (_ttsPaused) {
+      if (_fullUtterance.isEmpty) return;
+      try {
+        final result = await _tts.speak(_fullUtterance);
+        if (result != 1 && mounted) {
+          setState(() {
+            _ttsPlaying = false;
+            _ttsPaused = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to resume voice on this device'),
+            ),
+          );
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _ttsPlaying = false;
+            _ttsPaused = false;
+          });
+        }
+      }
+      return;
+    }
+    await _replayUtteranceFromStart();
+  }
+
   Future<void> _onPageChanged(int i) async {
     await _stopSpeaking();
     if (!mounted) return;
-    setState(() => _index = i);
+    final spoken = _speakableContentFor(i);
+    setState(() {
+      _index = i;
+      _captionText = spoken;
+      _fullUtterance = spoken;
+      _captionHighlightStart = null;
+      _captionHighlightEnd = null;
+      _androidSpeakSegmentBase = 0;
+      _androidLastWordStart = 0;
+    });
+    unawaited(_autoSpeakCurrentPage());
   }
 
   void _ensureBgGradientController() {
@@ -598,16 +752,20 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                       const Spacer(),
                       Tooltip(
                         message: _ttsError ??
-                            (_isSpeaking
-                                ? 'Stop reading aloud'
-                                : _selectedVoiceName == null
-                                    ? 'Read this screen aloud'
-                                    : 'Read this screen aloud (${_selectedVoiceName!})'),
+                            (_ttsPlaying
+                                ? 'Pause reading'
+                                : _ttsPaused
+                                    ? 'Resume reading'
+                                    : _selectedVoiceName == null
+                                        ? 'Read this screen aloud'
+                                        : 'Read this screen aloud (${_selectedVoiceName!})'),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
                             customBorder: const CircleBorder(),
-                            onTap: _ttsReady ? () => unawaited(_toggleVoice()) : null,
+                            onTap: _ttsReady
+                                ? () => unawaited(_onVoiceControlTap())
+                                : null,
                             child: Opacity(
                               opacity: _ttsReady ? 1 : 0.45,
                               child: Container(
@@ -629,7 +787,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                                   ],
                                 ),
                                 child: Icon(
-                                  _isSpeaking ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  _ttsPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
                                   size: 28,
                                   color: AppColors.footwearHeroStart,
                                 ),
@@ -641,6 +801,15 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                     ],
                   ),
                 ),
+                if (!kIsWeb && _ttsReady && _captionText.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: _ReadAlongCaption(
+                      text: _captionText,
+                      highlightStart: _captionHighlightStart,
+                      highlightEnd: _captionHighlightEnd,
+                    ),
+                  ),
                 Expanded(
                   child: PageView(
                     controller: _controller,
@@ -684,6 +853,80 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Karaoke-style caption for the same string passed to [FlutterTts.speak].
+class _ReadAlongCaption extends StatelessWidget {
+  const _ReadAlongCaption({
+    required this.text,
+    this.highlightStart,
+    this.highlightEnd,
+  });
+
+  final String text;
+  final int? highlightStart;
+  final int? highlightEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    const baseColor = Color(0xFFDFE7E9);
+    final baseStyle = GoogleFonts.montserrat(
+      color: baseColor.withValues(alpha: 0.92),
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      height: 1.45,
+    );
+    final highlightStyle = GoogleFonts.montserrat(
+      color: const Color(0xFF061F40),
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      height: 1.45,
+      backgroundColor: const Color(0xCCFFD54F),
+    );
+
+    final start = highlightStart;
+    final end = highlightEnd;
+    final hasRange =
+        start != null && end != null && start < end && text.isNotEmpty;
+    final TextSpan root;
+    if (!hasRange) {
+      root = TextSpan(text: text, style: baseStyle);
+    } else {
+      final a = start.clamp(0, text.length);
+      final b = end.clamp(0, text.length);
+      if (a >= b) {
+        root = TextSpan(text: text, style: baseStyle);
+      } else {
+        root = TextSpan(
+          children: [
+            TextSpan(text: text.substring(0, a), style: baseStyle),
+            TextSpan(text: text.substring(a, b), style: highlightStyle),
+            TextSpan(text: text.substring(b), style: baseStyle),
+          ],
+        );
+      }
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+        ),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 132),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Text.rich(
+            root,
+            textAlign: TextAlign.start,
+          ),
+        ),
       ),
     );
   }
