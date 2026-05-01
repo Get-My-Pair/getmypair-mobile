@@ -124,8 +124,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'dateOfBirth': dateOfBirth.toIso8601String().split('T')[0], // YYYY-MM-DD format
         'gender': gender.toLowerCase(),
       };
+      // Backend auth.validation only allows location: { lat, lng, address }
       if (location != null && location.isNotEmpty) {
-        body['location'] = location;
+        final loc = <String, dynamic>{};
+        final lat = location['lat'];
+        final lng = location['lng'];
+        final address = location['address'];
+        if (lat != null) loc['lat'] = lat is num ? lat : num.tryParse(lat.toString());
+        if (lng != null) loc['lng'] = lng is num ? lng : num.tryParse(lng.toString());
+        if (address != null &&
+            address.toString().trim().isNotEmpty &&
+            address.toString().trim().length <= 500) {
+          loc['address'] = address.toString().trim();
+        }
+        loc.removeWhere((k, v) => v == null);
+        if (loc.isNotEmpty) {
+          body['location'] = loc;
+        }
       }
 
       final response = await client.post(

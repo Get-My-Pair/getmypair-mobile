@@ -16,17 +16,36 @@ class UserModel extends User {
     required super.updatedAt,
   });
 
+  /// Backend may return `role` as an ObjectId string, or a populated `{ _id, name }`.
+  static String _roleFromJson(dynamic role) {
+    if (role == null) return 'user';
+    if (role is String) {
+      final s = role.trim();
+      if (s.isEmpty) return 'user';
+      return s;
+    }
+    if (role is Map) {
+      final name = role['name'];
+      if (name is String && name.isNotEmpty) {
+        return name.toLowerCase();
+      }
+      final id = role['_id'];
+      if (id != null) return id.toString();
+    }
+    return role.toString();
+  }
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['_id'] ?? json['id'] ?? '',
       mobile: json['mobile'] ?? '',
       name: json['name'] ?? '',
       dateOfBirth: json['dateOfBirth'] != null
-          ? DateTime.parse(json['dateOfBirth'])
+          ? DateTime.parse(json['dateOfBirth'].toString())
           : DateTime.now(),
       gender: json['gender'] ?? '',
       email: json['email'],
-      role: json['role'] ?? 'user',
+      role: _roleFromJson(json['role']),
       isPhoneVerified: json['isPhoneVerified'] ?? false,
       isActive: json['isActive'] ?? true,
       lastLogin: json['lastLogin'] != null

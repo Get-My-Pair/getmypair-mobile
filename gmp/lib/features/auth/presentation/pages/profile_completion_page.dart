@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -96,13 +98,32 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
       );
-      // Try server reverse geocode for human readable address
+      // Try server reverse geocode — backend returns { data: { location: { displayName, ... } } }
       try {
-        final uri = Uri.parse('${ApiEndpoints.baseUrl}/api/geocode/reverse?lat=${pos.latitude}&lon=${pos.longitude}');
+        final uri = Uri.parse(
+          '${ApiEndpoints.baseUrl}/api/geocode/reverse?lat=${pos.latitude}&lon=${pos.longitude}',
+        );
         final resp = await http.get(uri);
-        if (resp.statusCode == 200) {
-          final body = resp.body;
-          return {'lat': pos.latitude, 'lng': pos.longitude, 'raw': body};
+        if (resp.statusCode == 200 && resp.body.isNotEmpty) {
+          String? displayAddr;
+          try {
+            final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+            final data = decoded['data'];
+            if (data is Map && data['location'] is Map) {
+              final loc = data['location'] as Map<String, dynamic>;
+              final dn = loc['displayName'];
+              if (dn is String && dn.trim().isNotEmpty) {
+                displayAddr = dn.trim();
+              }
+            }
+          } catch (_) {
+            // ignore parse errors — still return coordinates
+          }
+          return {
+            'lat': pos.latitude,
+            'lng': pos.longitude,
+            if (displayAddr != null) 'address': displayAddr,
+          };
         }
       } catch (_) {
         // ignore reverse geocode failures — return coords
