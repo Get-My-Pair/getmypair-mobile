@@ -415,6 +415,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           maintenancePlan: _selectedService!.value == 'maintenance'
               ? (_selectedMaintenancePlan ?? _maintenancePlans.first)
               : null,
+          homePickup: _homePickup,
+          requestedPickupAt: _pickupSlotDateTimes.isEmpty
+              ? null
+              : _pickupSlotDateTimes[_selectedPickupSlot
+                  .clamp(0, _pickupSlotDateTimes.length - 1)],
         ),
       ),
     );

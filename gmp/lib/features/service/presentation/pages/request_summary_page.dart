@@ -29,6 +29,10 @@ class RequestSummaryPage extends StatefulWidget {
   final String? problemDescription;
   final String? pickupModeLabel;
   final String? pickupScheduleLabel;
+  /// Matches API `pickupMode`: home pickup vs cobbler nearby.
+  final bool homePickup;
+  /// Matches API `requestedPickupAt` (ISO 8601) from the selected day + slot.
+  final DateTime? requestedPickupAt;
 
   const RequestSummaryPage({
     super.key,
@@ -42,6 +46,8 @@ class RequestSummaryPage extends StatefulWidget {
     this.problemDescription,
     this.pickupModeLabel,
     this.pickupScheduleLabel,
+    this.homePickup = true,
+    this.requestedPickupAt,
   });
 
   @override
@@ -150,17 +156,33 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
             videoUrls.add(url);
           }
 
+          final body = <String, dynamic>{
+            'articleId': widget.articleId,
+            'serviceType': widget.service.value,
+            'addressId': widget.address.id,
+            'photos': photoUrls,
+            'videos': videoUrls,
+            'estimatedCost': widget.estimatedCostRupees,
+            'pickupMode': widget.homePickup ? 'home_pickup' : 'cobbler_nearby',
+          };
+          final desc = widget.problemDescription?.trim();
+          if (desc != null && desc.isNotEmpty) {
+            body['problemDescription'] = desc;
+          }
+          final pickupAt = widget.requestedPickupAt;
+          if (pickupAt != null) {
+            body['requestedPickupAt'] = pickupAt.toUtc().toIso8601String();
+          }
+          final plan = widget.maintenancePlan;
+          if (plan != null) {
+            body['maintenancePlanId'] = plan.id;
+            body['maintenancePlanLabel'] = plan.label;
+          }
+
           final res = await sl<DioClient>().post(
             ApiEndpoints.serviceCreate,
             accessToken: token,
-            body: {
-              'articleId': widget.articleId,
-              'serviceType': widget.service.value,
-              'addressId': widget.address.id,
-              'photos': photoUrls,
-              'videos': videoUrls,
-              'estimatedCost': widget.estimatedCostRupees,
-            },
+            body: body,
           );
 
           final requestId =
