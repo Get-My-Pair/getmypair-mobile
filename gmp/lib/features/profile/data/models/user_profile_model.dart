@@ -14,24 +14,34 @@ class UserProfileModel extends UserProfile {
     required super.updatedAt,
   });
 
+  static String _stringId(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v;
+    if (v is Map) {
+      final o = v[r'$oid'] ?? v['oid'];
+      if (o != null) return o.toString();
+    }
+    return v.toString();
+  }
+
   factory UserProfileModel.fromJson(Map<String, dynamic> json) {
     final addressList = (json['addresses'] as List<dynamic>? ?? [])
         .map((a) => AddressModel.fromJson(a as Map<String, dynamic>))
         .toList();
 
     return UserProfileModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      userId: json['userId'] ?? '',
+      id: _stringId(json['_id'] ?? json['id']),
+      userId: _stringId(json['userId']),
       name: json['name'] ?? '',
       phone: json['phone'] ?? '',
       email: json['email'],
       profileImage: json['profileImage'],
       addresses: addressList,
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+          ? DateTime.parse(json['createdAt'].toString())
           : DateTime.now(),
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
+          ? DateTime.parse(json['updatedAt'].toString())
           : DateTime.now(),
     );
   }

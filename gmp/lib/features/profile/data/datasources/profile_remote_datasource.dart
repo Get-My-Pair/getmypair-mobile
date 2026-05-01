@@ -94,8 +94,15 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   }) async {
     try {
       final body = <String, dynamic>{};
-      if (name != null) body['name'] = name;
-      if (email != null) body['email'] = email;
+      if (name != null && name.trim().isNotEmpty) body['name'] = name.trim();
+      if (email != null && email.trim().isNotEmpty) {
+        body['email'] = email.trim();
+      }
+      if (body.isEmpty) {
+        throw ServerException(
+          'Nothing to update. Provide a new name or email.',
+        );
+      }
 
       final response = await http
           .put(Uri.parse(ApiEndpoints.userProfileUpdate),
@@ -122,6 +129,9 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
         Uri.parse(ApiEndpoints.userProfileUploadImage),
       );
       request.headers['Authorization'] = 'Bearer $accessToken';
+      request.headers['X-App-Source'] = AppConstants.appSourceForApi;
+      request.headers['X-App-Version'] = AppConstants.appVersion;
+      request.headers['Accept'] = 'application/json';
       request.files.add(http.MultipartFile.fromBytes(
         'file',
         imageBytes,

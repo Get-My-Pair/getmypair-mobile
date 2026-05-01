@@ -215,7 +215,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveChanges() async {
     FocusScope.of(context).unfocus();
     final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
+    final trimmedEmail = _emailController.text.trim();
     if (name.isEmpty) {
       await showAppFeedbackAlert(
         context,
@@ -224,12 +224,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
       );
       return;
     }
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(name)) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Name can contain only letters and spaces.',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
+
+    final nameChanged = name != widget.profile.name.trim();
+    final prevEmail = (widget.profile.email ?? '').trim().toLowerCase();
+    final newEmailNorm =
+        trimmedEmail.isEmpty ? '' : trimmedEmail.toLowerCase();
+    var emailChanged = prevEmail != newEmailNorm;
+    if (trimmedEmail.isEmpty &&
+        widget.profile.email != null &&
+        widget.profile.email!.trim().isNotEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message:
+            'Removing your email is not supported in the app yet. Leave the field as-is or enter a new email.',
+        type: AppFeedbackType.warning,
+      );
+      emailChanged = false;
+    }
+
+    if (!nameChanged && !emailChanged) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'No changes to save.',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
+
     if (!mounted) return;
     context.read<ProfileBloc>().add(
           ProfileUpdateRequested(
             accessToken: widget.accessToken,
-            name: name,
-            email: email.isEmpty ? null : email,
+            name: nameChanged ? name : null,
+            email: emailChanged && trimmedEmail.isNotEmpty ? trimmedEmail : null,
           ),
         );
   }
