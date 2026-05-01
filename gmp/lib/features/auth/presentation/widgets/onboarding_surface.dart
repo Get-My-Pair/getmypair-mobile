@@ -41,7 +41,7 @@ class OnboardingGradientBackdrop extends StatelessWidget {
     return const RepaintBoundary(
       child: SizedBox.expand(
         child: Image(
-          image: AssetImage('assets/images/bg/ai-onbording.png'),
+          image: AssetImage('assets/images/bg/onbording.png'),
           fit: BoxFit.cover,
           filterQuality: FilterQuality.high,
         ),
