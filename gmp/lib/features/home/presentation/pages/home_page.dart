@@ -492,9 +492,11 @@ class _HomePageState extends State<HomePage> {
                                                 color: _kRackCardBg,
                                                 borderRadius:
                                                     BorderRadius.circular(10),
-                                                border: Border.all(
-                                                  color: _kRackCardBorder,
-                                                  width: 3,
+                                                border: const Border(
+                                                  bottom: BorderSide(
+                                                    color: _kRackCardBorder,
+                                                    width: 3,
+                                                  ),
                                                 ),
                                               ),
                                               child: Column(
