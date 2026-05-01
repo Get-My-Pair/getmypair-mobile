@@ -457,9 +457,9 @@ class _HomePageState extends State<HomePage> {
                                   child: LayoutBuilder(
                                     builder: (context, bodyConstraints) {
                                       final bodyH = bodyConstraints.maxHeight;
-                                      final topGap = (bodyH * 0.03).clamp(
-                                        7.0,
-                                        16.0,
+                                      final topGap = (bodyH * 0.048).clamp(
+                                        14.0,
+                                        28.0,
                                       );
                                       const rackHeight = 155.0;
                                       final uniformCardGap = (bodyH * 0.026)
@@ -1003,9 +1003,14 @@ class _HomeTopCard extends StatelessWidget {
         borderRadius: headerRadius,
         boxShadow: [
           BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 14,
-            offset: Offset(0, 6),
+            color: Color(0x18000000),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 16,
+            offset: Offset(0, 7),
           ),
         ],
       ),
