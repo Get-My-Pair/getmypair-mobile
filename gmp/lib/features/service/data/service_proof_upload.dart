@@ -31,6 +31,7 @@ class ServiceProofUpload {
     request.headers['Authorization'] = 'Bearer $accessToken';
     request.headers['X-App-Source'] = AppConstants.appSourceForApi;
     request.headers['X-App-Version'] = AppConstants.appVersion;
+    request.headers['Accept'] = 'application/json';
     request.files.add(
       http.MultipartFile.fromBytes(
         'file',

@@ -80,6 +80,14 @@ class ApiEndpoints {
   static String get serviceRespondActualCost =>
       '$baseUrl$servicePrefix/respond-actual-cost';
 
+  /// Public reverse geocode (GET) — no auth. Query: lat, lon (matches backend).
+  static String geocodeReverse(double lat, double lon) =>
+      '$baseUrl/api/geocode/reverse?lat=$lat&lon=$lon';
+
+  /// Optional: list addresses only (`GET /api/user/profile/addresses`).
+  static String get userProfileAddresses =>
+      '$baseUrl$userProfilePrefix/addresses';
+
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
     final headers = <String, String>{

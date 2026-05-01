@@ -122,6 +122,13 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   Future<void> _submit() async {
     _errorMessage = null;
     if (!_formKey.currentState!.validate()) return;
+    if (_purchaseYear == null) {
+      setState(() {
+        _errorMessage =
+            'Please select a purchase year. The API requires this to register your footwear.';
+      });
+      return;
+    }
 
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
@@ -451,7 +458,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
         Padding(
           padding: const EdgeInsets.only(left: 2, bottom: 6),
           child: Text(
-            'Purchased On',
+            'Purchased On (required)',
             style: const TextStyle(
               fontSize: 16,
               color: Colors.white,

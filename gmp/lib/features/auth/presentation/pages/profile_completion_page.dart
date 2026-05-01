@@ -100,10 +100,14 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       );
       // Try server reverse geocode — backend returns { data: { location: { displayName, ... } } }
       try {
-        final uri = Uri.parse(
-          '${ApiEndpoints.baseUrl}/api/geocode/reverse?lat=${pos.latitude}&lon=${pos.longitude}',
+        final uri = Uri.parse(ApiEndpoints.geocodeReverse(
+          pos.latitude,
+          pos.longitude,
+        ));
+        final resp = await http.get(
+          uri,
+          headers: const {'Accept': 'application/json'},
         );
-        final resp = await http.get(uri);
         if (resp.statusCode == 200 && resp.body.isNotEmpty) {
           String? displayAddr;
           try {

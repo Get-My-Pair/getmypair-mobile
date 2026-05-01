@@ -1,10 +1,12 @@
-/// API Configuration Constants
+import 'api_endpoints.dart';
+
+/// Legacy scaffolding — **not wired** in [injection_container] (app uses [ApiEndpoints] + [DioClient]).
+/// [baseUrl] tracks the same backend as [ApiEndpoints] so accidental use is not pointed at a dead host.
 class ApiConfig {
   ApiConfig._();
 
-  // Base URLs
-  static const String baseUrl = 'https://api.getmypair.com/v1';
-  static const String devBaseUrl = 'https://dev-api.getmypair.com/v1';
+  static String get baseUrl => ApiEndpoints.baseUrl;
+  static String get devBaseUrl => ApiEndpoints.baseUrl;
 
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 30);

@@ -15,6 +15,16 @@ class ArticleModel extends Article {
     required super.createdAt,
   });
 
+  static String _stringId(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v;
+    if (v is Map) {
+      final o = v[r'$oid'] ?? v['oid'];
+      if (o != null) return o.toString();
+    }
+    return v.toString();
+  }
+
   factory ArticleModel.fromJson(Map<String, dynamic> json) {
     final materialsList = (json['materials'] as List<dynamic>? ?? [])
         .map((m) {
@@ -29,8 +39,8 @@ class ArticleModel extends Article {
         (json['images'] as List<dynamic>? ?? []).map((e) => e.toString()).toList();
 
     return ArticleModel(
-      id: json['_id'] ?? json['id'] ?? '',
-      ownerId: json['ownerId'] ?? '',
+      id: _stringId(json['_id'] ?? json['id']),
+      ownerId: _stringId(json['ownerId']),
       brand: json['brand'] ?? '',
       model: json['model'] ?? '',
       category: json['category'] ?? '',

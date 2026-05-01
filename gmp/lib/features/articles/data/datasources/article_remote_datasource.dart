@@ -178,6 +178,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       request.headers['Authorization'] = 'Bearer $accessToken';
       request.headers['X-App-Source'] = AppConstants.appSourceForApi;
       request.headers['X-App-Version'] = AppConstants.appVersion;
+      request.headers['Accept'] = 'application/json';
       request.fields['articleId'] = articleId;
       request.files.add(http.MultipartFile.fromBytes(
         'file',

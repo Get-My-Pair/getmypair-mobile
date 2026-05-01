@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
@@ -46,8 +48,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Return response data which may include OTP in development mode
       final data = response['data'] as Map<String, dynamic>? ?? {};
       
-      // Debug: Print OTP if available
-      if (data.containsKey('otp')) {
+      if (kDebugMode && data.containsKey('otp')) {
+        // ignore: avoid_print
         print('DEBUG: OTP received from backend: ${data['otp']}');
       }
       
