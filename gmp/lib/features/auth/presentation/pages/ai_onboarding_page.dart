@@ -17,6 +17,123 @@ const TextHeightBehavior _kOnboardingButtonTextHeight = TextHeightBehavior(
   applyHeightToLastDescent: false,
 );
 
+String _normalizeSpeech(String raw) {
+  return raw.replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+}
+
+String _aiOnboardingBody(int index, String nickname) {
+  switch (index) {
+    case 0:
+      return 'Welcome, Collector!\n\nI\u2019m your AI friend KIX!\n\nI\u2019m here to help you nail the perfect fit, discover brands that work for you, and vibe with your style.\n\nBut first let\u2019s get to know you better!';
+    case 1:
+      return '$nickname! That\u2019s a great name!!';
+    case 2:
+      return 'Awesome!\nLet\u2019s start setting up the rack...';
+    case 3:
+      return 'Kids rack, huh?\nThat\u2019s awesome! We get to style you all up.\n\nBut first, let\u2019s get you sorted before the others.';
+    case 4:
+      return 'Looks like your size is\nUS 10\nUK 09\nEU 41\n\nAnd it seems like you have wide feet...\n\nNot to worry we know the right brands that will fit you...';
+    case 5:
+      return 'That sounds really frustrating..\nwe get it, and we\u2019re here to help\nfix those fit struggles.';
+    case 6:
+      return 'That sounds really frustrating..\nwe get it, and we\u2019re here to help\nfix those fit struggles.\n\n'
+          'When you are ready, use the button below to allow camera access so we can help measure your feet.';
+    default:
+      return '';
+  }
+}
+
+String _aiOnboardingTitle(int index) {
+  switch (index) {
+    case 0:
+      return 'What should we call you?\nDo you go by a nickname?';
+    case 1:
+      return 'Now, let\u2019s get to know\nyour age and gender...';
+    case 2:
+      return 'Is this rack just for you, or\nare we setting it up for\nyour loved ones too?';
+    case 3:
+      return 'What shoe troubles do you run into most?';
+    case 4:
+      return 'Before that let\u2019s\nunderstand your kids needs too...';
+    case 5:
+    case 6:
+      return 'Let\u2019s get to know your\nfoot type and size!';
+    default:
+      return '';
+  }
+}
+
+List<int> _normPrefixLengths(String raw) {
+  final lens = List<int>.filled(raw.length + 1, 0);
+  for (var k = 0; k <= raw.length; k++) {
+    lens[k] = _normalizeSpeech(raw.substring(0, k)).length;
+  }
+  return lens;
+}
+
+/// Half-open range `[ns, ne)` in normalized [raw] → half-open raw indices.
+(int, int) _rawRangeForNormHalfOpen(String raw, List<int> lens, int ns, int ne) {
+  if (raw.isEmpty || ns >= ne) return (0, 0);
+  final maxN = lens[raw.length];
+  if (ns >= maxN) return (0, 0);
+  if (ne > maxN) ne = maxN;
+  if (ns >= ne) return (0, 0);
+  var start = 0;
+  for (var k = 0; k <= raw.length; k++) {
+    if (lens[k] > ns) {
+      start = k - 1;
+      if (start < 0) start = 0;
+      break;
+    }
+  }
+  var end = raw.length;
+  for (var k = 0; k <= raw.length; k++) {
+    if (lens[k] >= ne) {
+      end = k;
+      break;
+    }
+  }
+  if (start >= end) return (0, 0);
+  return (start, end);
+}
+
+int _titleNormStartInFull(String body, String title) {
+  final full = _normalizeSpeech('$body $title');
+  final bp = _normalizeSpeech(body);
+  if (full.startsWith(bp)) {
+    var i = bp.length;
+    while (i < full.length && full[i] == ' ') {
+      i++;
+    }
+    return i;
+  }
+  return bp.length.clamp(0, full.length);
+}
+
+TextSpan _readAlongSpanForSegment(
+  String raw,
+  TextStyle base,
+  TextStyle highlight,
+  int segNormLo,
+  int segNormHi,
+) {
+  if (segNormLo >= segNormHi || raw.isEmpty) {
+    return TextSpan(text: raw, style: base);
+  }
+  final lens = _normPrefixLengths(raw);
+  final range = _rawRangeForNormHalfOpen(raw, lens, segNormLo, segNormHi);
+  final a = range.$1;
+  final b = range.$2;
+  if (a >= b) return TextSpan(text: raw, style: base);
+  return TextSpan(
+    children: [
+      TextSpan(text: raw.substring(0, a), style: base),
+      TextSpan(text: raw.substring(a, b), style: highlight),
+      TextSpan(text: raw.substring(b), style: base),
+    ],
+  );
+}
+
 class AiOnboardingPage extends StatefulWidget {
   const AiOnboardingPage({
     super.key,
@@ -58,9 +175,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   /// Full utterance for the current page (used for Android resume after pause).
   String _fullUtterance = '';
-
-  /// Read-along caption uses the same string as TTS.
-  String _captionText = '';
 
   int? _captionHighlightStart;
   int? _captionHighlightEnd;
@@ -168,7 +282,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         setState(() {
           _ttsReady = true;
           _ttsError = null;
-          _captionText = _speakableContentFor(_index);
         });
         unawaited(_autoSpeakCurrentPage());
       }
@@ -251,55 +364,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     }
   }
 
-  String _normalizeForSpeech(String raw) {
-    return raw.replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
-  }
-
   String _speakableContentFor(int index) {
     final nickname = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
-    switch (index) {
-      case 0:
-        return _normalizeForSpeech(
-          "Welcome, Collector! I'm your AI friend KIX! I'm here to help you nail the perfect fit, "
-          "discover brands that work for you, and vibe with your style. But first let's get to know you better! "
-          "What should we call you? Do you go by a nickname?",
-        );
-      case 1:
-        return _normalizeForSpeech(
-          "$nickname! That's a great name!! "
-          "Now, let's get to know your age and gender...",
-        );
-      case 2:
-        return _normalizeForSpeech(
-          "Awesome! Let's start setting up the rack... "
-          "Is this rack just for you, or are we setting it up for your loved ones too?",
-        );
-      case 3:
-        return _normalizeForSpeech(
-          "Kids rack, huh? That's awesome! We get to style you all up. "
-          "But first, let's get you sorted before the others. "
-          "What shoe troubles do you run into most?",
-        );
-      case 4:
-        return _normalizeForSpeech(
-          'Looks like your size is US 10, UK 09, EU 41. '
-          'And it seems like you have wide feet. Not to worry we know the right brands that will fit you. '
-          "Before that let's understand your kids needs too...",
-        );
-      case 5:
-        return _normalizeForSpeech(
-          'That sounds really frustrating. we get it, and we are here to help fix those fit struggles. '
-          "Let's get to know your foot type and size!",
-        );
-      case 6:
-        return _normalizeForSpeech(
-          'That sounds really frustrating. we get it, and we are here to help fix those fit struggles. '
-          "Let's get to know your foot type and size! "
-          'When you are ready, use the button below to allow camera access so we can help measure your feet.',
-        );
-      default:
-        return '';
-    }
+    final body = _aiOnboardingBody(index, nickname);
+    final title = _aiOnboardingTitle(index);
+    return _normalizeSpeech('$body $title');
   }
 
   Future<void> _stopSpeaking() async {
@@ -367,7 +436,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     if (!mounted) return;
     setState(() {
       _fullUtterance = text;
-      _captionText = text;
       _captionHighlightStart = null;
       _captionHighlightEnd = null;
       _androidSpeakSegmentBase = 0;
@@ -418,7 +486,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     final spoken = _speakableContentFor(i);
     setState(() {
       _index = i;
-      _captionText = spoken;
       _fullUtterance = spoken;
       _captionHighlightStart = null;
       _captionHighlightEnd = null;
@@ -510,11 +577,13 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   Widget build(BuildContext context) {
     _ensureBgGradientController();
     final bgGradientController = _bgGradientController!;
-    final steps = <Widget>[
-      _Step(
-        text:
-            "Welcome, Collector!\n\nI’m your AI friend KIX!\n\nI’m here to help you nail the perfect fit, discover brands that work for you, and vibe with your style.\n\nBut first let’s get to know you better!",
-        title: 'What should we call you?\nDo you go by a nickname?',
+    final nick = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
+    final steps = <Widget>[      _Step(
+        text: _aiOnboardingBody(0, nick),
+        title: _aiOnboardingTitle(0),
+        showReadAlong: _index == 0 && !kIsWeb && _ttsReady,
+        readNormStart: _captionHighlightStart,
+        readNormEnd: _captionHighlightEnd,
         child: _Input(
           controller: _name,
           hint: 'Enter nickname',
@@ -522,8 +591,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         ),
       ),
       _Step(
-        text: "${_name.text.trim().isEmpty ? 'Aashi' : _name.text.trim()}! That’s a great name!!",
-        title: 'Now, let’s get to know\nyour age and gender...',
+        text: _aiOnboardingBody(1, nick),
+        title: _aiOnboardingTitle(1),
+        showReadAlong: _index == 1 && !kIsWeb && _ttsReady,
+        readNormStart: _captionHighlightStart,
+        readNormEnd: _captionHighlightEnd,
         child: Column(
           children: [
             _Input(
@@ -577,8 +649,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         ),
       ),
       _Step(
-        text: "Awesome!\nLet’s start setting up the rack...",
-        title: 'Is this rack just for you, or\nare we setting it up for\nyour loved ones too?',
+        text: _aiOnboardingBody(2, nick),
+        title: _aiOnboardingTitle(2),
+        showReadAlong: _index == 2 && !kIsWeb && _ttsReady,
+        readNormStart: _captionHighlightStart,
+        readNormEnd: _captionHighlightEnd,
         child: _Checks(
           options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
           selected: _rack,
@@ -586,9 +661,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         ),
       ),
       _Step(
-        text:
-            "Kids rack, huh?\nThat’s awesome! We get to style you all up.\n\nBut first, let’s get you sorted before the others.",
-        title: 'What shoe troubles do you run into most?',
+        text: _aiOnboardingBody(3, nick),
+        title: _aiOnboardingTitle(3),
+        showReadAlong: _index == 3 && !kIsWeb && _ttsReady,
+        readNormStart: _captionHighlightStart,
+        readNormEnd: _captionHighlightEnd,
         child: _Checks(
           options: const [
             'Hard to find the right fit!',
@@ -600,20 +677,26 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           onChanged: () => setState(() {}),
         ),
       ),
-      const _Step(
-        text:
-            'Looks like your size is\nUS 10\nUK 09\nEU 41\n\nAnd it seems like you have wide feet...\n\nNot to worry we know the right brands that will fit you...',
-        title: 'Before that let’s\nunderstand your kids needs too...',
-      ),
-      const _Step(
-        text:
-            'That sounds really frustrating..\nwe get it, and we’re here to help\nfix those fit struggles.',
-        title: 'Let’s get to know your\nfoot type and size!',
+      _Step(
+        text: _aiOnboardingBody(4, nick),
+        title: _aiOnboardingTitle(4),
+        showReadAlong: _index == 4 && !kIsWeb && _ttsReady,
+        readNormStart: _captionHighlightStart,
+        readNormEnd: _captionHighlightEnd,
       ),
       _Step(
-        text:
-            'That sounds really frustrating..\nwe get it, and we’re here to help\nfix those fit struggles.',
-        title: 'Let’s get to know your\nfoot type and size!',
+        text: _aiOnboardingBody(5, nick),
+        title: _aiOnboardingTitle(5),
+        showReadAlong: _index == 5 && !kIsWeb && _ttsReady,
+        readNormStart: _captionHighlightStart,
+        readNormEnd: _captionHighlightEnd,
+      ),
+      _Step(
+        text: _aiOnboardingBody(6, nick),
+        title: _aiOnboardingTitle(6),
+        showReadAlong: _index == 6 && !kIsWeb && _ttsReady,
+        readNormStart: _captionHighlightStart,
+        readNormEnd: _captionHighlightEnd,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -653,6 +736,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           ],
         ),
       ),
+
     ];
 
     return Scaffold(
@@ -801,15 +885,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                     ],
                   ),
                 ),
-                if (!kIsWeb && _ttsReady && _captionText.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                    child: _ReadAlongCaption(
-                      text: _captionText,
-                      highlightStart: _captionHighlightStart,
-                      highlightEnd: _captionHighlightEnd,
-                    ),
-                  ),
                 Expanded(
                   child: PageView(
                     controller: _controller,
@@ -858,80 +933,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   }
 }
 
-/// Karaoke-style caption for the same string passed to [FlutterTts.speak].
-class _ReadAlongCaption extends StatelessWidget {
-  const _ReadAlongCaption({
-    required this.text,
-    this.highlightStart,
-    this.highlightEnd,
-  });
-
-  final String text;
-  final int? highlightStart;
-  final int? highlightEnd;
-
-  @override
-  Widget build(BuildContext context) {
-    const baseColor = Color(0xFFDFE7E9);
-    final baseStyle = GoogleFonts.montserrat(
-      color: baseColor.withValues(alpha: 0.92),
-      fontSize: 14,
-      fontWeight: FontWeight.w400,
-      height: 1.45,
-    );
-    final highlightStyle = GoogleFonts.montserrat(
-      color: const Color(0xFF061F40),
-      fontSize: 14,
-      fontWeight: FontWeight.w600,
-      height: 1.45,
-      backgroundColor: const Color(0xCCFFD54F),
-    );
-
-    final start = highlightStart;
-    final end = highlightEnd;
-    final hasRange =
-        start != null && end != null && start < end && text.isNotEmpty;
-    final TextSpan root;
-    if (!hasRange) {
-      root = TextSpan(text: text, style: baseStyle);
-    } else {
-      final a = start.clamp(0, text.length);
-      final b = end.clamp(0, text.length);
-      if (a >= b) {
-        root = TextSpan(text: text, style: baseStyle);
-      } else {
-        root = TextSpan(
-          children: [
-            TextSpan(text: text.substring(0, a), style: baseStyle),
-            TextSpan(text: text.substring(a, b), style: highlightStyle),
-            TextSpan(text: text.substring(b), style: baseStyle),
-          ],
-        );
-      }
-    }
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.12),
-        ),
-      ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 132),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Text.rich(
-            root,
-            textAlign: TextAlign.start,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _Step extends StatelessWidget {
   const _Step({
     required this.text,
@@ -939,6 +940,9 @@ class _Step extends StatelessWidget {
     this.child,
     this.titleFontSize,
     this.titleTopSpacing,
+    this.showReadAlong = false,
+    this.readNormStart,
+    this.readNormEnd,
   });
 
   final String text;
@@ -946,37 +950,93 @@ class _Step extends StatelessWidget {
   final Widget? child;
   final double? titleFontSize;
   final double? titleTopSpacing;
+  final bool showReadAlong;
+  final int? readNormStart;
+  final int? readNormEnd;
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final bodySize = screenWidth < 360 ? 20.0 : 23.0;
     final titleSize = titleFontSize ?? (screenWidth < 360 ? 20.0 : 23.0);
+    final bodyStyle = GoogleFonts.montserrat(
+      color: const Color(0xFFDFE7E9),
+      fontSize: bodySize,
+      fontWeight: FontWeight.w300,
+      height: 1.25,
+    );
+    final bodyHl = GoogleFonts.montserrat(
+      color: const Color(0xFF061F40),
+      fontSize: bodySize,
+      fontWeight: FontWeight.w600,
+      height: 1.25,
+      backgroundColor: const Color(0xCCFFD54F),
+    );
+    final titleStyle = GoogleFonts.boldonse(
+      color: const Color(0xFFDFE7E9),
+      fontSize: titleSize,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.2,
+      height: 1.59,
+    );
+    final titleHl = GoogleFonts.boldonse(
+      color: const Color(0xFF061F40),
+      fontSize: titleSize,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.2,
+      height: 1.59,
+      backgroundColor: const Color(0xCCFFD54F),
+    );
+
+    late final Widget bodyWidget;
+    late final Widget titleWidget;
+    final ns = readNormStart;
+    final ne = readNormEnd;
+    if (showReadAlong && ns != null && ne != null && ns < ne) {
+      final full = _normalizeSpeech('$text $title');
+      final bn = _normalizeSpeech(text).length;
+      final t0 = _titleNormStartInFull(text, title);
+      final cap = full.length;
+
+      final bLo = ns.clamp(0, bn);
+      final bHi = ne.clamp(0, bn);
+
+      final tLo = ns.clamp(t0, cap);
+      final tHi = ne.clamp(t0, cap);
+      final locNs = tLo - t0;
+      final locNe = tHi - t0;
+
+      bodyWidget = Text.rich(
+        _readAlongSpanForSegment(
+          text,
+          bodyStyle,
+          bodyHl,
+          bLo,
+          bHi,
+        ),
+      );
+      titleWidget = Text.rich(
+        _readAlongSpanForSegment(
+          title,
+          titleStyle,
+          titleHl,
+          locNs,
+          locNe,
+        ),
+      );
+    } else {
+      bodyWidget = Text(text, style: bodyStyle);
+      titleWidget = Text(title, style: titleStyle);
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            text,
-            style: GoogleFonts.montserrat(
-              color: const Color(0xFFDFE7E9),
-              fontSize: bodySize,
-              fontWeight: FontWeight.w300,
-              height: 1.25,
-            ),
-          ),
+          bodyWidget,
           SizedBox(height: titleTopSpacing ?? 50),
-          Text(
-            title,
-            style: GoogleFonts.boldonse(
-              color: const Color(0xFFDFE7E9),
-              fontSize: titleSize,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
-              height: 1.59,
-            ),
-          ),
+          titleWidget,
           if (child != null) ...[
             const SizedBox(height: 80),
             child!,
