@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -233,48 +235,64 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      height: 42,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      clipBehavior: Clip.antiAlias,
-      alignment: Alignment.center,
-      child: TextField(
-        controller: _searchController,
-        readOnly: true,
-        style: GoogleFonts.montserrat(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: const Color(0xFF2A2A2A),
-        ),
-        decoration: InputDecoration(
-          isDense: true,
-          border: InputBorder.none,
-          hintText: 'Search an area or address',
-          hintStyle: GoogleFonts.montserrat(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: const Color(0x57000000),
-          ),
-          prefixIcon: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 11, 2, 11),
-            child: SvgPicture.asset(
-              'assets/images/search.svg',
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF000000),
-                BlendMode.srcIn,
+    final radius = BorderRadius.circular(999);
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: radius,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
+            ],
+          ),
+          child: TextField(
+            controller: _searchController,
+            readOnly: true,
+            style: GoogleFonts.montserrat(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              color: Colors.white,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: Colors.transparent,
+              border: InputBorder.none,
+              hintText: 'Search an area or address',
+              hintStyle: GoogleFonts.montserrat(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+                color: Colors.white.withValues(alpha: 0.52),
+              ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 11, 2, 11),
+                child: SvgPicture.asset(
+                  'assets/images/search.svg',
+                  width: 24,
+                  height: 24,
+                  colorFilter: ColorFilter.mode(
+                    Colors.white.withValues(alpha: 0.85),
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 48,
+                minHeight: 42,
+              ),
+              contentPadding: const EdgeInsets.only(left: 4, right: 14),
             ),
           ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 48,
-            minHeight: 42,
-          ),
-          contentPadding: const EdgeInsets.only(left: 4, right: 14),
         ),
       ),
     );
@@ -946,66 +964,81 @@ class _AddressFormPageState extends State<_AddressFormPage> {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.72),
-                Colors.white.withValues(alpha: 0.45),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.20),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(1),
-          child: TextFormField(
-            controller: ctrl,
-            keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-            style: GoogleFonts.montserrat(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: textColor,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.montserrat(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: hintColor ?? Colors.black54,
-              ),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.10),
-              border: OutlineInputBorder(
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.11),
                 borderRadius: BorderRadius.circular(999),
-                borderSide: BorderSide.none,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.26),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(999),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(999),
-                borderSide: BorderSide.none,
-              ),
-              errorStyle: GoogleFonts.montserrat(
-                color: const Color(0xFFFFB4B4),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
+              child: TextFormField(
+                controller: ctrl,
+                keyboardType:
+                    isNumeric ? TextInputType.number : TextInputType.text,
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: textColor,
+                ),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: hintColor ?? Colors.black54,
+                  ),
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide(
+                      color: Colors.red.withValues(alpha: 0.65),
+                    ),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide(
+                      color: Colors.red.withValues(alpha: 0.85),
+                      width: 1.2,
+                    ),
+                  ),
+                  errorStyle: GoogleFonts.montserrat(
+                    color: const Color(0xFFFFB4B4),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                validator:
+                    validator ??
+                    (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
             ),
-            validator:
-                validator ??
-                (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
         ),
       ],

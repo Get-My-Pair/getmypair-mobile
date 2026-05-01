@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:flutter/material.dart';
@@ -32,11 +33,6 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  static const Color _inputFill = Color(0x24FFFFFF);
-  static const Color _inputFillReadOnly = Color(0x1FFFFFFF);
-  static const Color _inputBorder = Color(0x40FFFFFF);
-  static const Color _inputBorderFocused = Color(0x8CFFFFFF);
-
   late final TextEditingController _nameController;
   late final TextEditingController _nickNameController;
   late final TextEditingController _phoneController;
@@ -661,60 +657,67 @@ class _EditProfilePageState extends State<EditProfilePage> {
     TextInputType? keyboardType,
     double scale = 1.0,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(100),
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xBFFFFFFF),
-            Colors.white.withValues(alpha: 0.45),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.20),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    final radius = BorderRadius.circular(100);
+    final glassTint = readOnly
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.white.withValues(alpha: 0.11);
+    final borderAlpha = readOnly ? 0.18 : 0.26;
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: glassTint,
+            borderRadius: radius,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: borderAlpha),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(1),
-      child: TextFormField(
-        controller: controller,
-        readOnly: readOnly,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        style: GoogleFonts.montserrat(
-          fontSize: (13 * scale).clamp(10.0, 13.0),
-          fontWeight: FontWeight.w500,
-          color: const Color(0xF2FFFFFF),
-        ),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: readOnly ? _inputFillReadOnly : _inputFill,
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: (18 * scale).clamp(12.0, 18.0),
-            vertical: (10 * scale).clamp(7.0, 10.0),
-          ),
-          suffixIcon: suffix,
-          suffixIconConstraints: BoxConstraints(
-            minHeight: (34 * scale).clamp(24.0, 34.0),
-            minWidth: (40 * scale).clamp(28.0, 40.0),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(100),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(100),
-            borderSide: BorderSide.none,
-          ),
-          disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(100),
-            borderSide: BorderSide.none,
+          child: TextFormField(
+            controller: controller,
+            readOnly: readOnly,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            style: GoogleFonts.montserrat(
+              fontSize: (13 * scale).clamp(10.0, 13.0),
+              fontWeight: FontWeight.w500,
+              color: const Color(0xF2FFFFFF),
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.transparent,
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: (18 * scale).clamp(12.0, 18.0),
+                vertical: (10 * scale).clamp(7.0, 10.0),
+              ),
+              suffixIcon: suffix,
+              suffixIconConstraints: BoxConstraints(
+                minHeight: (34 * scale).clamp(24.0, 34.0),
+                minWidth: (40 * scale).clamp(28.0, 40.0),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: radius,
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: radius,
+                borderSide: BorderSide.none,
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: radius,
+                borderSide: BorderSide.none,
+              ),
+            ),
           ),
         ),
       ),
