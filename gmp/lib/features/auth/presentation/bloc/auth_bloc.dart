@@ -57,7 +57,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     final userResult = await getCurrentUser();
     userResult.fold(
-      (_) => emit(const AuthUnauthenticated()),
+      (failure) {
+        // Keep users logged in unless session is truly invalid.
+        // Only auth-specific failures should move to login.
+        if (failure is AuthenticationFailure) {
+          emit(const AuthUnauthenticated());
+          return;
+        }
+        emit(AuthError(_mapFailureToMessage(failure)));
+      },
       (user) => emit(AuthAuthenticated(user)),
     );
   }

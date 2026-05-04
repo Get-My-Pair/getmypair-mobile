@@ -507,13 +507,15 @@ class _HomePageState extends State<HomePage> {
                                           (12 * layoutScale).clamp(8.0, 14.0);
                                       // Thumbnails need header + gap + thumb row.
                                       final rackHeight = showRackThumbs
-                                          ? (rackCardTopPadding +
-                                                    24 +
-                                                    1 +
-                                                    62 +
-                                                    rackCardBottomPadding +
-                                                    rackLoadedExtraHeight)
-                                                .clamp(118.0, 146.0)
+                                          ? 
+                                          // (rackCardTopPadding +
+                                          //           24 +
+                                          //           1 +
+                                          //           62 +
+                                          //           rackCardBottomPadding +
+                                          //           rackLoadedExtraHeight)
+                                          //       .clamp(118.0, 146.0)
+                                          rackLoadingHeight
                                           : rackLoadingHeight;
                                       final uniformCardGap = (bodyH * 0.026)
                                           .clamp(10.0, 16.0);
