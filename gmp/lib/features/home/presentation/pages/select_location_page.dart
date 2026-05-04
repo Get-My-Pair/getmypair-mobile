@@ -1,4 +1,3 @@
-import 'dart:math' show min, max;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -127,6 +126,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     ),
   );
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  /// Synced from [_searchFocusNode] listener — never read [FocusNode.hasFocus] in [build] on web.
+  bool _searchBarHasFocus = false;
   final Distance _distance = const Distance();
   bool _isLoadingCobblers = false;
   String? _cobblerLoadError;
@@ -136,13 +138,23 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   @override
   void initState() {
     super.initState();
+    _searchFocusNode.addListener(_syncSearchBarFocusFromNode);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initLocation();
     });
   }
 
+  void _syncSearchBarFocusFromNode() {
+    if (!mounted) return;
+    final hasFocus = _searchFocusNode.hasFocus;
+    if (_searchBarHasFocus == hasFocus) return;
+    setState(() => _searchBarHasFocus = hasFocus);
+  }
+
   @override
   void dispose() {
+    _searchFocusNode.removeListener(_syncSearchBarFocusFromNode);
+    _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -477,6 +489,10 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     final bottomSafe = Responsive.bottomInsetOf(context);
     final bottomNavReserve = FloatingGradientBottomNav.barHeight + 12 + bottomSafe;
     final isCompact = MediaQuery.sizeOf(context).width < 360;
+    // Map / Sat toggle and zoom controls: one square size, one icon size (matches filter button).
+    final mapControlTile = isCompact ? 44.0 : 48.0;
+    final mapControlIconSize = isCompact ? 22.0 : 24.0;
+    final canPopRoute = Navigator.of(context).canPop();
     final authState = context.read<AuthBloc>().state;
     final userDisplayName = (widget.mapPinDisplayName != null &&
             widget.mapPinDisplayName!.trim().isNotEmpty)
@@ -545,33 +561,40 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                             Padding(
                               padding: EdgeInsets.fromLTRB(hPad, isCompact ? 10 : 14, hPad, 0),
                               child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                textDirection: TextDirection.ltr,
                                 children: [
-                                  if (Navigator.of(context).canPop())
-                                    IconButton(
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                                      onPressed: () => Navigator.of(context).maybePop(),
-                                      icon: const Icon(
-                                        Icons.arrow_back_ios_new_rounded,
-                                        size: 18,
-                                        color: Colors.white,
+                                  if (canPopRoute)
+                                    SizedBox(
+                                      width: 32,
+                                      height: 44,
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () => Navigator.of(context).maybePop(),
+                                        child: const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Icon(
+                                            Icons.arrow_back_ios_new_rounded,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                       ),
                                     )
                                   else
                                     const SizedBox(width: 8),
+                                  if (canPopRoute) const SizedBox(width: 4),
                                   Expanded(
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Cobbler Nearby',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.left,
-                                        style: GoogleFonts.boldonse(
-                                          color: Colors.white,
-                                          fontSize: Responsive.fontSize(context, isCompact ? 19 : 22),
-                                          fontWeight: FontWeight.w400,
-                                        ),
+                                    child: Text(
+                                      'Cobbler Nearby',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.start,
+                                      style: GoogleFonts.boldonse(
+                                        color: Colors.white,
+                                        fontSize: Responsive.fontSize(context, isCompact ? 19 : 22),
+                                        fontWeight: FontWeight.w400,
                                       ),
                                     ),
                                   ),
@@ -590,81 +613,73 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                       borderRadius: BorderRadius.circular(24),
                                       child: BackdropFilter(
                                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                        child: Container(
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 220),
+                                          curve: Curves.easeOutCubic,
                                           height: 48,
                                           padding: const EdgeInsets.symmetric(horizontal: 12),
                                           decoration: BoxDecoration(
                                             color: Colors.white.withValues(alpha: 0.92),
                                             borderRadius: BorderRadius.circular(24),
                                             border: Border.all(
-                                              color: Colors.white,
-                                              width: 1.6,
+                                              color: _searchBarHasFocus
+                                                  ? const Color(0xFF15808D)
+                                                  : Colors.white,
+                                              width: _searchBarHasFocus ? 2.2 : 1.6,
                                             ),
-                                            boxShadow: const [
-                                              BoxShadow(
+                                            boxShadow: [
+                                              const BoxShadow(
                                                 color: Color(0x22000000),
                                                 blurRadius: 10,
                                                 offset: Offset(0, 3),
                                               ),
+                                              if (_searchBarHasFocus)
+                                                BoxShadow(
+                                                  color: const Color(0xFF15808D).withValues(alpha: 0.22),
+                                                  blurRadius: 14,
+                                                  spreadRadius: 0,
+                                                ),
                                             ],
                                           ),
-                                          child: LayoutBuilder(
-                                            builder: (context, constraints) {
-                                              const iconGap = 6.0;
-                                              const iconVisual = 22.0;
-                                              final mw = constraints.maxWidth.isFinite
-                                                  ? constraints.maxWidth
-                                                  : 0.0;
-                                              final iconTotal = iconVisual + iconGap;
-                                              final maxTf = (mw - iconTotal).clamp(0.0, double.infinity);
-                                              // ~72% of bar for icon + field, never wider than parent
-                                              final textFieldWRaw = maxTf <= 0
-                                                  ? 0.0
-                                                  : min(maxTf, max(24.0, mw * 0.72 - iconTotal));
-                                              final textFieldW =
-                                                  textFieldWRaw.isFinite ? textFieldWRaw.clamp(0.0, maxTf) : 0.0;
-                                              return Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                children: [
-                                                  const Icon(
-                                                    Icons.search_rounded,
-                                                    color: Color(0xFF15808D),
-                                                    size: 22,
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            mainAxisAlignment: MainAxisAlignment.start,
+                                            children: [
+                                              _AnimatedSearchIcon(
+                                                active: !_searchBarHasFocus &&
+                                                    _searchController.text.trim().isEmpty,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: TextField(
+                                                  controller: _searchController,
+                                                  focusNode: _searchFocusNode,
+                                                  onChanged: (_) => setState(() {}),
+                                                  textAlign: TextAlign.start,
+                                                  style: GoogleFonts.montserrat(
+                                                    fontSize: Responsive.fontSize(context, 15),
+                                                    color: Color(0xFF0A2429),
                                                   ),
-                                                  SizedBox(width: iconGap),
-                                                  SizedBox(
-                                                    width: textFieldW,
-                                                    child: TextField(
-                                                      controller: _searchController,
-                                                      onChanged: (_) => setState(() {}),
-                                                      textAlign: TextAlign.center,
-                                                      style: GoogleFonts.montserrat(
-                                                        fontSize: Responsive.fontSize(context, 15),
-                                                        color: Color(0xFF0A2429),
-                                                      ),
-                                                      decoration: InputDecoration(
-                                                        isDense: true,
-                                                        filled: false,
-                                                        border: InputBorder.none,
-                                                        enabledBorder: InputBorder.none,
-                                                        focusedBorder: InputBorder.none,
-                                                        disabledBorder: InputBorder.none,
-                                                        errorBorder: InputBorder.none,
-                                                        focusedErrorBorder: InputBorder.none,
-                                                        hintText: 'Search cobbler',
-                                                        hintStyle: GoogleFonts.montserrat(
-                                                          color: AppColors.textSecondary,
-                                                          fontSize: Responsive.fontSize(context, 15),
-                                                        ),
-                                                        contentPadding:
-                                                            const EdgeInsets.symmetric(vertical: 12),
-                                                      ),
+                                                  decoration: InputDecoration(
+                                                    isDense: true,
+                                                    filled: false,
+                                                    border: InputBorder.none,
+                                                    enabledBorder: InputBorder.none,
+                                                    focusedBorder: InputBorder.none,
+                                                    disabledBorder: InputBorder.none,
+                                                    errorBorder: InputBorder.none,
+                                                    focusedErrorBorder: InputBorder.none,
+                                                    hintText: 'Search cobbler',
+                                                    hintStyle: GoogleFonts.montserrat(
+                                                      color: AppColors.textSecondary,
+                                                      fontSize: Responsive.fontSize(context, 15),
                                                     ),
+                                                    contentPadding:
+                                                        const EdgeInsets.symmetric(vertical: 12),
                                                   ),
-                                                ],
-                                              );
-                                            },
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -782,20 +797,24 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                                 ),
                                                 borderRadius: BorderRadius.circular(12),
                                                 child: SizedBox(
-                                                  width: isCompact ? 72 : 84,
-                                                  height: isCompact ? 44 : 48,
+                                                  width: mapControlTile,
+                                                  height: mapControlTile,
                                                   child: Center(
-                                                    child: Text(
-                                                      (_isSatelliteView == true) ? 'Map' : 'Sat',
-                                                      style: GoogleFonts.montserrat(
-                                                        color: (_isSatelliteView == true)
-                                                            ? Colors.white
-                                                            : const Color(0xFF0A2429),
-                                                        fontSize: Responsive.fontSize(
-                                                          context,
-                                                          isCompact ? 12 : 13,
+                                                    child: FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      child: Text(
+                                                        (_isSatelliteView == true) ? 'Map' : 'Sat',
+                                                        maxLines: 1,
+                                                        style: GoogleFonts.montserrat(
+                                                          color: (_isSatelliteView == true)
+                                                              ? Colors.white
+                                                              : const Color(0xFF0A2429),
+                                                          fontSize: Responsive.fontSize(
+                                                            context,
+                                                            isCompact ? 12 : 13,
+                                                          ),
+                                                          fontWeight: FontWeight.w700,
                                                         ),
-                                                        fontWeight: FontWeight.w700,
                                                       ),
                                                     ),
                                                   ),
@@ -804,11 +823,15 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                             ),
                                             const SizedBox(height: 8),
                                             _ZoomButton(
+                                              size: mapControlTile,
+                                              iconSize: mapControlIconSize,
                                               icon: Icons.add_rounded,
                                               onTap: _zoomIn,
                                             ),
                                             const SizedBox(height: 8),
                                             _ZoomButton(
+                                              size: mapControlTile,
+                                              iconSize: mapControlIconSize,
                                               icon: Icons.remove_rounded,
                                               onTap: _zoomOut,
                                             ),
@@ -1244,6 +1267,76 @@ class _NearbyCobbler {
   });
 }
 
+/// Gentle pulse on the magnifier when the bar is idle (empty + unfocused).
+class _AnimatedSearchIcon extends StatefulWidget {
+  final bool active;
+
+  const _AnimatedSearchIcon({required this.active});
+
+  @override
+  State<_AnimatedSearchIcon> createState() => _AnimatedSearchIconState();
+}
+
+class _AnimatedSearchIconState extends State<_AnimatedSearchIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _scale = Tween<double>(begin: 1, end: 1.1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    if (widget.active) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedSearchIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.active && oldWidget.active) {
+      _controller.stop();
+      _controller.animateTo(
+        0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scale.value,
+          child: child,
+        );
+      },
+      child: const Icon(
+        Icons.search_rounded,
+        color: Color(0xFF15808D),
+        size: 22,
+      ),
+    );
+  }
+}
+
 class _RingLabel extends StatelessWidget {
   final String text;
 
@@ -1269,10 +1362,14 @@ class _RingLabel extends StatelessWidget {
 class _ZoomButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final double size;
+  final double iconSize;
 
   const _ZoomButton({
     required this.icon,
     required this.onTap,
+    required this.size,
+    required this.iconSize,
   });
 
   @override
@@ -1280,16 +1377,20 @@ class _ZoomButton extends StatelessWidget {
     return Material(
       color: Colors.white.withValues(alpha: 0.9),
       borderRadius: BorderRadius.circular(12),
+      shadowColor: Colors.black45,
+      elevation: 2,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(
-            icon,
-            color: const Color(0xFF062F35),
-            size: 22,
+          width: size,
+          height: size,
+          child: Center(
+            child: Icon(
+              icon,
+              color: const Color(0xFF062F35),
+              size: iconSize,
+            ),
           ),
         ),
       ),

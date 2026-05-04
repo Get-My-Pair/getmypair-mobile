@@ -9,16 +9,20 @@ class ApiEndpoints {
   // Local: 'http://localhost:3000' (Web/iOS) or 'http://10.0.2.2:3000' (Android emulator)
   // Physical device: 'http://YOUR_IP:3000' (same network as backend)
   // Web: browser may block requests (CORS). Prefer device/emulator for auth, or configure backend CORS.
+  //
+  // If Render still returns 403 on `/api/cobbler/profile/nearby`, deploy latest `getmypair-api` **or**
+  // run the API locally and start the app with:
+  //   flutter run --dart-define=USE_LOCAL_API=true
+  // (Web: use http://localhost:PORT matching your server; configure CORS on the API.)
+
+  static const bool _kUseLocalApi =
+      bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
 
   /// Get base URL based on environment
   static String get baseUrl {
-    // In debug mode, you can use local backend for testing
-    if (kDebugMode) {
-      // http://localhost:3000
-      // For flutter web running locally:
-      return 'https://getmypair-api.onrender.com';
+    if (kDebugMode && _kUseLocalApi) {
+      return 'http://localhost:3000';
     }
-    // Production backend (Render.com)
     return 'https://getmypair-api.onrender.com';
   }
 
