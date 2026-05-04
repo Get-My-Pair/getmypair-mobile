@@ -36,10 +36,12 @@ const Color _kQuickActionMutedText = Color(0xFF062F35);
 const Color _kRackCardBorderStart = Color(0xFF0F6876);
 const Color _kRackCardBorderEnd = Color(0xFF1CC2DC);
 const Color _kRackCardEdgeLight = Color(0xB3FFFFFF);
+const double _kRackCardRadius = 10;
 const double _kRackBottomLineHeight = 2.5;
 const double _kRackBottomLineHorizontalInset = 0;
-const BorderRadius _kRackBottomLineRadius = BorderRadius.all(
-  Radius.circular(10),
+const BorderRadius _kRackBottomLineRadius = BorderRadius.only(
+  bottomLeft: Radius.circular(_kRackCardRadius),
+  bottomRight: Radius.circular(_kRackCardRadius),
 );
 /// Visible grey panel behind “My Rack” (distinct from scaffold / quick tiles).
 const Color _kRackCardBg = Color(0xFFE2E5E8);
@@ -492,16 +494,27 @@ class _HomePageState extends State<HomePage> {
                                       final rackCardTopPadding = showRackThumbs
                                           ? ((20 * layoutScale).clamp(14.0, 23.0))
                                           : rackCardTopPaddingLoose;
-                                      // Loading / empty need extra vertical room; thumbnails only need
-                                      // header + gap + thumb row — shorter card removes slack above bottom border.
+                                      // Keep loading/empty/error card height aligned with
+                                      // the loaded rack card so the section does not jump.
+                                      final rackLoadingHeight =
+                                          (rackCardTopPaddingLoose +
+                                                  24 +
+                                                  1 +
+                                                  62 +
+                                                  rackCardBottomPadding)
+                                              .clamp(110.0, 132.0);
+                                      final rackLoadedExtraHeight =
+                                          (12 * layoutScale).clamp(8.0, 14.0);
+                                      // Thumbnails need header + gap + thumb row.
                                       final rackHeight = showRackThumbs
                                           ? (rackCardTopPadding +
                                                     24 +
                                                     1 +
                                                     62 +
-                                                    rackCardBottomPadding)
-                                                .clamp(110.0, 132.0)
-                                          : 155.0;
+                                                    rackCardBottomPadding +
+                                                    rackLoadedExtraHeight)
+                                                .clamp(118.0, 146.0)
+                                          : rackLoadingHeight;
                                       final uniformCardGap = (bodyH * 0.026)
                                           .clamp(10.0, 16.0);
                                       final careCardH = (bodyH * 0.2).clamp(
@@ -538,11 +551,16 @@ class _HomePageState extends State<HomePage> {
                                                     width: 1,
                                                   ),
                                                 ),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
+                                                borderRadius: BorderRadius.circular(
+                                                  _kRackCardRadius,
+                                                ),
                                               ),
-                                              child: Stack(
-                                                children: [
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(
+                                                  _kRackCardRadius,
+                                                ),
+                                                child: Stack(
+                                                  children: [
                                                   Padding(
                                                     padding: EdgeInsets.fromLTRB(
                                                       14,
@@ -694,34 +712,35 @@ class _HomePageState extends State<HomePage> {
                                                       ],
                                                     ),
                                                   ),
-                                                  Positioned(
-                                                    left:
-                                                        _kRackBottomLineHorizontalInset,
-                                                    right:
-                                                        _kRackBottomLineHorizontalInset,
-                                                    bottom: 0,
-                                                    child: Container(
-                                                      height: _kRackBottomLineHeight,
-                                                      decoration:
-                                                          const BoxDecoration(
-                                                        gradient: LinearGradient(
-                                                          begin:
-                                                              Alignment
-                                                                  .centerLeft,
-                                                          end:
-                                                              Alignment
-                                                                  .centerRight,
-                                                          colors: [
-                                                            _kRackCardBorderStart,
-                                                            _kRackCardBorderEnd,
-                                                          ],
+                                                    Positioned(
+                                                      left:
+                                                          _kRackBottomLineHorizontalInset,
+                                                      right:
+                                                          _kRackBottomLineHorizontalInset,
+                                                      bottom: 0,
+                                                      child: Container(
+                                                        height: _kRackBottomLineHeight,
+                                                        decoration:
+                                                            const BoxDecoration(
+                                                          gradient: LinearGradient(
+                                                            begin:
+                                                                Alignment
+                                                                    .centerLeft,
+                                                            end:
+                                                                Alignment
+                                                                    .centerRight,
+                                                            colors: [
+                                                              _kRackCardBorderStart,
+                                                              _kRackCardBorderEnd,
+                                                            ],
+                                                          ),
+                                                          borderRadius:
+                                                              _kRackBottomLineRadius,
                                                         ),
-                                                        borderRadius:
-                                                            _kRackBottomLineRadius,
                                                       ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ),

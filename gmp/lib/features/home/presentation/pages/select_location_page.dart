@@ -1057,6 +1057,11 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         lng: _markerPosition.longitude,
         radiusKm: _selectedRangeKm,
       );
+      debugPrint(
+        '[SelectLocationPage] Fetch nearby cobblers: '
+        'lat=${_markerPosition.latitude}, lng=${_markerPosition.longitude}, '
+        'radiusKm=$_selectedRangeKm, endpoint=$endpoint',
+      );
 
       final json = await sl<DioClient>().get(endpoint, accessToken: token);
       final data = (json['data'] is Map<String, dynamic>)
@@ -1075,10 +1080,15 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           .map(_parseCobblerProfile)
           .whereType<_CobblerProfile>()
           .toList();
+      debugPrint(
+        '[SelectLocationPage] Nearby cobbler response parsed: '
+        'rawCount=${list.length}, parsedCount=${parsed.length}',
+      );
 
       if (!mounted) return;
       setState(() => _allCobblers = parsed);
     } catch (e) {
+      debugPrint('[SelectLocationPage] Nearby cobbler fetch failed: $e');
       if (!mounted) return;
       setState(() {
         _allCobblers = const [];
@@ -1098,9 +1108,25 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     final location = (raw['location'] is Map<String, dynamic>)
         ? raw['location'] as Map<String, dynamic>
         : <String, dynamic>{};
-    final lat = _toDouble(raw['lat'] ?? raw['latitude'] ?? location['lat'] ?? location['latitude']);
-    final lng =
-        _toDouble(raw['lng'] ?? raw['lon'] ?? raw['longitude'] ?? location['lng'] ?? location['lon'] ?? location['longitude']);
+    final coords = _geoJsonCoordinates(location);
+    final lat = _toDouble(
+      raw['lat'] ??
+          raw['latitude'] ??
+          location['lat'] ??
+          location['latitude'] ??
+          location['y'] ??
+          (coords?.$2),
+    );
+    final lng = _toDouble(
+      raw['lng'] ??
+          raw['lon'] ??
+          raw['longitude'] ??
+          location['lng'] ??
+          location['lon'] ??
+          location['longitude'] ??
+          location['x'] ??
+          (coords?.$1),
+    );
     if (name.isEmpty || lat == null || lng == null) return null;
 
     final rating = _toDouble(raw['rating'] ?? raw['avgRating'] ?? raw['averageRating']) ?? 0;
@@ -1121,6 +1147,15 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     if (value == null) return null;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString());
+  }
+
+  (double, double)? _geoJsonCoordinates(Map<String, dynamic> location) {
+    final coordinates = location['coordinates'];
+    if (coordinates is! List || coordinates.length < 2) return null;
+    final lon = _toDouble(coordinates[0]);
+    final lat = _toDouble(coordinates[1]);
+    if (lon == null || lat == null) return null;
+    return (lon, lat);
   }
 }
 
