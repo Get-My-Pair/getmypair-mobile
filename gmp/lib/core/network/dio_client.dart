@@ -37,6 +37,7 @@ class DioClient {
       throw NetworkException('Invalid response format: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
+      if (e is ServerException) rethrow;
       throw NetworkException('Network error: ${e.toString()}');
     }
   }
@@ -72,6 +73,7 @@ class DioClient {
       throw NetworkException('Invalid response format: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
+      if (e is ServerException) rethrow;
       final msg = e.toString();
       if (msg.contains('XMLHttpRequest')) {
         throw NetworkException(
@@ -112,6 +114,7 @@ class DioClient {
       throw NetworkException('HTTP error: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
+      if (e is ServerException) rethrow;
       final msg = e.toString();
       if (msg.contains('XMLHttpRequest')) {
         throw NetworkException(
@@ -150,6 +153,7 @@ class DioClient {
       throw NetworkException('HTTP error: ${e.message}');
     } catch (e) {
       if (e is NetworkException) rethrow;
+      if (e is ServerException) rethrow;
       final msg = e.toString();
       if (msg.contains('XMLHttpRequest')) {
         throw NetworkException(

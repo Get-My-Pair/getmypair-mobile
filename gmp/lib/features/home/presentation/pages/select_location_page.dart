@@ -1,3 +1,4 @@
+import 'dart:math' show min, max;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -112,11 +114,18 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   LatLng _markerPosition = _defaultCenter;
   String _address = 'Loading address...';
   bool _isLoadingAddress = false;
-  bool _isLoadingCurrent = false;
   bool _isSatelliteView = true;
   double _currentZoom = _initialZoom;
   double _selectedRangeKm = 5;
-  static const List<double> _rangeOptionsKm = [1, 2, 5, 10, 15];
+  static const double _minRangeKm = 0;
+  static const double _maxRangeKm = 150;
+  /// 0–150 km in 5 km steps (radio list).
+  static final List<double> _rangeOptionsKm = List<double>.unmodifiable(
+    List<double>.generate(
+      ((_maxRangeKm - _minRangeKm) ~/ 5) + 1,
+      (i) => _minRangeKm + i * 5,
+    ),
+  );
   final TextEditingController _searchController = TextEditingController();
   final Distance _distance = const Distance();
   bool _isLoadingCobblers = false;
@@ -249,31 +258,6 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     }
   }
 
-  Future<void> _useCurrentLocation() async {
-    if (_isLoadingCurrent) return;
-    setState(() => _isLoadingCurrent = true);
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      final latLng = LatLng(position.latitude, position.longitude);
-      setState(() => _markerPosition = latLng);
-      _mapController.move(latLng, _currentZoom);
-      await _updateAddressFromLatLng(latLng);
-      await _fetchNearbyCobblers();
-    } catch (e) {
-      if (mounted) {
-        await showAppFeedbackAlert(
-          context,
-          message: 'Could not get current location',
-          type: AppFeedbackType.failure,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingCurrent = false);
-    }
-  }
-
   void _confirmLocation() {
     final result = (_address == 'Selected location')
         ? '${_markerPosition.latitude}, ${_markerPosition.longitude}'
@@ -328,36 +312,72 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Nearby cobblers (${_selectedRangeKm.toInt()} km)',
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nearby cobblers (${_selectedRangeKm.toInt()} km)',
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 18),
                   fontWeight: FontWeight.w700,
                   color: _titleNavy,
                 ),
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _rangeOptionsKm
-                    .map(
-                      (km) => ChoiceChip(
-                        label: Text('${km.toInt()} km'),
-                        selected: _selectedRangeKm == km,
-                        onSelected: (_) {
-                          setState(() => _selectedRangeKm = km);
-                          _fetchNearbyCobblers();
-                          Navigator.of(ctx).pop();
-                          _showFilterSheet();
-                        },
+              const SizedBox(height: 8),
+              Text(
+                'Search radius (${_minRangeKm.toInt()}–${_maxRangeKm.toInt()} km)',
+                style: GoogleFonts.montserrat(
+                  fontSize: Responsive.fontSize(context, 13),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: (MediaQuery.sizeOf(ctx).height * 0.42).clamp(200.0, 360.0),
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    radioTheme: RadioThemeData(
+                      fillColor: WidgetStateProperty.resolveWith(
+                        (states) => states.contains(WidgetState.selected)
+                            ? _tealButton
+                            : AppColors.textSecondary.withValues(alpha: 0.55),
                       ),
-                    )
-                    .toList(),
+                    ),
+                  ),
+                  child: RadioGroup<double>(
+                    groupValue: _selectedRangeKm,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _selectedRangeKm = value);
+                      _fetchNearbyCobblers();
+                      Navigator.of(ctx).pop();
+                      _showFilterSheet();
+                    },
+                    child: ListView.builder(
+                      itemCount: _rangeOptionsKm.length,
+                      itemBuilder: (context, index) {
+                        final km = _rangeOptionsKm[index];
+                        return RadioListTile<double>(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                          value: km,
+                          title: Text(
+                            '${km.toInt()} km',
+                            style: GoogleFonts.montserrat(
+                              fontSize: Responsive.fontSize(context, 15),
+                              fontWeight: FontWeight.w600,
+                              color: _titleNavy,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               if (_isLoadingCobblers)
@@ -372,7 +392,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                 )
               else if (nearby.isEmpty)
                 Text(
-                  'No cobbler found in ${_selectedRangeKm.toInt()} km. Increase range and try again.',
+                  'No active cobblers right now.',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: Responsive.fontSize(context, 14),
@@ -386,7 +406,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                     _formatDistance(c.distanceMeters),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -539,34 +560,18 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                   else
                                     const SizedBox(width: 8),
                                   Expanded(
-                                    child: Text(
-                                      'Shoe Care',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.boldonse(
-                                        color: Colors.white,
-                                        fontSize: Responsive.fontSize(context, isCompact ? 19 : 22),
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                  ),
-                                  Material(
-                                    color: Colors.white.withValues(alpha: 0.95),
-                                    elevation: 2,
-                                    shadowColor: Colors.black26,
-                                    shape: const CircleBorder(),
-                                    child: InkWell(
-                                      customBorder: const CircleBorder(),
-                                      onTap: _isLoadingCurrent ? null : _useCurrentLocation,
-                                      child: SizedBox(
-                                        width: 44,
-                                        height: 44,
-                                        child: _isLoadingCurrent
-                                            ? const Padding(
-                                                padding: EdgeInsets.all(10),
-                                                child: CircularProgressIndicator(strokeWidth: 2, color: _titleNavy),
-                                              )
-                                            : Icon(Icons.add, color: _tealButton, size: 26),
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'Cobbler Nearby',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.left,
+                                        style: GoogleFonts.boldonse(
+                                          color: Colors.white,
+                                          fontSize: Responsive.fontSize(context, isCompact ? 19 : 22),
+                                          fontWeight: FontWeight.w400,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -580,7 +585,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                 children: [
                                   Expanded(
                                     child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(100),
+                                      // Half of bar height (48): larger values (e.g. 100) can exceed
+                                      // RRect limits vs width and trigger "Invalid argument" on some devices.
+                                      borderRadius: BorderRadius.circular(24),
                                       child: BackdropFilter(
                                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                         child: Container(
@@ -588,7 +595,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                           padding: const EdgeInsets.symmetric(horizontal: 12),
                                           decoration: BoxDecoration(
                                             color: Colors.white.withValues(alpha: 0.92),
-                                            borderRadius: BorderRadius.circular(100),
+                                            borderRadius: BorderRadius.circular(24),
                                             border: Border.all(
                                               color: Colors.white,
                                               width: 1.6,
@@ -601,68 +608,69 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                               ),
                                             ],
                                           ),
-                                          child: TextField(
-                                            controller: _searchController,
-                                            onChanged: (_) => setState(() {}),
-                                            style: GoogleFonts.montserrat(
-                                              fontSize: Responsive.fontSize(context, 15),
-                                              color: Color(0xFF0A2429),
-                                            ),
-                                            decoration: InputDecoration(
-                                              isDense: true,
-                                              border: InputBorder.none,
-                                              hintText: 'Search cobbler',
-                                              hintStyle: GoogleFonts.montserrat(
-                                                color: AppColors.textSecondary,
-                                                fontSize: Responsive.fontSize(context, 15),
-                                              ),
-                                              prefixIcon: const Icon(
-                                                Icons.search_rounded,
-                                                color: Color(0xFF15808D),
-                                                size: 22,
-                                              ),
-                                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                                            ),
+                                          child: LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              const iconGap = 6.0;
+                                              const iconVisual = 22.0;
+                                              final mw = constraints.maxWidth.isFinite
+                                                  ? constraints.maxWidth
+                                                  : 0.0;
+                                              final iconTotal = iconVisual + iconGap;
+                                              final maxTf = (mw - iconTotal).clamp(0.0, double.infinity);
+                                              // ~72% of bar for icon + field, never wider than parent
+                                              final textFieldWRaw = maxTf <= 0
+                                                  ? 0.0
+                                                  : min(maxTf, max(24.0, mw * 0.72 - iconTotal));
+                                              final textFieldW =
+                                                  textFieldWRaw.isFinite ? textFieldWRaw.clamp(0.0, maxTf) : 0.0;
+                                              return Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.search_rounded,
+                                                    color: Color(0xFF15808D),
+                                                    size: 22,
+                                                  ),
+                                                  SizedBox(width: iconGap),
+                                                  SizedBox(
+                                                    width: textFieldW,
+                                                    child: TextField(
+                                                      controller: _searchController,
+                                                      onChanged: (_) => setState(() {}),
+                                                      textAlign: TextAlign.center,
+                                                      style: GoogleFonts.montserrat(
+                                                        fontSize: Responsive.fontSize(context, 15),
+                                                        color: Color(0xFF0A2429),
+                                                      ),
+                                                      decoration: InputDecoration(
+                                                        isDense: true,
+                                                        filled: false,
+                                                        border: InputBorder.none,
+                                                        enabledBorder: InputBorder.none,
+                                                        focusedBorder: InputBorder.none,
+                                                        disabledBorder: InputBorder.none,
+                                                        errorBorder: InputBorder.none,
+                                                        focusedErrorBorder: InputBorder.none,
+                                                        hintText: 'Search cobbler',
+                                                        hintStyle: GoogleFonts.montserrat(
+                                                          color: AppColors.textSecondary,
+                                                          fontSize: Responsive.fontSize(context, 15),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets.symmetric(vertical: 12),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  Material(
-                                    color: (_isSatelliteView == true)
-                                        ? const Color(0xFF0F6876)
-                                        : Colors.white.withValues(alpha: 0.92),
-                                    borderRadius: BorderRadius.circular(12),
-                                    shadowColor: Colors.black45,
-                                    elevation: 2,
-                                    child: InkWell(
-                                      onTap: () => setState(
-                                        () => _isSatelliteView = !(_isSatelliteView == true),
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: SizedBox(
-                                        width: isCompact ? 72 : 84,
-                                        height: isCompact ? 44 : 48,
-                                        child: Center(
-                                          child: Text(
-                                            (_isSatelliteView == true) ? 'Map' : 'Sat',
-                                            style: GoogleFonts.montserrat(
-                                              color: (_isSatelliteView == true)
-                                                  ? Colors.white
-                                                  : const Color(0xFF0A2429),
-                                              fontSize: Responsive.fontSize(
-                                                context,
-                                                isCompact ? 12 : 13,
-                                              ),
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
                                   Material(
                                     color: const Color(0xFF0F6876),
                                     borderRadius: BorderRadius.circular(12),
@@ -752,6 +760,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                         right: 10,
                                         bottom: 10,
                                         child: Column(
+                                          mainAxisSize: MainAxisSize.min,
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             _RingLabel('${_selectedRangeKm.toInt()}km'),
@@ -759,14 +768,41 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                             _RingLabel('${(_selectedRangeKm * 0.6).toStringAsFixed(1)}km'),
                                             const SizedBox(height: 2),
                                             _RingLabel('${(_selectedRangeKm * 0.3).toStringAsFixed(1)}km'),
-                                          ],
-                                        ),
-                                      ),
-                                      Positioned(
-                                        right: 10,
-                                        top: 10,
-                                        child: Column(
-                                          children: [
+                                            const SizedBox(height: 10),
+                                            Material(
+                                              color: (_isSatelliteView == true)
+                                                  ? const Color(0xFF0F6876)
+                                                  : Colors.white.withValues(alpha: 0.92),
+                                              borderRadius: BorderRadius.circular(12),
+                                              shadowColor: Colors.black45,
+                                              elevation: 2,
+                                              child: InkWell(
+                                                onTap: () => setState(
+                                                  () => _isSatelliteView = !(_isSatelliteView == true),
+                                                ),
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: SizedBox(
+                                                  width: isCompact ? 72 : 84,
+                                                  height: isCompact ? 44 : 48,
+                                                  child: Center(
+                                                    child: Text(
+                                                      (_isSatelliteView == true) ? 'Map' : 'Sat',
+                                                      style: GoogleFonts.montserrat(
+                                                        color: (_isSatelliteView == true)
+                                                            ? Colors.white
+                                                            : const Color(0xFF0A2429),
+                                                        fontSize: Responsive.fontSize(
+                                                          context,
+                                                          isCompact ? 12 : 13,
+                                                        ),
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
                                             _ZoomButton(
                                               icon: Icons.add_rounded,
                                               onTap: _zoomIn,
@@ -945,7 +981,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
         ),
         child: Text(
-          'No cobbler found in ${_selectedRangeKm.toInt()} km. Change range to find nearby cobblers.',
+          'No active cobblers right now.',
           style: GoogleFonts.montserrat(
             fontSize: Responsive.fontSize(context, 12),
             color: Colors.white.withValues(alpha: 0.95),
@@ -1087,6 +1123,29 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
 
       if (!mounted) return;
       setState(() => _allCobblers = parsed);
+    } on ServerException catch (e) {
+      debugPrint(
+        '[SelectLocationPage] Nearby cobbler API error: '
+        'status=${e.statusCode}, message=${e.message}',
+      );
+      if (!mounted) return;
+      var userMsg = e.message;
+      if (e.statusCode == 403) {
+        final s = context.read<AuthBloc>().state;
+        final role = s is AuthAuthenticated
+            ? s.user.role.toLowerCase()
+            : s is AuthProfileCompleted
+                ? s.user.role.toLowerCase()
+                : '';
+        if (role == 'cobbler') {
+          userMsg = 'Nearby cobblers are only listed for customer accounts.';
+        }
+      }
+      setState(() {
+        _allCobblers = const [];
+        _cobblerLoadError =
+            userMsg.trim().isEmpty ? 'Unable to load cobblers right now.' : userMsg;
+      });
     } catch (e) {
       debugPrint('[SelectLocationPage] Nearby cobbler fetch failed: $e');
       if (!mounted) return;

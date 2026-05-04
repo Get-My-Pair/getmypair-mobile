@@ -81,12 +81,20 @@ class ApiEndpoints {
       '$baseUrl$servicePrefix/respond-actual-cost';
 
   // Cobblers for customer nearby discovery
+  /// Query must match backend `GET /api/cobbler/profile/nearby` (auth + role checks on server).
   static String cobblerNearby({
     required double lat,
     required double lng,
     required double radiusKm,
-  }) =>
-      '$baseUrl/api/cobbler/profile/nearby?lat=$lat&lng=$lng&radiusKm=$radiusKm';
+  }) {
+    return Uri.parse('$baseUrl/api/cobbler/profile/nearby').replace(
+      queryParameters: <String, String>{
+        'lat': '$lat',
+        'lng': '$lng',
+        'radiusKm': '$radiusKm',
+      },
+    ).toString();
+  }
 
   /// Public reverse geocode (GET) — no auth. Query: lat, lon (matches backend).
   static String geocodeReverse(double lat, double lon) =>
