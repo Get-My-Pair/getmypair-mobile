@@ -80,6 +80,14 @@ class ApiEndpoints {
   static String get serviceRespondActualCost =>
       '$baseUrl$servicePrefix/respond-actual-cost';
 
+  // Cobblers for customer nearby discovery
+  static String cobblerNearby({
+    required double lat,
+    required double lng,
+    required double radiusKm,
+  }) =>
+      '$baseUrl/api/cobbler/profile/nearby?lat=$lat&lng=$lng&radiusKm=$radiusKm';
+
   /// Public reverse geocode (GET) — no auth. Query: lat, lon (matches backend).
   static String geocodeReverse(double lat, double lon) =>
       '$baseUrl/api/geocode/reverse?lat=$lat&lon=$lon';

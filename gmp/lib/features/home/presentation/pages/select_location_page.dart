@@ -15,12 +15,15 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../profile/domain/entities/user_profile.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../../injection_container.dart';
 
 /// Profile snapshot from [ProfileState] for map-pin / navigation helpers.
 UserProfile? userProfileFromProfileState(ProfileState s) {
@@ -116,44 +119,10 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   static const List<double> _rangeOptionsKm = [1, 2, 5, 10, 15];
   final TextEditingController _searchController = TextEditingController();
   final Distance _distance = const Distance();
+  bool _isLoadingCobblers = false;
+  String? _cobblerLoadError;
 
-  static final List<_CobblerProfile> _allCobblers = [
-    _CobblerProfile(
-      id: 'cb1',
-      name: 'Krishna',
-      point: const LatLng(13.0872, 80.2756),
-      rating: 4.8,
-      isActive: true,
-    ),
-    _CobblerProfile(
-      id: 'cb2',
-      name: 'Mohan',
-      point: const LatLng(13.0908, 80.2623),
-      rating: 4.6,
-      isActive: true,
-    ),
-    _CobblerProfile(
-      id: 'cb3',
-      name: 'Shankar',
-      point: const LatLng(13.0751, 80.2814),
-      rating: 4.7,
-      isActive: true,
-    ),
-    _CobblerProfile(
-      id: 'cb4',
-      name: 'Ravi',
-      point: const LatLng(13.1128, 80.2441),
-      rating: 4.4,
-      isActive: false,
-    ),
-    _CobblerProfile(
-      id: 'cb5',
-      name: 'Suresh',
-      point: const LatLng(13.0462, 80.2387),
-      rating: 4.9,
-      isActive: true,
-    ),
-  ];
+  List<_CobblerProfile> _allCobblers = const [];
 
   @override
   void initState() {
@@ -199,6 +168,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       if (!enabled) {
         if (!mounted) return;
         setState(() => _address = 'Location services disabled');
+        _fetchNearbyCobblers();
         return;
       }
       var perm = await Geolocator.checkPermission();
@@ -212,6 +182,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           _address = 'Allow location to use current position';
         });
         _updateAddressFromLatLng(_defaultCenter);
+        _fetchNearbyCobblers();
         return;
       }
       final position = await Geolocator.getCurrentPosition(
@@ -222,6 +193,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       setState(() => _markerPosition = latLng);
       _mapController.move(latLng, _currentZoom);
       _updateAddressFromLatLng(latLng);
+      _fetchNearbyCobblers();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -229,6 +201,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         _address = 'Location unavailable';
       });
       _updateAddressFromLatLng(_defaultCenter);
+      _fetchNearbyCobblers();
     }
   }
 
@@ -276,6 +249,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       setState(() => _markerPosition = latLng);
       _mapController.move(latLng, _currentZoom);
       await _updateAddressFromLatLng(latLng);
+      await _fetchNearbyCobblers();
     } catch (e) {
       if (mounted) {
         await showAppFeedbackAlert(
@@ -366,6 +340,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                         selected: _selectedRangeKm == km,
                         onSelected: (_) {
                           setState(() => _selectedRangeKm = km);
+                          _fetchNearbyCobblers();
                           Navigator.of(ctx).pop();
                           _showFilterSheet();
                         },
@@ -374,7 +349,17 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                     .toList(),
               ),
               const SizedBox(height: 14),
-              if (nearby.isEmpty)
+              if (_isLoadingCobblers)
+                const Center(child: CircularProgressIndicator())
+              else if (_cobblerLoadError != null)
+                Text(
+                  _cobblerLoadError!,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: Responsive.fontSize(context, 14),
+                  ),
+                )
+              else if (nearby.isEmpty)
                 Text(
                   'No cobbler found in ${_selectedRangeKm.toInt()} km. Increase range and try again.',
                   style: TextStyle(
@@ -711,6 +696,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                           onTap: (_, latLng) {
                                             setState(() => _markerPosition = latLng);
                                             _updateAddressFromLatLng(latLng);
+                                            _fetchNearbyCobblers();
                                           },
                                         ),
                                         children: [
@@ -899,6 +885,45 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
 
   Widget _buildNearbyCobblerStrip() {
     final nearby = _nearbyCobblers;
+    if (_isLoadingCobblers) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    if (_cobblerLoadError != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+        ),
+        child: Text(
+          _cobblerLoadError!,
+          style: GoogleFonts.montserrat(
+            fontSize: Responsive.fontSize(context, 12),
+            color: Colors.white.withValues(alpha: 0.95),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
     if (nearby.isEmpty) {
       return Container(
         width: double.infinity,
@@ -995,6 +1020,96 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         },
       ),
     );
+  }
+
+  Future<void> _fetchNearbyCobblers() async {
+    if (_isLoadingCobblers) return;
+    setState(() {
+      _isLoadingCobblers = true;
+      _cobblerLoadError = null;
+    });
+
+    try {
+      final tokenResult = await sl<GetValidAccessToken>().call();
+      final token = tokenResult.fold((_) => null, (t) => t);
+      if (token == null) {
+        if (!mounted) return;
+        setState(() {
+          _allCobblers = const [];
+          _cobblerLoadError = 'Please sign in again to fetch cobblers.';
+        });
+        return;
+      }
+
+      final endpoint = ApiEndpoints.cobblerNearby(
+        lat: _markerPosition.latitude,
+        lng: _markerPosition.longitude,
+        radiusKm: _selectedRangeKm,
+      );
+
+      final json = await sl<DioClient>().get(endpoint, accessToken: token);
+      final data = (json['data'] is Map<String, dynamic>)
+          ? json['data'] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final list = (data['cobblers'] ??
+              data['profiles'] ??
+              data['items'] ??
+              json['cobblers'] ??
+              json['profiles'] ??
+              json['items']) as List<dynamic>? ??
+          const [];
+
+      final parsed = list
+          .whereType<Map<String, dynamic>>()
+          .map(_parseCobblerProfile)
+          .whereType<_CobblerProfile>()
+          .toList();
+
+      if (!mounted) return;
+      setState(() => _allCobblers = parsed);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _allCobblers = const [];
+        _cobblerLoadError = 'Unable to load cobblers right now.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCobblers = false);
+      }
+    }
+  }
+
+  _CobblerProfile? _parseCobblerProfile(Map<String, dynamic> raw) {
+    final id = (raw['_id'] ?? raw['id'] ?? '').toString();
+    final name = (raw['name'] ?? raw['fullName'] ?? raw['shopName'] ?? '').toString().trim();
+
+    final location = (raw['location'] is Map<String, dynamic>)
+        ? raw['location'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final lat = _toDouble(raw['lat'] ?? raw['latitude'] ?? location['lat'] ?? location['latitude']);
+    final lng =
+        _toDouble(raw['lng'] ?? raw['lon'] ?? raw['longitude'] ?? location['lng'] ?? location['lon'] ?? location['longitude']);
+    if (name.isEmpty || lat == null || lng == null) return null;
+
+    final rating = _toDouble(raw['rating'] ?? raw['avgRating'] ?? raw['averageRating']) ?? 0;
+    final isActive = (raw['isActive'] == true) ||
+        (raw['active'] == true) ||
+        (raw['status']?.toString().toLowerCase() == 'active');
+
+    return _CobblerProfile(
+      id: id.isEmpty ? name : id,
+      name: name,
+      point: LatLng(lat, lng),
+      rating: rating,
+      isActive: isActive,
+    );
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 }
 
