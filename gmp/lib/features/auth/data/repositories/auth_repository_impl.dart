@@ -27,11 +27,14 @@ class AuthRepositoryImpl implements AuthRepository {
       return false;
     }
 
-    // If refresh token is a JWT and expired, session must end.
+    // Do not auto-clear session here. The app should keep the user logged in
+    // unless they explicitly log out.
+    //
+    // If refresh token is a JWT and expired, report unusable so callers can
+    // decide whether to use cached user data, but keep local session intact.
     if (JwtHelper.isTokenExpired(refreshToken)) {
       final exp = JwtHelper.getTokenExpiration(refreshToken);
       if (exp != null) {
-        await localDataSource.clearAll();
         return false;
       }
     }
@@ -281,7 +284,6 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final refreshToken = await localDataSource.getRefreshToken();
       if (refreshToken == null) {
-        await localDataSource.clearAll();
         return const Left(AuthenticationFailure('No refresh token found'));
       }
 
@@ -304,7 +306,6 @@ class AuthRepositoryImpl implements AuthRepository {
               message.contains('jwt expired') ||
               message.contains('unauthorized');
           if (isRefreshAuthFailure) {
-            await localDataSource.clearAll();
             return Left(AuthenticationFailure(e.message));
           }
           return Left(ServerFailure(e.message));
