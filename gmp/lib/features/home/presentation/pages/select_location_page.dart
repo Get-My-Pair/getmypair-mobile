@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -113,7 +112,48 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   bool _isLoadingCurrent = false;
   bool _isSatelliteView = true;
   double _currentZoom = _initialZoom;
+  double _selectedRangeKm = 5;
+  static const List<double> _rangeOptionsKm = [1, 2, 5, 10, 15];
   final TextEditingController _searchController = TextEditingController();
+  final Distance _distance = const Distance();
+
+  static final List<_CobblerProfile> _allCobblers = [
+    _CobblerProfile(
+      id: 'cb1',
+      name: 'Krishna',
+      point: const LatLng(13.0872, 80.2756),
+      rating: 4.8,
+      isActive: true,
+    ),
+    _CobblerProfile(
+      id: 'cb2',
+      name: 'Mohan',
+      point: const LatLng(13.0908, 80.2623),
+      rating: 4.6,
+      isActive: true,
+    ),
+    _CobblerProfile(
+      id: 'cb3',
+      name: 'Shankar',
+      point: const LatLng(13.0751, 80.2814),
+      rating: 4.7,
+      isActive: true,
+    ),
+    _CobblerProfile(
+      id: 'cb4',
+      name: 'Ravi',
+      point: const LatLng(13.1128, 80.2441),
+      rating: 4.4,
+      isActive: false,
+    ),
+    _CobblerProfile(
+      id: 'cb5',
+      name: 'Suresh',
+      point: const LatLng(13.0462, 80.2387),
+      rating: 4.9,
+      isActive: true,
+    ),
+  ];
 
   @override
   void initState() {
@@ -129,13 +169,28 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     super.dispose();
   }
 
-  /// Offset [eastMeters] / [northMeters] from [base] (approximate).
-  static LatLng _offsetMeters(LatLng base, double eastMeters, double northMeters) {
-    const mPerDegLat = 111320.0;
-    final lat = base.latitude + northMeters / mPerDegLat;
-    final lon = base.longitude +
-        eastMeters / (mPerDegLat * math.cos(base.latitude * math.pi / 180));
-    return LatLng(lat, lon);
+  List<_NearbyCobbler> get _nearbyCobblers {
+    final query = _searchController.text.trim().toLowerCase();
+    final maxMeters = _selectedRangeKm * 1000;
+
+    final cobblers = _allCobblers
+        .where((c) => c.isActive)
+        .map(
+          (c) => _NearbyCobbler(
+            profile: c,
+            distanceMeters: _distance.as(LengthUnit.Meter, _markerPosition, c.point),
+          ),
+        )
+        .where((c) => c.distanceMeters <= maxMeters)
+        .where((c) => query.isEmpty || c.profile.name.toLowerCase().contains(query))
+        .toList()
+      ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+    return cobblers;
+  }
+
+  String _formatDistance(double meters) {
+    if (meters < 1000) return '${meters.round()} m';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
   Future<void> _initLocation() async {
@@ -278,6 +333,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   }
 
   void _showFilterSheet() {
+    final nearby = _nearbyCobblers;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -292,7 +348,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Nearby cobblers',
+                'Nearby cobblers (${_selectedRangeKm.toInt()} km)',
                 style: TextStyle(
                   fontSize: Responsive.fontSize(context, 18),
                   fontWeight: FontWeight.w700,
@@ -300,9 +356,40 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              _sheetRow('Krishna', '5.0'),
-              _sheetRow('Mohan', '5.0'),
-              _sheetRow('Shankar', '5.0'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _rangeOptionsKm
+                    .map(
+                      (km) => ChoiceChip(
+                        label: Text('${km.toInt()} km'),
+                        selected: _selectedRangeKm == km,
+                        onSelected: (_) {
+                          setState(() => _selectedRangeKm = km);
+                          Navigator.of(ctx).pop();
+                          _showFilterSheet();
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 14),
+              if (nearby.isEmpty)
+                Text(
+                  'No cobbler found in ${_selectedRangeKm.toInt()} km. Increase range and try again.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: Responsive.fontSize(context, 14),
+                  ),
+                )
+              else
+                ...nearby.map(
+                  (c) => _sheetRow(
+                    c.profile.name,
+                    c.profile.rating,
+                    _formatDistance(c.distanceMeters),
+                  ),
+                ),
             ],
           ),
         ),
@@ -322,7 +409,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     setState(() => _currentZoom = nextZoom);
   }
 
-  Widget _sheetRow(String name, String rating) {
+  Widget _sheetRow(String name, double rating, String distanceLabel) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -330,7 +417,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           Icon(Icons.person_outline_rounded, color: _tealButton, size: 22),
           const SizedBox(width: 12),
           Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w600))),
-          Text(rating, style: TextStyle(color: AppColors.textSecondary)),
+          Text(distanceLabel, style: TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(width: 8),
+          Text(rating.toStringAsFixed(1), style: TextStyle(color: AppColors.textSecondary)),
           const SizedBox(width: 4),
           Icon(Icons.star_rounded, size: 18, color: Colors.amber.shade700),
         ],
@@ -339,20 +428,14 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   }
 
   List<Marker> _buildCobblerMarkers() {
-    final base = _markerPosition;
-    final spots = <({String name, LatLng point})>[
-      (name: 'Krishna', point: _offsetMeters(base, 55, 75)),
-      (name: 'Mohan', point: _offsetMeters(base, -85, 40)),
-      (name: 'Shankar', point: _offsetMeters(base, 70, -65)),
-    ];
-    return spots
+    return _nearbyCobblers
         .map(
           (s) => Marker(
-            point: s.point,
+            point: s.profile.point,
             width: 132,
             height: 118,
             alignment: Alignment.bottomCenter,
-            child: _CobblerMapPin(name: s.name),
+            child: _CobblerMapPin(name: s.profile.name),
           ),
         )
         .toList();
@@ -532,7 +615,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                             decoration: InputDecoration(
                                               isDense: true,
                                               border: InputBorder.none,
-                                              hintText: 'Search',
+                                              hintText: 'Search cobbler',
                                               hintStyle: GoogleFonts.montserrat(
                                                 color: AppColors.textSecondary,
                                                 fontSize: Responsive.fontSize(context, 15),
@@ -645,7 +728,11 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                           CircleLayer(
                                             optimizeRadiusInMeters: true,
                                             circles: [
-                                              for (final r in [300.0, 200.0, 100.0])
+                                              for (final r in [
+                                                _selectedRangeKm * 1000,
+                                                _selectedRangeKm * 600,
+                                                _selectedRangeKm * 300,
+                                              ])
                                                 CircleMarker(
                                                   point: _markerPosition,
                                                   radius: r,
@@ -669,12 +756,12 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                         bottom: 10,
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: const [
-                                            _RingLabel('300m'),
-                                            SizedBox(height: 2),
-                                            _RingLabel('200m'),
-                                            SizedBox(height: 2),
-                                            _RingLabel('100m'),
+                                          children: [
+                                            _RingLabel('${_selectedRangeKm.toInt()}km'),
+                                            const SizedBox(height: 2),
+                                            _RingLabel('${(_selectedRangeKm * 0.6).toStringAsFixed(1)}km'),
+                                            const SizedBox(height: 2),
+                                            _RingLabel('${(_selectedRangeKm * 0.3).toStringAsFixed(1)}km'),
                                           ],
                                         ),
                                       ),
@@ -699,6 +786,10 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                   ),
                                 ),
                               ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(hPad, 10, hPad, 0),
+                              child: _buildNearbyCobblerStrip(),
                             ),
                             Padding(
                               padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 16),
@@ -805,6 +896,132 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       ),
     );
   }
+
+  Widget _buildNearbyCobblerStrip() {
+    final nearby = _nearbyCobblers;
+    if (nearby.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+        ),
+        child: Text(
+          'No cobbler found in ${_selectedRangeKm.toInt()} km. Change range to find nearby cobblers.',
+          style: GoogleFonts.montserrat(
+            fontSize: Responsive.fontSize(context, 12),
+            color: Colors.white.withValues(alpha: 0.95),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 78,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: nearby.length.clamp(0, 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final c = nearby[i];
+          return Container(
+            width: 176,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    c.profile.name[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: _titleNavy,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c.profile.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatDistance(c.distanceMeters),
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      c.profile.rating.toStringAsFixed(1),
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFD54F)),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CobblerProfile {
+  final String id;
+  final String name;
+  final LatLng point;
+  final double rating;
+  final bool isActive;
+
+  const _CobblerProfile({
+    required this.id,
+    required this.name,
+    required this.point,
+    required this.rating,
+    required this.isActive,
+  });
+}
+
+class _NearbyCobbler {
+  final _CobblerProfile profile;
+  final double distanceMeters;
+
+  const _NearbyCobbler({
+    required this.profile,
+    required this.distanceMeters,
+  });
 }
 
 class _RingLabel extends StatelessWidget {
