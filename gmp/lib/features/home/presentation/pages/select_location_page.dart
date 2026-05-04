@@ -138,11 +138,22 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     super.dispose();
   }
 
+  List<_CobblerProfile> _safeCobblersSnapshot() {
+    try {
+      // Web hot-reload can occasionally leave stale state objects; guard against it.
+      final cobblers = _allCobblers;
+      return List<_CobblerProfile>.from(cobblers);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   List<_NearbyCobbler> get _nearbyCobblers {
     final query = _searchController.text.trim().toLowerCase();
     final maxMeters = _selectedRangeKm * 1000;
+    final allCobblers = _safeCobblersSnapshot();
 
-    final cobblers = _allCobblers
+    final cobblers = allCobblers
         .where((c) => c.isActive)
         .map(
           (c) => _NearbyCobbler(
