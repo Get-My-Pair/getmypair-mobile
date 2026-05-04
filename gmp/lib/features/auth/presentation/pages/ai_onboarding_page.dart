@@ -810,8 +810,8 @@ class _Step extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final bodySize = screenWidth < 360 ? 20.0 : 23.0;
-    final titleSize = titleFontSize ?? (screenWidth < 360 ? 20.0 : 23.0);
+    final bodySize = screenWidth < 360 ? 19.0 : 22.0;
+    final titleSize = titleFontSize ?? (screenWidth < 360 ? 19.0 : 22.0);
     final bodyStyle = GoogleFonts.montserrat(
       color: const Color(0xFFDFE7E9),
       fontSize: bodySize,

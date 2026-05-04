@@ -132,11 +132,11 @@ EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
   // Scale bottom inset with width + safe-area so spacing feels consistent
   // across compact phones and larger screens.
   final widthFactor = ((w - 320.0) / 160.0).clamp(0.0, 1.0);
-  final baseBottom = 26.0 + (widthFactor * 10.0);
+  final baseBottom = 14.5 + (widthFactor * 6.3);
   final bottom = safeBottom <= 0
       ? baseBottom
-      : (baseBottom + (safeBottom * 1.0)).clamp(28.0, 56.0).toDouble();
-  return EdgeInsets.fromLTRB(side, 16, side, bottom);
+      : (baseBottom + (safeBottom * 0.72)).clamp(16.0, 36.0).toDouble();
+  return EdgeInsets.fromLTRB(side, 7, side, bottom);
 }
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
