@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -63,77 +62,6 @@ String _aiOnboardingTitle(int index) {
   }
 }
 
-List<int> _normPrefixLengths(String raw) {
-  final lens = List<int>.filled(raw.length + 1, 0);
-  for (var k = 0; k <= raw.length; k++) {
-    lens[k] = _normalizeSpeech(raw.substring(0, k)).length;
-  }
-  return lens;
-}
-
-/// Half-open range `[ns, ne)` in normalized [raw] → half-open raw indices.
-(int, int) _rawRangeForNormHalfOpen(String raw, List<int> lens, int ns, int ne) {
-  if (raw.isEmpty || ns >= ne) return (0, 0);
-  final maxN = lens[raw.length];
-  if (ns >= maxN) return (0, 0);
-  if (ne > maxN) ne = maxN;
-  if (ns >= ne) return (0, 0);
-  var start = 0;
-  for (var k = 0; k <= raw.length; k++) {
-    if (lens[k] > ns) {
-      start = k - 1;
-      if (start < 0) start = 0;
-      break;
-    }
-  }
-  var end = raw.length;
-  for (var k = 0; k <= raw.length; k++) {
-    if (lens[k] >= ne) {
-      end = k;
-      break;
-    }
-  }
-  if (start >= end) return (0, 0);
-  return (start, end);
-}
-
-int _titleNormStartInFull(String body, String title) {
-  final full = _normalizeSpeech('$body $title');
-  final bp = _normalizeSpeech(body);
-  if (full.startsWith(bp)) {
-    var i = bp.length;
-    while (i < full.length && full[i] == ' ') {
-      i++;
-    }
-    return i;
-  }
-  return bp.length.clamp(0, full.length);
-}
-
-TextSpan _readAlongSpanForSegment(
-  String raw,
-  TextStyle base,
-  TextStyle highlight,
-  int segNormLo,
-  int segNormHi,
-) {
-  if (segNormLo >= segNormHi || raw.isEmpty) {
-    return TextSpan(text: raw, style: base);
-  }
-  final lens = _normPrefixLengths(raw);
-  final range = _rawRangeForNormHalfOpen(raw, lens, segNormLo, segNormHi);
-  final a = range.$1;
-  final b = range.$2;
-  if (a >= b) return TextSpan(text: raw, style: base);
-  return TextSpan(
-    children: [
-      TextSpan(text: raw.substring(0, a), style: base),
-      TextSpan(text: raw.substring(a, b), style: highlight),
-      TextSpan(text: raw.substring(b), style: base),
-    ],
-  );
-}
-
 class AiOnboardingPage extends StatefulWidget {
   const AiOnboardingPage({
     super.key,
@@ -176,18 +104,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   /// Full utterance for the current page (used for Android resume after pause).
   String _fullUtterance = '';
 
-  int? _captionHighlightStart;
-  int? _captionHighlightEnd;
-
-  /// Android: progress offsets are relative to the current segment; sum prior segments here.
-  int _androidSpeakSegmentBase = 0;
-
-  /// Android: start index of the last reported word in the current segment (used when pause truncates text).
-  int _androidLastWordStart = 0;
-
-  bool get _isAndroid =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
   @override
   void initState() {
     super.initState();
@@ -219,23 +135,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           _ttsPaused = false;
         });
       });
-      _tts.setProgressHandler((String _, int start, int end, String _) {
-        if (!mounted) return;
-        setState(() {
-          _androidLastWordStart = start;
-          final base = _isAndroid ? _androidSpeakSegmentBase : 0;
-          _captionHighlightStart = base + start;
-          _captionHighlightEnd = base + end;
-        });
-      });
       _tts.setPauseHandler(() {
         if (!mounted) return;
         setState(() {
           _ttsPlaying = false;
           _ttsPaused = true;
-          if (_isAndroid) {
-            _androidSpeakSegmentBase += _androidLastWordStart;
-          }
         });
       });
       _tts.setContinueHandler(() {
@@ -250,10 +154,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         setState(() {
           _ttsPlaying = false;
           _ttsPaused = false;
-          _captionHighlightStart = null;
-          _captionHighlightEnd = null;
-          _androidSpeakSegmentBase = 0;
-          _androidLastWordStart = 0;
         });
       });
       _tts.setCancelHandler(() {
@@ -261,10 +161,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         setState(() {
           _ttsPlaying = false;
           _ttsPaused = false;
-          _captionHighlightStart = null;
-          _captionHighlightEnd = null;
-          _androidSpeakSegmentBase = 0;
-          _androidLastWordStart = 0;
         });
       });
       _tts.setErrorHandler((msg) {
@@ -273,8 +169,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
             _ttsPlaying = false;
             _ttsPaused = false;
             _ttsError = msg;
-            _captionHighlightStart = null;
-            _captionHighlightEnd = null;
           });
         }
       });
@@ -379,10 +273,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       setState(() {
         _ttsPlaying = false;
         _ttsPaused = false;
-        _captionHighlightStart = null;
-        _captionHighlightEnd = null;
-        _androidSpeakSegmentBase = 0;
-        _androidLastWordStart = 0;
       });
     }
   }
@@ -398,8 +288,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     final text = _speakableContentFor(_index);
     if (text.isEmpty) return;
     _fullUtterance = text;
-    _androidSpeakSegmentBase = 0;
-    _androidLastWordStart = 0;
     try {
       final result = await _tts.speak(text);
       if (result != 1 && mounted) {
@@ -436,10 +324,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     if (!mounted) return;
     setState(() {
       _fullUtterance = text;
-      _captionHighlightStart = null;
-      _captionHighlightEnd = null;
-      _androidSpeakSegmentBase = 0;
-      _androidLastWordStart = 0;
     });
     unawaited(_autoSpeakCurrentPage());
   }
@@ -487,10 +371,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     setState(() {
       _index = i;
       _fullUtterance = spoken;
-      _captionHighlightStart = null;
-      _captionHighlightEnd = null;
-      _androidSpeakSegmentBase = 0;
-      _androidLastWordStart = 0;
     });
     unawaited(_autoSpeakCurrentPage());
   }
@@ -581,9 +461,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     final steps = <Widget>[      _Step(
         text: _aiOnboardingBody(0, nick),
         title: _aiOnboardingTitle(0),
-        showReadAlong: _index == 0 && !kIsWeb && _ttsReady,
-        readNormStart: _captionHighlightStart,
-        readNormEnd: _captionHighlightEnd,
         child: _Input(
           controller: _name,
           hint: 'Enter nickname',
@@ -593,9 +470,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       _Step(
         text: _aiOnboardingBody(1, nick),
         title: _aiOnboardingTitle(1),
-        showReadAlong: _index == 1 && !kIsWeb && _ttsReady,
-        readNormStart: _captionHighlightStart,
-        readNormEnd: _captionHighlightEnd,
         child: Column(
           children: [
             _Input(
@@ -651,9 +525,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       _Step(
         text: _aiOnboardingBody(2, nick),
         title: _aiOnboardingTitle(2),
-        showReadAlong: _index == 2 && !kIsWeb && _ttsReady,
-        readNormStart: _captionHighlightStart,
-        readNormEnd: _captionHighlightEnd,
         child: _Checks(
           options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
           selected: _rack,
@@ -663,9 +534,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       _Step(
         text: _aiOnboardingBody(3, nick),
         title: _aiOnboardingTitle(3),
-        showReadAlong: _index == 3 && !kIsWeb && _ttsReady,
-        readNormStart: _captionHighlightStart,
-        readNormEnd: _captionHighlightEnd,
         child: _Checks(
           options: const [
             'Hard to find the right fit!',
@@ -680,23 +548,14 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       _Step(
         text: _aiOnboardingBody(4, nick),
         title: _aiOnboardingTitle(4),
-        showReadAlong: _index == 4 && !kIsWeb && _ttsReady,
-        readNormStart: _captionHighlightStart,
-        readNormEnd: _captionHighlightEnd,
       ),
       _Step(
         text: _aiOnboardingBody(5, nick),
         title: _aiOnboardingTitle(5),
-        showReadAlong: _index == 5 && !kIsWeb && _ttsReady,
-        readNormStart: _captionHighlightStart,
-        readNormEnd: _captionHighlightEnd,
       ),
       _Step(
         text: _aiOnboardingBody(6, nick),
         title: _aiOnboardingTitle(6),
-        showReadAlong: _index == 6 && !kIsWeb && _ttsReady,
-        readNormStart: _captionHighlightStart,
-        readNormEnd: _captionHighlightEnd,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -940,9 +799,6 @@ class _Step extends StatelessWidget {
     this.child,
     this.titleFontSize,
     this.titleTopSpacing,
-    this.showReadAlong = false,
-    this.readNormStart,
-    this.readNormEnd,
   });
 
   final String text;
@@ -950,9 +806,6 @@ class _Step extends StatelessWidget {
   final Widget? child;
   final double? titleFontSize;
   final double? titleTopSpacing;
-  final bool showReadAlong;
-  final int? readNormStart;
-  final int? readNormEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -965,13 +818,6 @@ class _Step extends StatelessWidget {
       fontWeight: FontWeight.w300,
       height: 1.25,
     );
-    final bodyHl = GoogleFonts.montserrat(
-      color: const Color(0xFF061F40),
-      fontSize: bodySize,
-      fontWeight: FontWeight.w600,
-      height: 1.25,
-      backgroundColor: const Color(0xCCFFD54F),
-    );
     final titleStyle = GoogleFonts.boldonse(
       color: const Color(0xFFDFE7E9),
       fontSize: titleSize,
@@ -979,55 +825,9 @@ class _Step extends StatelessWidget {
       letterSpacing: 0.2,
       height: 1.59,
     );
-    final titleHl = GoogleFonts.boldonse(
-      color: const Color(0xFF061F40),
-      fontSize: titleSize,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 0.2,
-      height: 1.59,
-      backgroundColor: const Color(0xCCFFD54F),
-    );
 
-    late final Widget bodyWidget;
-    late final Widget titleWidget;
-    final ns = readNormStart;
-    final ne = readNormEnd;
-    if (showReadAlong && ns != null && ne != null && ns < ne) {
-      final full = _normalizeSpeech('$text $title');
-      final bn = _normalizeSpeech(text).length;
-      final t0 = _titleNormStartInFull(text, title);
-      final cap = full.length;
-
-      final bLo = ns.clamp(0, bn);
-      final bHi = ne.clamp(0, bn);
-
-      final tLo = ns.clamp(t0, cap);
-      final tHi = ne.clamp(t0, cap);
-      final locNs = tLo - t0;
-      final locNe = tHi - t0;
-
-      bodyWidget = Text.rich(
-        _readAlongSpanForSegment(
-          text,
-          bodyStyle,
-          bodyHl,
-          bLo,
-          bHi,
-        ),
-      );
-      titleWidget = Text.rich(
-        _readAlongSpanForSegment(
-          title,
-          titleStyle,
-          titleHl,
-          locNs,
-          locNe,
-        ),
-      );
-    } else {
-      bodyWidget = Text(text, style: bodyStyle);
-      titleWidget = Text(title, style: titleStyle);
-    }
+    final bodyWidget = Text(text, style: bodyStyle);
+    final titleWidget = Text(title, style: titleStyle);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
