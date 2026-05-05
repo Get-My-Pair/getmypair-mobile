@@ -194,6 +194,19 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
+  String _currentUserRole() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) return authState.user.role.toLowerCase().trim();
+    if (authState is AuthProfileCompleted) return authState.user.role.toLowerCase().trim();
+    return '';
+  }
+
+  bool _canFetchNearbyCobblersForRole(String role) {
+    // Project roles: user / cobbler / admin.
+    // Nearby map can be opened by these authenticated roles.
+    return role == 'user' || role == 'cobbler' || role == 'admin';
+  }
+
   Future<void> _initLocation() async {
     try {
       final enabled = await Geolocator.isLocationServiceEnabled();
@@ -1100,6 +1113,16 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     });
 
     try {
+      final role = _currentUserRole();
+      if (!_canFetchNearbyCobblersForRole(role)) {
+        if (!mounted) return;
+        setState(() {
+          _allCobblers = const [];
+          _cobblerLoadError = 'Nearby cobblers are unavailable for this account.';
+        });
+        return;
+      }
+
       final tokenResult = await sl<GetValidAccessToken>().call();
       final token = tokenResult.fold((_) => null, (t) => t);
       if (token == null) {
@@ -1154,14 +1177,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       if (!mounted) return;
       var userMsg = e.message;
       if (e.statusCode == 403) {
-        final s = context.read<AuthBloc>().state;
-        final role = s is AuthAuthenticated
-            ? s.user.role.toLowerCase()
-            : s is AuthProfileCompleted
-                ? s.user.role.toLowerCase()
-                : '';
-        if (role == 'cobbler') {
-          userMsg = 'Nearby cobblers are only listed for customer accounts.';
+        final role = _currentUserRole();
+        if (role == 'user' || role == 'cobbler' || role == 'admin') {
+          userMsg = 'Access denied while loading nearby cobblers. Please sign in again.';
         }
       }
       setState(() {

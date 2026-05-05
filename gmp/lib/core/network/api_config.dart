@@ -1,4 +1,4 @@
-import 'api_endpoints.dart';
+import '../constants/api_endpoints.dart';
 
 /// Legacy scaffolding — **not wired** in [injection_container] (app uses [ApiEndpoints] + [DioClient]).
 /// [baseUrl] tracks the same backend as [ApiEndpoints] so accidental use is not pointed at a dead host.
