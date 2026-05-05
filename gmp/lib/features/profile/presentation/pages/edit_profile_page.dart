@@ -188,22 +188,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
     h += sx(100, 72, 100);
     h += sx(20, 10, 22);
     for (var i = 0; i < 5; i++) {
-      h += sx(15, 11, 14);
-      h += sx(8, 4, 8);
-      final v = sx(11, 7, 11);
-      final t = sx(14, 11, 14);
+      h += sx(16, 12, 16) * 1.2;
+      h += sx(6, 3, 6);
+      final v = sx(11, 8, 11);
+      final t = sx(16, 12, 16);
       final hasSuffix = i == 4;
       final icon = hasSuffix ? sx(32, 24, 32) : 0.0;
       final base = 2 * v + t * 1.28;
       h += (hasSuffix ? (base > icon ? base : icon) : base) + 6;
-      h += sx(12, 7, 14);
+      h += sx(20, 10, 20);
     }
     h += sx(18, 10, 20);
-    h += sx(15, 11, 14);
+    h += sx(15, 12, 16) * 1.2;
     h += sx(8, 4, 8);
     h += sx(14, 11, 14) * 1.2;
     h += sx(20, 8, 16);
-    h += sx(15, 11, 14);
+    h += sx(14, 11, 14) * 1.2;
     h += sx(6, 3, 6);
     h += sx(14, 11, 14) * 1.2;
     h += sx(16, 10, 20);
@@ -371,9 +371,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           var contentScale = uiScale.clamp(0.48, 1.08);
                           for (var i = 0; i < 22; i++) {
                             final padTop =
-                                statusTop + 30;
+                                statusTop + (30 * contentScale).clamp(14.0, 30.0);
                             final padBottom =
-                                (72 * contentScale).clamp(22.0, 84.0);
+                                (6 * contentScale).clamp(0.0, 6.0);
                             final innerH =
                                 constraints.maxHeight - padTop - padBottom;
                             if (innerH <= 80) break;
@@ -381,17 +381,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 _estimateEditProfileColumnHeight(contentScale);
                             if (need <= innerH - 2) break;
                             contentScale *= (innerH / need) * 0.995;
-                            if (contentScale < 0.44) {
-                              contentScale = 0.44;
+                            if (contentScale < 0.40) {
+                              contentScale = 0.40;
                               break;
                             }
                           }
-                          contentScale = contentScale.clamp(0.44, uiScale);
+                          contentScale = contentScale.clamp(0.40, uiScale);
 
                           final padTop =
-                              statusTop + 30;
+                              statusTop + (30 * contentScale).clamp(14.0, 30.0);
                           final padBottom =
-                              (72 * contentScale).clamp(22.0, 84.0);
+                              (6 * contentScale).clamp(0.0, 6.0);
+                          final labelToFieldSpace =
+                              (6 * contentScale).clamp(3.0, 6.0);
+                          final fieldGroupSpace =
+                              (20 * contentScale).clamp(10.0, 20.0);
 
                           return Padding(
                             padding: EdgeInsets.fromLTRB(
@@ -415,18 +419,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                                 _buildLabel('Full Name', contentScale),
                                 SizedBox(
-                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                  height: labelToFieldSpace,
                                 ),
                                 _profileField(
                                   controller: _nameController,
                                   scale: contentScale,
                                 ),
                                 SizedBox(
-                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                  height: fieldGroupSpace,
                                 ),
                                 _buildLabel('Nick Name', contentScale),
                                 SizedBox(
-                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                  height: labelToFieldSpace,
                                 ),
                                 _profileField(
                                   controller: _nickNameController,
@@ -434,11 +438,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   scale: contentScale,
                                 ),
                                 SizedBox(
-                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                  height: fieldGroupSpace,
                                 ),
                                 _buildLabel('Phone Number', contentScale),
                                 SizedBox(
-                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                  height: labelToFieldSpace,
                                 ),
                                 _profileField(
                                   controller: _phoneController,
@@ -446,11 +450,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   scale: contentScale,
                                 ),
                                 SizedBox(
-                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                  height: fieldGroupSpace,
                                 ),
                                 _buildLabel('E-Mail Address', contentScale),
                                 SizedBox(
-                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                  height: labelToFieldSpace,
                                 ),
                                 _profileField(
                                   controller: _emailController,
@@ -458,17 +462,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   scale: contentScale,
                                 ),
                                 SizedBox(
-                                  height: (12 * contentScale).clamp(7.0, 14.0),
+                                  height: fieldGroupSpace,
                                 ),
                                 _buildLabel('Password', contentScale),
                                 SizedBox(
-                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                  height: labelToFieldSpace,
                                 ),
                                 _profileField(
                                   controller: _passwordController,
                                   readOnly: true,
                                   obscureText: !_showPassword,
                                   scale: contentScale,
+                                  verticalPaddingScaleFactor: 0.52,
                                   suffix: IconButton(
                                     onPressed: () => setState(
                                       () => _showPassword = !_showPassword,
@@ -541,13 +546,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                                 SizedBox(
                                   height:
-                                      (16 * contentScale).clamp(10.0, 20.0),
+                                      (4 * contentScale).clamp(0.0, 4.0),
                                 ),
                                 Align(
-                                  alignment: Alignment.centerRight,
-                                  child: _buildSaveChangesButton(
-                                    scale: contentScale,
-                                    isBusy: isLoading,
+                                  alignment: Alignment.center,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                          (8 * contentScale).clamp(4.0, 12.0),
+                                    ),
+                                    child: _buildSaveChangesButton(
+                                      scale: contentScale,
+                                      isBusy: isLoading,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -676,10 +687,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Text(
       text,
       style: GoogleFonts.montserrat(
-        fontSize: (15 * scale).clamp(11.0, 14.0),
+        fontSize: (16 * scale).clamp(12.0, 16.0),
         fontWeight: FontWeight.w400,
         color: Colors.white,
-        height: 1,
       ),
     );
   }
@@ -691,6 +701,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     Widget? suffix,
     TextInputType? keyboardType,
     double scale = 1.0,
+    double verticalPaddingScaleFactor = 1.0,
   }) {
     final radius = BorderRadius.circular(100);
     final glassTint = readOnly
@@ -723,8 +734,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
             obscureText: obscureText,
             keyboardType: keyboardType,
             style: GoogleFonts.montserrat(
-              fontSize: (13 * scale).clamp(10.0, 13.0),
-              fontWeight: FontWeight.w500,
+              fontSize: (16 * scale).clamp(12.0, 16.0),
+              fontWeight: FontWeight.w400,
               color: const Color(0xF2FFFFFF),
             ),
             decoration: InputDecoration(
@@ -732,8 +743,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               fillColor: Colors.transparent,
               isDense: true,
               contentPadding: EdgeInsets.symmetric(
-                horizontal: (18 * scale).clamp(12.0, 18.0),
-                vertical: (10 * scale).clamp(7.0, 10.0),
+                horizontal: (16 * scale).clamp(12.0, 16.0),
+                vertical: (11 * scale * verticalPaddingScaleFactor)
+                    .clamp(4.0, 11.0),
               ),
               suffixIcon: suffix,
               suffixIconConstraints: BoxConstraints(
@@ -783,6 +795,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final fontSize = (14 * scale).clamp(12.0, 14.0);
     final btnHeight = (50 * scale).clamp(44.0, 52.0);
     final indicator = (22 * scale).clamp(18.0, 22.0);
+    final minWidth = (210 * scale).clamp(170.0, 240.0);
 
     return ElevatedButton(
       onPressed: isBusy ? null : _saveChanges,
@@ -796,7 +809,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         padding: EdgeInsets.symmetric(
           horizontal: (24 * scale).clamp(18.0, 28.0),
         ),
-        minimumSize: Size(0, btnHeight),
+        minimumSize: Size(minWidth, btnHeight),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(100),

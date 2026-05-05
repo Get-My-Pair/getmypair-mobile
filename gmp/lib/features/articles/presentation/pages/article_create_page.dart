@@ -262,61 +262,17 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 const SizedBox(height: 20),
                 _dropdownWithLabel('Category', _category, _categories, (v) => setState(() => _category = v!)),
                 const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _submitting ? null : _pickImages,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF12899B),
-                      disabledBackgroundColor: Colors.white70,
-                      disabledForegroundColor: const Color(0xFF12899B),
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                      side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
-                    ),
-                    child: const Text(
-                      'Upload Footwear',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontFamily: _headingFontFamily,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
+                _buildActionButton(
+                  label: 'Upload Footwear',
+                  onPressed: _pickImages,
+                  isBusy: _submitting,
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF12899B),
-                      disabledBackgroundColor: Colors.white70,
-                      disabledForegroundColor: const Color(0xFF12899B),
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                      side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
-                    ),
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF12899B),
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Save Footwear',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontFamily: _headingFontFamily,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                  ),
+                _buildActionButton(
+                  label: 'Save Footwear',
+                  onPressed: _submit,
+                  isBusy: _submitting,
+                  showLoader: true,
                 ),
                 ],
               ),
@@ -717,6 +673,55 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required VoidCallback onPressed,
+    required bool isBusy,
+    bool showLoader = false,
+  }) {
+    const teal = Color(0xFF12899B);
+    const cyanBorder = Color(0xFF09DFFF);
+
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        onPressed: isBusy ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: teal,
+          disabledBackgroundColor: Colors.white,
+          disabledForegroundColor: teal,
+          elevation: 2,
+          shadowColor: Colors.black26,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          minimumSize: const Size(0, 50),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(100),
+            side: const BorderSide(color: cyanBorder, width: 1),
+          ),
+        ),
+        child: showLoader && isBusy
+            ? const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(
+                  color: teal,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                label,
+                style: GoogleFonts.boldonse(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: teal,
+                ),
+              ),
+      ),
     );
   }
 }

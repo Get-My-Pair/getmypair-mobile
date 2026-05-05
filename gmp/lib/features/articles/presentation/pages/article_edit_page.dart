@@ -368,72 +368,24 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                 (v) => setState(() => _category = v ?? _category),
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _submitting
-                      ? null
-                      : () async {
-                          if (!context.mounted) return;
-                          await showAppFeedbackAlert(
-                            context,
-                            message: 'Upload flow will be added in next step',
-                            type: AppFeedbackType.info,
-                          );
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF12899B),
-                    disabledBackgroundColor: Colors.white70,
-                    disabledForegroundColor: const Color(0xFF12899B),
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
-                  ),
-                  child: const Text(
-                    'Upload Footwear',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: _headingFontFamily,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
+              _buildActionButton(
+                label: 'Upload Footwear',
+                isBusy: _submitting,
+                onPressed: () async {
+                  if (!context.mounted) return;
+                  await showAppFeedbackAlert(
+                    context,
+                    message: 'Upload flow will be added in next step',
+                    type: AppFeedbackType.info,
+                  );
+                },
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _submitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF12899B),
-                    disabledBackgroundColor: Colors.white70,
-                    disabledForegroundColor: const Color(0xFF12899B),
-                    side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 14,
-                      fontFamily: _headingFontFamily,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF12899B),
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text('Save Footwear'),
-                ),
+              _buildActionButton(
+                label: 'Save Footwear',
+                isBusy: _submitting,
+                onPressed: _submit,
+                showLoader: true,
               ),
             ],
           ),
@@ -732,6 +684,55 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             );
           }),
       ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required bool isBusy,
+    required VoidCallback onPressed,
+    bool showLoader = false,
+  }) {
+    const teal = Color(0xFF12899B);
+    const cyanBorder = Color(0xFF09DFFF);
+
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        onPressed: isBusy ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: teal,
+          disabledBackgroundColor: Colors.white,
+          disabledForegroundColor: teal,
+          elevation: 2,
+          shadowColor: Colors.black26,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          minimumSize: const Size(0, 50),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(100),
+            side: const BorderSide(color: cyanBorder, width: 1),
+          ),
+        ),
+        child: showLoader && isBusy
+            ? const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(
+                  color: teal,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                label,
+                style: GoogleFonts.boldonse(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: teal,
+                ),
+              ),
+      ),
     );
   }
 }
