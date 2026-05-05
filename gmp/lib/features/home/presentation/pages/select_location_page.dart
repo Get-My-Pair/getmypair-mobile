@@ -196,15 +196,27 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
 
   String _currentUserRole() {
     final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) return authState.user.role.toLowerCase().trim();
-    if (authState is AuthProfileCompleted) return authState.user.role.toLowerCase().trim();
+    if (authState is AuthAuthenticated) {
+      return authState.user.role.toLowerCase().trim();
+    }
+    if (authState is AuthProfileCompleted) {
+      return authState.user.role.toLowerCase().trim();
+    }
     return '';
   }
 
+  String _normalizeRole(String role) {
+    final r = role.toLowerCase().trim();
+    if (r == 'cobber') return 'cobbler';
+    if (r == 'customer') return 'user';
+    return r;
+  }
+
   bool _canFetchNearbyCobblersForRole(String role) {
-    // Project roles: user / cobbler / admin.
-    // Nearby map can be opened by these authenticated roles.
-    return role == 'user' || role == 'cobbler' || role == 'admin';
+    final normalized = _normalizeRole(role);
+    // Do not block unknown/empty role locally; let backend decide.
+    if (normalized.isEmpty) return true;
+    return normalized == 'user' || normalized == 'cobbler' || normalized == 'admin';
   }
 
   Future<void> _initLocation() async {
@@ -1113,7 +1125,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     });
 
     try {
-      final role = _currentUserRole();
+      final role = _normalizeRole(_currentUserRole());
       if (!_canFetchNearbyCobblersForRole(role)) {
         if (!mounted) return;
         setState(() {
@@ -1177,7 +1189,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       if (!mounted) return;
       var userMsg = e.message;
       if (e.statusCode == 403) {
-        final role = _currentUserRole();
+        final role = _normalizeRole(_currentUserRole());
         if (role == 'user' || role == 'cobbler' || role == 'admin') {
           userMsg = 'Access denied while loading nearby cobblers. Please sign in again.';
         }
