@@ -484,7 +484,7 @@ class _HomePageState extends State<HomePage> {
                                         28.0,
                                       );
                                       final rackCardTopPaddingLoose =
-                                          (24 * layoutScale).clamp(16.0, 26.0);
+                                          (64 * layoutScale).clamp(16.0, 26.0);
                                       final rackCardBottomPadding =
                                           (7 * layoutScale).clamp(5.0, 7.0);
                                       final showRackThumbs = !_rackLoading &&
@@ -1369,22 +1369,12 @@ class _HomeTopCard extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            SizedBox(
-                              width: (24 * s).clamp(14.0, 24.0),
-                              height: (24 * s).clamp(14.0, 24.0),
-                              child: Image.network(
-                                FigmaHomeAssets.search,
-                                fit: BoxFit.contain,
-                                color: _kSearchHintColor,
-                                colorBlendMode: BlendMode.srcIn,
-                                errorBuilder: (_, _, _) => Icon(
-                                  Icons.search,
-                                  size: (24 * s).clamp(14.0, 24.0),
-                                  color: _kSearchHintColor,
-                                ),
-                              ),
+                            SvgPicture.asset(
+                              'assets/images/search.svg',
+                              width: 22,
+                              height: 22,
                             ),
-                            SizedBox(width: 10 * s),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 'Search',
