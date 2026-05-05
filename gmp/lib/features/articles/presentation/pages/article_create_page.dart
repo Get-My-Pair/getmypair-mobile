@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
@@ -27,38 +28,13 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   static const String _headingFontFamily = 'Boldonse';
   static const String _contentFontFamily = 'Montserrat';
   final _formKey = GlobalKey<FormState>();
+  final _modelController = TextEditingController(text: 'Air Max');
+  final _brandController = TextEditingController(text: 'Nike');
   final _colorController = TextEditingController();
 
-  String _brand = 'Nike';
-  String _model = 'Air Max';
   String _category = 'sports_shoe';
   String _condition = 'good';
   int? _purchaseYear;
-
-  static const List<String> _brands = [
-    'Nike',
-    'Adidas',
-    'Puma',
-    'New Balance',
-    'Converse',
-    'Reebok',
-    'Asics',
-    'Vans',
-    'Jordan',
-    'Skechers',
-  ];
-  static const List<String> _models = [
-    'Air Max',
-    'Stan Smith',
-    'Classic',
-    'Runner',
-    'Sneaker',
-    'Chuck Taylor',
-    'Ultraboost',
-    'Gel-Kayano',
-    'Old Skool',
-    'Pegasus',
-  ];
   static const List<String> _materialTypes = [
     'Leather',
     'Synthetic leather',
@@ -95,6 +71,8 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
 
   @override
   void dispose() {
+    _modelController.dispose();
+    _brandController.dispose();
     _colorController.dispose();
     super.dispose();
   }
@@ -149,8 +127,8 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
 
           // Create article first (API requires article to exist before upload-image)
           final article = await sl<CreateArticle>().call(token,
-            brand: _brand,
-            model: _model,
+            brand: _brandController.text.trim(),
+            model: _modelController.text.trim(),
             category: _category,
             color: _colorController.text.trim(),
             purchaseYear: _purchaseYear,
@@ -216,10 +194,21 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 Row(
                   children: [
                     IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                       onPressed: _submitting ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 22),
+                      icon: SvgPicture.asset(
+                        'assets/images/chevron-left.svg',
+                        width: 24,
+                        height: 24,
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                     Expanded(
                       child: Text(
                         'Add New Footwear',
@@ -248,22 +237,31 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                     ),
                   ),
                 ],
-                _modelDropdown(),
-                const SizedBox(height: 14),
-                _brandDropdown(),
-                const SizedBox(height: 14),
+                _field(
+                  _modelController,
+                  'Name your footwear',
+                  placeholder: 'Nike Shoes',
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: 20),
+                _field(
+                  _brandController,
+                  'Brand',
+                  placeholder: 'Nike',
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: 20),
                 _purchaseYearDropdown(),
-                const SizedBox(height: 14),
-                _field(_colorController, 'Colour', textCapitalization: TextCapitalization.words),
-                const SizedBox(height: 14),
+                const SizedBox(height: 20),
+                _field(
+                  _colorController,
+                  'Colour',
+                  placeholder: 'Denim',
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: 20),
                 _dropdownWithLabel('Category', _category, _categories, (v) => setState(() => _category = v!)),
-                const SizedBox(height: 14),
-                _dropdownWithLabel('Condition', _condition, _conditions, (v) => setState(() => _condition = v!)),
-                const SizedBox(height: 14),
-                _materialsSection(horizontal),
-                const SizedBox(height: 18),
-                _imagesSection(),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
@@ -271,7 +269,9 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF12899B),
-                      elevation: 2,
+                      disabledBackgroundColor: Colors.white70,
+                      disabledForegroundColor: const Color(0xFF12899B),
+                      elevation: 1,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                       side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
                     ),
@@ -291,9 +291,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                   child: ElevatedButton(
                     onPressed: _submitting ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _submitting ? const Color(0xFFABABAB) : const Color(0xFFABABAB),
-                      foregroundColor: const Color(0xFF5A5A5A),
-                      elevation: 2,
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF12899B),
+                      disabledBackgroundColor: Colors.white70,
+                      disabledForegroundColor: const Color(0xFF12899B),
+                      elevation: 1,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                       side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
                     ),
@@ -302,7 +304,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                             height: 22,
                             width: 22,
                             child: CircularProgressIndicator(
-                              color: Color(0xFF5A5A5A),
+                              color: Color(0xFF12899B),
                               strokeWidth: 2,
                             ),
                           )
@@ -328,6 +330,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   Widget _field(
     TextEditingController ctrl,
     String hint, {
+    String? placeholder,
     TextInputType? keyboardType,
     TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
@@ -338,10 +341,9 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           padding: const EdgeInsets.only(left: 2, bottom: 6),
           child: Text(
             hint,
-            style: const TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 16,
               color: Colors.white,
-              fontFamily: _contentFontFamily,
             ),
           ),
         ),
@@ -350,84 +352,12 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             controller: ctrl,
             keyboardType: keyboardType,
             textCapitalization: textCapitalization,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontFamily: _contentFontFamily,
-            ),
-            decoration: _glassInputDecoration(),
+            style: _inputTextStyle(),
+            decoration: _glassInputDecoration(hintText: placeholder),
             validator: (v) {
               if (hint.startsWith('Purchase')) return null;
               return (v == null || v.trim().isEmpty) ? 'Required' : null;
             },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _brandDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            'Brand',
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-              fontFamily: _contentFontFamily,
-            ),
-          ),
-        ),
-        _glassInputShell(
-          child: DropdownButtonFormField<String>(
-            value: _brand,
-            decoration: _glassInputDecoration(),
-            dropdownColor: const Color(0xFF0D5B68),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontFamily: _contentFontFamily,
-            ),
-            iconEnabledColor: Colors.white,
-            items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-            onChanged: (v) => setState(() => _brand = v ?? _brands.first),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _modelDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            'Name your footwear',
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-              fontFamily: _contentFontFamily,
-            ),
-          ),
-        ),
-        _glassInputShell(
-          child: DropdownButtonFormField<String>(
-            value: _model,
-            decoration: _glassInputDecoration(),
-            dropdownColor: const Color(0xFF0D5B68),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontFamily: _contentFontFamily,
-            ),
-            iconEnabledColor: Colors.white,
-            items: _models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-            onChanged: (v) => setState(() => _model = v ?? _models.first),
           ),
         ),
       ],
@@ -471,16 +401,14 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             onTap: _submitting ? null : _openPurchaseYearPicker,
             borderRadius: BorderRadius.circular(100),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       _purchaseYear?.toString() ?? 'Not specified',
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: _inputTextStyle(
                         color: _purchaseYear != null ? Colors.white : Colors.white70,
-                        fontFamily: _contentFontFamily,
                       ),
                     ),
                   ),
@@ -490,7 +418,8 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                       onPressed: _submitting ? null : () => setState(() => _purchaseYear = null),
                       style: IconButton.styleFrom(
                         padding: EdgeInsets.zero,
-                        minimumSize: const Size(32, 32),
+                        minimumSize: const Size(24, 24),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     )
                   else
@@ -560,8 +489,14 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     );
   }
 
-  InputDecoration _glassInputDecoration() {
+  InputDecoration _glassInputDecoration({String? hintText}) {
     return InputDecoration(
+      isDense: true,
+      hintText: hintText,
+      hintStyle: GoogleFonts.montserrat(
+        color: Colors.white70,
+        fontSize: 16,
+      ),
       filled: true,
       fillColor: Colors.transparent,
       border: OutlineInputBorder(
@@ -576,7 +511,14 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
         borderRadius: BorderRadius.circular(100),
         borderSide: BorderSide.none,
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+    );
+  }
+
+  TextStyle _inputTextStyle({Color color = Colors.white, double fontSize = 16}) {
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: fontSize,
     );
   }
 
@@ -652,7 +594,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
                       dropdownColor: Color(0xFF0D5B68),
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
                         fontFamily: _contentFontFamily,
@@ -678,10 +620,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                     child: TextFormField(
                       initialValue: _materials[i]['percentage']?.toString() ?? '',
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '%',
                         filled: true,
-                        hintStyle: TextStyle(color: Colors.white70),
+                        hintStyle: GoogleFonts.montserrat(color: Colors.white70),
                         fillColor: Color(0x2BFFFFFF),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(100)),
@@ -693,10 +635,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                         ),
                         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontFamily: _contentFontFamily,
-                      ),
+                      style: _inputTextStyle(),
                       onChanged: (v) => _materials[i]['percentage'] = int.tryParse(v) ?? 0,
                     ),
                   ),

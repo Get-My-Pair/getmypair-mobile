@@ -41,32 +41,6 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
   final List<Map<String, dynamic>> _materials = [];
 
-  static const List<String> _brands = [
-    'Nike',
-    'Adidas',
-    'Puma',
-    'New Balance',
-    'Converse',
-    'Reebok',
-    'Asics',
-    'Vans',
-    'Jordan',
-    'Skechers',
-  ];
-
-  static const List<String> _models = [
-    'Air Max',
-    'Stan Smith',
-    'Classic',
-    'Runner',
-    'Sneaker',
-    'Chuck Taylor',
-    'Ultraboost',
-    'Gel-Kayano',
-    'Old Skool',
-    'Pegasus',
-  ];
-
   static const List<Map<String, String>> _categories = [
     {'value': 'sports_shoe', 'label': 'Sports shoe'},
     {'value': 'casual', 'label': 'Casual'},
@@ -122,8 +96,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             _loading = false;
             _error = null;
 
-            _brand = _brands.contains(article.brand) ? article.brand : _brands.first;
-            _model = _models.contains(article.model) ? article.model : _models.first;
+            _brand = article.brand;
+            _model = article.model;
             _category = article.category;
             _condition = article.condition.isNotEmpty ? article.condition : 'good';
             _color = article.color;
@@ -232,12 +206,12 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
           title: 'Edit Shoe',
           leading: IconButton(
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
             visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
             icon: SvgPicture.asset(
               'assets/images/chevron-left.svg',
-              width: 24,
-              height: 24,
+              width: 28,
+              height: 28,
               colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
             onPressed: () => Navigator.pop(context),
@@ -267,12 +241,12 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
           title: 'Edit Shoe',
           leading: IconButton(
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
             visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
             icon: SvgPicture.asset(
               'assets/images/chevron-left.svg',
-              width: 24,
-              height: 24,
+              width: 28,
+              height: 28,
               colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
             onPressed: () => Navigator.pop(context),
@@ -337,13 +311,13 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                 children: [
                   IconButton(
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+                    constraints: const BoxConstraints.tightFor(width: 30, height: 30),
                     visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                     onPressed: _submitting ? null : () => Navigator.pop(context),
                     icon: SvgPicture.asset(
                       'assets/images/chevron-left.svg',
-                      width: 24,
-                      height: 24,
+                      width: 28,
+                      height: 28,
                       colorFilter: const ColorFilter.mode(
                         Colors.white,
                         BlendMode.srcIn,
@@ -380,46 +354,52 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                 ),
               ],
               _modelField(),
-              const SizedBox(height: 16),
-              _brandDropdown(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+              _brandField(),
+              const SizedBox(height: 20),
               _purchaseYearField(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               _colorField(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               _dropdownWithLabel(
                 'Category',
                 _category,
                 _categories,
                 (v) => setState(() => _category = v ?? _category),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 24),
               SizedBox(
                 height: 50,
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: _submitting
                       ? null
-                      : () {
-                          showAppFeedbackAlert(
+                      : () async {
+                          if (!context.mounted) return;
+                          await showAppFeedbackAlert(
                             context,
                             message: 'Upload flow will be added in next step',
                             type: AppFeedbackType.info,
                           );
                         },
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.95),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF12899B),
-                    side: const BorderSide(color: Color(0xFF09DFFF)),
+                    disabledBackgroundColor: Colors.white70,
+                    disabledForegroundColor: const Color(0xFF12899B),
+                    elevation: 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(100),
                     ),
-                    textStyle: const TextStyle(
+                    side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
+                  ),
+                  child: const Text(
+                    'Upload Footwear',
+                    style: TextStyle(
                       fontSize: 14,
                       fontFamily: _headingFontFamily,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
-                  child: const Text('Upload Footwear'),
                 ),
               ),
               const SizedBox(height: 24),
@@ -428,11 +408,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                 child: ElevatedButton(
                   onPressed: _submitting ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFABABAB),
-                    foregroundColor: const Color(0xFF5A5A5A),
-                    disabledBackgroundColor: const Color(0xFFABABAB),
-                    disabledForegroundColor: const Color(0xFF5A5A5A),
-                    side: const BorderSide(color: Color(0xFF09DFFF)),
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF12899B),
+                    disabledBackgroundColor: Colors.white70,
+                    disabledForegroundColor: const Color(0xFF12899B),
+                    side: const BorderSide(color: Color(0xFF09DFFF), width: 1),
                     elevation: 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(100),
@@ -448,7 +428,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                           height: 22,
                           width: 22,
                           child: CircularProgressIndicator(
-                            color: Color(0xFF5A5A5A),
+                            color: Color(0xFF12899B),
                             strokeWidth: 2,
                           ),
                         )
@@ -485,11 +465,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
       child: TextFormField(
         initialValue: _model,
         textCapitalization: TextCapitalization.words,
-        style: const TextStyle(
-          fontSize: 16,
-          color: Colors.white,
-          fontFamily: _contentFontFamily,
-        ),
+        style: _inputTextStyle(),
         decoration: _glassInputDecoration(hintText: 'Nike Shoes'),
         onChanged: (v) => _model = v.trim(),
         validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -497,21 +473,16 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     );
   }
 
-  Widget _brandDropdown() {
+  Widget _brandField() {
     return _glassFieldShell(
       label: 'Brand',
-      child: DropdownButtonFormField<String>(
-        value: _brand,
-        iconEnabledColor: Colors.white,
-        dropdownColor: const Color(0xFF0C5B67),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontFamily: _contentFontFamily,
-        ),
-        decoration: _glassInputDecoration(),
-        items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-        onChanged: (v) => setState(() => _brand = v ?? _brands.first),
+      child: TextFormField(
+        initialValue: _brand,
+        textCapitalization: TextCapitalization.words,
+        style: _inputTextStyle(),
+        decoration: _glassInputDecoration(hintText: 'Nike'),
+        onChanged: (v) => _brand = v.trim(),
+        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
       ),
     );
   }
@@ -521,14 +492,12 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 6),
+          padding: const EdgeInsets.only(left: 2, bottom: 6),
           child: Text(
             label,
-            style: const TextStyle(
+            style: GoogleFonts.montserrat(
               color: Colors.white,
               fontSize: 16,
-              fontWeight: FontWeight.w400,
-              fontFamily: _contentFontFamily,
             ),
           ),
         ),
@@ -539,17 +508,21 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
   InputDecoration _glassInputDecoration({String? hintText, Widget? suffixIcon}) {
     return InputDecoration(
+      isDense: true,
       hintText: hintText,
-      hintStyle: const TextStyle(
+      hintStyle: GoogleFonts.montserrat(
         color: Colors.white70,
         fontSize: 16,
-        fontFamily: _contentFontFamily,
       ),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.10),
-      errorStyle: const TextStyle(color: Colors.white),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      fillColor: Colors.transparent,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       suffixIcon: suffixIcon,
+      suffixIconConstraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(100),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+      ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(100),
         borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
@@ -569,6 +542,13 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     );
   }
 
+  TextStyle _inputTextStyle({Color color = Colors.white, double fontSize = 16}) {
+    return GoogleFonts.montserrat(
+      color: color,
+      fontSize: fontSize,
+    );
+  }
+
   Widget _dropdownWithLabel(
     String label,
     String value,
@@ -581,11 +561,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         value: value,
         iconEnabledColor: Colors.white,
         dropdownColor: const Color(0xFF0C5B67),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontFamily: _contentFontFamily,
-        ),
+        style: _inputTextStyle(),
         decoration: _glassInputDecoration(),
         items: items
             .map(
@@ -606,11 +582,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
       child: TextFormField(
         initialValue: _color,
         textCapitalization: TextCapitalization.words,
-        style: const TextStyle(
-          fontSize: 16,
-          color: Colors.white,
-          fontFamily: _contentFontFamily,
-        ),
+        style: _inputTextStyle(),
         decoration: _glassInputDecoration(hintText: 'Denim'),
         onChanged: (v) => _color = v.trim(),
         validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -629,9 +601,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             suffixIcon: IconButton(
               icon: Icon(
                 _purchaseYear != null ? Icons.close : Icons.calendar_today_outlined,
-                size: 20,
+                size: 18,
                 color: Colors.white,
               ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
               onPressed: _submitting
                   ? null
                   : _purchaseYear != null
@@ -641,11 +615,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
           ),
           child: Text(
             _purchaseYear?.toString() ?? '2023',
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-              fontFamily: _contentFontFamily,
-            ),
+            style: _inputTextStyle(),
           ),
         ),
       ),
@@ -713,6 +683,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                         ),
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontFamily: _contentFontFamily,
+                      ),
                       items: _materialTypes
                           .map(
                             (t) => DropdownMenuItem<String>(
@@ -733,8 +708,9 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                     child: TextFormField(
                       initialValue: _materials[i]['percentage']?.toString() ?? '',
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '%',
+                        hintStyle: GoogleFonts.montserrat(color: Colors.white70),
                         filled: true,
                         fillColor: AppColors.surfaceVariant,
                         border: OutlineInputBorder(
@@ -743,6 +719,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                         ),
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
+                      style: _inputTextStyle(fontSize: 15),
                       onChanged: (v) => _materials[i]['percentage'] = int.tryParse(v) ?? 0,
                     ),
                   ),
