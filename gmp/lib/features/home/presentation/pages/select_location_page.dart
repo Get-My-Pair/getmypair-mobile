@@ -576,7 +576,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                           alignment: Alignment.centerLeft,
                                           child: Icon(
                                             Icons.arrow_back_ios_new_rounded,
-                                            size: 18,
+                                            size: 20,
                                             color: Colors.white,
                                           ),
                                         ),

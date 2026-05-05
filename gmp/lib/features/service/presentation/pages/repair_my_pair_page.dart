@@ -214,7 +214,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
               icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: _dark,
-                size: 22,
+                size: 24,
               ),
             ),
             Text(

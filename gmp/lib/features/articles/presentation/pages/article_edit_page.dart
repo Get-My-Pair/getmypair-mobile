@@ -210,8 +210,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
             icon: SvgPicture.asset(
               'assets/images/chevron-left.svg',
-              width: 28,
-              height: 28,
+              width: 30,
+              height: 30,
               colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
             onPressed: () => Navigator.pop(context),
@@ -245,8 +245,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
             icon: SvgPicture.asset(
               'assets/images/chevron-left.svg',
-              width: 28,
-              height: 28,
+              width: 30,
+              height: 30,
               colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
             onPressed: () => Navigator.pop(context),
@@ -316,8 +316,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                     onPressed: _submitting ? null : () => Navigator.pop(context),
                     icon: SvgPicture.asset(
                       'assets/images/chevron-left.svg',
-                      width: 28,
-                      height: 28,
+                      width: 30,
+                      height: 30,
                       colorFilter: const ColorFilter.mode(
                         Colors.white,
                         BlendMode.srcIn,

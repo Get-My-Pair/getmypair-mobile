@@ -226,7 +226,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       appBar: buildGradientAppBar(
         title: 'RepairMyPair',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
           onPressed: _submitting ? null : () => Navigator.pop(context),
         ),
         automaticallyImplyLeading: false,
@@ -520,7 +520,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   icon: const Icon(
                                     Icons.arrow_back_ios_new_rounded,
                                     color: Color(0xFF062F35),
-                                    size: 22,
+                                    size: 24,
                                   ),
                                 ),
                                 Text(

@@ -109,8 +109,8 @@ class FamilyProfilePage extends StatelessWidget {
                                   onPressed: () => Navigator.of(context).maybePop(),
                                   icon: SvgPicture.asset(
                                     'assets/images/chevron-left.svg',
-                                    width: (26 * layoutScale).clamp(22.0, 26.0),
-                                    height: (26 * layoutScale).clamp(22.0, 26.0),
+                                    width: (28 * layoutScale).clamp(24.0, 28.0),
+                                    height: (28 * layoutScale).clamp(24.0, 28.0),
                                     colorFilter: const ColorFilter.mode(
                                       Colors.white,
                                       BlendMode.srcIn,

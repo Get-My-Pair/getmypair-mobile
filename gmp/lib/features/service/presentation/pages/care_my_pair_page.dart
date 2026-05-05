@@ -211,8 +211,8 @@ class _Header extends StatelessWidget {
         IconButton(
           onPressed: onBack,
           padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35), size: 22),
+          constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35), size: 24),
         ),
         const SizedBox(width: 6),
         Text(

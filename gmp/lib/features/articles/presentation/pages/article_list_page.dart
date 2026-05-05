@@ -349,8 +349,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
                       },
                       icon: SvgPicture.asset(
                         'assets/images/chevron-left.svg',
-                        width: 24,
-                        height: 24,
+                        width: 26,
+                        height: 26,
                         colorFilter: const ColorFilter.mode(
                           _rackDark,
                           BlendMode.srcIn,

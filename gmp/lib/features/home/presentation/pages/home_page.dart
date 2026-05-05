@@ -1347,7 +1347,7 @@ class _HomeTopCard extends StatelessWidget {
                     SizedBox(height: _homeLocationToSearchGap(context, s)),
                     Padding(
                       padding: EdgeInsets.symmetric(
-                        vertical: (4 * s).clamp(2.0, 8.0),
+                        vertical: (1 * s).clamp(0.0, 3.0),
                       ),
                       child: Container(
                         height: searchBarH,
@@ -1377,7 +1377,7 @@ class _HomeTopCard extends StatelessWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Search',
+                                'Search an area or address',
                                 style: GoogleFonts.montserrat(
                                   fontSize: (16 * s).clamp(10.0, 16.0),
                                   fontWeight: FontWeight.w400,

@@ -118,13 +118,39 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                            Text(
-                              'Location',
-                              style: GoogleFonts.boldonse(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFFDFE7E9),
-                              ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 26,
+                                    height: 26,
+                                  ),
+                                  visualDensity: const VisualDensity(
+                                    horizontal: -4,
+                                    vertical: -4,
+                                  ),
+                                  onPressed: () => Navigator.of(context).maybePop(),
+                                  icon: SvgPicture.asset(
+                                    'assets/images/chevron-left.svg',
+                                    width: 26,
+                                    height: 26,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xFFDFE7E9),
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 7),
+                                Text(
+                                  'Location',
+                                  style: GoogleFonts.boldonse(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFFDFE7E9),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 24),
                             _buildSearchBar(),
@@ -235,65 +261,53 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
   }
 
   Widget _buildSearchBar() {
-    final radius = BorderRadius.circular(999);
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: radius,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      alignment: Alignment.centerLeft,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SvgPicture.asset(
+            'assets/images/search.svg',
+            width: 22,
+            height: 22,
           ),
-          child: TextField(
-            controller: _searchController,
-            readOnly: true,
-            style: GoogleFonts.montserrat(
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-              color: Colors.white,
-            ),
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: Colors.transparent,
-              border: InputBorder.none,
-              hintText: 'Search an area or address',
-              hintStyle: GoogleFonts.montserrat(
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              readOnly: true,
+              style: GoogleFonts.montserrat(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.52),
+                color: const Color(0xFF1A1A1A),
               ),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 11, 2, 11),
-                child: SvgPicture.asset(
-                  'assets/images/search.svg',
-                  width: 24,
-                  height: 24,
-                  colorFilter: ColorFilter.mode(
-                    Colors.white.withValues(alpha: 0.85),
-                    BlendMode.srcIn,
-                  ),
+              decoration: InputDecoration(
+                isDense: true,
+                filled: false,
+                fillColor: Colors.transparent,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                hintText: 'Search an area or address',
+                hintStyle: GoogleFonts.montserrat(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0x57000000),
                 ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 48,
-                minHeight: 42,
-              ),
-              contentPadding: const EdgeInsets.only(left: 4, right: 14),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -511,9 +525,12 @@ class _AddressRow extends StatelessWidget {
                         color: Colors.white,
                         size: 24,
                       ),
+                      padding: EdgeInsets.zero,
                       color: Colors.white,
+                      menuPadding: const EdgeInsets.symmetric(vertical: 4),
+                      constraints: const BoxConstraints(minWidth: 98, maxWidth: 98),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 6,
                       onSelected: (value) {
@@ -523,42 +540,57 @@ class _AddressRow extends StatelessWidget {
                       itemBuilder: (_) => [
                         PopupMenuItem<String>(
                           value: 'edit',
+                          height: 30,
+                          padding: const EdgeInsets.symmetric(horizontal: 7),
                           child: Row(
                             children: [
                               SvgPicture.asset(
                                 'assets/images/icons/profile/edit.svg',
-                                width: 18,
-                                height: 18,
+                                width: 22,
+                                height: 22,
                                 colorFilter: const ColorFilter.mode(
                                   Color(0xFF202124),
                                   BlendMode.srcIn,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 6),
                               const Text(
                                 'Edit',
-                                style: TextStyle(color: Color(0xFF202124)),
+                                style: TextStyle(
+                                  color: Color(0xFF202124),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w100,
+                                  height: 1,
+                                ),
                               ),
                             ],
                           ),
                         ),
+                        const PopupMenuDivider(height: 1),
                         PopupMenuItem<String>(
                           value: 'delete',
+                          height: 30,
+                          padding: const EdgeInsets.symmetric(horizontal: 7),
                           child: Row(
                             children: [
                               SvgPicture.asset(
                                 'assets/images/icons/profile/trash-2.svg',
-                                width: 18,
-                                height: 18,
+                                width: 22,
+                                height: 22,
                                 colorFilter: const ColorFilter.mode(
                                   Color(0xFF202124),
                                   BlendMode.srcIn,
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 6),
                               const Text(
                                 'Delete',
-                                style: TextStyle(color: Color(0xFF202124)),
+                                style: TextStyle(
+                                  color: Color(0xFF202124),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w100,
+                                  height: 1,
+                                ),
                               ),
                             ],
                           ),
@@ -731,7 +763,7 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                                 child: Icon(
                                   Icons.arrow_back_ios_new,
                                   color: Color(0xFFDFE7E9),
-                                  size: 20,
+                                  size: 22,
                                 ),
                               ),
                             ),

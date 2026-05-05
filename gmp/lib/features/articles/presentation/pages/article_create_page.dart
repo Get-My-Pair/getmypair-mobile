@@ -200,8 +200,8 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                       onPressed: _submitting ? null : () => Navigator.pop(context),
                       icon: SvgPicture.asset(
                         'assets/images/chevron-left.svg',
-                        width: 24,
-                        height: 24,
+                        width: 26,
+                        height: 26,
                         colorFilter: const ColorFilter.mode(
                           Colors.white,
                           BlendMode.srcIn,
@@ -401,7 +401,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             onTap: _submitting ? null : _openPurchaseYearPicker,
             borderRadius: BorderRadius.circular(100),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
                   Expanded(

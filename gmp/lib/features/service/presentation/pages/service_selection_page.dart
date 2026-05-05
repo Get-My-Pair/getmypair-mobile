@@ -443,7 +443,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         appBar: buildGradientAppBar(
           title: 'Select Service',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
             onPressed: () => Navigator.pop(context),
           ),
           automaticallyImplyLeading: false,
@@ -461,7 +461,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ? (widget.flowPageTitle ?? 'RepairMyPair')
             : 'Select Service',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
           onPressed: _submitting
               ? null
               : () {
@@ -641,7 +641,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   icon: const Icon(
                                     Icons.arrow_back_ios_new_rounded,
                                     color: Color(0xFF062F35),
-                                    size: 22,
+                                    size: 24,
                                   ),
                                 ),
                                 Text(
