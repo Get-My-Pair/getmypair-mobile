@@ -15,6 +15,16 @@ import '../../../service/presentation/pages/service_selection_page.dart';
 import 'article_create_page.dart';
 import 'article_details_page.dart';
 
+/// Rack shelf shell — same border/radius as home “My Rack”; fill `#F0F0F0`.
+const Color _kRackCardBgHome = Color(0xFFF0F0F0);
+const Color _kRackCardBorderHome = Color(0xFF0F6876);
+const double _kRackShelfCornerR = 10;
+/// Shelf rows: flat top; bottom edge + only bottom-left / bottom-right corners.
+const BorderRadius _kRackShelfBorderRadius = BorderRadius.only(
+  bottomLeft: Radius.circular(_kRackShelfCornerR),
+  bottomRight: Radius.circular(_kRackShelfCornerR),
+);
+
 class ArticleListPage extends StatefulWidget {
   final List<String>? serviceFlowAllowedTypes;
   final String? serviceFlowTitle;
@@ -312,7 +322,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final headerHInset = (12.0 * uiScale).clamp(10.0, 20.0);
     final titleLeftInset = (headerHInset - 4).clamp(10.0, 18.0);
-    final topTitleGap = (10.0 * uiScale).clamp(8.0, 14.0);
+    final topTitleGap = (20.0 * uiScale).clamp(18.0, 28.0);
     final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
     const plusSize = 42.0;
     const searchHeight = 42.0;
@@ -760,50 +770,34 @@ class _RackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = (14.0 * uiScale).clamp(12.0, 18.0);
     final rowPad = (8.0 * uiScale).clamp(6.0, 10.0);
     final childGap = (4.0 * uiScale).clamp(2.0, 6.0);
 
     return AspectRatio(
       aspectRatio: 3.08,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: Stack(
-          children: [
-            Container(
-              padding: EdgeInsets.fromLTRB(rowPad, rowPad, rowPad, rowPad - 1),
-              color: const Color(0xFFF3F3F3),
-              child: Row(
-                children: List.generate(3, (index) {
-                  return Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: childGap),
-                      child: children[index],
-                    ),
-                  );
-                }),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                height: 3,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Color(0xFF09E0FF),
-                      Color(0xFF11999E),
-                      Color(0xFF0F6876),
-                    ],
+      child: Container(
+        decoration: const BoxDecoration(
+          color: _kRackCardBgHome,
+          border: Border(
+            bottom: BorderSide(color: _kRackCardBorderHome, width: 3),
+          ),
+          borderRadius: _kRackShelfBorderRadius,
+        ),
+        child: ClipRRect(
+          borderRadius: _kRackShelfBorderRadius,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(rowPad, rowPad, rowPad, rowPad - 1),
+            child: Row(
+              children: List.generate(3, (index) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: childGap),
+                    child: children[index],
                   ),
-                ),
-              ),
+                );
+              }),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1300,7 +1294,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
+          padding: EdgeInsets.fromLTRB(hPad, 26, hPad, 0),
           child: _selectionMode
               ? Row(
                   children: [
@@ -1552,71 +1546,91 @@ class _ArticleListPageState extends State<ArticleListPage> {
                       for (int r = 0; r < rowCount; r++) ...[
                         Container(
                           height: 104,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                          decoration: const ShapeDecoration(
-                            color: _panelBg,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(10)),
-                            ),
-                          ),
-                          child: DecoratedBox(
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: _rackTealPrimary, width: 3),
+                          decoration: const BoxDecoration(
+                            color: _kRackCardBgHome,
+                            border: Border(
+                              bottom: BorderSide(
+                                color: _kRackCardBorderHome,
+                                width: 3,
                               ),
                             ),
-                            // Fixed height avoids AspectRatio + tight Row width fighting maxHeight (~84px),
-                            // which triggers a layout assertion on web and mobile.
-                            child: SizedBox(
-                              height: 74,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: List.generate(3, (c) {
-                                  final idx = r * 3 + c;
-                                  if (idx >= list.length) {
-                                    return const Expanded(child: SizedBox.shrink());
-                                  }
-                                  final article = list[idx];
-                                  final imageUrl = _imageUrl(article.thumbnailImage);
-                                  return Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                                      child: _RackGridItem(
-                                        article: article,
-                                        imageUrl: imageUrl,
-                                        selectionMode: _selectionMode,
-                                        selected: _selectedIds.contains(article.id),
-                                        onLongPress: () => setState(() {
-                                          _selectionMode = true;
-                                          _selectedIds.add(article.id);
-                                        }),
-                                        onTap: () {
-                                          if (_selectionMode) {
-                                            setState(() {
-                                              if (_selectedIds.contains(article.id)) {
-                                                _selectedIds.remove(article.id);
-                                                if (_selectedIds.isEmpty) {
-                                                  _selectionMode = false;
+                            borderRadius: _kRackShelfBorderRadius,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: _kRackShelfBorderRadius,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 10,
+                              ),
+                              // Fixed height avoids AspectRatio + tight Row width fighting maxHeight (~84px),
+                              // which triggers a layout assertion on web and mobile.
+                              child: SizedBox(
+                                height: 74,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: List.generate(3, (c) {
+                                    final idx = r * 3 + c;
+                                    if (idx >= list.length) {
+                                      return const Expanded(
+                                        child: SizedBox.shrink(),
+                                      );
+                                    }
+                                    final article = list[idx];
+                                    final imageUrl = _imageUrl(
+                                      article.thumbnailImage,
+                                    );
+                                    return Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 2,
+                                        ),
+                                        child: _RackGridItem(
+                                          article: article,
+                                          imageUrl: imageUrl,
+                                          selectionMode: _selectionMode,
+                                          selected: _selectedIds.contains(
+                                            article.id,
+                                          ),
+                                          onLongPress: () => setState(() {
+                                            _selectionMode = true;
+                                            _selectedIds.add(article.id);
+                                          }),
+                                          onTap: () {
+                                            if (_selectionMode) {
+                                              setState(() {
+                                                if (_selectedIds.contains(
+                                                  article.id,
+                                                )) {
+                                                  _selectedIds.remove(
+                                                    article.id,
+                                                  );
+                                                  if (_selectedIds.isEmpty) {
+                                                    _selectionMode = false;
+                                                  }
+                                                } else {
+                                                  _selectedIds.add(article.id);
                                                 }
-                                              } else {
-                                                _selectedIds.add(article.id);
-                                              }
-                                            });
-                                          } else {
-                                            if (_isServiceFlowMode) {
-                                              _navigateToServiceSelection(
-                                                context,
-                                                article,
-                                              );
+                                              });
                                             } else {
-                                              _navigateToDetails(context, article);
+                                              if (_isServiceFlowMode) {
+                                                _navigateToServiceSelection(
+                                                  context,
+                                                  article,
+                                                );
+                                              } else {
+                                                _navigateToDetails(
+                                                  context,
+                                                  article,
+                                                );
+                                              }
                                             }
-                                          }
-                                        },
+                                          },
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                }),
+                                    );
+                                  }),
+                                ),
                               ),
                             ),
                           ),

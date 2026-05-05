@@ -34,17 +34,15 @@ const Color _kOnHeaderText = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
 const Color _kRackCardBorderStart = Color(0xFF0F6876);
-const Color _kRackCardBorderEnd = Color(0xFF1CC2DC);
-const Color _kRackCardEdgeLight = Color(0xB3FFFFFF);
+const Color _kRackCardEdgeLight = _kRackCardBorderStart;
 const double _kRackCardRadius = 10;
-const double _kRackBottomLineHeight = 2.5;
-const double _kRackBottomLineHorizontalInset = 0;
-const BorderRadius _kRackBottomLineRadius = BorderRadius.only(
+/// Rack card: flat top; teal line + rounding only at bottom corners.
+const BorderRadius _kRackCardBorderRadius = BorderRadius.only(
   bottomLeft: Radius.circular(_kRackCardRadius),
   bottomRight: Radius.circular(_kRackCardRadius),
 );
-/// Visible grey panel behind “My Rack” (distinct from scaffold / quick tiles).
-const Color _kRackCardBg = Color(0xFFE2E5E8);
+/// My Rack panel fill — design `#F0F0F0`.
+const Color _kRackCardBg = Color(0xFFF0F0F0);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 const String _kNotificationBellBodySvgAsset =
@@ -285,7 +283,7 @@ class _HomePageState extends State<HomePage> {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Container(
-          color: const Color(0xFFE0E4E6),
+          color: _kRackCardBg,
           alignment: Alignment.center,
           child: const Icon(
             Icons.checkroom_outlined,
@@ -496,27 +494,17 @@ class _HomePageState extends State<HomePage> {
                                           : rackCardTopPaddingLoose;
                                       // Keep loading/empty/error card height aligned with
                                       // the loaded rack card so the section does not jump.
+                                      // Thumb row allowance + clamps tuned so the rack card
+                                      // reads taller; same value when empty/loading so height
+                                      // does not jump when articles appear.
                                       final rackLoadingHeight =
                                           (rackCardTopPaddingLoose +
                                                   24 +
                                                   1 +
-                                                  62 +
+                                                  76 +
                                                   rackCardBottomPadding)
-                                              .clamp(110.0, 132.0);
-                                      final rackLoadedExtraHeight =
-                                          (12 * layoutScale).clamp(8.0, 14.0);
-                                      // Thumbnails need header + gap + thumb row.
-                                      final rackHeight = showRackThumbs
-                                          ? 
-                                          // (rackCardTopPadding +
-                                          //           24 +
-                                          //           1 +
-                                          //           62 +
-                                          //           rackCardBottomPadding +
-                                          //           rackLoadedExtraHeight)
-                                          //       .clamp(118.0, 146.0)
-                                          rackLoadingHeight
-                                          : rackLoadingHeight;
+                                              .clamp(118.0, 146.0);
+                                      final rackHeight = rackLoadingHeight;
                                       final uniformCardGap = (bodyH * 0.026)
                                           .clamp(10.0, 16.0);
                                       final careCardH = (bodyH * 0.2).clamp(
@@ -550,17 +538,13 @@ class _HomePageState extends State<HomePage> {
                                                 border: const Border(
                                                   bottom: BorderSide(
                                                     color: _kRackCardEdgeLight,
-                                                    width: 1,
+                                                    width: 3,
                                                   ),
                                                 ),
-                                                borderRadius: BorderRadius.circular(
-                                                  _kRackCardRadius,
-                                                ),
+                                                borderRadius: _kRackCardBorderRadius,
                                               ),
                                               child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(
-                                                  _kRackCardRadius,
-                                                ),
+                                                borderRadius: _kRackCardBorderRadius,
                                                 child: Stack(
                                                   children: [
                                                   Padding(
@@ -568,8 +552,7 @@ class _HomePageState extends State<HomePage> {
                                                       14,
                                                       rackCardTopPadding,
                                                       14,
-                                                      rackCardBottomPadding +
-                                                          _kRackBottomLineHeight,
+                                                      rackCardBottomPadding,
                                                     ),
                                                     child: Column(
                                                       crossAxisAlignment:
@@ -714,33 +697,6 @@ class _HomePageState extends State<HomePage> {
                                                       ],
                                                     ),
                                                   ),
-                                                    Positioned(
-                                                      left:
-                                                          _kRackBottomLineHorizontalInset,
-                                                      right:
-                                                          _kRackBottomLineHorizontalInset,
-                                                      bottom: 0,
-                                                      child: Container(
-                                                        height: _kRackBottomLineHeight,
-                                                        decoration:
-                                                            const BoxDecoration(
-                                                          gradient: LinearGradient(
-                                                            begin:
-                                                                Alignment
-                                                                    .centerLeft,
-                                                            end:
-                                                                Alignment
-                                                                    .centerRight,
-                                                            colors: [
-                                                              _kRackCardBorderStart,
-                                                              _kRackCardBorderEnd,
-                                                            ],
-                                                          ),
-                                                          borderRadius:
-                                                              _kRackBottomLineRadius,
-                                                        ),
-                                                      ),
-                                                    ),
                                                   ],
                                                 ),
                                               ),
