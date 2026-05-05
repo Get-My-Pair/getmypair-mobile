@@ -53,7 +53,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
 <path d="M5 12H19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 ''';
-
   static const List<Map<String, String>> _filterTabs = [
     {'value': 'formal', 'label': 'Formals'},
     {'value': 'sports_shoe', 'label': 'Nike'},
@@ -312,7 +311,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final headerHInset = (12.0 * uiScale).clamp(10.0, 20.0);
-    final titleLeftInset = (headerHInset - 4).clamp(6.0, 16.0);
+    final titleLeftInset = (headerHInset - 4).clamp(10.0, 18.0);
     final topTitleGap = (10.0 * uiScale).clamp(8.0, 14.0);
     final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
     const plusSize = 42.0;
@@ -337,10 +336,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   children: [
                     IconButton(
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
+                      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                       onPressed: () {
                         final nav = Navigator.of(context);
                         if (nav.canPop()) {
@@ -350,13 +347,17 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         customerDashboardTabIndex.value = 0;
                         nav.popUntil((route) => route.isFirst);
                       },
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 20,
-                        color: _rackDark,
+                      icon: SvgPicture.asset(
+                        'assets/images/chevron-left.svg',
+                        width: 24,
+                        height: 24,
+                        colorFilter: const ColorFilter.mode(
+                          _rackDark,
+                          BlendMode.srcIn,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 2),
+                    const SizedBox(width: 7),
                     Text(
                       'My Rack',
                       style: GoogleFonts.boldonse(
@@ -401,6 +402,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         padding: const EdgeInsets.all(10),
                         child: SvgPicture.string(
                           _plusIconSvg,
+                          width: 14,
+                          height: 14,
                           fit: BoxFit.contain,
                           colorFilter: const ColorFilter.mode(
                             _rackDark,
@@ -432,7 +435,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
               ),
             ),
           ),
-        SizedBox(height: (16.0 * uiScale).clamp(12.0, 20.0)),
+        SizedBox(height: (28.0 * uiScale).clamp(20.0, 36.0)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: headerHInset),
           child: Container(
@@ -442,7 +445,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
               gradient: const LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                colors: [Color(0xFF09E0FF), Color(0xFF0F6876)],
+                colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
               ),
               borderRadius: BorderRadius.circular(100),
               boxShadow: const [
@@ -459,15 +462,15 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 borderRadius: BorderRadius.circular(100),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.manage_search_rounded,
-                      color: Color(0xFF0F6876),
-                      size: 22,
+                    SvgPicture.asset(
+                      'assets/images/search.svg',
+                      width: 22,
+                      height: 22,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
                         onChanged: (value) => setState(() => _searchQuery = value),
@@ -498,7 +501,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     SvgPicture.asset(
                       'assets/images/icons/myrack/filter.svg',
                       width: 20,
@@ -508,7 +511,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         BlendMode.srcIn,
                       ),
                     ),
-                    const SizedBox(width: 2),
+                    const SizedBox(width: 6),
                   ],
                 ),
               ),
@@ -757,51 +760,51 @@ class _RackRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = (10.0 * uiScale).clamp(8.0, 12.0);
+    final borderRadius = (14.0 * uiScale).clamp(12.0, 18.0);
     final rowPad = (8.0 * uiScale).clamp(6.0, 10.0);
     final childGap = (4.0 * uiScale).clamp(2.0, 6.0);
 
     return AspectRatio(
       aspectRatio: 3.08,
-      child: Stack(
-        children: [
-          Container(
-            padding: EdgeInsets.fromLTRB(rowPad, rowPad, rowPad, rowPad - 1),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F0F0),
-              borderRadius: BorderRadius.circular(borderRadius),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Stack(
+          children: [
+            Container(
+              padding: EdgeInsets.fromLTRB(rowPad, rowPad, rowPad, rowPad - 1),
+              color: const Color(0xFFF3F3F3),
+              child: Row(
+                children: List.generate(3, (index) {
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: childGap),
+                      child: children[index],
+                    ),
+                  );
+                }),
+              ),
             ),
-            child: Row(
-              children: List.generate(3, (index) {
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: childGap),
-                    child: children[index],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 3,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Color(0xFF09E0FF),
+                      Color(0xFF11999E),
+                      Color(0xFF0F6876),
+                    ],
                   ),
-                );
-              }),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 2.5,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(10),
-                  bottomRight: Radius.circular(10),
-                ),
-                gradient: const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Color(0xFF09E0FF), Color(0xFF11999E), Color(0xFF0F6876)],
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

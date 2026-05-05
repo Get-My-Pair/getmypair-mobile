@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
@@ -230,7 +231,15 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         appBar: buildGradientAppBar(
           title: 'Edit Shoe',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+            icon: SvgPicture.asset(
+              'assets/images/chevron-left.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           automaticallyImplyLeading: false,
@@ -257,7 +266,15 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         appBar: buildGradientAppBar(
           title: 'Edit Shoe',
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+            icon: SvgPicture.asset(
+              'assets/images/chevron-left.svg',
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           automaticallyImplyLeading: false,
@@ -319,14 +336,21 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
               Row(
                 children: [
                   IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                     onPressed: _submitting ? null : () => Navigator.pop(context),
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white,
-                      size: 22,
+                    icon: SvgPicture.asset(
+                      'assets/images/chevron-left.svg',
+                      width: 24,
+                      height: 24,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(
                       'Edit Footwear',
