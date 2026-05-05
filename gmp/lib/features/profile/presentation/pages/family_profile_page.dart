@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
@@ -75,12 +76,12 @@ class FamilyProfilePage extends StatelessWidget {
                           textScaleTightness)
                           .clamp(0.82, 1.0);
 
-                      final horizontalLeft = (22 * widthScale).clamp(18.0, 24.0);
+                      final horizontalLeft = (12 * widthScale).clamp(10.0, 18.0);
                       final horizontalRight =
                           (22 * widthScale).clamp(18.0, 24.0);
                       final topPadding = statusTop + 42;
                       final bottomPadding = (20 * layoutScale).clamp(4.0, 18.0);
-                      const titleSize = 24.0;
+                      const titleSize = 20.0;
 
                       return Padding(
                         padding: EdgeInsets.fromLTRB(
@@ -93,16 +94,48 @@ class FamilyProfilePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 26,
+                                    height: 26,
+                                  ),
+                                  visualDensity: const VisualDensity(
+                                    horizontal: -4,
+                                    vertical: -4,
+                                  ),
+                                  onPressed: () => Navigator.of(context).maybePop(),
+                                  icon: SvgPicture.asset(
+                                    'assets/images/chevron-left.svg',
+                                    width: (26 * layoutScale).clamp(22.0, 26.0),
+                                    height: (26 * layoutScale).clamp(22.0, 26.0),
+                                    colorFilter: const ColorFilter.mode(
+                                      Colors.white,
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: (7 * layoutScale).clamp(4.0, 8.0),
+                                ),
                                 Expanded(
-                                  child: Text(
-                                    'Family Profile',
-                                    style: GoogleFonts.boldonse(
-                                      fontSize: titleSize,
-                                      fontWeight: FontWeight.w400,
-                                      color: const Color(0xFFDFE7E9),
-                                      height: 1,
+                                  child: FittedBox(
+                                    alignment: Alignment.center,
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'Family Profile',
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.visible,
+                                      style: GoogleFonts.boldonse(
+                                        fontSize: titleSize,
+                                        fontWeight: FontWeight.w400,
+                                        color: const Color(0xFFDFE7E9),
+                                        height: 1,
+                                      ),
                                     ),
                                   ),
                                 ),
