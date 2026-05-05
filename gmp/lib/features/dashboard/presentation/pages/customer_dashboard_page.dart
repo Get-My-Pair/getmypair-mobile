@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gmp/core/errors/failures.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:gmp/features/auth/presentation/bloc/auth_event.dart';
 import 'package:gmp/features/auth/presentation/bloc/auth_state.dart';
 import 'package:gmp/features/auth/presentation/pages/mobile_otp_page.dart';
 import 'package:gmp/features/articles/presentation/pages/article_list_page.dart';
@@ -57,11 +55,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     final result = await sl<GetValidAccessToken>().call();
     if (!context.mounted) return;
     result.fold(
-      (failure) {
-        if (failure is AuthenticationFailure) {
-          context.read<AuthBloc>().add(const AuthSessionExpired());
-        }
-      },
+      (failure) {},
       (token) => context.read<ProfileBloc>().add(ProfileLoadRequested(token)),
     );
   }

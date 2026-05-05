@@ -161,10 +161,15 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User>> getCurrentUser() async {
     try {
+      final cachedUser = await localDataSource.getUser();
       var accessToken = await localDataSource.getAccessToken();
       if (accessToken == null || accessToken.isEmpty) {
         final hasRefreshToken = await _hasUsableRefreshToken();
         if (!hasRefreshToken) {
+          if (cachedUser != null) {
+            // Keep user in app until they manually logout.
+            return Right(cachedUser);
+          }
           return const Left(AuthenticationFailure('No valid refresh token found'));
         }
 
@@ -172,11 +177,19 @@ class AuthRepositoryImpl implements AuthRepository {
         if (refreshResult.isLeft()) {
           return refreshResult.fold(
             (l) => Left(l),
-            (_) => const Left(AuthenticationFailure('Refresh failed')),
+            (_) {
+              if (cachedUser != null) {
+                return Right(cachedUser);
+              }
+              return const Left(AuthenticationFailure('Refresh failed'));
+            },
           );
         }
         accessToken = await localDataSource.getAccessToken();
         if (accessToken == null || accessToken.isEmpty) {
+          if (cachedUser != null) {
+            return Right(cachedUser);
+          }
           return const Left(AuthenticationFailure('No access token after refresh'));
         }
       }
@@ -200,13 +213,11 @@ class AuthRepositoryImpl implements AuthRepository {
                 } on ServerException catch (e2) {
                   // If backend is temporarily failing after a successful refresh,
                   // keep the user logged in using cached profile data.
-                  final cachedUser = await localDataSource.getUser();
                   if (cachedUser != null) {
                     return Right(cachedUser);
                   }
                   return Left(ServerFailure(e2.message));
                 } on NetworkException catch (e2) {
-                  final cachedUser = await localDataSource.getUser();
                   if (cachedUser != null) {
                     return Right(cachedUser);
                   }
@@ -214,16 +225,17 @@ class AuthRepositoryImpl implements AuthRepository {
                 }
               }
             }
+            if (cachedUser != null) {
+              return Right(cachedUser);
+            }
             return refreshResult.fold((l) => Left(l), (_) => Left(ServerFailure(e.message)));
           }
           // Non-auth server errors should not force logout if we have cached user.
-          final cachedUser = await localDataSource.getUser();
           if (cachedUser != null) {
             return Right(cachedUser);
           }
           return Left(ServerFailure(e.message));
         } on NetworkException catch (e) {
-          final cachedUser = await localDataSource.getUser();
           if (cachedUser != null) {
             return Right(cachedUser);
           }

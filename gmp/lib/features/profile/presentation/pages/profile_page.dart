@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
-import '../../../../core/errors/failures.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -54,10 +53,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (!mounted) return;
     await result.fold(
       (failure) async {
-        if (failure is AuthenticationFailure) {
-          context.read<AuthBloc>().add(const AuthSessionExpired());
-          return;
-        }
         if (!context.mounted) return;
         await showAppFeedbackAlert(
           context,
