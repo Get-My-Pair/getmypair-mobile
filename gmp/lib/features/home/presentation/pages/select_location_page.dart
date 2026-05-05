@@ -1219,13 +1219,20 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     final location = (raw['location'] is Map<String, dynamic>)
         ? raw['location'] as Map<String, dynamic>
         : <String, dynamic>{};
-    final coords = _geoJsonCoordinates(location);
+    // Backend nearby API returns GeoJSON on `lastKnownLocation`, not `location`.
+    final lastKnownLocation = (raw['lastKnownLocation'] is Map<String, dynamic>)
+        ? raw['lastKnownLocation'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final coords =
+        _geoJsonCoordinates(location) ?? _geoJsonCoordinates(lastKnownLocation);
     final lat = _toDouble(
       raw['lat'] ??
           raw['latitude'] ??
           location['lat'] ??
           location['latitude'] ??
           location['y'] ??
+          lastKnownLocation['lat'] ??
+          lastKnownLocation['latitude'] ??
           (coords?.$2),
     );
     final lng = _toDouble(
@@ -1236,6 +1243,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           location['lon'] ??
           location['longitude'] ??
           location['x'] ??
+          lastKnownLocation['lng'] ??
+          lastKnownLocation['lon'] ??
+          lastKnownLocation['longitude'] ??
           (coords?.$1),
     );
     if (name.isEmpty || lat == null || lng == null) return null;
