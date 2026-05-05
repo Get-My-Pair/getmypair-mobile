@@ -213,10 +213,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   }
 
   bool _canFetchNearbyCobblersForRole(String role) {
-    final normalized = _normalizeRole(role);
-    // Do not block unknown/empty role locally; let backend decide.
-    if (normalized.isEmpty) return true;
-    return normalized == 'user' || normalized == 'cobbler' || normalized == 'admin';
+    // Do not block locally; role payloads can vary across deployments.
+    // Let backend auth/authorization decide access.
+    return true;
   }
 
   Future<void> _initLocation() async {
@@ -1242,9 +1241,26 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     if (name.isEmpty || lat == null || lng == null) return null;
 
     final rating = _toDouble(raw['rating'] ?? raw['avgRating'] ?? raw['averageRating']) ?? 0;
-    final isActive = (raw['isActive'] == true) ||
-        (raw['active'] == true) ||
-        (raw['status']?.toString().toLowerCase() == 'active');
+    final status = (raw['status'] ??
+            raw['availabilityStatus'] ??
+            raw['onlineStatus'] ??
+            '')
+        .toString()
+        .toLowerCase()
+        .trim();
+    final isOnline = _toBool(
+          raw['isOnline'] ?? raw['online'] ?? raw['onlineMode'] ?? raw['isAvailable'],
+        ) ??
+        _toBool(location['isOnline'] ?? location['online']);
+    final isActiveFlag = _toBool(raw['isActive'] ?? raw['active']);
+    final hasAnyAvailabilitySignal =
+        isOnline != null || isActiveFlag != null || status.isNotEmpty;
+    final isActive = (isOnline == true) ||
+        (isActiveFlag == true) ||
+        status == 'active' ||
+        status == 'online' ||
+        status == 'available' ||
+        !hasAnyAvailabilitySignal;
 
     return _CobblerProfile(
       id: id.isEmpty ? name : id,
@@ -1259,6 +1275,19 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     if (value == null) return null;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString());
+  }
+
+  bool? _toBool(dynamic value) {
+    if (value == null) return null;
+    if (value is bool) return value;
+    final s = value.toString().toLowerCase().trim();
+    if (s == 'true' || s == '1' || s == 'yes' || s == 'online' || s == 'active') {
+      return true;
+    }
+    if (s == 'false' || s == '0' || s == 'no' || s == 'offline' || s == 'inactive') {
+      return false;
+    }
+    return null;
   }
 
   (double, double)? _geoJsonCoordinates(Map<String, dynamic> location) {

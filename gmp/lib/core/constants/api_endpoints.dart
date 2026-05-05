@@ -23,7 +23,7 @@ class ApiEndpoints {
     if (kDebugMode && _kUseLocalApi) {
       return 'http://localhost:3000';
     }
-    return 'https://getmypair-api.onrender.com';
+    return 'http://localhost:3000';
   }
 
   static const String apiPrefix = '/api/auth';
