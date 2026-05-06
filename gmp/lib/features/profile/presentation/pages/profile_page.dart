@@ -258,10 +258,18 @@ class _ProfilePageState extends State<ProfilePage> {
                             final topPadding = statusTop +
                                 30 +
                                 ArticleStyleHeaderInsets.topTitleGapOf(context);
+                            final embeddedBottomNavReserve = widget.showBottomNav
+                                ? 0.0
+                                : (FloatingGradientBottomNav.barHeight +
+                                        dashboardBottomNavOuterInsets(context)
+                                            .bottom +
+                                        8)
+                                    .toDouble();
                             final bottomPadding = (20 * layoutScale).clamp(
-                              4.0,
-                              18.0,
-                            );
+                                  4.0,
+                                  18.0,
+                                ) +
+                                embeddedBottomNavReserve;
                             const titleSize = 24.0;
                             final subtitleSize = (14 * layoutScale).clamp(
                               11.0,
@@ -462,12 +470,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     if (widget.showBottomNav) ...[
                       const SizedBox(height: 14),
-                      DashboardLinkedBottomNav(
-                        selectedTabIndex: 2,
-                        onProfileTabWhenCannotPop: token.isNotEmpty
-                            ? () => _openEditProfile(context, profile, token)
-                            : null,
-                      ),
+                      const DashboardLinkedBottomNav(selectedTabIndex: 2),
                     ],
                   ],
                 ),
