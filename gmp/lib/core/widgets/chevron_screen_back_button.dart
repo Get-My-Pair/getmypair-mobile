@@ -69,10 +69,12 @@ class ChevronScreenBackButton extends StatelessWidget {
     super.key,
     required this.iconColor,
     this.onPressed,
+    this.iconAssetPath = 'assets/images/chevron-left.svg',
   });
 
   final Color iconColor;
   final VoidCallback? onPressed;
+  final String iconAssetPath;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +84,7 @@ class ChevronScreenBackButton extends StatelessWidget {
       visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
       onPressed: onPressed ?? () => popOrGoToDashboardHome(context),
       icon: SvgPicture.asset(
-        'assets/images/chevron-left.svg',
+        iconAssetPath,
         width: 26,
         height: 26,
         colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),

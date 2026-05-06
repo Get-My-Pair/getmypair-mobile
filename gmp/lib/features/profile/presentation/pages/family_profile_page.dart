@@ -131,7 +131,9 @@ class FamilyProfilePage extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            SizedBox(height: (28 * layoutScale).clamp(20.0, 28.0)),
+                            SizedBox(
+                              height: (16 * layoutScale).clamp(4.0, 16.0),
+                            ),
                             Expanded(
                               child: SingleChildScrollView(
                                 physics: const ClampingScrollPhysics(),

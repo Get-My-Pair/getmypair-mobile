@@ -325,7 +325,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                             Text(
                                               _subtitleLine(profile),
                                               maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                              overflow: TextOverflow.fade,
+                                              softWrap: false,
                                               style: GoogleFonts.montserrat(
                                                 fontSize: subtitleSize,
                                                 fontWeight: FontWeight.w400,
