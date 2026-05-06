@@ -6,6 +6,7 @@ import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
+import 'package:gmp/injection_container.dart';
 
 /// Pill-shaped floating bar: angular (conic) teal sweep from Figma `825:756`,
 /// white icons, selected tab on a solid white circle (icon in dark teal).
@@ -174,7 +175,12 @@ class DashboardLinkedBottomNav extends StatelessWidget {
               onProfileTabWhenCannotPop!();
               return;
             }
-            final profileBloc = context.read<ProfileBloc>();
+            ProfileBloc profileBloc;
+            try {
+              profileBloc = context.read<ProfileBloc>();
+            } catch (_) {
+              profileBloc = sl<ProfileBloc>();
+            }
             nav.push(
               MaterialPageRoute(
                 builder: (_) => BlocProvider.value(

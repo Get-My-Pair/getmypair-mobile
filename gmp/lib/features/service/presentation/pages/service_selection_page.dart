@@ -694,7 +694,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                     color: Color(0xFF062F35),
                                     size: 24,
                                   ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(width: 26, height: 26),
                                 ),
+                                const SizedBox(width: 6),
                                 Text(
                                   widget.flowPageTitle ?? 'RepairMyPair',
                                   style: GoogleFonts.boldonse(

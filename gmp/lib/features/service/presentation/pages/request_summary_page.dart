@@ -527,8 +527,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   ),
                                   padding: EdgeInsets.zero,
                                   alignment: Alignment.centerLeft,
-                                  constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+                                  constraints: const BoxConstraints.tightFor(width: 26, height: 26),
                                 ),
+                                const SizedBox(width: 6),
                                 Text(
                                   _flowPageTitle,
                                   style: GoogleFonts.boldonse(
