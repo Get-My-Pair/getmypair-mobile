@@ -112,11 +112,11 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
       'slipper': 'Slipper',
       'other': 'Other',
     };
-    return map[c] ?? (c.isEmpty ? '—' : c);
+    return map[c] ?? c;
   }
 
-  static const String _staticSize = 'US: —';
-  static const String _staticDash = '—';
+  static math.Random _rng(String id, [String salt = '']) =>
+      math.Random(Object.hash(id, salt));
 
   static const List<String> _monthShort = [
     'Jan',
@@ -133,29 +133,66 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     'Dec',
   ];
 
-  /// API `shoeSize` / `size` / `usSize`; otherwise static placeholder.
-  static String _sizeLine(Article a) {
-    final raw = a.shoeSize?.trim();
-    if (raw != null && raw.isNotEmpty) {
-      final u = raw.toUpperCase();
-      if (u.startsWith('US')) return raw;
-      return 'US: $raw';
+  static const List<String> _fallbackUsSizes = [
+    '06',
+    '07',
+    '08',
+    '09',
+    '10',
+    '11',
+    '12',
+  ];
+
+  static const List<(String, Color)> _fallbackColorPalette = [
+    ('Denim', Color(0xFF11253F)),
+    ('Black', Color(0xFF1A1A1A)),
+    ('White', Color(0xFFE2E4E6)),
+    ('Green', Color(0xFF2D5A3D)),
+    ('Red', Color(0xFF8B2E2E)),
+    ('Brown', Color(0xFF5C4033)),
+    ('Navy', Color(0xFF1B2A4A)),
+    ('Grey', Color(0xFF6B7280)),
+  ];
+
+  static const Map<String, Color> _namedColorSwatches = {
+    'black': Color(0xFF1A1A1A),
+    'white': Color(0xFFF5F5F5),
+    'blue': Color(0xFF1E4A7A),
+    'navy': Color(0xFF0F2540),
+    'red': Color(0xFFB83232),
+    'green': Color(0xFF2E6B3C),
+    'brown': Color(0xFF5C4033),
+    'grey': Color(0xFF6B7280),
+    'gray': Color(0xFF6B7280),
+    'tan': Color(0xFFC4A77D),
+    'orange': Color(0xFFD97736),
+    'pink': Color(0xFFC97B9A),
+    'yellow': Color(0xFFE6C84A),
+    'denim': Color(0xFF11253F),
+  };
+
+  static (String name, Color swatch) _randomColorPair(String id) {
+    final i = _rng(id, 'pal').nextInt(_fallbackColorPalette.length);
+    return _fallbackColorPalette[i];
+  }
+
+  /// Backend color string + hex when present; otherwise seeded “random” pair.
+  static (String name, Color swatch) _resolveColorRow(Article a) {
+    final s = a.color.trim();
+    if (s.isEmpty) return _randomColorPair(a.id);
+
+    final hexOnly = RegExp(r'^#?[0-9A-Fa-f]{6}$').hasMatch(s.replaceAll(' ', ''));
+    final parsedHex = _parseColorHex(s);
+    if (hexOnly && parsedHex != null) {
+      final label = _randomColorPair(a.id).$1;
+      return (label, parsedHex);
     }
-    return _staticSize;
-  }
 
-  /// API `lastWornAt` / `lastWear`; otherwise em dash.
-  static String _lastWearLine(Article a) {
-    final d = a.lastWornAt;
-    if (d != null) return _shortDetailDate(d);
-    return _staticDash;
-  }
+    final lower = s.toLowerCase();
+    final named = _namedColorSwatches[lower];
+    if (named != null) return (s, named);
 
-  /// API `lastShoeCareAt` / `shoeCareAt`; otherwise em dash.
-  static String _shoeCareDateLine(Article a) {
-    final d = a.lastShoeCareAt;
-    if (d != null) return _shortDetailDate(d);
-    return _staticDash;
+    return (s, parsedHex ?? _randomColorPair(a.id).$2);
   }
 
   static String _shortDetailDate(DateTime d) {
@@ -164,10 +201,94 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     return "${d.day} $mon'$yy";
   }
 
+  static String _randomWearDate(Article a) {
+    final r = _rng(a.id, 'wear');
+    final days = r.nextInt(380) + 14;
+    return _shortDetailDate(DateTime.now().subtract(Duration(days: days)));
+  }
+
+  static String _randomCareDate(Article a) {
+    final r = _rng(a.id, 'care');
+    final days = r.nextInt(520) + 40;
+    return _shortDetailDate(DateTime.now().subtract(Duration(days: days)));
+  }
+
+  /// API `shoeSize` / `size` / `usSize`; otherwise seeded US size.
+  static String _sizeLine(Article a) {
+    final raw = a.shoeSize?.trim();
+    if (raw != null && raw.isNotEmpty) {
+      final u = raw.toUpperCase();
+      if (u.startsWith('US')) return raw;
+      return 'US: $raw';
+    }
+    final idx = _rng(a.id, 'size').nextInt(_fallbackUsSizes.length);
+    return 'US: ${_fallbackUsSizes[idx]}';
+  }
+
+  /// API `lastWornAt`; otherwise seeded date string.
+  static String _lastWearLine(Article a) {
+    final d = a.lastWornAt;
+    if (d != null) return _shortDetailDate(d);
+    return _randomWearDate(a);
+  }
+
+  /// API `lastShoeCareAt`; otherwise seeded date string.
+  static String _shoeCareDateLine(Article a) {
+    final d = a.lastShoeCareAt;
+    if (d != null) return _shortDetailDate(d);
+    return _randomCareDate(a);
+  }
+
+  /// API `purchaseYear`; otherwise seeded year in a plausible range.
   static String _purchaseYearLine(Article a) {
     final y = a.purchaseYear;
     if (y != null) return y.toString();
-    return _staticDash;
+    final r = _rng(a.id, 'py');
+    return (2019 + r.nextInt(7)).toString();
+  }
+
+  /// Category from API code/string; otherwise seeded label.
+  static String _categoryDisplay(Article a) {
+    final c = a.category.trim();
+    if (c.isNotEmpty) return _categoryLabel(c);
+    const opts = [
+      'Sports shoe',
+      'Casuals',
+      'Formals',
+      'Sandal',
+      'Boot',
+      'Other',
+    ];
+    return opts[_rng(a.id, 'cat').nextInt(opts.length)];
+  }
+
+  static const List<String> _fallbackBrands = [
+    'Nike',
+    'Adidas',
+    'Converse',
+    'Puma',
+    'New Balance',
+  ];
+
+  static const List<String> _fallbackModels = [
+    'Air Max',
+    'Sneaker',
+    'Classic',
+    'Runner',
+    'Low Top',
+    'Originals',
+  ];
+
+  static String _brandLine(Article a) {
+    final b = a.brand.trim();
+    if (b.isNotEmpty) return b;
+    return _fallbackBrands[_rng(a.id, 'brand').nextInt(_fallbackBrands.length)];
+  }
+
+  static String _modelLine(Article a) {
+    final m = a.model.trim();
+    if (m.isNotEmpty) return m;
+    return _fallbackModels[_rng(a.id, 'model').nextInt(_fallbackModels.length)];
   }
 
   static Color? _parseColorHex(String s) {
@@ -401,8 +522,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     }
 
     final a = _article!;
-    final imageUrl = _imageUrl(a.thumbnailImage);
-    final swatchColor = _parseColorHex(a.color) ?? const Color(0xFF11253F);
+    // Prefer most recently uploaded image on details.
+    final imagePath = a.images.isNotEmpty ? a.images.last : a.thumbnailImage;
+    final imageUrl = _imageUrl(imagePath);
+    final colorRow = _resolveColorRow(a);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -440,7 +563,8 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       context,
                       article: a,
                       imageUrl: imageUrl,
-                      swatchColor: swatchColor,
+                      swatchColor: colorRow.$2,
+                      colorDisplayName: colorRow.$1,
                       bottomContentInset: bottomNavReserve,
                     ),
                   ),
@@ -464,6 +588,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     required Article article,
     required String imageUrl,
     required Color swatchColor,
+    required String colorDisplayName,
     required double bottomContentInset,
   }) {
     return LayoutBuilder(
@@ -487,6 +612,11 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         final layoutScale = scale * heightScale;
 
         final gap = math.max(4.0, innerH * 0.012);
+        final gapHeaderToImage = math.max(12.0, gap * 1.25);
+        final gapImageToStats = math.max(9.0, gap * 1.1);
+        final gapStatsToCare = math.max(12.0, gap * 1.3);
+        final gapCareToButtons = math.max(14.0, gap * 1.45);
+        final gapButtonsToBottom = math.max(14.0, gap * 1.65);
         final tightVertical = innerH < 460;
 
         var hGrid = math.min(math.max(innerH * 0.098, 56.0), 102.0);
@@ -602,7 +732,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ),
                   SizedBox(height: (20 * layoutScale).clamp(16.0, 32.0)),
                   Text(
-                    article.brand.isNotEmpty ? article.brand : 'Shoe',
+                    _brandLine(article),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.boldonse(
@@ -614,7 +744,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ),
                   SizedBox(height: titleGap),
                   Text(
-                    article.model.isNotEmpty ? article.model : '—',
+                    _modelLine(article),
                     maxLines: tightVertical ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.montserrat(
@@ -626,7 +756,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ),
                 ],
               ),
-              SizedBox(height: math.max(6.0, gap * 0.65)),
+              SizedBox(height: gapHeaderToImage),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, imgConstraints) {
@@ -662,7 +792,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   },
                 ),
               ),
-              SizedBox(height: gap),
+              SizedBox(height: gapImageToStats),
               Container(
                 height: hGrid,
                 padding: EdgeInsets.only(bottom: (5 * scale).clamp(4.0, 9.0)),
@@ -688,9 +818,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       child: _statColorColumn(
                         context,
                         swatchColor: swatchColor,
-                        colorName: article.color.isNotEmpty
-                            ? article.color
-                            : '—',
+                        colorName: colorDisplayName,
                         labelStyle: labelMontserrat(),
                         swatchSize: swatchSize,
                       ),
@@ -708,7 +836,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ],
                 ),
               ),
-              SizedBox(height: gap * 0.65),
+              SizedBox(height: math.max(10.0, gap * 1.0)),
               SizedBox(
                 height: hGrid,
                 child: Row(
@@ -717,7 +845,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                     Expanded(
                       child: _statPair(
                         context,
-                        value: _categoryLabel(article.category),
+                        value: _categoryDisplay(article),
                         label: 'Category',
                         valueStyle: valueBoldonse(),
                         labelStyle: labelMontserrat(),
@@ -736,9 +864,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ],
                 ),
               ),
-              SizedBox(height: gap),
+              SizedBox(height: gapStatsToCare),
               SizedBox(
-                height: hCare,
+                height: 81,
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -750,66 +878,79 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       );
                     },
                     borderRadius: BorderRadius.circular(10),
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
                     child: Ink(
-                      height: hCare,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: (16 * scale).clamp(12.0, 20.0),
-                        vertical: (8 * scale).clamp(6.0, 12.0),
-                      ),
-                      decoration: ShapeDecoration(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          side: const BorderSide(
-                            width: 1,
-                            color: Color(0xFF09DFFF),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
+                      height: 81,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
                         ),
-                        shadows: const [
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: const [
                           BoxShadow(
-                            color: Color(0x19000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 4),
+                            color: Color(0x22000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 3),
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: Padding(
+                        padding: const EdgeInsets.all(1.2),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8.8),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 12,
+                            ),
+                            child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: Text(
-                              'Last sent to shoe care',
+                              'Last sent to\nshoe care',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.montserrat(
                                 fontWeight: FontWeight.w400,
-                                fontSize: (14 * scale).clamp(12.0, 15.0),
-                                color: Colors.black87,
+                                fontSize: 16,
+                                height: 1.05,
+                                color: Colors.black,
                               ),
                             ),
                           ),
+                          SizedBox(width: (8 * scale).clamp(4.0, 10.0)),
                           Text(
                             _shoeCareDateLine(article),
                             textAlign: TextAlign.right,
                             style: GoogleFonts.boldonse(
                               fontWeight: FontWeight.w400,
-                              fontSize: (16 * scale).clamp(14.0, 17.0),
+                              fontSize: 16,
                               color: Colors.black,
                             ),
                           ),
-                          SizedBox(width: 8 * scale),
+                          SizedBox(width: (10 * scale).clamp(6.0, 14.0)),
                           Icon(
                             Icons.chevron_right_rounded,
                             size: (24 * scale).clamp(20.0, 26.0),
                             color: _rackTealAccent,
                           ),
                         ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: gap),
+              SizedBox(height: gapCareToButtons),
               SizedBox(
                 height: hButtons,
                 child: Row(
@@ -843,6 +984,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ],
                 ),
               ),
+              SizedBox(height: gapButtonsToBottom),
             ],
           ),
         );
@@ -1000,14 +1142,11 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   }
 
   Widget _placeholder() {
-    return ColoredBox(
-      color: AppColors.surfaceVariant,
-      child: const Center(
-        child: Icon(
-          Icons.checkroom_outlined,
-          color: AppColors.textTertiary,
-          size: 56,
-        ),
+    return const Center(
+      child: Icon(
+        Icons.checkroom_outlined,
+        color: AppColors.textTertiary,
+        size: 56,
       ),
     );
   }
