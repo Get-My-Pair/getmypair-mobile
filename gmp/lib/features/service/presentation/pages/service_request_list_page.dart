@@ -76,6 +76,7 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
     return GradientPageShell(
       appBar: buildGradientAppBar(
         title: 'My Requests',
+        centerTitle: false,
         actions: [
           IconButton(
             onPressed: _load,

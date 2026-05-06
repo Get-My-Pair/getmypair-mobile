@@ -62,7 +62,7 @@ class CareMyPairPage extends StatelessWidget {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
+              padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),
@@ -78,7 +78,7 @@ class CareMyPairPage extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: _panelRadius,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(10, 12, 6, 120),
+                    padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
                     children: [
                           _Header(onBack: () => Navigator.maybePop(context)),
                           const SizedBox(height: 24),

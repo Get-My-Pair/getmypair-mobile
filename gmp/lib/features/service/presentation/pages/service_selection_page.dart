@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
@@ -6,7 +7,9 @@ import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/home/presentation/pages/select_location_page.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
+import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/domain/usecases/get_user_profile.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -340,6 +343,38 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     });
   }
 
+  Future<void> _openNearbyCobblers() async {
+    if (_submitting || !mounted) return;
+    ProfileBloc profileBloc;
+    try {
+      profileBloc = BlocProvider.of<ProfileBloc>(context);
+    } catch (_) {
+      profileBloc = sl<ProfileBloc>();
+    }
+    final selectedLocation = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => SelectLocationPage(
+          profileBloc: profileBloc,
+        ),
+      ),
+    );
+    if (!mounted || selectedLocation == null || selectedLocation.trim().isEmpty) return;
+  }
+
+  void _selectPickupMode(bool homePickup) {
+    if (_submitting || !mounted) return;
+    setState(() => _homePickup = homePickup);
+  }
+
+  Future<void> _onRepairStepZeroNext() async {
+    if (_submitting || !mounted) return;
+    if (_homePickup) {
+      setState(() => _repairStep = 1);
+      return;
+    }
+    await _openNearbyCobblers();
+  }
+
   int? _resolvedEstimatedRupees() {
     final s = _selectedService?.value;
     switch (s) {
@@ -385,6 +420,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       );
       return;
     }
+    if (_homePickup && _selectedPickupSlot < 0) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a pickup time slot',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
 
     final est = _resolvedEstimatedRupees();
     if (est == null) {
@@ -410,13 +453,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               ? null
               : _problemController.text.trim(),
           pickupModeLabel: _homePickup ? 'Home Pickup' : 'Cobblers Nearby',
-          pickupScheduleLabel:
-              '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
+          pickupScheduleLabel: _selectedPickupSlot < 0
+              ? null
+              : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
           maintenancePlan: _selectedService!.value == 'maintenance'
               ? (_selectedMaintenancePlan ?? _maintenancePlans.first)
               : null,
           homePickup: _homePickup,
-          requestedPickupAt: _pickupSlotDateTimes.isEmpty
+          requestedPickupAt: _selectedPickupSlot < 0 || _pickupSlotDateTimes.isEmpty
               ? null
               : _pickupSlotDateTimes[_selectedPickupSlot
                   .clamp(0, _pickupSlotDateTimes.length - 1)],
@@ -445,9 +489,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
             onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            alignment: Alignment.centerLeft,
+            constraints: const BoxConstraints.tightFor(width: 36, height: 36),
           ),
           automaticallyImplyLeading: false,
-          centerTitle: true,
+          centerTitle: false,
         ),
         body: const Center(
           child: CircularProgressIndicator(color: Colors.white),
@@ -471,9 +518,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                   }
                   Navigator.pop(context);
                 },
+          padding: EdgeInsets.zero,
+          alignment: Alignment.centerLeft,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
         ),
         automaticallyImplyLeading: false,
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             onPressed: _submitting ? null : _load,
@@ -837,17 +887,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                 children: [
                                   Expanded(
                                     child: _repairPickupPill(
-                                      label: 'Home Pickup',
-                                      selected: _homePickup,
-                                      onTap: () => setState(() => _homePickup = true),
+                                      label: 'Cobblers Nearby',
+                                      selected: !_homePickup,
+                                      onTap: () => _selectPickupMode(false),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: _repairPickupPill(
-                                      label: 'Cobblers Nearby',
-                                      selected: !_homePickup,
-                                      onTap: () => setState(() => _homePickup = false),
+                                      label: 'Home Pickup',
+                                      selected: _homePickup,
+                                      onTap: () => _selectPickupMode(true),
                                     ),
                                   ),
                                 ],
@@ -876,14 +926,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                     child: TextButton(
                                       onPressed: _submitting
                                           ? null
-                                          : () => setState(() => _repairStep = 1),
+                                          : _onRepairStepZeroNext,
                                       style: TextButton.styleFrom(
+                                        padding: EdgeInsets.zero,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(100),
                                         ),
                                       ),
                                       child: Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
                                           Text(
                                             'Next',
@@ -894,10 +947,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                             ),
                                           ),
                                           const SizedBox(width: 20),
-                                          const Icon(
-                                            Icons.arrow_forward_ios_rounded,
-                                            color: Colors.white,
-                                            size: 18,
+                                          const SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.arrow_forward_ios_rounded,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -958,26 +1017,36 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   return InkWell(
                                     onTap: _submitting
                                         ? null
-                                        : () => setState(() => _selectedPickupSlot = index),
+                                        : () => setState(() {
+                                            _selectedPickupSlot =
+                                                selected ? -1 : index;
+                                          }),
                                     borderRadius: BorderRadius.circular(8),
                                     child: Container(
                                       alignment: Alignment.center,
-                                      decoration: ShapeDecoration(
-                                        color: const Color(0xFFDFE7E9),
-                                        shape: RoundedRectangleBorder(
-                                          side: BorderSide(
-                                            width: 1,
-                                            color: selected
-                                                ? const Color(0xFF0CADC5)
-                                                : const Color(0xFF0F6876),
-                                          ),
-                                          borderRadius: BorderRadius.circular(8),
+                                      decoration: BoxDecoration(
+                                        gradient: selected
+                                            ? const LinearGradient(
+                                                begin: Alignment.centerRight,
+                                                end: Alignment.centerLeft,
+                                                colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                                              )
+                                            : null,
+                                        color: selected ? null : const Color(0xFFDFE7E9),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          width: 1,
+                                          color: selected
+                                              ? Colors.transparent
+                                              : const Color(0xFF0F6876),
                                         ),
                                       ),
                                       child: Text(
                                         _pickupSlotLabels[index],
                                         style: GoogleFonts.boldonse(
-                                          color: const Color(0xFF12899B),
+                                          color: selected
+                                              ? Colors.white
+                                              : const Color(0xFF12899B),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w400,
                                         ),
@@ -1096,6 +1165,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                     child: TextButton(
                                       onPressed: _submitting ? null : _submit,
                                       style: TextButton.styleFrom(
+                                        padding: EdgeInsets.zero,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(100),
                                         ),
@@ -1110,7 +1180,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                               ),
                                             )
                                           : Row(
+                                              mainAxisSize: MainAxisSize.min,
                                               mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
                                               children: [
                                                 Text(
                                                   'Next',
@@ -1121,10 +1194,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 20),
-                                                const Icon(
-                                                  Icons.arrow_forward_ios_rounded,
-                                                  color: Colors.white,
-                                                  size: 18,
+                                                const SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: Center(
+                                                    child: Icon(
+                                                      Icons.arrow_forward_ios_rounded,
+                                                      color: Colors.white,
+                                                      size: 16,
+                                                    ),
+                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -1162,16 +1241,21 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       child: Container(
         height: 48,
         alignment: Alignment.center,
-        decoration: ShapeDecoration(
-          color: const Color(0xFFDFE7E9),
-          shape: RoundedRectangleBorder(
-            side: BorderSide(
-              width: 1,
-              color: selected ? const Color(0xFF0CADC5) : const Color(0xFF0F6876),
-            ),
-            borderRadius: BorderRadius.circular(100),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                )
+              : null,
+          color: selected ? null : const Color(0xFFDFE7E9),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            width: 1,
+            color: selected ? Colors.transparent : const Color(0xFF0F6876),
           ),
-          shadows: const [
+          boxShadow: const [
             BoxShadow(
               color: Color(0x19000000),
               blurRadius: 4,
@@ -1183,7 +1267,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           label,
           textAlign: TextAlign.center,
           style: GoogleFonts.boldonse(
-            color: const Color(0xFF062F35),
+            color: selected ? Colors.white : const Color(0xFF062F35),
             fontSize: 14,
             fontWeight: FontWeight.w400,
           ),
@@ -1301,8 +1385,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _problemController,
-                  minLines: 3,
-                  maxLines: 3,
+                  minLines: 2,
+                  maxLines: 2,
                   decoration: InputDecoration(
                     hintText: 'Type Here',
                     border: OutlineInputBorder(
@@ -1340,17 +1424,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                   children: [
                     Expanded(
                       child: _pickupModeChip(
-                        label: 'Home Pickup',
-                        selected: _homePickup,
-                        onTap: () => setState(() => _homePickup = true),
+                        label: 'Cobblers Nearby',
+                        selected: !_homePickup,
+                        onTap: () => _selectPickupMode(false),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _pickupModeChip(
-                        label: 'Cobblers Nearby',
-                        selected: !_homePickup,
-                        onTap: () => setState(() => _homePickup = false),
+                        label: 'Home Pickup',
+                        selected: _homePickup,
+                        onTap: () => _selectPickupMode(true),
                       ),
                     ),
                   ],
@@ -1487,16 +1571,23 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         height: 38,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withOpacity(0.12) : AppColors.surface,
+          gradient: selected
+              ? const LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                )
+              : null,
+          color: selected ? null : AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
+            color: selected ? Colors.transparent : AppColors.border,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? AppColors.primary : AppColors.textPrimary,
+            color: selected ? Colors.white : AppColors.textPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 12.5,
           ),

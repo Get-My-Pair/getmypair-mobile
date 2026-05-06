@@ -228,9 +228,12 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
           onPressed: _submitting ? null : () => Navigator.pop(context),
+          padding: EdgeInsets.zero,
+          alignment: Alignment.centerLeft,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
         ),
         automaticallyImplyLeading: false,
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: _loading
           ? const Center(
@@ -522,6 +525,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                     color: Color(0xFF062F35),
                                     size: 24,
                                   ),
+                                  padding: EdgeInsets.zero,
+                                  alignment: Alignment.centerLeft,
+                                  constraints: const BoxConstraints.tightFor(width: 34, height: 34),
                                 ),
                                 Text(
                                   _flowPageTitle,
@@ -548,6 +554,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                             _summaryLine(
                               'Pickup scheduled on:',
                               widget.pickupScheduleLabel ?? 'Not specified',
+                              singleLineValue: true,
                             ),
                             _summaryLine(
                               'Estimation cost:',
@@ -645,7 +652,11 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 
-  Widget _summaryLine(String key, String value) {
+  Widget _summaryLine(
+    String key,
+    String value, {
+    bool singleLineValue = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -661,12 +672,21 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.montserrat(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
+            child: SizedBox(
+              height: 22,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: GoogleFonts.montserrat(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
               ),
             ),
           ),

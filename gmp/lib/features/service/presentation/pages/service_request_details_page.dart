@@ -231,6 +231,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
     return GradientPageShell(
       appBar: buildGradientAppBar(
         title: 'Request Details',
+        centerTitle: false,
         actions: [
           IconButton(
             onPressed: _load,

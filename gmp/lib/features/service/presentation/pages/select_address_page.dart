@@ -72,9 +72,11 @@ class _SelectAddressPageState extends State<SelectAddressPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 26),
           onPressed: () => Navigator.pop(context),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 34, height: 34),
         ),
         automaticallyImplyLeading: false,
-        centerTitle: true,
+        centerTitle: false,
         actions: [
           IconButton(
             onPressed: _load,

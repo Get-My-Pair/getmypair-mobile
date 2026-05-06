@@ -136,7 +136,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
+              padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),
@@ -205,18 +205,21 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
 
     final rows = (_articles.length + 2) ~/ 3;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 128),
+      padding: const EdgeInsets.fromLTRB(10, 12, 12, 128),
       children: [
         Row(
           children: [
             IconButton(
               onPressed: () => Navigator.maybePop(context),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
               icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: _dark,
                 size: 24,
               ),
             ),
+            const SizedBox(width: 6),
             Text(
               widget.pageTitle,
               style: GoogleFonts.boldonse(
@@ -263,28 +266,31 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
           );
         }),
         const SizedBox(height: 18),
-        SizedBox(
-          height: 48,
-          child: FilledButton(
-            onPressed: _selectedArticleId == null || _submitting ? null : _goNext,
-            style: FilledButton.styleFrom(
-              backgroundColor: _teal,
-              disabledBackgroundColor: _teal.withValues(alpha: 0.35),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: _submitting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
+        Center(
+          child: SizedBox(
+            width: 220,
+            height: 48,
+            child: FilledButton(
+              onPressed: _selectedArticleId == null || _submitting ? null : _goNext,
+              style: FilledButton.styleFrom(
+                backgroundColor: _teal,
+                disabledBackgroundColor: _teal.withValues(alpha: 0.35),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Next',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                     ),
-                  )
-                : const Text(
-                    'Next',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                  ),
+            ),
           ),
         ),
       ],
