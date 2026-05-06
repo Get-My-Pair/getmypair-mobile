@@ -973,7 +973,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 8),
                               Text(
                                 'Please choose a time slot from the options below',
                                 style: GoogleFonts.montserrat(
@@ -982,7 +982,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              const SizedBox(height: 18),
+                              const SizedBox(height: 16),
                               Row(
                                 children: [
                                   Text(
@@ -1001,15 +1001,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 12),
                               GridView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _pickupSlotLabels.length,
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 3,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 14,
                                   childAspectRatio: 2.1,
                                 ),
                                 itemBuilder: (_, index) {
@@ -1055,7 +1055,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   );
                                 },
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 22),
                               Text(
                                 'Pickup Address',
                                 style: GoogleFonts.boldonse(
@@ -1064,9 +1064,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -1141,7 +1141,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 42),
+                              const SizedBox(height: 28),
                               Center(
                                 child: SizedBox(
                                   width: 164,
