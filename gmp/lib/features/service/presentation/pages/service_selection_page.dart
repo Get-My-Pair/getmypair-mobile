@@ -15,6 +15,7 @@ import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
@@ -982,34 +983,34 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 20),
                               Row(
                                 children: [
                                   Text(
                                     _pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)],
                                     style: GoogleFonts.boldonse(
-                                      color: const Color(0xFF11899B),
-                                      fontSize: 16,
+                                      color: const Color(0xFF12899B),
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w400,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Icon(
-                                    Icons.calendar_month_outlined,
-                                    color: Color(0xFF12899B),
-                                    size: 18,
+                                  SvgPicture.asset(
+                                    'assets/images/calendar.svg',
+                                    width: 18,
+                                    height: 18,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               GridView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _pickupSlotLabels.length,
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 3,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 14,
+                                  crossAxisSpacing: 14,
+                                  mainAxisSpacing: 16,
                                   childAspectRatio: 2.1,
                                 ),
                                 itemBuilder: (_, index) {
@@ -1055,7 +1056,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   );
                                 },
                               ),
-                              const SizedBox(height: 22),
+                              const SizedBox(height: 24),
                               Text(
                                 'Pickup Address',
                                 style: GoogleFonts.boldonse(
@@ -1071,8 +1072,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Container(
-                                      width: 28,
-                                      height: 28,
+                                      width: 30,
+                                      height: 30,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(color: const Color(0xFF11899B)),
@@ -1080,10 +1081,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                       child: const Icon(
                                         Icons.home_outlined,
                                         color: Color(0xFF11899B),
-                                        size: 18,
+                                        size: 17,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1096,11 +1097,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.montserrat(
                                               color: const Color(0xFF12899B),
-                                              fontSize: 12,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                          const SizedBox(height: 1),
+                                          const SizedBox(height: 2),
                                           Text(
                                             _selectedAddress == null
                                                 ? 'No address selected'
@@ -1109,20 +1110,21 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.montserrat(
                                               color: const Color(0xFF4E7F8A),
-                                              fontSize: 12,
+                                              fontSize: 13,
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
+                                    const SizedBox(width: 8),
                                     InkWell(
                                       onTap: _submitting ? null : _pickAddress,
                                       borderRadius: BorderRadius.circular(100),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 10,
-                                          vertical: 2,
+                                          vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF11899B),
@@ -1130,10 +1132,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                         ),
                                         child: Text(
                                           'Change',
-                                          style: GoogleFonts.boldonse(
+                                          style: GoogleFonts.montserrat(
                                             color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w400,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                       ),
@@ -1141,7 +1143,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 24),
                               Center(
                                 child: SizedBox(
                                   width: 164,

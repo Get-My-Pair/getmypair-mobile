@@ -115,6 +115,7 @@ flutter:
     - assets/images/bg/auth.png
     - assets/images/bg/floatbtn.png
     - assets/images/
+    - assets/images/calendar.svg
     - assets/images/allicons/
     - assets/images/phone.svg
     - assets/images/img/caremypair/
