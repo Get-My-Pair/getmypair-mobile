@@ -149,6 +149,7 @@ flutter:
     - assets/images/icons/shoe.svg
     - assets/images/icons/profile.svg
     - assets/images/logo/
+    - assets/images/logo/gmp_app_logo_white_1.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
