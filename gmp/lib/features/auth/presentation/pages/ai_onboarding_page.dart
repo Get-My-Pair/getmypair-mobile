@@ -2,13 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:gmp/features/auth/presentation/bloc/auth_event.dart';
+import 'package:gmp/features/auth/presentation/bloc/auth_state.dart';
 import 'package:gmp/features/auth/presentation/pages/onboarding/onboarding_bottom_progress.dart';
 import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_page.dart';
-
-import 'profile_completion_page.dart';
 
 /// Display fonts (e.g. Boldonse) use tall metrics; without this, labels can clip in Material buttons.
 const TextHeightBehavior _kOnboardingButtonTextHeight = TextHeightBehavior(
@@ -20,43 +24,110 @@ String _normalizeSpeech(String raw) {
   return raw.replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
-String _aiOnboardingBody(int index, String nickname) {
+/// Foot blueprint size rows (table UI + TTS).
+const List<(String, String)> _kFootSizeRows = [
+  ('United States & Canada', '10'),
+  ('United Kingdom', '8'),
+  ('Europe (EU)', '40.5 \u2013 41'),
+  ('Japan (CM)', '26.5 cm'),
+  ('Australia', '10'),
+];
+
+String _speakableFootSizes() {
+  return _kFootSizeRows
+      .map((r) => '${r.$1} \u2014 ${r.$2}')
+      .join('\n');
+}
+
+/// Body on the step after rack selection (index 3), driven by step-3 choices.
+String _bodyAfterRackSelection(Set<String> rack) {
+  if (rack.contains('My Partner')) {
+    return 'Crafting a curated masterpiece for two? Let\u2019s design this rack '
+        'to perfectly balance your personal rotation with your partner\u2019s '
+        'favourites.\n\nBut first, let\u2019s set you up together...';
+  }
+  if (rack.contains('My Kids')) {
+    return 'Building a fun and family-ready shoe collection? Let\u2019s create a rack '
+        'that keeps up with your style while making space for your kids\u2019 everyday '
+        'adventures, school days, and tiny trendsetters.\n\nBut first, let\u2019s set you up...';
+  }
+  if (rack.contains('Elderly')) {
+    return 'Creating a thoughtful shared collection for you and your elders? Let\u2019s design '
+        'a comfortable and organized rack that blends your personal style with everyday comfort, '
+        'accessibility, and timeless favourites for the family.\n\nBut first, let\u2019s set you up...';
+  }
+  return 'Going for a solo masterpiece, I see! Keeping this entire rack strictly '
+      'for your own personal rotation?';
+}
+
+/// Reassurance copy on the final step (index 6) when the rack includes partner, kids, or elders.
+String _rackReassuranceClosingStep(Set<String> rack) {
+  if (rack.contains('My Partner')) {
+    return 'Don\u2019t worry, we haven\u2019t forgotten about your partner! '
+        'We\u2019ll get their side of the rack styled and ready to go as soon as '
+        'we\u2019ve finished perfecting your fit.';
+  }
+  if (rack.contains('My Kids')) {
+    return 'Don\u2019t worry, the little ones aren\u2019t left out! We\u2019ll set up '
+        'their side of the rack with styles ready for school days, playtime, and '
+        'every family adventure once your fit is complete.';
+  }
+  if (rack.contains('Elderly')) {
+    return 'Don\u2019t worry, we haven\u2019t forgotten about your elders! We\u2019ll '
+        'thoughtfully arrange their side of the rack with comfort-first styles and '
+        'everyday essentials right after we perfect your setup.';
+  }
+  return '';
+}
+
+String _aiOnboardingBody(
+  int index,
+  String nickname, {
+  Set<String> rack = const {},
+}) {
   switch (index) {
     case 0:
       return 'Welcome, Collector!\n\nI\u2019m your AI friend KIX!\n\nI\u2019m here to help you nail the perfect fit, discover brands that work for you, and vibe with your style.\n\nBut first let\u2019s get to know you better!';
     case 1:
       return '$nickname! That\u2019s a great name!!';
     case 2:
-      return 'Awesome!\nLet\u2019s start setting up the rack...';
+      return 'That\u2019s the spirit! Let\u2019s get your personalized rack ready!';
     case 3:
-      return 'Kids rack, huh?\nThat\u2019s awesome! We get to style you all up.\n\nBut first, let\u2019s get you sorted before the others.';
+      return _bodyAfterRackSelection(rack);
     case 4:
-      return 'Looks like your size is\nUS 10\nUK 09\nEU 41\n\nAnd it seems like you have wide feet...\n\nNot to worry we know the right brands that will fit you...';
+      return 'That sounds like a total nightmare, but don\'t worry! We\'ve got your back (and your feet) covered.';
     case 5:
-      return 'That sounds really frustrating..\nwe get it, and we\u2019re here to help\nfix those fit struggles.';
-    case 6:
-      return 'That sounds really frustrating..\nwe get it, and we\u2019re here to help\nfix those fit struggles.\n\n'
-          'When you are ready, use the button below to allow camera access so we can help measure your feet.';
+      return '';
     default:
       return '';
   }
 }
 
-String _aiOnboardingTitle(int index) {
+String _aiOnboardingTitle(int index, {Set<String> rack = const {}}) {
   switch (index) {
     case 0:
       return 'What should we call you?\nDo you go by a nickname?';
     case 1:
-      return 'Now, let\u2019s get to know\nyour age and gender...';
+      return 'Since I\'m all about getting to know the real you, tell me: when were you born, and what are your preferred pronouns?';
     case 2:
-      return 'Is this rack just for you, or\nare we setting it up for\nyour loved ones too?';
+      return 'Will this be a solo collection, or are we making room for the whole crew?';
     case 3:
-      return 'What shoe troubles do you run into most?';
+      return 'Time for some shoe therapy: what\u2019s the ultimate dealbreaker that usually stands between you and the perfect fit?';
     case 4:
-      return 'Before that let\u2019s\nunderstand your kids needs too...';
+      return 'Let\u2019s dive in and find your perfect match by getting the lowdown on your unique foot shape and size!';
     case 5:
+      return 'Here it is: the blueprint of your feet! Check out your custom foot type and size breakdown right here.';
     case 6:
-      return 'Let\u2019s get to know your\nfoot type and size!';
+      return _rackReassuranceClosingStep(rack);
+    default:
+      return '';
+  }
+}
+
+String _aiOnboardingTrailingTitle(int index) {
+  switch (index) {
+    case 5:
+      return 'Detected Foot Profile: The \u201CHigh Arch\u201D';
     default:
       return '';
   }
@@ -82,11 +153,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   final PageController _controller = PageController();
   final TextEditingController _name = TextEditingController();
-  final TextEditingController _age = TextEditingController();
   final FlutterTts _tts = FlutterTts();
   AnimationController? _bgGradientController;
 
   int _index = 0;
+  DateTime? _birthDate;
   String? _gender;
   bool _cameraAllowed = false;
   final Set<String> _rack = <String>{};
@@ -103,6 +174,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   /// Full utterance for the current page (used for Android resume after pause).
   String _fullUtterance = '';
+
+  /// True while [AuthCompleteProfile] is in flight after the last onboarding step.
+  bool _isSubmittingProfile = false;
 
   @override
   void initState() {
@@ -260,9 +334,15 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   String _speakableContentFor(int index) {
     final nickname = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
-    final body = _aiOnboardingBody(index, nickname);
-    final title = _aiOnboardingTitle(index);
-    return _normalizeSpeech('$body $title');
+    final body = index == 5
+        ? _speakableFootSizes()
+        : _aiOnboardingBody(index, nickname, rack: _rack);
+    final title = _aiOnboardingTitle(index, rack: _rack);
+    final trailing = _aiOnboardingTrailingTitle(index);
+    if (index == 5) {
+      return _normalizeSpeech('$title $body $trailing');
+    }
+    return _normalizeSpeech('$body $title $trailing');
   }
 
   Future<void> _stopSpeaking() async {
@@ -388,7 +468,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     unawaited(_safeStopTts());
     _bgGradientController?.dispose();
     _name.dispose();
-    _age.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -398,23 +477,23 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       case 0:
         return _name.text.trim().isNotEmpty;
       case 1:
-        return _age.text.trim().isNotEmpty && _gender != null;
+        return _birthDate != null && _gender != null;
       case 2:
         return _rack.isNotEmpty;
       case 3:
         return _troubles.isNotEmpty;
       case 4:
-      case 5:
-        return true;
-      case 6:
         return _cameraAllowed;
+      case 5:
+      case 6:
+        return true;
       default:
         return false;
     }
   }
 
   void _prev() {
-    if (_index == 0) return;
+    if (_index == 0 || _isSubmittingProfile) return;
     _controller.previousPage(
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
@@ -422,9 +501,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   }
 
   void _next() {
-    if (!_canNext) return;
+    if (!_canNext || _isSubmittingProfile) return;
     if (_index == _pageCount - 1) {
-      _finish();
+      unawaited(_finish());
       return;
     }
     _controller.nextPage(
@@ -433,24 +512,55 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     );
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     if (widget.requiresProfileCompletion) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ProfileCompletionPage(mobile: widget.mobile),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const CustomerDashboardPage()),
-        (_) => false,
-      );
+      final name = _name.text.trim();
+      if (name.length < 2 || _birthDate == null || _gender == null) {
+        if (!mounted) return;
+        await showAppFeedbackAlert(
+          context,
+          message:
+              'Profile details are incomplete. Go back and fill your name, birthday, and gender.',
+          type: AppFeedbackType.warning,
+        );
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _isSubmittingProfile = true);
+      context.read<AuthBloc>().add(
+            AuthCompleteProfile(
+              mobile: widget.mobile,
+              name: name,
+              dateOfBirth: _birthDate!,
+              gender: _gender!.toLowerCase(),
+              location: null,
+            ),
+          );
+      return;
     }
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const CustomerDashboardPage()),
+      (_) => false,
+    );
   }
 
   Future<void> _onCameraTap() async {
     if (_cameraAllowed) return;
     setState(() => _cameraAllowed = true);
+  }
+
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 25, 1, 1),
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+    if (picked != null && mounted) {
+      setState(() => _birthDate = picked);
+    }
   }
 
   @override
@@ -471,53 +581,16 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         text: _aiOnboardingBody(1, nick),
         title: _aiOnboardingTitle(1),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Input(
-              controller: _age,
-              hint: 'Age',
-              numeric: true,
-              onChanged: () => setState(() {}),
+            _BirthdayPill(
+              date: _birthDate,
+              onTap: _pickBirthDate,
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ['Female', 'Male', 'Other'].map((g) {
-                final selected = _gender == g;
-                return ElevatedButton(
-                  onPressed: () => setState(() => _gender = g),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selected
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.15),
-                    foregroundColor: selected
-                        ? const Color(0xFF12899B)
-                        : const Color(0xFFDFE7E9),
-                    elevation: selected ? 2 : 0,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 22,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    side: const BorderSide(
-                      color: Color(0xFF09DFFF),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    g,
-                    textHeightBehavior: _kOnboardingButtonTextHeight,
-                    style: GoogleFonts.boldonse(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      height: 1.2,
-                    ),
-                  ),
-                );
-              }).toList(),
+            const SizedBox(height: 20),
+            _GenderRadios(
+              selected: _gender,
+              onSelected: (value) => setState(() => _gender = value),
             ),
           ],
         ),
@@ -532,7 +605,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         ),
       ),
       _Step(
-        text: _aiOnboardingBody(3, nick),
+        text: _aiOnboardingBody(3, nick, rack: _rack),
         title: _aiOnboardingTitle(3),
         child: _Checks(
           options: const [
@@ -548,14 +621,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       _Step(
         text: _aiOnboardingBody(4, nick),
         title: _aiOnboardingTitle(4),
-      ),
-      _Step(
-        text: _aiOnboardingBody(5, nick),
-        title: _aiOnboardingTitle(5),
-      ),
-      _Step(
-        text: _aiOnboardingBody(6, nick),
-        title: _aiOnboardingTitle(6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -595,11 +660,42 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           ],
         ),
       ),
+      _Step(
+        text: _aiOnboardingBody(5, nick),
+        title: _aiOnboardingTitle(5),
+        trailingTitle: _aiOnboardingTrailingTitle(5),
+        leadingTitleFirst: true,
+        child: const _FootSizeTable(),
+      ),
+      _Step(
+        text: _aiOnboardingBody(6, nick, rack: _rack),
+        title: _aiOnboardingTitle(6, rack: _rack),
+      ),
 
     ];
 
-    return Scaffold(
-      body: Stack(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) async {
+        if (state is AuthProfileCompleted) {
+          if (!mounted) return;
+          setState(() => _isSubmittingProfile = false);
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const CustomerDashboardPage()),
+            (_) => false,
+          );
+        } else if (state is AuthError) {
+          if (!_isSubmittingProfile) return;
+          if (!mounted) return;
+          setState(() => _isSubmittingProfile = false);
+          await showAppFeedbackAlert(
+            context,
+            message: state.message,
+            type: AppFeedbackType.failure,
+          );
+        }
+      },
+      child: Scaffold(
+        body: Stack(
         fit: StackFit.expand,
         children: [
           AnimatedBuilder(
@@ -760,7 +856,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         _NavCircleButton(
-                          enabled: _index > 0,
+                          enabled: _index > 0 && !_isSubmittingProfile,
                           onTap: _prev,
                           flipX: true,
                         ),
@@ -776,7 +872,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                         ),
                         const SizedBox(width: 20),
                         _NavCircleButton(
-                          enabled: _canNext,
+                          enabled: _canNext && !_isSubmittingProfile,
                           onTap: _next,
                         ),
                       ],
@@ -786,38 +882,54 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
               ],
             ),
           ),
+          if (_isSubmittingProfile)
+            Positioned.fill(
+              child: AbsorbPointer(
+                child: ColoredBox(
+                  color: Colors.black38,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
+        ),
       ),
     );
   }
 }
 
 class _Step extends StatelessWidget {
-  const _Step({
+  // Non-const: const ctors block hot reload when widget fields are added/removed.
+  // ignore: prefer_const_constructors_in_immutables
+  _Step({
     required this.text,
     required this.title,
+    this.trailingTitle = '',
+    this.leadingTitleFirst = false,
     this.child,
-    this.titleFontSize,
-    this.titleTopSpacing,
+    this.prominentBody = false,
   });
 
   final String text;
   final String title;
+  final String trailingTitle;
+
+  /// When true, [title] is shown above [text] (e.g. foot blueprint step).
+  final bool leadingTitleFirst;
   final Widget? child;
-  final double? titleFontSize;
-  final double? titleTopSpacing;
+
+  /// Boldonse body at the same size as [title] (e.g. foot blueprint headline).
+  final bool prominentBody;
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final bodySize = screenWidth < 360 ? 19.0 : 22.0;
-    final titleSize = titleFontSize ?? (screenWidth < 360 ? 19.0 : 22.0);
-    final bodyStyle = GoogleFonts.montserrat(
-      color: const Color(0xFFDFE7E9),
-      fontSize: bodySize,
-      fontWeight: FontWeight.w300,
-      height: 1.25,
-    );
+    final titleSize = screenWidth < 360 ? 19.0 : 22.0;
     final titleStyle = GoogleFonts.boldonse(
       color: const Color(0xFFDFE7E9),
       fontSize: titleSize,
@@ -825,46 +937,211 @@ class _Step extends StatelessWidget {
       letterSpacing: 0.2,
       height: 1.59,
     );
+    final bodyStyle = prominentBody
+        ? titleStyle
+        : GoogleFonts.montserrat(
+            color: const Color(0xFFDFE7E9),
+            fontSize: bodySize,
+            fontWeight: FontWeight.w300,
+            height: 1.25,
+          );
 
-    final bodyWidget = Text(text, style: bodyStyle);
-    final titleWidget = Text(title, style: titleStyle);
+    final bodyWidget = Text(
+      text,
+      style: bodyStyle,
+      textHeightBehavior:
+          prominentBody ? _kOnboardingButtonTextHeight : null,
+    );
+    final titleWidget = Text(
+      title,
+      style: titleStyle,
+      textHeightBehavior: _kOnboardingButtonTextHeight,
+    );
+    final trailingTitleWidget = Text(
+      trailingTitle,
+      style: titleStyle,
+      textHeightBehavior: _kOnboardingButtonTextHeight,
+    );
+    final hasTitle = title.trim().isNotEmpty;
+    final hasBodyText = text.trim().isNotEmpty;
+    final hasTrailingTitle = trailingTitle.trim().isNotEmpty;
+
+    final columnChildren = leadingTitleFirst
+        ? <Widget>[
+            if (hasTitle) ...[
+              titleWidget,
+              const SizedBox(height: 50),
+            ],
+            if (hasBodyText) bodyWidget,
+            if (child != null) ...[
+              if (hasBodyText) const SizedBox(height: 24),
+              child!,
+            ],
+            if (hasTrailingTitle) ...[
+              const SizedBox(height: 24),
+              trailingTitleWidget,
+            ],
+          ]
+        : <Widget>[
+            if (hasBodyText) bodyWidget,
+            if (hasTitle) ...[
+              const SizedBox(height: 50),
+              titleWidget,
+            ],
+            if (child != null) ...[
+              SizedBox(height: hasTitle ? 80 : 24),
+              child!,
+            ],
+            if (hasTrailingTitle) ...[
+              const SizedBox(height: 24),
+              trailingTitleWidget,
+            ],
+          ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          bodyWidget,
-          SizedBox(height: titleTopSpacing ?? 50),
-          titleWidget,
-          if (child != null) ...[
-            const SizedBox(height: 80),
-            child!,
+        children: columnChildren,
+      ),
+    );
+  }
+}
+
+/// Region / size grid for the foot blueprint step (small type, fits teal gradient).
+class _FootSizeTable extends StatelessWidget {
+  const _FootSizeTable();
+
+  static Widget _cell(
+    String label,
+    double fontSize, {
+    bool header = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Text(
+        label,
+        style: GoogleFonts.montserrat(
+          color: const Color(0xFFDFE7E9),
+          fontSize: header ? fontSize + 0.75 : fontSize,
+          fontWeight: header ? FontWeight.w600 : FontWeight.w400,
+          height: 1.25,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final dataFont = screenWidth < 360 ? 9.5 : 10.5;
+    final borderColor = Colors.white.withValues(alpha: 0.28);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      padding: const EdgeInsets.all(8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Table(
+          defaultColumnWidth: const FlexColumnWidth(1),
+          border: TableBorder.all(color: borderColor, width: 1),
+          children: [
+            TableRow(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+              children: [
+                _cell('Region', dataFont, header: true),
+                _cell('Size Equivalent', dataFont, header: true),
+              ],
+            ),
+            for (final row in _kFootSizeRows)
+              TableRow(
+                children: [
+                  _cell(row.$1, dataFont),
+                  _cell(row.$2, dataFont),
+                ],
+              ),
           ],
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BirthdayPill extends StatelessWidget {
+  // ignore: prefer_const_constructors_in_immutables
+  _BirthdayPill({
+    required this.date,
+    required this.onTap,
+  });
+
+  final DateTime? date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    date == null
+                        ? 'Your Birthday'
+                        : DateFormat.yMMMd().format(date!),
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFFDFE7E9),
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  color: const Color(0xFFDFE7E9).withValues(alpha: 0.95),
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
 class _Input extends StatelessWidget {
-  const _Input({
+  // ignore: prefer_const_constructors_in_immutables
+  _Input({
     required this.controller,
     required this.hint,
     required this.onChanged,
-    this.numeric = false,
   });
 
   final TextEditingController controller;
   final String hint;
   final VoidCallback onChanged;
-  final bool numeric;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      keyboardType: numeric ? TextInputType.number : TextInputType.text,
+      keyboardType: TextInputType.text,
       textInputAction: TextInputAction.done,
       onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
@@ -904,8 +1181,102 @@ class _Input extends StatelessWidget {
   }
 }
 
+/// Single-select gender list: same layout as [_Checks] (header + rows), radio circles on the left.
+class _GenderRadios extends StatelessWidget {
+  // ignore: prefer_const_constructors_in_immutables
+  _GenderRadios({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String? selected;
+  final ValueChanged<String> onSelected;
+
+  static const _options = ['Female', 'Male'];
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final labelSize = screenWidth < 360 ? 20.0 : 24.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select your Gender',
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFFDFE7E9).withValues(alpha: 0.8),
+            fontSize: screenWidth < 360 ? 14.0 : 15.0,
+            fontWeight: FontWeight.w400,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 18),
+        ..._options.map((option) {
+          final active = selected == option;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: () => onSelected(option),
+              child: Semantics(
+                label: option,
+                checked: active,
+                inMutuallyExclusiveGroup: true,
+                button: true,
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFDFE7E9),
+                          width: 3,
+                        ),
+                        color: active
+                            ? const Color(0xFFDFE7E9).withValues(alpha: .2)
+                            : Colors.transparent,
+                      ),
+                      child: active
+                          ? Center(
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFFDFE7E9),
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Text(
+                        option,
+                        textHeightBehavior: _kOnboardingButtonTextHeight,
+                        style: GoogleFonts.boldonse(
+                          color: const Color(0xFFDFE7E9),
+                          fontSize: labelSize,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
 class _Checks extends StatelessWidget {
-  const _Checks({
+  // ignore: prefer_const_constructors_in_immutables
+  _Checks({
     required this.options,
     required this.selected,
     required this.onChanged,
@@ -923,7 +1294,7 @@ class _Checks extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Choose multiple options',
+          'You Choose multiple options',
           style: GoogleFonts.montserrat(
             color: const Color(0xFFDFE7E9).withValues(alpha: 0.8),
             fontSize: screenWidth < 360 ? 14.0 : 15.0,
@@ -992,7 +1363,8 @@ class _Checks extends StatelessWidget {
 }
 
 class _NavCircleButton extends StatelessWidget {
-  const _NavCircleButton({
+  // ignore: prefer_const_constructors_in_immutables
+  _NavCircleButton({
     required this.enabled,
     required this.onTap,
     this.flipX = false,

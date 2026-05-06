@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../core/bgtheme.dart';
+import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_gradients.dart';
 import 'onboarding/onboarding_flow_page.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -52,63 +53,47 @@ class _SplashScreenState extends State<SplashScreen> {
         systemNavigationBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        body: Stack(
-          children: [
-            ...BgTheme.background(),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final sy = constraints.maxHeight / _figmaHeight;
+        body: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: AppGradients.splashBackground,
+          ),
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final sy = constraints.maxHeight / _figmaHeight;
+                final logoW = 116.0 * sy;
+                final logoH = 100.992 * sy;
+                final gap = 9.0 * sy;
+                final titleSize = 36.0 * sy;
 
-                  final top = 260.0 * sy;
-                  final gap = 9.0 * sy;
-                  return Stack(
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Positioned(
-                        top: top,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Image.asset(
-                              //   AppAssets.appLogo,
-                              //   height: logoH,
-                              //   fit: BoxFit.contain,
-                              //   filterQuality: FilterQuality.high,
-                              // ),
-                              SizedBox(height: gap * 1.5),
-                              Text(
-                                'Welcome to',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                              SizedBox(height: gap),
-                              Text(
-                                'GetMyPair',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.boldonse(
-                                  color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ],
-                          ),
+                      Image.asset(
+                        AppAssets.appLogoWhite1,
+                        width: logoW,
+                        height: logoH,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      ),
+                      SizedBox(height: gap),
+                      Text(
+                        'GetMyPair',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.boldonse(
+                          color: Colors.white,
+                          fontSize: titleSize,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-          ],
+          ),
         ),
       ),
     );
