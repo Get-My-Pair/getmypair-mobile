@@ -4,7 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
-import '../../../../core/utils/responsive.dart';
+import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 
 /// Account Settings → Manage Devices: view and remove sessions on other devices.
@@ -29,8 +29,6 @@ class ManageDevicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final thisDeviceLabel = _isPhone() ? 'Android' : _deviceLabel();
-    final h = Responsive.horizontalPaddingOf(context);
-    final statusTop = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
       body: SafeArea(
@@ -61,28 +59,45 @@ class ManageDevicesPage extends StatelessWidget {
                 ),
                 margin: const EdgeInsets.only(bottom: 14),
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(h, statusTop + 30, h, 112),
+                  padding:
+                      ArticleStyleHeaderInsets.scrollContentPadding(context),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Manage Devices',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFFDFE7E9),
-                          fontSize: 25,
-                          fontWeight: FontWeight.w400,
-                          height: 1.18,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Devices you\'re currently logged in on. Remove one to sign out from it',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          height: 1.2,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const ChevronScreenBackButton(
+                            iconColor: Color(0xFFDFE7E9),
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Manage Devices',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFFDFE7E9),
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.18,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Devices you\'re currently logged in on. Remove one to sign out from it',
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 42),
                       Text(

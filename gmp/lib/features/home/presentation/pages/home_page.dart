@@ -330,7 +330,10 @@ class _HomePageState extends State<HomePage> {
     Navigator.of(context)
         .push<void>(
           MaterialPageRoute<void>(
-            builder: (_) => ArticleDetailsPage(articleId: article.id),
+            builder: (_) => ArticleDetailsPage(
+              articleId: article.id,
+              initialArticle: article,
+            ),
           ),
         )
         .then((_) {

@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
@@ -246,15 +247,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                     textScaleTightness)
                                 .clamp(0.58, 1.0);
 
-                            final horizontalLeft = (20 * widthScale).clamp(
-                              16.0,
-                              22.0,
+                            final horizontalLeft =
+                                ArticleStyleHeaderInsets.titleLeftInsetOf(
+                              context,
                             );
-                            final horizontalRight = (20 * widthScale).clamp(
-                              16.0,
-                              22.0,
+                            final horizontalRight =
+                                ArticleStyleHeaderInsets.headerRightInsetOf(
+                              context,
                             );
-                            final topPadding = statusTop + 22;
+                            final topPadding = statusTop +
+                                30 +
+                                ArticleStyleHeaderInsets.topTitleGapOf(context);
                             final bottomPadding = (20 * layoutScale).clamp(
                               4.0,
                               18.0,
@@ -278,6 +281,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                          top: (2 * layoutScale).clamp(
+                                            0.0,
+                                            4.0,
+                                          ),
+                                        ),
+                                        child: const ChevronScreenBackButton(
+                                          iconColor: Color(0xFFDFE7E9),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 7),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:

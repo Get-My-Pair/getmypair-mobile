@@ -3,10 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
+import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
@@ -76,10 +76,13 @@ class FamilyProfilePage extends StatelessWidget {
                           textScaleTightness)
                           .clamp(0.82, 1.0);
 
-                      final horizontalLeft = (12 * widthScale).clamp(10.0, 18.0);
+                      final horizontalLeft =
+                          ArticleStyleHeaderInsets.titleLeftInsetOf(context);
                       final horizontalRight =
-                          (22 * widthScale).clamp(18.0, 24.0);
-                      final topPadding = statusTop + 42;
+                          ArticleStyleHeaderInsets.headerRightInsetOf(context);
+                      final topPadding = statusTop +
+                          30 +
+                          ArticleStyleHeaderInsets.topTitleGapOf(context);
                       final bottomPadding = (20 * layoutScale).clamp(4.0, 18.0);
                       const titleSize = 20.0;
 
@@ -96,30 +99,10 @@ class FamilyProfilePage extends StatelessWidget {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints.tightFor(
-                                    width: 26,
-                                    height: 26,
-                                  ),
-                                  visualDensity: const VisualDensity(
-                                    horizontal: -4,
-                                    vertical: -4,
-                                  ),
-                                  onPressed: () => Navigator.of(context).maybePop(),
-                                  icon: SvgPicture.asset(
-                                    'assets/images/chevron-left.svg',
-                                    width: (28 * layoutScale).clamp(24.0, 28.0),
-                                    height: (28 * layoutScale).clamp(24.0, 28.0),
-                                    colorFilter: const ColorFilter.mode(
-                                      Colors.white,
-                                      BlendMode.srcIn,
-                                    ),
-                                  ),
+                                const ChevronScreenBackButton(
+                                  iconColor: Colors.white,
                                 ),
-                                SizedBox(
-                                  width: (7 * layoutScale).clamp(4.0, 8.0),
-                                ),
+                                const SizedBox(width: 7),
                                 Expanded(
                                   child: FittedBox(
                                     alignment: Alignment.center,

@@ -112,8 +112,18 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final json = _handleResponse(response);
       final data = json['data'];
       if (data == null) throw ServerException('Article not found');
-      final raw = data is Map ? data['article'] : null;
-      final article = raw is Map<String, dynamic> ? raw : null;
+
+      Map<String, dynamic>? article;
+      if (data is Map<String, dynamic>) {
+        final nested = data['article'];
+        if (nested is Map<String, dynamic>) {
+          article = nested;
+        } else if (data.containsKey('_id') ||
+            data.containsKey('id') ||
+            data.containsKey('brand')) {
+          article = data;
+        }
+      }
       if (article == null) throw ServerException('Article not found');
       return ArticleModel.fromJson(article);
     } catch (e) {

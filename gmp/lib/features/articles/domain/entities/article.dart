@@ -25,6 +25,11 @@ class Article extends Equatable {
   final List<String> images;
   final DateTime createdAt;
 
+  /// Shoe size from API when provided (e.g. `"06"`, `"US 9"`).
+  final String? shoeSize;
+  final DateTime? lastWornAt;
+  final DateTime? lastShoeCareAt;
+
   const Article({
     required this.id,
     required this.ownerId,
@@ -37,6 +42,9 @@ class Article extends Equatable {
     required this.condition,
     this.images = const [],
     required this.createdAt,
+    this.shoeSize,
+    this.lastWornAt,
+    this.lastShoeCareAt,
   });
 
   /// First image URL for list thumbnail, or null if no images.
@@ -44,6 +52,20 @@ class Article extends Equatable {
       images.isNotEmpty ? images.first : null;
 
   @override
-  List<Object?> get props =>
-      [id, ownerId, brand, model, category, color, purchaseYear, materials, condition, images, createdAt];
+  List<Object?> get props => [
+        id,
+        ownerId,
+        brand,
+        model,
+        category,
+        color,
+        purchaseYear,
+        materials,
+        condition,
+        images,
+        createdAt,
+        shoeSize,
+        lastWornAt,
+        lastShoeCareAt,
+      ];
 }

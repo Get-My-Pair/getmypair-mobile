@@ -153,7 +153,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) => ArticleDetailsPage(articleId: article.id),
+              builder: (_) => ArticleDetailsPage(
+                articleId: article.id,
+                initialArticle: article,
+              ),
             ),
           );
         } catch (e) {

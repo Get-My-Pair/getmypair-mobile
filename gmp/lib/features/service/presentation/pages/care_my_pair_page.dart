@@ -75,7 +75,7 @@ class CareMyPairPage extends StatelessWidget {
                     children: [
                       _Header(onBack: () => Navigator.maybePop(context)),
                       const SizedBox(height: 10),
-                      _SearchBar(),
+                      const _SearchBar(),
                       const SizedBox(height: 18),
                       Text(
                         'Our Services',
@@ -228,49 +228,76 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// Same shell as [ArticleListPage] rack search (gradient stroke, white fill); no filter icon.
 class _SearchBar extends StatelessWidget {
+  const _SearchBar();
+
   @override
   Widget build(BuildContext context) {
+    const searchHeight = 36.0;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+
     return Container(
-      height: 38,
-      padding: const EdgeInsets.all(1),
+      height: searchHeight,
+      padding: const EdgeInsets.all(1.2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(100),
         gradient: const LinearGradient(
-          colors: [Color(0xFF09E0FF), Color(0xFF1CCAE5)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
+          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
         ),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(100),
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0xFF09E0FF).withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Color(0x22000000),
+            blurRadius: 6,
+            offset: Offset(0, 3),
           ),
         ],
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(99),
+          borderRadius: BorderRadius.circular(100),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Row(
             children: [
-              Icon(
-                Icons.manage_search_rounded,
-                color: Colors.black.withValues(alpha: 0.4),
-                size: 24,
+              SvgPicture.asset(
+                'assets/images/search.svg',
+                width: 20,
+                height: 20,
               ),
-              const SizedBox(width: 10),
-              Text(
-                'Search',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.montserrat(
-                  color: Colors.black.withValues(alpha: 0.34),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  textAlignVertical: TextAlignVertical.center,
+                  style: GoogleFonts.montserrat(
+                    fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    isCollapsed: false,
+                    filled: false,
+                    fillColor: Colors.transparent,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    hintText: 'Search',
+                    hintStyle: GoogleFonts.montserrat(
+                      color: Colors.black.withValues(alpha: 0.34),
+                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
                 ),
               ),
             ],

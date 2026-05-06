@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
+import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/address.dart';
 import '../../domain/entities/user_profile.dart';
@@ -70,8 +71,6 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
             ? allAddresses
             : allAddresses.take(2).toList(growable: false);
 
-        final statusTop = MediaQuery.paddingOf(context).top;
-
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: kProfileGradientHeaderSystemUi,
           child: Scaffold(
@@ -109,37 +108,17 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         thumbColor: const Color(0x80000000),
                         child: SingleChildScrollView(
                           controller: _scrollController,
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            statusTop + 30,
-                            20,
-                            112,
+                          padding:
+                              ArticleStyleHeaderInsets.scrollContentPadding(
+                            context,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                             Row(
                               children: [
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints.tightFor(
-                                    width: 26,
-                                    height: 26,
-                                  ),
-                                  visualDensity: const VisualDensity(
-                                    horizontal: -4,
-                                    vertical: -4,
-                                  ),
-                                  onPressed: () => Navigator.of(context).maybePop(),
-                                  icon: SvgPicture.asset(
-                                    'assets/images/chevron-left.svg',
-                                    width: 26,
-                                    height: 26,
-                                    colorFilter: const ColorFilter.mode(
-                                      Color(0xFFDFE7E9),
-                                      BlendMode.srcIn,
-                                    ),
-                                  ),
+                                const ChevronScreenBackButton(
+                                  iconColor: Color(0xFFDFE7E9),
                                 ),
                                 const SizedBox(width: 7),
                                 Text(

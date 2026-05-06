@@ -651,7 +651,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
     Navigator.of(context)
         .push(
           MaterialPageRoute(
-            builder: (_) => ArticleDetailsPage(articleId: article.id),
+            builder: (_) => ArticleDetailsPage(
+              articleId: article.id,
+              initialArticle: article,
+            ),
           ),
         )
         .then((_) => _loadArticles());

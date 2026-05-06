@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/bgtheme.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/user_profile.dart';
@@ -181,34 +182,54 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   /// Vertical space needed by the form at [scale], mirroring clamps in [build].
+  /// Kept slightly conservative vs strict math so web / platform font metrics do not overflow.
   double _estimateEditProfileColumnHeight(double scale) {
     double sx(double v, double lo, double hi) => (v * scale).clamp(lo, hi);
+
+    // Matches [_buildLabel] (Montserrat) — use >1.2 so estimate ≥ rendered line height on web.
+    double labelLineHeight() => sx(16, 12, 16) * 1.34;
+
+    // Matches [_profileField] padding + line + InputDecoration / M3 slop.
+    double fieldBlockHeight(int index) {
+      final isPassword = index == 4;
+      final v = isPassword
+          ? (11 * scale * 0.52).clamp(4.0, 11.0)
+          : (11 * scale).clamp(4.0, 11.0);
+      final t = sx(16, 12, 16);
+      final textLine = t * 1.34;
+      var block = 2 * v + textLine;
+      if (isPassword) {
+        final iconMinH = sx(34, 24, 34);
+        block = block > iconMinH ? block : iconMinH;
+      }
+      return block + 10;
+    }
 
     var h = 0.0;
     h += sx(100, 72, 100);
     h += sx(20, 10, 22);
+
+    final labelToField = sx(6, 3, 6);
+    final betweenGroups = sx(20, 10, 20);
+    final afterPassword = sx(18, 10, 20);
+
     for (var i = 0; i < 5; i++) {
-      h += sx(16, 12, 16) * 1.2;
-      h += sx(6, 3, 6);
-      final v = sx(11, 8, 11);
-      final t = sx(16, 12, 16);
-      final hasSuffix = i == 4;
-      final icon = hasSuffix ? sx(32, 24, 32) : 0.0;
-      final base = 2 * v + t * 1.28;
-      h += (hasSuffix ? (base > icon ? base : icon) : base) + 6;
-      h += sx(20, 10, 20);
+      h += labelLineHeight();
+      h += labelToField;
+      h += fieldBlockHeight(i);
+      h += i < 4 ? betweenGroups : afterPassword;
     }
-    h += sx(18, 10, 20);
-    h += sx(15, 12, 16) * 1.2;
+
+    h += labelLineHeight();
     h += sx(8, 4, 8);
-    h += sx(14, 11, 14) * 1.2;
+    h += sx(12, 10, 12) * 1.3;
     h += sx(20, 8, 16);
-    h += sx(14, 11, 14) * 1.2;
+    h += labelLineHeight();
     h += sx(6, 3, 6);
-    h += sx(14, 11, 14) * 1.2;
-    h += sx(16, 10, 20);
-    // Matches article create primary pill (height ~50, scaled).
+    h += sx(14, 11, 14) * 1.34;
+    h += sx(4, 0, 4);
     h += sx(50, 44, 52);
+
     return h;
   }
 
@@ -364,8 +385,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ),
                         ],
                       ),
-                      // No scrolling: shrink spacing, padding, and control sizes until
-                      // the column fits the available height (see [_estimateEditProfileColumnHeight]).
+                      // Shrink spacing and control sizes until the column fits (see
+                      // [_estimateEditProfileColumnHeight]).
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           var contentScale = uiScale.clamp(0.48, 1.08);
@@ -379,8 +400,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             if (innerH <= 80) break;
                             final need =
                                 _estimateEditProfileColumnHeight(contentScale);
-                            if (need <= innerH - 2) break;
-                            contentScale *= (innerH / need) * 0.995;
+                            if (need <= innerH - 4) break;
+                            contentScale *= (innerH / need) * 0.994;
                             if (contentScale < 0.40) {
                               contentScale = 0.40;
                               break;
@@ -588,6 +609,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        const ChevronScreenBackButton(iconColor: Color(0xFFDFE7E9)),
+        const SizedBox(width: 7),
         Expanded(
           child: Text(
             'Edit Profile',
