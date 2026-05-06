@@ -81,7 +81,7 @@ class FamilyProfilePage extends StatelessWidget {
                       final horizontalRight =
                           ArticleStyleHeaderInsets.headerRightInsetOf(context);
                       final topPadding = statusTop +
-                          30 +
+                          24 +
                           ArticleStyleHeaderInsets.topTitleGapOf(context);
                       final bottomPadding = (20 * layoutScale).clamp(4.0, 18.0);
                       const titleSize = 20.0;
@@ -127,12 +127,12 @@ class FamilyProfilePage extends StatelessWidget {
                                 ),
                                 _AvatarCluster(
                                   profile: profile,
-                                  scale: layoutScale,
+                                  scale: (layoutScale * 0.9).clamp(0.68, 1.0),
                                 ),
                               ],
                             ),
                             SizedBox(
-                              height: (16 * layoutScale).clamp(4.0, 16.0),
+                              height: (12 * layoutScale).clamp(3.0, 12.0),
                             ),
                             Expanded(
                               child: SingleChildScrollView(
