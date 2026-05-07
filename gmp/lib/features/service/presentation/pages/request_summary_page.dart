@@ -63,7 +63,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   bool get _isStyledSingleServiceSummary =>
       widget.service.value == 'repair' ||
       widget.service.value == 'maintenance' ||
-      widget.service.value == 'wash';
+      widget.service.value == 'wash' ||
+      widget.service.value == 'donate' ||
+      widget.service.value == 'dispose';
 
   String get _flowPageTitle {
     switch (widget.service.value) {
@@ -71,6 +73,10 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         return 'MaintainMyPair';
       case 'wash':
         return 'WashMyPair';
+      case 'donate':
+        return 'DonateMyPair';
+      case 'dispose':
+        return 'DisposeMyPair';
       default:
         return 'RepairMyPair';
     }
@@ -82,10 +88,29 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         return 'Maintain My Pair';
       case 'wash':
         return 'Wash My Pair';
+      case 'donate':
+        return 'Donate My Pair';
+      case 'dispose':
+        return 'Dispose My Pair';
       default:
         return 'Repair My Pair';
     }
   }
+
+  String get _confirmButtonLabel {
+    switch (widget.service.value) {
+      case 'donate':
+        return 'All Set for Donation';
+      case 'dispose':
+        return 'All Set for Disposal';
+      default:
+        return 'Request Quotation';
+    }
+  }
+
+  bool get _hideEstimationRow =>
+      widget.service.value == 'donate' ||
+      widget.service.value == 'dispose';
 
   @override
   void initState() {
@@ -557,10 +582,11 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                               widget.pickupScheduleLabel ?? 'Not specified',
                               singleLineValue: true,
                             ),
-                            _summaryLine(
-                              'Estimation cost:',
-                              '₹${widget.estimatedCostRupees}',
-                            ),
+                            if (!_hideEstimationRow)
+                              _summaryLine(
+                                'Estimation cost:',
+                                '₹${widget.estimatedCostRupees}',
+                              ),
                             _summaryLine('Problem described:', ''),
                             const SizedBox(height: 2),
                             Text(
@@ -613,7 +639,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                             ),
                                           )
                                         : Text(
-                                            'Request Quotation',
+                                            _confirmButtonLabel,
                                             style: GoogleFonts.boldonse(
                                               color: Colors.white,
                                               fontSize: 16,

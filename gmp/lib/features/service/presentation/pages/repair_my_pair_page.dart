@@ -9,6 +9,7 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'donate_my_pair_flow.dart';
 import 'service_selection_page.dart';
 
 class RepairMyPairPage extends StatefulWidget {
@@ -106,15 +107,25 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
       (article) => article.id == _selectedArticleId,
     );
     setState(() => _submitting = true);
+    final allowed = widget.allowedServiceTypes;
+    final isDonateOnly = allowed.length == 1 &&
+        allowed.first.trim().toLowerCase() == 'donate';
+
     final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => ServiceSelectionPage(
-          articleId: _selectedArticleId!,
-          allowedServiceTypes: widget.allowedServiceTypes,
-          articleName: _displayName(selectedArticle),
-          articleImageUrl: _imageUrl(selectedArticle.thumbnailImage),
-          flowPageTitle: widget.pageTitle,
-        ),
+      MaterialPageRoute<bool>(
+        builder: (_) => isDonateOnly
+            ? DonateMyPairDetailsPage(
+                articleId: _selectedArticleId!,
+                articleName: _displayName(selectedArticle),
+                articleImageUrl: _imageUrl(selectedArticle.thumbnailImage),
+              )
+            : ServiceSelectionPage(
+                articleId: _selectedArticleId!,
+                allowedServiceTypes: widget.allowedServiceTypes,
+                articleName: _displayName(selectedArticle),
+                articleImageUrl: _imageUrl(selectedArticle.thumbnailImage),
+                flowPageTitle: widget.pageTitle,
+              ),
       ),
     );
     if (!mounted) return;

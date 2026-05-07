@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 
-/// Background theme used across auth screens.
+/// Full-screen background: [backgroundImageAsset] only (no theme gradient/solid).
+/// Use [scaffoldBackgroundColor] on [Scaffold] when the body includes
+/// [background] so the image is visible instead of [ThemeData.scaffoldBackgroundColor].
 abstract class BgTheme {
   BgTheme._();
 
   static const String backgroundImageAsset = 'assets/images/bg.png';
 
-  /// Full background stack.
+  /// Set on [Scaffold.backgroundColor] when layering [background] in the body.
+  static const Color scaffoldBackgroundColor = Colors.transparent;
+
+  /// Full background stack (place first inside a [Stack]).
   static List<Widget> background() {
     return [
-      const Positioned.fill(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(backgroundImageAsset),
-              fit: BoxFit.cover,
-            ),
-          ),
+      Positioned.fill(
+        child: Image.asset(
+          backgroundImageAsset,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          filterQuality: FilterQuality.high,
         ),
       ),
     ];
