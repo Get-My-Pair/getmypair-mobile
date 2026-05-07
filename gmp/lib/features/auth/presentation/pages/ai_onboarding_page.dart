@@ -24,6 +24,9 @@ String _normalizeSpeech(String raw) {
   return raw.replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
+/// Global app-session guard: show voice-audibility hint only once.
+bool _hasShownVoicePlaybackHintGlobally = false;
+
 /// Foot blueprint size rows (table UI + TTS).
 const List<(String, String)> _kFootSizeRows = [
   ('United States & Canada', '10'),
@@ -363,6 +366,20 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     } catch (_) {}
   }
 
+  void _showVoicePlaybackHintOnce() {
+    if (!mounted || _hasShownVoicePlaybackHintGlobally) return;
+    _hasShownVoicePlaybackHintGlobally = true;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Voice is not audible. Please increase media volume or turn off silent mode.',
+          ),
+        ),
+      );
+  }
+
   Future<void> _autoSpeakCurrentPage() async {
     if (!_ttsReady || !mounted) return;
     final text = _speakableContentFor(_index);
@@ -375,11 +392,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           _ttsPlaying = false;
           _ttsPaused = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to play voice on this device'),
-          ),
-        );
+        _showVoicePlaybackHintOnce();
       }
     } catch (_) {
       if (mounted) {
@@ -387,11 +400,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           _ttsPlaying = false;
           _ttsPaused = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to play voice on this device'),
-          ),
-        );
+        _showVoicePlaybackHintOnce();
       }
     }
   }
@@ -425,11 +434,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
             _ttsPlaying = false;
             _ttsPaused = false;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Unable to resume voice on this device'),
-            ),
-          );
+          _showVoicePlaybackHintOnce();
         }
       } catch (_) {
         if (mounted) {

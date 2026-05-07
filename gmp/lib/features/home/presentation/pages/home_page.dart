@@ -41,7 +41,7 @@ const BorderRadius _kRackCardBorderRadius = BorderRadius.only(
   bottomRight: Radius.circular(_kRackCardRadius),
 );
 /// My Rack panel fill — design `#F0F0F0`.
-const Color _kRackCardBg = Color(0xFFF0F0F0);
+const Color _kRackCardBg = Color(0xFFE6E6E6);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 const String _kNotificationBellBodySvgAsset =

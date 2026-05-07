@@ -48,6 +48,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
 
+    // Login state is governed by ONLY two events:
+    //   1. Refresh token expired / rejected by backend (AuthenticationFailure)
+    //   2. Manual logout (handled by AuthLogout)
+    // Any other failure (network down, backend 5xx, parse error, etc.) must
+    // NOT log the user out. We keep them on the dashboard with cached data
+    // and let a later launch / API call refresh once connectivity returns.
     final result = await checkAuthStatus();
     final isAuthenticated = result.fold((_) => false, (value) => value);
     if (!isAuthenticated) {
@@ -58,13 +64,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final userResult = await getCurrentUser();
     userResult.fold(
       (failure) {
-        // Keep users logged in unless session is truly invalid.
-        // Only auth-specific failures should move to login.
         if (failure is AuthenticationFailure) {
+          // Refresh token truly invalid – treat as logged out.
           emit(const AuthUnauthenticated());
           return;
         }
-        emit(AuthError(_mapFailureToMessage(failure)));
+        // Transient failure with no cached user available. Do NOT clear the
+        // refresh token here; surface as unauthenticated only because we have
+        // no User entity to render. Tokens stay in local storage so the next
+        // launch can recover the session automatically.
+        emit(const AuthUnauthenticated());
       },
       (user) => emit(AuthAuthenticated(user)),
     );
