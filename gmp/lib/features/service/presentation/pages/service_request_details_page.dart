@@ -685,35 +685,183 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
         .toString();
     var currentIndex = _workflowStages.indexOf(currentState);
     if (currentIndex < 0) currentIndex = 0;
+    final total = _workflowStages.length;
+
     return Column(
-      children: _workflowStages.map((stage) {
-        final idx = _workflowStages.indexOf(stage);
-        final done = currentIndex >= idx;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Icon(
-                done ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 18,
-                color: done ? AppColors.success : AppColors.textTertiary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _label(stage),
-                  style: TextStyle(
-                    color: done
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                    fontWeight: done ? FontWeight.w600 : FontWeight.w400,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Follow your pair’s journey',
+          style: GoogleFonts.montserrat(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...List.generate(_workflowStages.length, (idx) {
+          final stage = _workflowStages[idx];
+          final done = currentIndex > idx;
+          final isCurrent = currentIndex == idx;
+          final isLast = idx == total - 1;
+
+          Color bubbleColor;
+          Gradient? bubbleGradient;
+          Color cardColor;
+          Color borderColor;
+          Color titleColor;
+          FontWeight titleWeight;
+
+          if (done) {
+            bubbleColor = AppColors.success;
+            cardColor = AppColors.success.withValues(alpha: 0.06);
+            borderColor = AppColors.success.withValues(alpha: 0.55);
+            titleColor = AppColors.textPrimary;
+            titleWeight = FontWeight.w600;
+          } else if (isCurrent) {
+            bubbleColor = AppColors.primary;
+            bubbleGradient = const LinearGradient(
+              colors: [
+                Color(0xFF14B8C4),
+                Color(0xFF0F8792),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            );
+            cardColor = const Color(0xFFE9F8FA);
+            borderColor = const Color(0xFF0F8792).withValues(alpha: 0.65);
+            titleColor = const Color(0xFF0B555F);
+            titleWeight = FontWeight.w700;
+          } else {
+            bubbleColor = AppColors.border;
+            cardColor = AppColors.surfaceVariant;
+            borderColor = AppColors.border;
+            titleColor = AppColors.textSecondary;
+            titleWeight = FontWeight.w400;
+          }
+
+          final label = _label(stage);
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 26,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: bubbleGradient,
+                          color: bubbleGradient == null ? bubbleColor : null,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x22000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: done
+                            ? const Icon(
+                                Icons.check_rounded,
+                                size: 12,
+                                color: Colors.white,
+                              )
+                            : isCurrent
+                                ? const Icon(
+                                    Icons.directions_walk_rounded,
+                                    size: 12,
+                                    color: Colors.white,
+                                  )
+                                : const Icon(
+                                    Icons.circle_outlined,
+                                    size: 10,
+                                    color: Colors.white,
+                                  ),
+                      ),
+                      if (!isLast)
+                        Container(
+                          width: 2,
+                          height: 42,
+                          margin: const EdgeInsets.only(top: 2),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: done || isCurrent
+                                  ? [
+                                      bubbleColor.withValues(alpha: 0.85),
+                                      bubbleColor.withValues(alpha: 0.15),
+                                    ]
+                                  : [
+                                      AppColors.border,
+                                      AppColors.border.withValues(alpha: 0.0),
+                                    ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13.5,
+                            fontWeight: titleWeight,
+                            color: titleColor,
+                          ),
+                        ),
+                        if (isCurrent) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Step ${idx + 1} of $total • in progress',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ] else if (done) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Completed',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 11.5,
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
