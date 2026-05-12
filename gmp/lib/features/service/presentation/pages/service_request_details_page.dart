@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
-import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
-import 'package:gmp/core/widgets/gradient_page_shell.dart';
+import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/service/presentation/widgets/service_request_bg_layer.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ServiceRequestDetailsPage extends StatefulWidget {
   final String requestId;
@@ -225,48 +226,195 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final horizontal = Responsive.horizontalPaddingOf(context);
-    return GradientPageShell(
-      appBar: buildGradientAppBar(
-        title: 'Request Details',
-        centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: _load,
-            icon: const Icon(Icons.refresh, color: Colors.white),
+  static const BorderRadius _panelRadius = BorderRadius.only(
+    topLeft: Radius.circular(20),
+    topRight: Radius.circular(20),
+    bottomLeft: Radius.circular(50),
+    bottomRight: Radius.circular(50),
+  );
+
+  double _progressFractionForRequest() {
+    if (_request == null) return 0;
+    final tracking =
+        (_request!['trackingState'] ?? 'request_created').toString();
+    var idx = _workflowStages.indexOf(tracking);
+    if (idx < 0) idx = 0;
+    return ((idx + 1) / _workflowStages.length).clamp(0.0, 1.0);
+  }
+
+  Widget _progressHero() {
+    final r = _request!;
+    final tracking = (r['trackingState'] ?? 'request_created').toString();
+    final label = _label(tracking);
+    final progress = _progressFractionForRequest();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFF0F6876).withValues(alpha: 0.35),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
           ),
         ],
       ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            )
-          : _error != null
-          ? Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontal),
-                child: Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.error),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Current stage',
+            style: GoogleFonts.montserrat(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF12899B),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label.isEmpty ? '—' : label,
+            style: GoogleFonts.boldonse(
+              fontSize: 18,
+              color: const Color(0xFF062F35),
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: const Color(0xFFDFE7E9),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF0F6876),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: Stack(
+        children: [
+          ...ServiceRequestBgLayer.stackBehind(),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
+              child: DecoratedBox(
+                decoration: ShapeDecoration(
+                  color: ServiceRequestBgLayer.panelFill,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: _panelRadius,
+                  ),
+                  shadows: const [
+                    BoxShadow(
+                      color: Color(0x19000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ),
-            )
-          : _request == null
-          ? const Center(
-              child: Text(
-                'Request not found',
-                style: TextStyle(color: AppColors.onGradientBody),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-                children: [
-                  _card(
+                child: ClipRRect(
+                  borderRadius: _panelRadius,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 8, 0),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => Navigator.maybePop(context),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 26,
+                                height: 26,
+                              ),
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Color(0xFF062F35),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Service progress',
+                                style: GoogleFonts.boldonse(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: _loading ? null : _load,
+                              icon: const Icon(
+                                Icons.refresh_rounded,
+                                color: Color(0xFF062F35),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: _loading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFF11999E),
+                                ),
+                              )
+                            : _error != null
+                                ? Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24),
+                                      child: Text(
+                                        _error!,
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.montserrat(
+                                          color: AppColors.error,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : _request == null
+                                    ? Center(
+                                        child: Text(
+                                          'Request not found',
+                                          style: GoogleFonts.montserrat(
+                                            color: const Color(0xFF5C5C5C),
+                                          ),
+                                        ),
+                                      )
+                                    : RefreshIndicator(
+                                        color: const Color(0xFF11999E),
+                                        onRefresh: _load,
+                                        child: ListView(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            14,
+                                            8,
+                                            14,
+                                            120,
+                                          ),
+                                          children: [
+                                            _progressHero(),
+                                            _card(
                     title: 'Overview',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,9 +444,11 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withOpacity(0.12),
+                        color: AppColors.warning.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.warning.withOpacity(0.45)),
+                        border: Border.all(
+                          color: AppColors.warning.withValues(alpha: 0.45),
+                        ),
                       ),
                       child: const Text(
                         'Review the final service cost from the team. Accept to continue the workflow, or reject to cancel this request.',
@@ -381,9 +531,11 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                         padding: const EdgeInsets.all(12),
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.08),
+                          color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.error.withOpacity(0.35)),
+                          border: Border.all(
+                            color: AppColors.error.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: const Text(
                           'You rejected the final service cost. This service request has been cancelled.',
@@ -496,9 +648,30 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                               ),
                       ),
                     ),
-                ],
+                                          ],
+                                        ),
+                                      ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const DashboardLinkedBottomNav(selectedTabIndex: 1),
+                SizedBox(height: bottomSafe),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -510,36 +683,185 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   Widget _workflowProgress() {
     final currentState = (_request?['trackingState'] ?? 'request_created')
         .toString();
-    final currentIndex = _workflowStages.indexOf(currentState);
+    var currentIndex = _workflowStages.indexOf(currentState);
+    if (currentIndex < 0) currentIndex = 0;
+    final total = _workflowStages.length;
+
     return Column(
-      children: _workflowStages.map((stage) {
-        final idx = _workflowStages.indexOf(stage);
-        final done = currentIndex >= idx;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Icon(
-                done ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 18,
-                color: done ? AppColors.success : AppColors.textTertiary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _label(stage),
-                  style: TextStyle(
-                    color: done
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                    fontWeight: done ? FontWeight.w600 : FontWeight.w400,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Follow your pair’s journey',
+          style: GoogleFonts.montserrat(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...List.generate(_workflowStages.length, (idx) {
+          final stage = _workflowStages[idx];
+          final done = currentIndex > idx;
+          final isCurrent = currentIndex == idx;
+          final isLast = idx == total - 1;
+
+          Color bubbleColor;
+          Gradient? bubbleGradient;
+          Color cardColor;
+          Color borderColor;
+          Color titleColor;
+          FontWeight titleWeight;
+
+          if (done) {
+            bubbleColor = AppColors.success;
+            cardColor = AppColors.success.withValues(alpha: 0.06);
+            borderColor = AppColors.success.withValues(alpha: 0.55);
+            titleColor = AppColors.textPrimary;
+            titleWeight = FontWeight.w600;
+          } else if (isCurrent) {
+            bubbleColor = AppColors.primary;
+            bubbleGradient = const LinearGradient(
+              colors: [
+                Color(0xFF14B8C4),
+                Color(0xFF0F8792),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            );
+            cardColor = const Color(0xFFE9F8FA);
+            borderColor = const Color(0xFF0F8792).withValues(alpha: 0.65);
+            titleColor = const Color(0xFF0B555F);
+            titleWeight = FontWeight.w700;
+          } else {
+            bubbleColor = AppColors.border;
+            cardColor = AppColors.surfaceVariant;
+            borderColor = AppColors.border;
+            titleColor = AppColors.textSecondary;
+            titleWeight = FontWeight.w400;
+          }
+
+          final label = _label(stage);
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 26,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: bubbleGradient,
+                          color: bubbleGradient == null ? bubbleColor : null,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x22000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: done
+                            ? const Icon(
+                                Icons.check_rounded,
+                                size: 12,
+                                color: Colors.white,
+                              )
+                            : isCurrent
+                                ? const Icon(
+                                    Icons.directions_walk_rounded,
+                                    size: 12,
+                                    color: Colors.white,
+                                  )
+                                : const Icon(
+                                    Icons.circle_outlined,
+                                    size: 10,
+                                    color: Colors.white,
+                                  ),
+                      ),
+                      if (!isLast)
+                        Container(
+                          width: 2,
+                          height: 42,
+                          margin: const EdgeInsets.only(top: 2),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: done || isCurrent
+                                  ? [
+                                      bubbleColor.withValues(alpha: 0.85),
+                                      bubbleColor.withValues(alpha: 0.15),
+                                    ]
+                                  : [
+                                      AppColors.border,
+                                      AppColors.border.withValues(alpha: 0.0),
+                                    ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13.5,
+                            fontWeight: titleWeight,
+                            color: titleColor,
+                          ),
+                        ),
+                        if (isCurrent) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Step ${idx + 1} of $total • in progress',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ] else if (done) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Completed',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 11.5,
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -660,18 +982,28 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(
+          color: const Color(0xFF0F6876).withValues(alpha: 0.22),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+            style: GoogleFonts.boldonse(
+              fontSize: 15,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF062F35),
             ),
           ),
           const SizedBox(height: 10),
@@ -691,18 +1023,20 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
             width: 110,
             child: Text(
               key,
-              style: const TextStyle(
+              style: GoogleFonts.montserrat(
                 fontSize: 13,
                 color: AppColors.textTertiary,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: GoogleFonts.montserrat(
                 fontSize: 13.5,
                 color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

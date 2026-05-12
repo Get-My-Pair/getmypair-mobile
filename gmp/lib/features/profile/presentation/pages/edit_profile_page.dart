@@ -354,10 +354,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
             heightComfortScale;
         final uiScale = layoutScale.clamp(0.50, 1.08);
 
+        final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: kProfileGradientHeaderSystemUi,
           child: Scaffold(
             extendBody: true,
+            // Keep the layout geometry stable when the keyboard appears.
+            // Without this, the body shrinks, LayoutBuilder re-runs with a
+            // tiny maxHeight, the fit-to-screen scale collapses to its floor
+            // and the form overflows / renders as a blank/white area.
+            resizeToAvoidBottomInset: false,
             body: SafeArea(
               top: false,
               // Let the bottom-nav widget own the bottom inset, otherwise we can
@@ -386,7 +393,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ],
                       ),
                       // Shrink spacing and control sizes until the column fits (see
-                      // [_estimateEditProfileColumnHeight]).
+                      // [_estimateEditProfileColumnHeight]). Wrapped in a
+                      // SingleChildScrollView so the focused field auto-scrolls
+                      // above the keyboard (and very short devices can scroll).
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           var contentScale = uiScale.clamp(0.48, 1.08);
@@ -418,12 +427,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           final fieldGroupSpace =
                               (20 * contentScale).clamp(10.0, 20.0);
 
-                          return Padding(
+                          return SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
                             padding: EdgeInsets.fromLTRB(
                               (18 * contentScale).clamp(12.0, 18.0),
                               padTop,
                               (18 * contentScale).clamp(12.0, 18.0),
-                              padBottom,
+                              padBottom + keyboardInset,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

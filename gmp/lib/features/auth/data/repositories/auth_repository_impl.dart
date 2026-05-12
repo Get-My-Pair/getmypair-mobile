@@ -200,7 +200,7 @@ class AuthRepositoryImpl implements AuthRepository {
           await localDataSource.saveUser(userModel);
           return Right(userModel);
         } on ServerException catch (e) {
-          // Access token expired (401) – refresh and retry once; keep user logged in until refresh token expires
+          // Access token expired (401) – try refresh once and retry /me.
           if (e.statusCode == 401) {
             final refreshResult = await refreshToken();
             if (refreshResult.isRight()) {
@@ -211,8 +211,8 @@ class AuthRepositoryImpl implements AuthRepository {
                   await localDataSource.saveUser(userModel);
                   return Right(userModel);
                 } on ServerException catch (e2) {
-                  // If backend is temporarily failing after a successful refresh,
-                  // keep the user logged in using cached profile data.
+                  // Backend temporarily failing after a successful refresh –
+                  // keep the user logged in via cached profile.
                   if (cachedUser != null) {
                     return Right(cachedUser);
                   }
@@ -225,10 +225,21 @@ class AuthRepositoryImpl implements AuthRepository {
                 }
               }
             }
-            if (cachedUser != null) {
-              return Right(cachedUser);
-            }
-            return refreshResult.fold((l) => Left(l), (_) => Left(ServerFailure(e.message)));
+            // Refresh failed. Distinguish *why* it failed so we only end the
+            // session for genuine refresh-token rejection. Network / server
+            // errors are transient and must NOT log the user out.
+            return refreshResult.fold(
+              (failure) {
+                if (failure is AuthenticationFailure) {
+                  return Left(failure);
+                }
+                if (cachedUser != null) {
+                  return Right(cachedUser);
+                }
+                return Left(failure);
+              },
+              (_) => Left(ServerFailure(e.message)),
+            );
           }
           // Non-auth server errors should not force logout if we have cached user.
           if (cachedUser != null) {

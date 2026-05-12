@@ -8,4 +8,7 @@ class AppAssets {
 
   static const String appIcon = 'assets/images/logo/app_icon.png';
   static const String appLogo = 'assets/images/logo/app_logo.png';
+
+  /// White mark for splash (Figma: GMP APP LOGO WHITE 1). Web-safe name — no spaces.
+  static const String appLogoWhite1 = 'assets/images/logo/gmp_app_logo_white_1.png';
 }

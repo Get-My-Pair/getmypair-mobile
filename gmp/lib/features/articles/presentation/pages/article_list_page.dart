@@ -1108,7 +1108,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
     final bottomSafe = Responsive.bottomInsetOf(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: BgTheme.scaffoldBackgroundColor,
       extendBody: true,
       body: Stack(
         clipBehavior: Clip.none,

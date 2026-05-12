@@ -238,6 +238,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
+      // Keep hero + card geometry stable when the keyboard opens (avoid inset resize +
+      // Column Spacer() reflow that pushes content upward).
+      resizeToAvoidBottomInset: false,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthOTPSent) {

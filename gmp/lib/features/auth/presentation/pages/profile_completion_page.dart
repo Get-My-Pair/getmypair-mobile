@@ -16,6 +16,9 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import 'package:gmp/features/dashboard/presentation/pages/customer_dashboard_page.dart';
 
+/// Manual profile form + [AuthCompleteProfile]. New users who finish [AiOnboardingPage]
+/// submit the same API from onboarding with data collected there; this screen remains
+/// for routes / users who still need the standalone form (e.g. deep links).
 class ProfileCompletionPage extends StatefulWidget {
   final String mobile;
 

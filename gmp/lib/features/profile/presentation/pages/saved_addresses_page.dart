@@ -690,6 +690,11 @@ class _AddressFormPageState extends State<_AddressFormPage> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: kProfileGradientHeaderSystemUi,
       child: Scaffold(
+        // Keep layout geometry stable when the keyboard appears. Without
+        // this, the body shrinks AND the inner scroll view + bottom-nav
+        // already add `bottomInset` themselves, causing a double-shift that
+        // pushes content off the top and shows a large blank/white area.
+        resizeToAvoidBottomInset: false,
         body: Column(
           children: [
             Expanded(
@@ -722,10 +727,14 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                     thumbColor: const Color(0x80000000),
                     child: SingleChildScrollView(
                       controller: _formScrollController,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: EdgeInsets.fromLTRB(
                         20,
                         statusTop + 30,
                         20,
+                        // 164 = bottom-nav clearance, + keyboard height so
+                        // the focused field can scroll above the keyboard.
                         164 + bottomInset,
                       ),
                       child: Column(
@@ -918,9 +927,12 @@ class _AddressFormPageState extends State<_AddressFormPage> {
                 ),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomInset),
-              child: const DashboardLinkedBottomNav(selectedTabIndex: 2),
+            // The Scaffold no longer resizes for the keyboard; the keyboard
+            // simply overlays the bottom-nav. Adding `bottomInset` here would
+            // shift the nav up off-screen, so we use a fixed bottom padding.
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: DashboardLinkedBottomNav(selectedTabIndex: 2),
             ),
           ],
         ),

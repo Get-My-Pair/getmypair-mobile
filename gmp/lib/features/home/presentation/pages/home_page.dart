@@ -20,13 +20,12 @@ import '../../../profile/presentation/pages/profile_page.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'select_location_page.dart';
-import 'chatbot_page.dart';
 import '../../../articles/domain/entities/article.dart';
 import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
-import '../../../articles/presentation/pages/article_create_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
+import '../../../service/presentation/pages/rehome_my_pair_page.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 
@@ -42,7 +41,7 @@ const BorderRadius _kRackCardBorderRadius = BorderRadius.only(
   bottomRight: Radius.circular(_kRackCardRadius),
 );
 /// My Rack panel fill — design `#F0F0F0`.
-const Color _kRackCardBg = Color(0xFFF0F0F0);
+const Color _kRackCardBg = Color(0xFFE6E6E6);
 const Color _kSearchHintColor = Color(0x57000000);
 const Color _kHeaderIconTint = Color(0xFFDFE7E9);
 const String _kNotificationBellBodySvgAsset =
@@ -60,13 +59,6 @@ const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 /// Vertical gaps inside the hero (greeting → location → search → stats).
 const double _kHomeHeaderGreetingToLocation = 0;
 const double _kHomeHeaderSearchToStats = 20;
-
-/// Section spacing below hero / between blocks (12–16px).
-const double _kSectionGap = 22;
-const double _kRackThumbGap = 8;
-
-/// Extra breathing room between "My Rack" and quick action tiles.
-const double _kAfterRackToActionsGap = 12;
 
 /// Tile height for quick actions (reference @ 390px width).
 const double _kQuickActionCellHeight = 78;
@@ -209,7 +201,9 @@ class _HomePageState extends State<HomePage> {
       }
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -341,43 +335,9 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
-  Future<void> _openServiceFlow({
-    required String title,
-    required List<String> allowedServiceTypes,
-  }) async {
-    final hasArticles = (_rackArticles?.isNotEmpty ?? false);
-    if (!hasArticles) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add article first to continue')),
-      );
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const ArticleCreatePage()),
-      );
-      if (mounted) {
-        await _loadRackPreview();
-      }
-      return;
-    }
-
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => ArticleListPage(
-          serviceFlowAllowedTypes: allowedServiceTypes,
-          serviceFlowTitle: title,
-        ),
-      ),
-    );
-    if (mounted) {
-      _loadRackPreview();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final isCompact = width < 360;
     final uiScale = _homeUiScale(context);
-    final fabSize = (72 * uiScale).clamp(56.0, 72.0);
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -519,12 +479,6 @@ class _HomePageState extends State<HomePage> {
                                         56.0,
                                         96.0,
                                       );
-                                      final usedHeightWithoutTopGap =
-                                          rackHeight +
-                                          uniformCardGap +
-                                          careCardH +
-                                          midSpacer +
-                                          actionH;
                                       // Keep original top spacing for the rack section.
                                       final topGap = baseTopGap.toDouble();
                                       return Column(
@@ -779,14 +733,12 @@ class _HomePageState extends State<HomePage> {
                                                         iconWidth: rehomeIconW,
                                                         iconHeight: rehomeIconH,
                                                         cellHeight: actionH,
-                                                        onTap: () => _openServiceFlow(
-                                                          title:
-                                                              'Select article for Rehome MyPair (Donate, Dispose)',
-                                                          allowedServiceTypes:
-                                                              const [
-                                                                'donate',
-                                                                'dispose',
-                                                              ],
+                                                        onTap: () =>
+                                                            Navigator.of(context).push(
+                                                          MaterialPageRoute<void>(
+                                                            builder: (_) =>
+                                                                const RehomeMyPairPage(),
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
@@ -1138,7 +1090,7 @@ class _HomeProfileAvatarStack extends StatelessWidget {
       child: CircleAvatar(
         radius: radius,
         backgroundColor: Colors.white24,
-        backgroundImage: hasImage ? NetworkImage(url!) : null,
+        backgroundImage: hasImage ? NetworkImage(url) : null,
         child: hasImage
             ? null
             : Icon(

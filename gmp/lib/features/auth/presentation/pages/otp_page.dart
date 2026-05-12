@@ -9,6 +9,7 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
+import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -225,10 +226,12 @@ class _OTPPageState extends State<OTPPage> {
             if (!context.mounted) return;
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
-                builder: (_) => AiOnboardingPage(
-                  mobile: widget.mobile,
-                  requiresProfileCompletion: state.requiresProfileCompletion,
-                ),
+                builder: (_) => state.requiresProfileCompletion
+                    ? AiOnboardingPage(
+                        mobile: widget.mobile,
+                        requiresProfileCompletion: true,
+                      )
+                    : const CustomerDashboardPage(),
               ),
               (route) => false,
             );

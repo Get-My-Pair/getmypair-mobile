@@ -78,6 +78,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   bool _homePickup = true;
   int _selectedPickupDay = 0;
   int _selectedPickupSlot = 0;
+  /// When user picks a place on the map for [cobbler_nearby], shown on the summary.
+  String? _cobblerNearbyLocationSummary;
   final TextEditingController _problemController = TextEditingController();
 
   final List<XFile> _proofImages = [];
@@ -359,7 +361,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         ),
       ),
     );
-    if (!mounted || selectedLocation == null || selectedLocation.trim().isEmpty) return;
+    if (!mounted || selectedLocation == null || selectedLocation.trim().isEmpty) {
+      return;
+    }
+    setState(() => _cobblerNearbyLocationSummary = selectedLocation.trim());
+    await _submit();
   }
 
   void _selectPickupMode(bool homePickup) {
@@ -454,17 +460,21 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               ? null
               : _problemController.text.trim(),
           pickupModeLabel: _homePickup ? 'Home Pickup' : 'Cobblers Nearby',
-          pickupScheduleLabel: _selectedPickupSlot < 0
-              ? null
-              : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
+          pickupScheduleLabel: !_homePickup && _cobblerNearbyLocationSummary != null
+              ? _cobblerNearbyLocationSummary
+              : _selectedPickupSlot < 0
+                  ? null
+                  : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
           maintenancePlan: _selectedService!.value == 'maintenance'
               ? (_selectedMaintenancePlan ?? _maintenancePlans.first)
               : null,
           homePickup: _homePickup,
-          requestedPickupAt: _selectedPickupSlot < 0 || _pickupSlotDateTimes.isEmpty
-              ? null
-              : _pickupSlotDateTimes[_selectedPickupSlot
-                  .clamp(0, _pickupSlotDateTimes.length - 1)],
+          requestedPickupAt: _homePickup &&
+                  _selectedPickupSlot >= 0 &&
+                  _pickupSlotDateTimes.isNotEmpty
+              ? _pickupSlotDateTimes[_selectedPickupSlot
+                  .clamp(0, _pickupSlotDateTimes.length - 1)]
+              : null,
         ),
       ),
     );

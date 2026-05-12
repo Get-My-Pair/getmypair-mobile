@@ -107,6 +107,7 @@ flutter:
 
   # Assets
   assets:
+    - assets/app.png
     - assets/images/bg.png
     - assets/images/bg/
     - assets/images/bg/onbording.png
@@ -148,6 +149,7 @@ flutter:
     - assets/images/icons/shoe.svg
     - assets/images/icons/profile.svg
     - assets/images/logo/
+    - assets/images/logo/gmp_app_logo_white_1.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -180,8 +182,9 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/allicons/logo.png
+  image_path: assets/app.png
   remove_alpha_ios: true
   background_color_ios: "#FFFFFF"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: assets/images/allicons/logo.png
+  # Adaptive icon: foreground is full artwork; background fills masked safe zone
+  adaptive_icon_background: "#061F40"
+  adaptive_icon_foreground: assets/app.png

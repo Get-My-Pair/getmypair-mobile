@@ -156,7 +156,10 @@ class _AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
-      // Try to refresh token
+      // Try to refresh token. Login state must change ONLY when the refresh
+      // token is genuinely rejected by the backend (401/403). Network errors,
+      // timeouts, and 5xx responses must NOT clear the session – they are
+      // transient and the next request / app launch can retry.
       final refreshToken = await _storage.getRefreshToken();
       if (refreshToken != null) {
         try {
@@ -174,15 +177,21 @@ class _AuthInterceptor extends Interceptor {
               refreshToken: newRefreshToken,
             );
 
-            // Retry original request
             err.requestOptions.headers['Authorization'] =
                 'Bearer $newAccessToken';
             final retryResponse = await _dio.fetch(err.requestOptions);
             return handler.resolve(retryResponse);
           }
-        } catch (e) {
-          // Refresh failed, logout user
-          await _storage.clearAll();
+        } on DioException catch (refreshErr) {
+          final status = refreshErr.response?.statusCode;
+          // Only clear local session when the refresh token itself is
+          // rejected. Anything else (offline, server error) leaves the
+          // tokens in place so the user stays logged in.
+          if (status == 401 || status == 403) {
+            await _storage.clearAll();
+          }
+        } catch (_) {
+          // Unknown error – treat as transient; do not log out.
         }
       }
     }
