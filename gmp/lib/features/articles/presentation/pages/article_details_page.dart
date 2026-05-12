@@ -9,6 +9,7 @@ import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
+import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/delete_article.dart';
@@ -521,8 +522,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     }
 
     final a = _article!;
-    // Prefer most recently uploaded image on details.
-    final imagePath = a.images.isNotEmpty ? a.images.last : a.thumbnailImage;
+    final imagePath = a.rackHeroImagePath;
     final imageUrl = _imageUrl(imagePath);
     final colorRow = _resolveColorRow(a);
 
@@ -764,28 +764,13 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       imgConstraints.maxWidth,
                     );
                     return Center(
-                      child: Transform.rotate(
-                        angle: -0.38,
-                        child: Transform.flip(
-                          flipX: true,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: SizedBox(
-                              width: maxImgW,
-                              height: imgConstraints.maxHeight * 0.92,
-                              child: imageUrl.isNotEmpty
-                                  ? Image.network(
-                                      imageUrl,
-                                      fit: BoxFit.contain,
-                                      alignment: Alignment.center,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              _placeholder(),
-                                    )
-                                  : _placeholder(),
-                            ),
-                          ),
-                        ),
+                      child: ArticleRackShoeImage(
+                        imageUrl: imageUrl,
+                        width: maxImgW,
+                        height: imgConstraints.maxHeight * 0.92,
+                        fit: BoxFit.contain,
+                        placeholder: _placeholder(),
+                        errorPlaceholder: _placeholder(),
                       ),
                     );
                   },

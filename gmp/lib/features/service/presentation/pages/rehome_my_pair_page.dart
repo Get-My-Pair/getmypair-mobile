@@ -68,34 +68,46 @@ class RehomeMyPairPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    const topInset = 52.0;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
           ...BgTheme.background(),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
-              child: DecoratedBox(
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFF0F0F0),
-                  shape: RoundedRectangleBorder(borderRadius: _panelRadius),
-                  shadows: [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  topInset,
+                  horizontalInset,
+                  0,
                 ),
-                child: ClipRRect(
-                  borderRadius: _panelRadius,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
-                    children: [
+                child: DecoratedBox(
+                  decoration: const ShapeDecoration(
+                    color: Color(0xFFF0F0F0),
+                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
+                    shadows: [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _panelRadius,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
+                      children: [
                       _Header(onBack: () => Navigator.maybePop(context)),
                       const SizedBox(height: 24),
                       const _SearchBar(),
@@ -216,13 +228,13 @@ class RehomeMyPairPage extends StatelessWidget {
               ),
             ),
           ),
+          ),
           const Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
-          SizedBox(height: bottomSafe),
         ],
       ),
     );

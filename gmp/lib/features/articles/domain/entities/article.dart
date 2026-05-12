@@ -51,6 +51,10 @@ class Article extends Equatable {
   String? get thumbnailImage =>
       images.isNotEmpty ? images.first : null;
 
+  /// Same primary photo as rack article details and service flows: latest upload when present.
+  String? get rackHeroImagePath =>
+      images.isNotEmpty ? images.last : thumbnailImage;
+
   @override
   List<Object?> get props => [
         id,
