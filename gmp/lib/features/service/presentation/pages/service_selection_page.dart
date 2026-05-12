@@ -947,33 +947,34 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                           borderRadius: BorderRadius.circular(100),
                                         ),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            'Next',
-                                            style: GoogleFonts.boldonse(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 20),
-                                          const SizedBox(
-                                            width: 24,
-                                            height: 24,
-                                            child: Center(
-                                              child: Icon(
-                                                Icons.arrow_forward_ios_rounded,
+                                      child: _submitting
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child: CircularProgressIndicator(
                                                 color: Colors.white,
-                                                size: 16,
+                                                strokeWidth: 2,
                                               ),
+                                            )
+                                          : Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Next',
+                                                  style: GoogleFonts.boldonse(
+                                                    color: Colors.white,
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w400,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 20),
+                                                const Icon(
+                                                  Icons.arrow_forward_ios_rounded,
+                                                  color: Colors.white,
+                                                  size: 16,
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                        ],
-                                      ),
                                     ),
                                   ),
                                 ),
@@ -1187,8 +1188,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                       ),
                                       child: _submitting
                                           ? const SizedBox(
-                                              height: 20,
-                                              width: 20,
+                                              width: 22,
+                                              height: 22,
                                               child: CircularProgressIndicator(
                                                 color: Colors.white,
                                                 strokeWidth: 2,
@@ -1196,9 +1197,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                             )
                                           : Row(
                                               mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
                                               children: [
                                                 Text(
                                                   'Next',
@@ -1209,16 +1207,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 20),
-                                                const SizedBox(
-                                                  width: 24,
-                                                  height: 24,
-                                                  child: Center(
-                                                    child: Icon(
-                                                      Icons.arrow_forward_ios_rounded,
-                                                      color: Colors.white,
-                                                      size: 16,
-                                                    ),
-                                                  ),
+                                                const Icon(
+                                                  Icons.arrow_forward_ios_rounded,
+                                                  color: Colors.white,
+                                                  size: 16,
                                                 ),
                                               ],
                                             ),

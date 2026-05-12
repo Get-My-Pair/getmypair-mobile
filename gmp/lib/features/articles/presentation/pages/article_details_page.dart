@@ -8,6 +8,7 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/delete_article.dart';
@@ -39,7 +40,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   bool _loading = true;
   String? _error;
 
-  static const Color _rackTeal = Color(0xFF0F6876);
   static const Color _rackTealAccent = Color(0xFF11899B);
   static const Color _panelBg = Color(0xFFF0F0F0);
 
@@ -491,13 +491,12 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                                     child: const Text('Go back'),
                                   ),
                                   const SizedBox(width: 12),
-                                  FilledButton(
+                                  AppGradientNextStyleButton(
+                                    label: 'Retry',
                                     onPressed: _load,
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: _rackTeal,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Retry'),
+                                    minWidth: 120,
+                                    leading: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                                    showTrailingIcon: false,
                                   ),
                                 ],
                               ),

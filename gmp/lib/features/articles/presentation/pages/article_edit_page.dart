@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
@@ -278,18 +279,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
+                AppGradientNextStyleButton(
+                  label: 'Retry',
                   onPressed: _load,
-                  icon: const Icon(Icons.refresh, size: 20),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textOnPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
+                  leading: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                  showTrailingIcon: false,
                 ),
               ],
             ),
@@ -381,11 +375,11 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                 },
               ),
               const SizedBox(height: 24),
-              _buildActionButton(
+              AppGradientNextStyleButton(
                 label: 'Save Footwear',
-                isBusy: _submitting,
                 onPressed: _submit,
-                showLoader: true,
+                isBusy: _submitting,
+                minWidth: 200,
               ),
             ],
           ),

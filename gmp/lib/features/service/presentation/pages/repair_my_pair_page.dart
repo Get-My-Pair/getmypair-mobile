@@ -279,28 +279,65 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
         const SizedBox(height: 18),
         Center(
           child: SizedBox(
-            width: 220,
+            width: 164,
             height: 48,
-            child: FilledButton(
-              onPressed: _selectedArticleId == null || _submitting ? null : _goNext,
-              style: FilledButton.styleFrom(
-                backgroundColor: _teal,
-                disabledBackgroundColor: _teal.withValues(alpha: 0.35),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [
+                    Color(0xFF0CADC5),
+                    Color(0xFF063239),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(100),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+              child: TextButton(
+                onPressed:
+                    _selectedArticleId == null || _submitting ? null : _goNext,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Next',
+                            style: GoogleFonts.boldonse(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ],
                       ),
-                    )
-                  : const Text(
-                      'Next',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                    ),
+              ),
             ),
           ),
         ),

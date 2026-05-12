@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
@@ -271,11 +272,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                   isBusy: _submitting,
                 ),
                 const SizedBox(height: 24),
-                _buildActionButton(
+                AppGradientNextStyleButton(
                   label: 'Save Footwear',
                   onPressed: _submit,
                   isBusy: _submitting,
-                  showLoader: true,
+                  minWidth: 200,
                 ),
                 ],
               ),
