@@ -887,76 +887,179 @@ class _HomeHeaderBell extends StatelessWidget {
     final bellClapperW = (8.8 * s).clamp(6.8, 10.5);
     final bellClapperH = (5.2 * s).clamp(4.0, 6.4);
 
+    // Glass chrome — scaled from header scale [s] so blur, rim, and lift stay proportional.
+    final blurSigma = (17.0 * s).clamp(14.0, 22.0);
+    final rimW = (1.15 * s).clamp(1.0, 1.45);
+    final liftBlur = (12.0 * s).clamp(10.0, 16.0);
+    final liftY = (4.5 * s).clamp(3.5, 6.5);
+    final haloBlur = (8.0 * s).clamp(6.0, 11.0);
+    final rimHighlightBlur = (2.0 * s).clamp(1.0, 3.0);
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: bellSize,
-        height: bellSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.22),
-              blurRadius: 1,
-              spreadRadius: -0.5,
-              offset: const Offset(0, -0.5),
-            ),
-          ],
-        ),
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: bellPadH,
-                vertical: bellPadV,
+      child: RepaintBoundary(
+        child: Container(
+          width: bellSize,
+          height: bellSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              // Primary float — cool-tinted shadow reads on gradients and light UI.
+              BoxShadow(
+                color: const Color(0xFF0A2540).withValues(alpha: 0.20),
+                blurRadius: liftBlur,
+                offset: Offset(0, liftY),
               ),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.45),
-                    Colors.white.withValues(alpha: 0.12),
-                  ],
-                  stops: const [0.0, 1.0],
-                ),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.65),
-                  width: 1.25,
-                ),
+              // Soft ambient pool — separates control from background.
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: haloBlur,
+                offset: Offset(0, liftY * 0.45),
               ),
-              child: Center(
-                child: SizedBox(
-                  width: bellBodyW,
-                  height: bellBodyH + bellClapperH + (2.0 * s),
-                  child: Stack(
-                    alignment: Alignment.topCenter,
-                    children: [
-                      SvgPicture.asset(
-                        _kNotificationBellBodySvgAsset,
-                        width: bellBodyW,
-                        height: bellBodyH,
-                        fit: BoxFit.contain,
+              // Tight top catch-light — glass edge lift (inset feel from spread).
+              BoxShadow(
+                color: Colors.white.withValues(alpha: 0.32),
+                blurRadius: rimHighlightBlur,
+                spreadRadius: -(1.1 * s).clamp(0.75, 1.45),
+                offset: Offset(0, -(0.9 * s).clamp(0.45, 1.15)),
+              ),
+            ],
+          ),
+          child: ClipOval(
+            clipBehavior: Clip.antiAlias,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 1) Base body tint — radial bias keeps icon legible on dark + light headers.
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        center: const Alignment(-0.22, -0.32),
+                        radius: 1.05,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.26),
+                          Colors.white.withValues(alpha: 0.11),
+                          Colors.white.withValues(alpha: 0.07),
+                        ],
+                        stops: const [0.0, 0.52, 1.0],
                       ),
-                      Positioned(
-                        bottom: 0,
-                        child: SvgPicture.asset(
-                          _kNotificationBellClapperSvgAsset,
-                          width: bellClapperW,
-                          height: bellClapperH,
-                          fit: BoxFit.contain,
+                    ),
+                  ),
+                  // 2) Diagonal frosted film — main glass read; restrained alphas.
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.34),
+                          Colors.white.withValues(alpha: 0.07),
+                          Colors.white.withValues(alpha: 0.16),
+                        ],
+                        stops: const [0.0, 0.48, 1.0],
+                      ),
+                    ),
+                  ),
+                  // 3) Top specular band — iOS-style polished highlight.
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: FractionallySizedBox(
+                      heightFactor: 0.40,
+                      widthFactor: 1,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withValues(alpha: 0.20),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  // 4) Bottom depth wash — anchors hierarchy without muddying blur.
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          const Color(0xFF0A1628).withValues(alpha: 0.07),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // 5) Inner rim glow — subtle inner edge light.
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        radius: 1.0,
+                        colors: [
+                          Colors.transparent,
+                          Colors.white.withValues(alpha: 0.0),
+                          Colors.white.withValues(alpha: 0.09),
+                        ],
+                        stops: const [0.0, 0.78, 1.0],
+                      ),
+                    ),
+                  ),
+                  // 6) Glass rim stroke — full-bleed ring; does not consume bell padding.
+                  IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          width: rimW,
+                          color: Colors.white.withValues(alpha: 0.40),
+                        ),
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  // 7) Bell — layout and SVGs unchanged.
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: bellPadH,
+                      vertical: bellPadV,
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: bellBodyW,
+                        height: bellBodyH + bellClapperH + (2.0 * s),
+                        child: Stack(
+                          alignment: Alignment.topCenter,
+                          children: [
+                            SvgPicture.asset(
+                              _kNotificationBellBodySvgAsset,
+                              width: bellBodyW,
+                              height: bellBodyH,
+                              fit: BoxFit.contain,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              child: SvgPicture.asset(
+                                _kNotificationBellClapperSvgAsset,
+                                width: bellClapperW,
+                                height: bellClapperH,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
