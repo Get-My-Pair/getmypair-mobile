@@ -19,6 +19,10 @@ import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
 
+/// Blocks IME edits while keeping the field non-readOnly so [obscureText] still masks.
+final TextInputFormatter _lockTextFieldValueFormatter =
+    TextInputFormatter.withFunction((oldValue, newValue) => oldValue);
+
 class EditProfilePage extends StatefulWidget {
   final UserProfile profile;
   final String accessToken;
@@ -502,9 +506,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   height: labelToFieldSpace,
                                 ),
                                 _profileField(
+                                  formFieldKey: ValueKey(_showPassword),
                                   controller: _passwordController,
-                                  readOnly: true,
+                                  readOnly: false,
                                   obscureText: !_showPassword,
+                                  obscuringCharacter: '*',
+                                  keyboardType: TextInputType.none,
+                                  enableInteractiveSelection: false,
+                                  inputFormatters: [_lockTextFieldValueFormatter],
                                   scale: contentScale,
                                   verticalPaddingScaleFactor: 0.52,
                                   suffix: IconButton(
@@ -514,9 +523,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     splashRadius:
                                         (22 * contentScale).clamp(14.0, 22.0),
                                     icon: Icon(
+                                      // Icons reflect current state: off when masked, on when plain.
                                       _showPassword
-                                          ? Icons.visibility_off_outlined
-                                          : Icons.visibility_outlined,
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
                                       color: const Color(0xCCFFFFFF),
                                       size: (24 * contentScale)
                                           .clamp(18.0, 24.0),
@@ -698,9 +708,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   child: Container(
                     height: (48 * scale).clamp(34.0, 48.0),
                     width: (48 * scale).clamp(34.0, 48.0),
-                    decoration: BoxDecoration(
-                      color: const Color(0xCC0E8EA4),
-                      border: Border.all(color: const Color(0x4DFFFFFF)),
+                    decoration: const BoxDecoration(
+                      color: Color(0xCC0E8EA4),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -730,11 +739,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Widget _profileField({
+    Key? formFieldKey,
     required TextEditingController controller,
     bool readOnly = false,
     bool obscureText = false,
+    String obscuringCharacter = '•',
     Widget? suffix,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    bool enableInteractiveSelection = true,
     double scale = 1.0,
     double verticalPaddingScaleFactor = 1.0,
   }) {
@@ -742,7 +755,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final glassTint = readOnly
         ? Colors.white.withValues(alpha: 0.07)
         : Colors.white.withValues(alpha: 0.11);
-    final borderAlpha = readOnly ? 0.18 : 0.26;
 
     return ClipRRect(
       borderRadius: radius,
@@ -752,9 +764,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           decoration: BoxDecoration(
             color: glassTint,
             borderRadius: radius,
-            border: Border.all(
-              color: Colors.white.withValues(alpha: borderAlpha),
-            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.12),
@@ -764,10 +773,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ],
           ),
           child: TextFormField(
+            key: formFieldKey,
             controller: controller,
             readOnly: readOnly,
             obscureText: obscureText,
+            obscuringCharacter: obscuringCharacter,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            enableInteractiveSelection: enableInteractiveSelection,
             style: GoogleFonts.montserrat(
               fontSize: (16 * scale).clamp(12.0, 16.0),
               fontWeight: FontWeight.w400,

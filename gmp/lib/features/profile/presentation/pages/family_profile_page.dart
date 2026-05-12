@@ -201,12 +201,13 @@ class _FamilyRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: (22 * scale).clamp(18.0, 24.0)),
-          decoration: BoxDecoration(
+            decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
             ),
           ),
+          
+          padding: EdgeInsets.symmetric(vertical: (22 * scale).clamp(18.0, 24.0)),
           child: Row(
             children: [
               Expanded(
@@ -239,18 +240,13 @@ class _AvatarCluster extends StatelessWidget {
 
   const _AvatarCluster({required this.profile, this.scale = 1.0});
 
-  static const _border = BorderSide(color: Colors.white, width: 2);
-
   @override
   Widget build(BuildContext context) {
     final clusterW = (156 * scale).clamp(112.0, 156.0);
     final clusterH = (92 * scale).clamp(68.0, 92.0);
     final smallRadius = (22 * scale).clamp(16.0, 22.0);
     final mainRadius = (39.5 * scale).clamp(28.0, 39.5);
-    final border = BorderSide(
-      color: Colors.white,
-      width: (2 * scale).clamp(1.3, 2.0),
-    );
+    const border = BorderSide.none;
     return SizedBox(
       width: clusterW,
       height: clusterH,
