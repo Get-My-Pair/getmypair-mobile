@@ -117,13 +117,13 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
             ? DonateMyPairDetailsPage(
                 articleId: _selectedArticleId!,
                 articleName: _displayName(selectedArticle),
-                articleImageUrl: _imageUrl(selectedArticle.thumbnailImage),
+                articleImageUrl: _imageUrl(selectedArticle.rackHeroImagePath),
               )
             : ServiceSelectionPage(
                 articleId: _selectedArticleId!,
                 allowedServiceTypes: widget.allowedServiceTypes,
                 articleName: _displayName(selectedArticle),
-                articleImageUrl: _imageUrl(selectedArticle.thumbnailImage),
+                articleImageUrl: _imageUrl(selectedArticle.rackHeroImagePath),
                 flowPageTitle: widget.pageTitle,
               ),
       ),
@@ -137,25 +137,45 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    const topInset = 52.0;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
           ...BgTheme.background(),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
-              child: DecoratedBox(
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFF0F0F0),
-                  shape: RoundedRectangleBorder(borderRadius: _panelRadius),
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  topInset,
+                  horizontalInset,
+                  0,
                 ),
-                child: ClipRRect(
-                  borderRadius: _panelRadius,
-                  child: _buildBody(),
+                child: DecoratedBox(
+                  decoration: const ShapeDecoration(
+                    color: Color(0xFFF0F0F0),
+                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
+                    shadows: [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _panelRadius,
+                    child: _buildBody(),
+                  ),
                 ),
               ),
             ),
@@ -166,7 +186,6 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
             bottom: 0,
             child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
-          SizedBox(height: bottomSafe),
         ],
       ),
     );
@@ -267,7 +286,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                 return Expanded(
                   child: _ShoeOption(
                     label: _displayName(article),
-                    imageUrl: _imageUrl(article.thumbnailImage),
+                    imageUrl: _imageUrl(article.rackHeroImagePath),
                     selected: _selectedArticleId == article.id,
                     onTap: () => setState(() => _selectedArticleId = article.id),
                   ),
@@ -419,12 +438,19 @@ class _ShoeOption extends StatelessWidget {
             const SizedBox(height: 4),
             Expanded(
               child: imageUrl.isEmpty
-                  ? const Icon(Icons.checkroom_outlined, color: Color(0xFF8D8D8D), size: 42)
+                  ? const Icon(
+                      Icons.checkroom_outlined,
+                      color: Color(0xFF8D8D8D),
+                      size: 42,
+                    )
                   : Image.network(
                       imageUrl,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) =>
-                          const Icon(Icons.checkroom_outlined, color: Color(0xFF8D8D8D), size: 42),
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.checkroom_outlined,
+                        color: Color(0xFF8D8D8D),
+                        size: 42,
+                      ),
                     ),
             ),
             const SizedBox(height: 2),

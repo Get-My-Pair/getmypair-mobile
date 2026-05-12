@@ -4,6 +4,7 @@ import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -123,6 +124,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         return 'Upload photos to show us the problem';
     }
   }
+
+  /// Shorter box for maintenance; repair/wash keep the original height.
+  int get _issueFieldMinLines =>
+      _singleFlowType == 'maintenance' ? 2 : 4;
+
+  int get _issueFieldMaxLines =>
+      _singleFlowType == 'maintenance' ? 2 : 4;
 
   List<DateTime> get _pickupDays {
     final now = DateTime.now();
@@ -760,10 +768,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                                               color: Color(0xFF8D8D8D),
                                               size: 58,
                                             )
-                                          : Image.network(
-                                              widget.articleImageUrl!,
+                                          : ArticleRackShoeImage(
+                                              imageUrl: widget.articleImageUrl!,
+                                              width: 230,
+                                              height: 96,
                                               fit: BoxFit.contain,
-                                              errorBuilder: (_, _, _) => const Icon(
+                                              placeholder: const Icon(
+                                                Icons.checkroom_outlined,
+                                                color: Color(0xFF8D8D8D),
+                                                size: 58,
+                                              ),
+                                              errorPlaceholder: const Icon(
                                                 Icons.checkroom_outlined,
                                                 color: Color(0xFF8D8D8D),
                                                 size: 58,
@@ -786,8 +801,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                               const SizedBox(height: 5),
                               TextField(
                                 controller: _problemController,
-                                minLines: 4,
-                                maxLines: 4,
+                                minLines: _issueFieldMinLines,
+                                maxLines: _issueFieldMaxLines,
                                 decoration: InputDecoration(
                                   hintText: _issueHint,
                                   hintStyle: GoogleFonts.montserrat(
@@ -1351,10 +1366,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                           color: AppColors.textTertiary,
                           size: 52,
                         )
-                      : Image.network(
-                          widget.articleImageUrl!,
+                      : ArticleRackShoeImage(
+                          imageUrl: widget.articleImageUrl!,
+                          width: 116,
+                          height: 72,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => const Icon(
+                          placeholder: const Icon(
+                            Icons.checkroom_outlined,
+                            color: AppColors.textTertiary,
+                            size: 52,
+                          ),
+                          errorPlaceholder: const Icon(
                             Icons.checkroom_outlined,
                             color: AppColors.textTertiary,
                             size: 52,

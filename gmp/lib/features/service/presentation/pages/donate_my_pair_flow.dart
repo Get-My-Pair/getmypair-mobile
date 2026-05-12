@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/home/presentation/pages/select_location_page.dart';
@@ -221,40 +222,52 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    const topInset = 52.0;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
           ...BgTheme.background(),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
-              child: DecoratedBox(
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFF0F0F0),
-                  shape: RoundedRectangleBorder(borderRadius: _panelRadius),
-                  shadows: [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  topInset,
+                  horizontalInset,
+                  0,
                 ),
-                child: ClipRRect(
-                  borderRadius: _panelRadius,
-                  child: _loading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF11999E),
-                          ),
-                        )
-                      : ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-                          children: [
+                child: DecoratedBox(
+                  decoration: const ShapeDecoration(
+                    color: Color(0xFFF0F0F0),
+                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
+                    shadows: [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _panelRadius,
+                    child: _loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF11999E),
+                            ),
+                          )
+                        : ListView(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                            children: [
                             Row(
                               children: [
                                 IconButton(
@@ -309,11 +322,17 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                                           color: Color(0xFF8D8D8D),
                                           size: 58,
                                         )
-                                      : Image.network(
-                                          widget.articleImageUrl,
+                                      : ArticleRackShoeImage(
+                                          imageUrl: widget.articleImageUrl,
+                                          width: 230,
+                                          height: 96,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (_, _, _) =>
-                                              const Icon(
+                                          placeholder: const Icon(
+                                            Icons.checkroom_outlined,
+                                            color: Color(0xFF8D8D8D),
+                                            size: 58,
+                                          ),
+                                          errorPlaceholder: const Icon(
                                             Icons.checkroom_outlined,
                                             color: Color(0xFF8D8D8D),
                                             size: 58,
@@ -547,17 +566,17 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
           const Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
-          SizedBox(height: bottomSafe),
         ],
       ),
     );
@@ -745,34 +764,46 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    const topInset = 52.0;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
           ...BgTheme.background(),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
-              child: DecoratedBox(
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFF0F0F0),
-                  shape: RoundedRectangleBorder(borderRadius: _panelRadius),
-                  shadows: [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  topInset,
+                  horizontalInset,
+                  0,
                 ),
-                child: ClipRRect(
-                  borderRadius: _panelRadius,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-                    children: [
+                child: DecoratedBox(
+                  decoration: const ShapeDecoration(
+                    color: Color(0xFFF0F0F0),
+                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
+                    shadows: [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _panelRadius,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                      children: [
                       Row(
                         children: [
                           IconButton(
@@ -1053,13 +1084,13 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
               ),
             ),
           ),
+          ),
           const Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
-          SizedBox(height: bottomSafe),
         ],
       ),
     );
