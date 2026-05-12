@@ -143,6 +143,15 @@ EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
   return EdgeInsets.fromLTRB(side, 7, side, bottom);
 }
 
+/// Total vertical extent of [DashboardLinkedBottomNav] (outer padding + bar height).
+///
+/// Use with [LayoutBuilder] / [Column] so panel content stays above the floating bar
+/// when [Scaffold.extendBody] is true.
+double dashboardLinkedBottomNavStackHeight(BuildContext context) {
+  final e = dashboardBottomNavOuterInsets(context);
+  return e.top + FloatingGradientBottomNav.barHeight + e.bottom;
+}
+
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
 /// Use on profile stack pages so Home / Rack / Profile match main navigation.
 class DashboardLinkedBottomNav extends StatelessWidget {
