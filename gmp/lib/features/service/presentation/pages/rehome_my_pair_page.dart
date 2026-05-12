@@ -133,9 +133,10 @@ class RehomeMyPairPage extends StatelessWidget {
                           Expanded(
                             child: _SecondaryServiceCard(
                               label: 'Sell\nMyPair',
-                              iconAsset: 'assets/images/icons/home/rentmypair.svg',
-                              iconSize: 48,
-                              labelFontSize: 13.2,
+                              iconAsset:
+                                  'assets/images/noun-shoes-cleaning-7675732 1.svg',
+                              iconSize: 64,
+                              labelFontSize: 15,
                               onTap: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -395,7 +396,7 @@ class _PrimaryDonateCard extends StatelessWidget {
           child: Row(
             children: [
               SvgPicture.asset(
-                'assets/images/icons/home/rehomemypair.svg',
+                'assets/images/icons/caremypair/rmp.svg',
                 width: 40,
                 height: 40,
               ),
@@ -406,8 +407,8 @@ class _PrimaryDonateCard extends StatelessWidget {
                   maxLines: 2,
                   style: GoogleFonts.boldonse(
                     color: Colors.white,
-                    fontSize: 14,
-                    height: 1.25,
+                    fontSize: 16,
+                    height: 1.9,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -438,48 +439,61 @@ class _SecondaryServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          height: _cardHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFDFE7E9),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF0F6876)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 4,
-                offset: Offset(0, 4),
-              ),
-            ],
+    const radius = BorderRadius.all(Radius.circular(10));
+    const borderSide = BorderSide(color: Color(0xFF0F6876));
+
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          borderRadius: radius,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 4,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: const Color(0xFFDFE7E9),
+          shape: const RoundedRectangleBorder(
+            borderRadius: radius,
+            side: borderSide,
           ),
-          child: Row(
-            children: [
-              SvgPicture.asset(
-                iconAsset,
-                width: iconSize,
-                height: iconSize,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  textAlign: TextAlign.left,
-                  style: GoogleFonts.boldonse(
-                    color: const Color(0xFF062F35),
-                    fontSize: labelFontSize,
-                    height: 1.35,
-                    fontWeight: FontWeight.w400,
-                  ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            child: SizedBox(
+              height: _cardHeight,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Row(
+                  children: [
+                    SvgPicture.asset(
+                      iconAsset,
+                      width: iconSize,
+                      height: iconSize,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        textAlign: TextAlign.left,
+                        style: GoogleFonts.boldonse(
+                          color: const Color(0xFF062F35),
+                          fontSize: labelFontSize,
+                    height: 1.9,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
