@@ -477,7 +477,6 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                 ),
                 SizedBox(height: 4 * layoutScale),
                 Expanded(
-                  flex: 2,
                   child: InkWell(
                     onTap: _busy ? null : _pickImages,
                     borderRadius: BorderRadius.circular(10),

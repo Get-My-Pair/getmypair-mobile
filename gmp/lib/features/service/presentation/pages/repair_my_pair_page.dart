@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
@@ -101,6 +103,10 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     return 'Shoe';
   }
 
+  bool get _isDonateOnlyPicker =>
+      widget.allowedServiceTypes.length == 1 &&
+      widget.allowedServiceTypes.first.trim().toLowerCase() == 'donate';
+
   Future<void> _goNext() async {
     if (_selectedArticleId == null || _submitting) return;
     final selectedArticle = _articles.firstWhere(
@@ -174,7 +180,12 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                   ),
                   child: ClipRRect(
                     borderRadius: _panelRadius,
-                    child: _buildBody(),
+                    child: _isDonateOnlyPicker
+                        ? _buildBody(context)
+                        : LayoutBuilder(
+                            builder: (context, constraints) =>
+                                _buildBody(context, constraints),
+                          ),
                   ),
                 ),
               ),
@@ -191,7 +202,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context, [BoxConstraints? constraints]) {
     if (_loading) {
       return const Center(
         child: CircularProgressIndicator(color: _teal),
@@ -233,6 +244,163 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
       );
     }
 
+    if (_isDonateOnlyPicker) {
+      return _buildDonateFootwearPickerLegacy(context);
+    }
+
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final navH = dashboardLinkedBottomNavStackHeight(context);
+    final maxH = constraints!.maxHeight.isFinite
+        ? constraints.maxHeight
+        : MediaQuery.sizeOf(context).height;
+    final layoutScale = math
+        .min(uiScale, ((maxH - navH) / 640).clamp(0.55, 1.0))
+        .toDouble();
+    final fs = (16 * layoutScale).clamp(12.0, 16.0);
+    final titleFs = (24 * layoutScale).clamp(17.0, 24.0);
+    final pillH = (48 * layoutScale).clamp(40.0, 52.0);
+    final rowGap = (10 * layoutScale).clamp(6.0, 14.0);
+    final rowH = (112 * layoutScale).clamp(96.0, 128.0);
+    final sidePad = (8 * layoutScale).clamp(6.0, 10.0);
+
+    final rows = (_articles.length + 2) ~/ 3;
+    return ListView(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, navH + 32),
+      children: [
+        Row(
+          children: [
+            IconButton(
+              onPressed: () => Navigator.maybePop(context),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: _dark,
+                size: (24 * layoutScale).clamp(18.0, 24.0),
+              ),
+            ),
+            SizedBox(width: 6 * layoutScale),
+            Expanded(
+              child: Text(
+                widget.pageTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.boldonse(
+                  color: _dark,
+                  fontSize: titleFs,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 10 * layoutScale),
+        Text(
+          widget.description,
+          style: GoogleFonts.montserrat(
+            color: Colors.black,
+            fontSize: fs,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        SizedBox(height: 14 * layoutScale),
+        ...List.generate(rows, (row) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: row == rows - 1 ? 0 : rowGap),
+            child: _ShoeRow(
+              rowHeight: rowH,
+              horizontalPadding: sidePad,
+              verticalPadding: sidePad,
+              children: List.generate(3, (col) {
+                final index = row * 3 + col;
+                if (index >= _articles.length) {
+                  return const Expanded(child: SizedBox.shrink());
+                }
+                final article = _articles[index];
+                return Expanded(
+                  child: _ShoeOption(
+                    layoutScale: layoutScale,
+                    label: _displayName(article),
+                    imageUrl: _imageUrl(article.rackHeroImagePath),
+                    selected: _selectedArticleId == article.id,
+                    onTap: () => setState(() => _selectedArticleId = article.id),
+                  ),
+                );
+              }),
+            ),
+          );
+        }),
+        SizedBox(height: 18 * layoutScale),
+        Center(
+          child: SizedBox(
+            width: (164 * layoutScale).clamp(132.0, 180.0),
+            height: pillH,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [
+                    Color(0xFF0CADC5),
+                    Color(0xFF063239),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(100),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextButton(
+                onPressed:
+                    _selectedArticleId == null || _submitting ? null : _goNext,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Next',
+                            style: GoogleFonts.boldonse(
+                              color: Colors.white,
+                              fontSize: fs,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          SizedBox(width: 20 * layoutScale),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white,
+                            size: (16 * layoutScale).clamp(13.0, 16.0),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDonateFootwearPickerLegacy(BuildContext context) {
     final rows = (_articles.length + 2) ~/ 3;
     return ListView(
       padding: const EdgeInsets.fromLTRB(10, 12, 12, 128),
@@ -367,14 +535,25 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
 
 class _ShoeRow extends StatelessWidget {
   final List<Widget> children;
+  final double rowHeight;
+  final double horizontalPadding;
+  final double verticalPadding;
 
-  const _ShoeRow({required this.children});
+  const _ShoeRow({
+    required this.children,
+    this.rowHeight = 112,
+    this.horizontalPadding = 8,
+    this.verticalPadding = 8,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 112,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      height: rowHeight,
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: verticalPadding,
+      ),
       decoration: BoxDecoration(
         color: const Color(0xFFF0F0F0),
         borderRadius: BorderRadius.circular(10),
@@ -395,65 +574,76 @@ class _ShoeOption extends StatelessWidget {
   final String imageUrl;
   final bool selected;
   final VoidCallback onTap;
+  final double layoutScale;
 
   const _ShoeOption({
     required this.label,
     required this.imageUrl,
     required this.selected,
     required this.onTap,
+    this.layoutScale = 1,
   });
 
   @override
   Widget build(BuildContext context) {
+    final radio = (22 * layoutScale).clamp(18.0, 24.0);
+    final checkSz = (14 * layoutScale).clamp(12.0, 16.0);
+    final shoeIcon = (42 * layoutScale).clamp(32.0, 48.0);
+    final labelFs = (16 * layoutScale).clamp(13.0, 16.0);
+    final borderW = (2 * layoutScale).clamp(1.5, 2.0);
+
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
+        padding: EdgeInsets.symmetric(horizontal: 2 * layoutScale),
         child: Column(
           children: [
-            const SizedBox(height: 2),
+            SizedBox(height: 2 * layoutScale),
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                width: 22,
-                height: 22,
+                width: radio,
+                height: radio,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: _RepairMyPairPageState._teal, width: 2),
+                  border: Border.all(
+                    color: _RepairMyPairPageState._teal,
+                    width: borderW,
+                  ),
                   color: selected
                       ? _RepairMyPairPageState._teal.withValues(alpha: 0.14)
                       : Colors.transparent,
                 ),
                 child: selected
-                    ? const Center(
+                    ? Center(
                         child: Icon(
                           Icons.check,
-                          size: 14,
+                          size: checkSz,
                           color: _RepairMyPairPageState._teal,
                         ),
                       )
                     : null,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4 * layoutScale),
             Expanded(
               child: imageUrl.isEmpty
-                  ? const Icon(
+                  ? Icon(
                       Icons.checkroom_outlined,
-                      color: Color(0xFF8D8D8D),
-                      size: 42,
+                      color: const Color(0xFF8D8D8D),
+                      size: shoeIcon,
                     )
                   : Image.network(
                       imageUrl,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
+                      errorBuilder: (_, _, _) => Icon(
                         Icons.checkroom_outlined,
-                        color: Color(0xFF8D8D8D),
-                        size: 42,
+                        color: const Color(0xFF8D8D8D),
+                        size: shoeIcon,
                       ),
                     ),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: 2 * layoutScale),
             Text(
               label,
               maxLines: 1,
@@ -461,7 +651,7 @@ class _ShoeOption extends StatelessWidget {
               style: GoogleFonts.boldonse(
                 color: _RepairMyPairPageState._teal,
                 fontWeight: FontWeight.w400,
-                fontSize: 16,
+                fontSize: labelFs,
               ),
             ),
           ],
