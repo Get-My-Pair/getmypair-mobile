@@ -306,6 +306,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     final pillFs = (14 * layoutScale).clamp(11.0, 14.0);
     final actionFs = (14 * layoutScale).clamp(11.0, 14.0);
     final iconSz = (58 * layoutScale).clamp(36.0, 58.0);
+    final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 16, 20, navH + 6),
@@ -405,24 +406,30 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
               ),
             ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Reason for donation',
-                  style: GoogleFonts.montserrat(
-                    color: const Color(0xFF062F35),
-                    fontSize: fs,
-                    fontWeight: FontWeight.w400,
+            child: SingleChildScrollView(
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
+              physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom + 8,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Reason for donation',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontSize: fs,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
-                SizedBox(height: 4 * layoutScale),
-                Expanded(
-                  child: TextField(
+                  SizedBox(height: 4 * layoutScale),
+                  TextField(
                     controller: _reasonController,
-                    expands: true,
-                    maxLines: null,
-                    minLines: null,
+                    keyboardType: TextInputType.multiline,
+                    minLines: 4,
+                    maxLines: 8,
                     textAlignVertical: TextAlignVertical.top,
                     style: GoogleFonts.montserrat(
                       color: const Color(0xFF062F35),
@@ -465,117 +472,118 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: 8 * layoutScale),
-                Text(
-                  'Upload photos for donation',
-                  style: GoogleFonts.montserrat(
-                    color: const Color(0xFF062F35),
-                    fontSize: fs,
-                    fontWeight: FontWeight.w400,
+                  SizedBox(height: 8 * layoutScale),
+                  Text(
+                    'Upload photos for donation',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontSize: fs,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
-                SizedBox(height: 4 * layoutScale),
-                Expanded(
-                  child: InkWell(
-                    onTap: _busy ? null : _pickImages,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      alignment: Alignment.center,
-                      decoration: ShapeDecoration(
-                        color: Colors.white.withValues(alpha: 0.10),
-                        shape: RoundedRectangleBorder(
-                          side: const BorderSide(
-                            width: 1,
-                            color: Color(0x7F12899B),
+                  SizedBox(height: 4 * layoutScale),
+                  SizedBox(
+                    height: uploadTapH,
+                    child: InkWell(
+                      onTap: _busy ? null : _pickImages,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: ShapeDecoration(
+                          color: Colors.white.withValues(alpha: 0.10),
+                          shape: RoundedRectangleBorder(
+                            side: const BorderSide(
+                              width: 1,
+                              color: Color(0x7F12899B),
+                            ),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ),
-                      child: Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: _busy ? null : _pickImages,
-                            child: Text(
-                              'Upload Photos ',
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: _busy ? null : _pickImages,
+                              child: Text(
+                                'Upload Photos ',
+                                style: GoogleFonts.boldonse(
+                                  color: const Color(0xFF12899B),
+                                  fontSize: actionFs,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'or',
                               style: GoogleFonts.boldonse(
-                                color: const Color(0xFF12899B),
+                                color: const Color(0xFFABABAB),
                                 fontSize: actionFs,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
-                          ),
-                          Text(
-                            'or',
-                            style: GoogleFonts.boldonse(
-                              color: const Color(0xFFABABAB),
-                              fontSize: actionFs,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _busy ? null : _takePicture,
-                            child: Text(
-                              ' Take Pictures',
-                              style: GoogleFonts.boldonse(
-                                color: const Color(0xFF12899B),
-                                fontSize: actionFs,
-                                fontWeight: FontWeight.w400,
+                            GestureDetector(
+                              onTap: _busy ? null : _takePicture,
+                              child: Text(
+                                ' Take Pictures',
+                                style: GoogleFonts.boldonse(
+                                  color: const Color(0xFF12899B),
+                                  fontSize: actionFs,
+                                  fontWeight: FontWeight.w400,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: 8 * layoutScale),
-                Text(
-                  'How would you like to send us your footwear?',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.montserrat(
-                    color: const Color(0xFF062F35),
-                    fontSize: fs,
-                    fontWeight: FontWeight.w400,
+                  SizedBox(height: 8 * layoutScale),
+                  Text(
+                    'How would you like to send us your footwear?',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontSize: fs,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
-                SizedBox(height: 6 * layoutScale),
-                SizedBox(
-                  height: pillH,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _pickupPill(
-                          label: 'Home Pickup',
-                          selected: _homePickup,
-                          height: pillH,
-                          fontSize: pillFs,
-                          onTap: () {
-                            if (_busy) return;
-                            setState(() => _homePickup = true);
-                          },
+                  SizedBox(height: 6 * layoutScale),
+                  SizedBox(
+                    height: pillH,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _pickupPill(
+                            label: 'Home Pickup',
+                            selected: _homePickup,
+                            height: pillH,
+                            fontSize: pillFs,
+                            onTap: () {
+                              if (_busy) return;
+                              setState(() => _homePickup = true);
+                            },
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 12 * layoutScale),
-                      Expanded(
-                        child: _pickupPill(
-                          label: 'Cobblers Nearby',
-                          selected: !_homePickup,
-                          height: pillH,
-                          fontSize: pillFs,
-                          onTap: () {
-                            if (_busy) return;
-                            setState(() => _homePickup = false);
-                          },
+                        SizedBox(width: 12 * layoutScale),
+                        Expanded(
+                          child: _pickupPill(
+                            label: 'Cobblers Nearby',
+                            selected: !_homePickup,
+                            height: pillH,
+                            fontSize: pillFs,
+                            onTap: () {
+                              if (_busy) return;
+                              setState(() => _homePickup = false);
+                            },
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           SizedBox(height: 10 * layoutScale),
