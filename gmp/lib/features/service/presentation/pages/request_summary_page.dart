@@ -360,7 +360,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: widget.proofImages.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(width: 8),
                             itemBuilder: (_, i) {
                               return ClipRRect(
@@ -723,39 +723,77 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   }
 
   Widget _buildProofPreviewStrip() {
-    final images = widget.proofImages.take(2).toList();
-    return Row(
-      children: List.generate(2, (index) {
-        if (index < images.length) {
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: index == 0 ? 4 : 0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: SizedBox(
-                  height: 104,
-                  child: FutureBuilder(
-                    future: images[index].readAsBytes(),
-                    builder: (context, snap) {
-                      if (!snap.hasData) {
-                        return Container(color: const Color(0xFFD6D6D6));
-                      }
-                      return Image.memory(snap.data!, fit: BoxFit.cover);
-                    },
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-        return Expanded(
-          child: Container(
+    final images = widget.proofImages;
+    final videos = widget.proofVideos;
+    if (images.isEmpty && videos.isEmpty) {
+      return Text(
+        'No proof photos or videos attached.',
+        style: GoogleFonts.montserrat(
+          color: const Color(0xFF8D8D8D),
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (images.isNotEmpty)
+          SizedBox(
             height: 104,
-            margin: EdgeInsets.only(right: index == 0 ? 4 : 0),
-            color: const Color(0xFFD6D6D6),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: images.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, index) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 104,
+                    height: 104,
+                    child: FutureBuilder(
+                      future: images[index].readAsBytes(),
+                      builder: (context, snap) {
+                        if (!snap.hasData) {
+                          return Container(
+                            color: const Color(0xFFD6D6D6),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF11999E),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                        return Image.memory(
+                          snap.data!,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      }),
+        if (videos.isNotEmpty) ...[
+          if (images.isNotEmpty) const SizedBox(height: 10),
+          Text(
+            '${videos.length} video(s) attached: ${videos.map((v) => v.name).join(', ')}',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.montserrat(
+              color: Colors.black87,
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
+      ],
     );
   }
 

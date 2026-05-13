@@ -1005,6 +1005,92 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         ),
                       ),
                     ),
+                    if (_proofImages.isNotEmpty) ...[
+                      SizedBox(height: 8 * layoutScale),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${_proofImages.length}/$kMaxProofImages photo(s) added',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF12899B),
+                            fontSize: (12 * layoutScale).clamp(10.0, 13.0),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 6 * layoutScale),
+                      SizedBox(
+                        height: (76 * layoutScale).clamp(60.0, 92.0),
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _proofImages.length,
+                          separatorBuilder: (_, _) =>
+                              SizedBox(width: 8 * layoutScale),
+                          itemBuilder: (_, i) {
+                            final thumb = (72 * layoutScale).clamp(56.0, 88.0);
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: SizedBox(
+                                    width: thumb,
+                                    height: thumb,
+                                    child: FutureBuilder(
+                                      future: _proofImages[i].readAsBytes(),
+                                      builder: (context, snap) {
+                                        if (!snap.hasData) {
+                                          return Container(
+                                            color: const Color(0xFFDFE7E9),
+                                            child: const Center(
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Color(0xFF11999E),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return Image.memory(
+                                          snap.data!,
+                                          fit: BoxFit.cover,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Material(
+                                    color: const Color(0xFFB00020),
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: _submitting
+                                          ? null
+                                          : () => _removeImage(i),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(4),
+                                        child: Icon(
+                                          Icons.close,
+                                          size: (16 * layoutScale)
+                                              .clamp(14.0, 18.0),
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                     SizedBox(height: 8 * layoutScale),
                     Text(
                       'How would you like to send us your footwear?',
@@ -1130,6 +1216,52 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                           fontWeight: FontWeight.w400,
                         ),
                       ),
+                      if (_proofImages.isNotEmpty) ...[
+                        SizedBox(height: 8 * layoutScale),
+                        Text(
+                          'Your uploaded photos (${_proofImages.length})',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF4E7F8A),
+                            fontSize: (12 * layoutScale).clamp(10.0, 13.0),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: 6 * layoutScale),
+                        SizedBox(
+                          height: (52 * layoutScale).clamp(44.0, 60.0),
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _proofImages.length,
+                            separatorBuilder: (_, _) =>
+                                SizedBox(width: 6 * layoutScale),
+                            itemBuilder: (_, i) {
+                              final w =
+                                  (48 * layoutScale).clamp(40.0, 56.0);
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: w,
+                                  height: w,
+                                  child: FutureBuilder(
+                                    future: _proofImages[i].readAsBytes(),
+                                    builder: (context, snap) {
+                                      if (!snap.hasData) {
+                                        return Container(
+                                          color: const Color(0xFFDFE7E9),
+                                        );
+                                      }
+                                      return Image.memory(
+                                        snap.data!,
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                       SizedBox(height: 8 * layoutScale),
                       Text(
                         'Please choose a time slot from the options below',
@@ -1969,7 +2101,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _proofImages.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   return Stack(
                     clipBehavior: Clip.none,

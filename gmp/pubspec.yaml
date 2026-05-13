@@ -37,6 +37,8 @@ dependencies:
   
   # HTTP client for API calls (^1.x required by flutter_map)
   http: ^1.6.0
+  http_parser: ^4.1.2
+  mime: ^2.0.0
 
   # State management
   flutter_bloc: ^9.1.1

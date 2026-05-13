@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
@@ -86,6 +87,166 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   }
 
   String _str(dynamic v) => v?.toString() ?? '';
+
+  List<String> _urlsFrom(dynamic raw) {
+    if (raw is! List) return [];
+    return raw
+        .map((e) => e.toString().trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
+  bool _requestDetailSectionVisible(Map<String, dynamic> r) {
+    if (_str(r['problemDescription']).trim().isNotEmpty) return true;
+    if (_urlsFrom(r['photos']).isNotEmpty) return true;
+    if (_urlsFrom(r['videos']).isNotEmpty) return true;
+    return false;
+  }
+
+  Widget _requestDetailsCard(Map<String, dynamic> r) {
+    final problem = _str(r['problemDescription']).trim();
+    final photos = _urlsFrom(r['photos']);
+    final videos = _urlsFrom(r['videos']);
+    return _card(
+      title: 'Your request',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (problem.isNotEmpty) ...[
+            Text(
+              'Problem described',
+              style: GoogleFonts.boldonse(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF12899B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              problem,
+              style: GoogleFonts.montserrat(
+                fontSize: 14,
+                color: AppColors.textPrimary,
+                height: 1.35,
+              ),
+            ),
+          ],
+          if (photos.isNotEmpty) ...[
+            if (problem.isNotEmpty) const SizedBox(height: 14),
+            Text(
+              'Proof photos',
+              style: GoogleFonts.boldonse(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF12899B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 96,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: photos.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 96,
+                      height: 96,
+                      child: Image.network(
+                        photos[i],
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            color: AppColors.surfaceVariant,
+                            child: const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF11999E),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (_, _, _) => Container(
+                          color: AppColors.surfaceVariant,
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+          if (videos.isNotEmpty) ...[
+            if (problem.isNotEmpty || photos.isNotEmpty)
+              const SizedBox(height: 14),
+            Text(
+              'Proof videos',
+              style: GoogleFonts.boldonse(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFF12899B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...List.generate(videos.length, (i) {
+              final url = videos[i];
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: i < videos.length - 1 ? 8 : 0,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.videocam_outlined,
+                      size: 22,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SelectableText(
+                        url,
+                        maxLines: 3,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: url));
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Video link copied'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      child: const Text('Copy'),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
 
   bool _hasActualCost(Map<String, dynamic> r) {
     final v = r['actualCost'];
@@ -437,6 +598,10 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                       ],
                     ),
                   ),
+                  if (_requestDetailSectionVisible(_request!)) ...[
+                    const SizedBox(height: 12),
+                    _requestDetailsCard(_request!),
+                  ],
                   const SizedBox(height: 12),
                   if (_pendingUserCost(_request!)) ...[
                     Container(
