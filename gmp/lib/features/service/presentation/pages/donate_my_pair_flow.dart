@@ -232,6 +232,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -276,11 +277,14 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
+            child: Offstage(
+              offstage: MediaQuery.viewInsetsOf(context).bottom > 0,
+              child: const DashboardLinkedBottomNav(selectedTabIndex: 1),
+            ),
           ),
         ],
       ),
@@ -307,9 +311,18 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     final actionFs = (14 * layoutScale).clamp(11.0, 14.0);
     final iconSz = (58 * layoutScale).clamp(36.0, 58.0);
     final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
+    final viewInsetBottom = MediaQuery.viewInsetsOf(context).bottom;
+    final keyboardOpen = viewInsetBottom > 0;
+    final uploadTapHCompact = (72 * layoutScale).clamp(56.0, 88.0);
+    final effectiveUploadH = keyboardOpen ? uploadTapHCompact : uploadTapH;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, navH + 6),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        keyboardOpen ? 12 : navH + 6,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -356,43 +369,44 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
               ),
             ),
             SizedBox(height: 4 * layoutScale),
-            LayoutBuilder(
-              builder: (context, ac) {
-                final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
-                final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
-                return Center(
-                  child: SizedBox(
-                    width: imgW,
-                    height: imgH,
-                    child: Center(
-                      child: widget.articleImageUrl.isEmpty
-                          ? Icon(
-                              Icons.checkroom_outlined,
-                              color: const Color(0xFF8D8D8D),
-                              size: iconSz,
-                            )
-                          : ArticleRackShoeImage(
-                              imageUrl: widget.articleImageUrl,
-                              width: imgW,
-                              height: imgH,
-                              fit: BoxFit.contain,
-                              placeholder: Icon(
+            if (!keyboardOpen)
+              LayoutBuilder(
+                builder: (context, ac) {
+                  final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
+                  final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
+                  return Center(
+                    child: SizedBox(
+                      width: imgW,
+                      height: imgH,
+                      child: Center(
+                        child: widget.articleImageUrl.isEmpty
+                            ? Icon(
                                 Icons.checkroom_outlined,
                                 color: const Color(0xFF8D8D8D),
                                 size: iconSz,
+                              )
+                            : ArticleRackShoeImage(
+                                imageUrl: widget.articleImageUrl,
+                                width: imgW,
+                                height: imgH,
+                                fit: BoxFit.contain,
+                                placeholder: Icon(
+                                  Icons.checkroom_outlined,
+                                  color: const Color(0xFF8D8D8D),
+                                  size: iconSz,
+                                ),
+                                errorPlaceholder: Icon(
+                                  Icons.checkroom_outlined,
+                                  color: const Color(0xFF8D8D8D),
+                                  size: iconSz,
+                                ),
                               ),
-                              errorPlaceholder: Icon(
-                                Icons.checkroom_outlined,
-                                color: const Color(0xFF8D8D8D),
-                                size: iconSz,
-                              ),
-                            ),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            SizedBox(height: 10 * layoutScale),
+                  );
+                },
+              ),
+            if (!keyboardOpen) SizedBox(height: 10 * layoutScale),
           ],
           if (_error != null)
             Padding(
@@ -428,8 +442,8 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   TextField(
                     controller: _reasonController,
                     keyboardType: TextInputType.multiline,
-                    minLines: 4,
-                    maxLines: 8,
+                    minLines: keyboardOpen ? 2 : 4,
+                    maxLines: keyboardOpen ? 5 : 8,
                     textAlignVertical: TextAlignVertical.top,
                     style: GoogleFonts.montserrat(
                       color: const Color(0xFF062F35),
@@ -483,7 +497,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   ),
                   SizedBox(height: 4 * layoutScale),
                   SizedBox(
-                    height: uploadTapH,
+                    height: effectiveUploadH,
                     child: InkWell(
                       onTap: _busy ? null : _pickImages,
                       borderRadius: BorderRadius.circular(10),
@@ -541,7 +555,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   SizedBox(height: 8 * layoutScale),
                   Text(
                     'How would you like to send us your footwear?',
-                    maxLines: 2,
+                    maxLines: keyboardOpen ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.montserrat(
                       color: const Color(0xFF062F35),
@@ -582,71 +596,72 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: 10 * layoutScale),
-          Center(
-            child: SizedBox(
-              width: (164 * layoutScale).clamp(132.0, 180.0),
-              height: pillH,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.centerRight,
-                    end: Alignment.centerLeft,
-                    colors: [
-                      Color(0xFF0CADC5),
-                      Color(0xFF063239),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(100),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextButton(
-                  onPressed: _busy ? null : _onNext,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                  ),
-                  child: _busy
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                  SizedBox(height: 10 * layoutScale),
+                  Center(
+                    child: SizedBox(
+                      width: (164 * layoutScale).clamp(132.0, 180.0),
+                      height: pillH,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.centerRight,
+                            end: Alignment.centerLeft,
+                            colors: [
+                              Color(0xFF0CADC5),
+                              Color(0xFF063239),
+                            ],
                           ),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Next',
-                              style: GoogleFonts.boldonse(
-                                color: Colors.white,
-                                fontSize: fs,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            SizedBox(width: 20 * layoutScale),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: Colors.white,
-                              size: (16 * layoutScale).clamp(13.0, 16.0),
+                          borderRadius: BorderRadius.circular(100),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x19000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 4),
                             ),
                           ],
                         ),
-                ),
+                        child: TextButton(
+                          onPressed: _busy ? null : _onNext,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                          ),
+                          child: _busy
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Next',
+                                      style: GoogleFonts.boldonse(
+                                        color: Colors.white,
+                                        fontSize: fs,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                    SizedBox(width: 20 * layoutScale),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      color: Colors.white,
+                                      size:
+                                          (16 * layoutScale).clamp(13.0, 16.0),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
