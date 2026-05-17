@@ -14,9 +14,11 @@ import '../../../../core/constants/figma_home_assets.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
+import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../profile/presentation/utils/saved_location_sync.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'select_location_page.dart';
@@ -124,6 +126,8 @@ class _HomePageState extends State<HomePage> {
   List<Article>? _rackArticles;
   bool _rackLoading = true;
   String? _rackError;
+  AddressParts? _detectedLocationParts;
+  bool _locationSavePromptHandled = false;
 
   @override
   void initState() {
@@ -213,16 +217,41 @@ class _HomePageState extends State<HomePage> {
 
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
+        _detectedLocationParts = AddressParts.fromPlacemark(place);
         setState(() {
           _currentAddress =
               '📍 ${place.subLocality ?? place.locality}, ${place.administrativeArea}';
         });
+        _maybePromptSaveDetectedLocation();
       } else {
         setState(() => _currentAddress = '📍 Location unavailable');
       }
     } catch (e) {
       setState(() => _currentAddress = '📍 Location unavailable');
     }
+  }
+
+  Future<void> _maybePromptSaveDetectedLocation() async {
+    if (_locationSavePromptHandled || _detectedLocationParts == null) return;
+
+    final profile =
+        userProfileFromProfileState(context.read<ProfileBloc>().state);
+    if (profile == null) return;
+
+    _locationSavePromptHandled = true;
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {},
+      (token) => SavedLocationSync.maybePersist(
+        context: context,
+        profileBloc: context.read<ProfileBloc>(),
+        accessToken: token,
+        parts: _detectedLocationParts!,
+        addresses: profile.addresses,
+      ),
+    );
   }
 
   static String _articleImageUrl(String? path) {
@@ -347,7 +376,13 @@ class _HomePageState extends State<HomePage> {
           );
         }
       },
-      child: BlocBuilder<AuthBloc, AuthState>(
+      child: BlocListener<ProfileBloc, ProfileState>(
+        listener: (context, state) {
+          if (state is ProfileLoaded || state is AddressActionLoading) {
+            _maybePromptSaveDetectedLocation();
+          }
+        },
+        child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           final userName = state is AuthAuthenticated
               ? state.user.name
@@ -813,6 +848,7 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         },
+        ),
       ),
     );
   }

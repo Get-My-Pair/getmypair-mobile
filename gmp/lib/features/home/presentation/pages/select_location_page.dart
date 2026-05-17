@@ -24,17 +24,11 @@ import '../../../profile/domain/entities/user_profile.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../profile/presentation/utils/saved_location_sync.dart';
 import '../../../../injection_container.dart';
 
-/// Profile snapshot from [ProfileState] for map-pin / navigation helpers.
-UserProfile? userProfileFromProfileState(ProfileState s) {
-  if (s is ProfileLoaded) return s.profile;
-  if (s is ProfileUpdating) return s.profile;
-  if (s is ProfileImageUploading) return s.profile;
-  if (s is ProfileError) return s.profile;
-  if (s is AddressActionLoading) return s.profile;
-  return null;
-}
+export '../../../profile/presentation/utils/saved_location_sync.dart'
+    show userProfileFromProfileState;
 
 /// Display name for the user map pin (profile name, else auth name, else “You”).
 String mapPinDisplayNameFrom(UserProfile? profile, AuthState auth) {
@@ -112,7 +106,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   final MapController _mapController = MapController();
   LatLng _markerPosition = _defaultCenter;
   String _address = 'Loading address...';
+  Placemark? _lastPlacemark;
   bool _isLoadingAddress = false;
+  bool _isConfirmingLocation = false;
   bool _isSatelliteView = true;
   double _currentZoom = _initialZoom;
   double _selectedRangeKm = 5;
@@ -275,6 +271,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       if (!mounted) return;
       if (placemarks.isNotEmpty) {
         final p = placemarks[0];
+        _lastPlacemark = p;
         final parts = [
           p.subThoroughfare,
           p.thoroughfare,
@@ -285,6 +282,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         ].where((e) => e != null && e.toString().trim().isNotEmpty).toList();
         setState(() => _address = parts.join(', '));
       } else {
+        _lastPlacemark = null;
         setState(() => _address = 'Selected location');
       }
     } catch (e) {
@@ -294,10 +292,38 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     }
   }
 
-  void _confirmLocation() {
+  Future<void> _confirmLocation() async {
+    if (_isConfirmingLocation || _isLoadingAddress) return;
+    setState(() => _isConfirmingLocation = true);
+
     final result = (_address == 'Selected location')
         ? '${_markerPosition.latitude}, ${_markerPosition.longitude}'
         : _address;
+
+    final parts = _lastPlacemark != null
+        ? AddressParts.fromPlacemark(_lastPlacemark!)
+        : AddressParts.fromDisplayLine(
+            _address,
+            coordinates: _markerPosition,
+          );
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (mounted) {
+      await tokenResult.fold(
+        (_) async {},
+        (token) => SavedLocationSync.maybePersist(
+          context: context,
+          profileBloc: widget.profileBloc,
+          accessToken: token,
+          parts: parts,
+          addresses:
+              userProfileFromProfileState(widget.profileBloc.state)?.addresses,
+        ),
+      );
+    }
+
+    if (!mounted) return;
+    setState(() => _isConfirmingLocation = false);
     Navigator.of(context).pop(result);
   }
 
@@ -927,7 +953,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                     ),
                                     const SizedBox(width: 6),
                                     FilledButton(
-                                      onPressed: _confirmLocation,
+                                      onPressed: (_isLoadingAddress || _isConfirmingLocation)
+                                          ? null
+                                          : _confirmLocation,
                                       style: FilledButton.styleFrom(
                                         backgroundColor: _tealButton,
                                         foregroundColor: Colors.white,
