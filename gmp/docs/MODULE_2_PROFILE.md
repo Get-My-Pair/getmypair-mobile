@@ -60,7 +60,7 @@ ProfilePage
       ↓
 Tap "Edit Profile"
       ↓
-ProfileEditPage (EditProfileWidget)
+EditProfilePage
       ↓
 Edit:
   • Name
@@ -69,13 +69,13 @@ Edit:
       ↓
 PUT /api/user/profile/update
       ↓
-ProfileViewPage (Updated)
+ProfilePage (refreshed)
 ```
 
 ### Upload Profile Image Flow
 
 ```
-ProfileEditPage
+EditProfilePage
       ↓
 Tap Profile Image / "Change Photo"
       ↓
@@ -87,7 +87,7 @@ Crop Image
       ↓
 POST /api/user/profile/upload-image
       ↓
-ProfileViewPage (Updated Image)
+ProfilePage (updated image)
 ```
 
 ### Address CRUD Flow
@@ -194,7 +194,7 @@ Authorization: Bearer <token>
 
 ### 2. POST /api/user/profile/create
 
-**Purpose:** Create a new user profile (usually called from Module 1)
+**Purpose:** Create profile on backend (if exposed). **The mobile app does not call this endpoint** — initial profile row is created by Module 1 `POST /api/auth/complete-profile`.
 
 **Headers:**
 ```
@@ -441,7 +441,10 @@ Authorization: Bearer <token>
 - Logout button
 
 **User Actions:**
-- Tap "Edit Profile" → Navigate to `EditProfileWidget`
+- Tap "Edit Profile" → `EditProfilePage`
+- Family profiles → `FamilyProfilePage`
+- Manage devices → `ManageDevicesPage`
+- Log out → `AuthLogout` → `MobileOTPPage`
 - Tap "Saved Addresses" → Navigate to `SavedAddressesPage`
 - Tap "Manage Devices" → Navigate to `ManageDevicesPage`
 - Tap "Logout" → Show confirmation dialog → Logout
@@ -464,9 +467,9 @@ context.read<ProfileBloc>().add(ProfileLoadRequested(token));
 
 ---
 
-### 2. ProfileEditPage (EditProfileWidget)
+### 2. EditProfilePage
 
-**File:** `lib/features/profile/presentation/widgets/edit_profile_widget.dart`
+**File:** `lib/features/profile/presentation/pages/edit_profile_page.dart`
 
 **Purpose:** Page for editing user profile information and uploading profile image.
 
@@ -536,9 +539,11 @@ context.read<ProfileBloc>().add(ProfileImageUploadRequested(
 
 ---
 
-### 3. AddressListPage (SavedAddressesPage)
+### 3. SavedAddressesPage
 
-**File:** `lib/features/profile/presentation/widgets/saved_addresses_page.dart`
+Previously documented as AddressListPage.
+
+**File:** `lib/features/profile/presentation/pages/saved_addresses_page.dart`
 
 **Purpose:** Page for viewing and managing saved addresses.
 
@@ -607,9 +612,11 @@ context.read<ProfileBloc>().add(AddressDeleteRequested(
 
 ---
 
-### 4. AddressFormPage (AddressFormSheet)
+### 4. Address form (inline sheet on SavedAddressesPage)
 
-**File:** `lib/features/profile/presentation/widgets/saved_addresses_page.dart` (internal widget)
+Address add/edit uses a bottom sheet form inside `saved_addresses_page.dart` (not a separate route file).
+
+**File:** `lib/features/profile/presentation/pages/saved_addresses_page.dart` (internal widget)
 
 **Purpose:** Bottom sheet form for adding or editing addresses.
 
@@ -899,11 +906,33 @@ context.read<ProfileBloc>().add(ProfileUpdateRequested(...));
 
 ---
 
+### 5. FamilyProfilePage
+
+**File:** `lib/features/profile/presentation/pages/family_profile_page.dart`
+
+**Purpose:** Manage family member profiles linked to the account (UI entry from ProfilePage).
+
+---
+
+### 6. ManageDevicesPage
+
+**File:** `lib/features/profile/presentation/pages/manage_devices_page.dart`
+
+**Purpose:** List/manage devices associated with the user account.
+
+---
+
+## Dashboard integration
+
+`CustomerDashboardPage` tab 3 wraps `ProfilePage(showBottomNav: false)` inside a `BlocProvider<ProfileBloc>`. Profile loads via `GetValidAccessToken` + `ProfileLoadRequested`.
+
+---
+
 ## Integration with Module 1
 
-- Profile completion in Module 1 creates initial profile
-- Token from Module 1 authentication is used for all profile API calls
-- Profile page is accessible from CustomerDashboardPage (Module 1)
+- Profile row created by `POST /api/auth/complete-profile` (Module 1)
+- `GetValidAccessToken` used for all profile API calls
+- Profile tab on `CustomerDashboardPage`
 - Profile state is managed separately but uses same authentication token
 
 ---

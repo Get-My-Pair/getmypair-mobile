@@ -16,12 +16,13 @@
 Module 1 handles the complete authentication flow for the GetMyPair mobile application. It includes user registration, login via OTP, and profile completion for new users.
 
 **Key Features:**
-- Mobile OTP-based authentication
-- Splash screen with auth status check
-- Welcome screen with app introduction
-- OTP verification with resend functionality
-- Profile completion for new users
-- JWT token management
+- Mobile OTP-based authentication (primary); email login stub only
+- `SplashScreen` with **local session** fast-path (refresh/access token in SharedPreferences)
+- Three-step **onboarding** (`OnboardingFlowPage`) before login
+- OTP verification with resend and dev-mode OTP hint
+- **AI onboarding** (`AiOnboardingPage`) for new users after OTP, then profile completion
+- Access + refresh JWT storage; `GetValidAccessToken` for API calls
+- Background `AuthCheckStatus` on launch without forcing logout on transient network errors
 
 ---
 
@@ -30,57 +31,36 @@ Module 1 handles the complete authentication flow for the GetMyPair mobile appli
 ### App Launch Flow
 
 ```
-App Launch
+App Launch (main.dart)
    ↓
-SplashPage (2s)
+AuthBloc.add(AuthCheckStatus)  [background]
    ↓
-Check AuthBloc.state
+SplashScreen (~1.5s min + local session read)
    ↓
- ├─ Authenticated → GET /api/user/profile/me
- │                     ↓
- │              ├─ Profile Exists → CustomerDashboardPage
- │              └─ Profile Not Exists → ProfileCompletionPage
+ ├─ Local session OR AuthAuthenticated
+ │      → CustomerDashboardPage  (fast path; no network wait)
  │
- └─ Not Authenticated → WelcomePage
-                          ↓
-                    Tap "Get Started"
-                          ↓
-                    MobileOTPPage
-                          ↓
-                    Enter Mobile Number
-                          ↓
-                    POST /api/auth/send-otp
-                          ↓
-                    OTPPage
-                          ↓
-                    Enter OTP
-                          ↓
-                    POST /api/auth/verify-otp
-                          ↓
-                    ├─ Existing User
-                    │      ↓
-                    │   Save Token
-                    │      ↓
-                    │   GET /api/user/profile/me
-                    │      ↓
-                    │   CustomerDashboardPage
-                    │
-                    └─ New User
-                           ↓
-                    ProfileCompletionPage
-                           ↓
-                    Fill:
-                      • Name
-                      • DOB
-                      • Gender
-                      • Location
-                           ↓
-                    POST /api/auth/complete-profile
-                           ↓
-                    Save Token
-                           ↓
-                    CustomerDashboardPage
+ └─ No session / AuthUnauthenticated
+        → OnboardingFlowPage (3 slides)
+               ↓
+          MobileOTPPage
+               ↓
+          POST /api/auth/send-otp
+               ↓
+          OTPPage
+               ↓
+          POST /api/auth/verify-otp
+               ↓
+     ├─ Existing user → CustomerDashboardPage
+     │
+     └─ New user (requiresProfileCompletion)
+            → AiOnboardingPage
+            → ProfileCompletionPage (if needed)
+            → POST /api/auth/complete-profile
+            → CustomerDashboardPage
 ```
+
+If the backend later rejects the refresh token, `AuthUnauthenticated` is emitted and the dashboard listener routes to `MobileOTPPage`.
 
 ---
 
@@ -202,77 +182,27 @@ Check AuthBloc.state
 
 ## Screen Documentation
 
-### 1. SplashPage
+### 1. SplashScreen
 
-**File:** `lib/features/auth/presentation/pages/splash_page.dart`
+**File:** `lib/features/auth/presentation/pages/app_splash_screen.dart`
 
-**Purpose:** Initial screen shown when app launches. Displays app branding and checks authentication status.
+**Purpose:** App `home` widget. Shows branding for at least 1.5s, reads SharedPreferences for refresh/access token + cached user, then navigates without blocking on network.
 
-**Features:**
-- Animated logo with floating effect
-- App name with gradient text
-- Tagline display
-- Loading indicator
-- App version display
-- 2-second minimum display time
-- Automatic navigation based on auth status
+**Navigation:**
+- `AuthAuthenticated` **or** valid local session (and not yet `AuthUnauthenticated`) → `CustomerDashboardPage`
+- Otherwise → `OnboardingFlowPage`
 
-**Navigation Logic:**
-```dart
-if (authState is AuthAuthenticated) {
-  // Navigate to CustomerDashboardPage
-} else {
-  // Navigate to WelcomePage
-}
-```
-
-**UI Components:**
-- Animated logo (scale + fade)
-- Floating animation for logo
-- Gradient text for app name
-- Pulsing loading dots
-- Decorative background elements
-
-**Route:** `/` (root route)
+**Note:** Named route `/` in `routes.dart` maps to `OnboardingFlowPage`; cold start uses `SplashScreen` from `main.dart`, not that route.
 
 ---
 
-### 2. WelcomePage
+### 2. OnboardingFlowPage
 
-**File:** `lib/features/auth/presentation/pages/welcome_page.dart`
+**File:** `lib/features/auth/presentation/pages/onboarding/onboarding_flow_page.dart`
 
-**Purpose:** Welcome screen introducing the app to new users.
+**Purpose:** Three Figma-aligned intro slides (scan feet, virtual try-on, repair/maintain/donate/sell). Last slide or CTA → `MobileOTPPage` via `pushReplacement`.
 
-**Features:**
-- App logo
-- Welcome message
-- App tagline
-- Feature highlights:
-  - Browse thousands of shoes
-  - Find trusted repair services
-  - Fast delivery to your doorstep
-- "Get Started" button
-- Terms & Privacy Policy links
-- Location permission request (optional)
-
-**User Actions:**
-- Tap "Get Started" → Navigate to `MobileOTPPage`
-- Location permission requested before navigation
-
-**Route:** `/welcome`
-
-**Key Code:**
-```dart
-ElevatedButton(
-  onPressed: () async {
-    await WelcomePage.askLocationPermissionIfNeeded();
-    Navigator.push(context, MaterialPageRoute(
-      builder: (context) => const MobileOTPPage(),
-    ));
-  },
-  child: Text('Get Started'),
-)
-```
+**Routes:** `/`, `/onboarding` (also used when splash sends unauthenticated users here)
 
 ---
 
@@ -345,9 +275,9 @@ context.read<AuthBloc>().add(AuthVerifyOTP(
 **Navigation Logic:**
 ```dart
 if (state.requiresProfileCompletion) {
-  // Navigate to ProfileCompletionPage
+  // AiOnboardingPage(mobile, requiresProfileCompletion: true)
 } else {
-  // Navigate to CustomerDashboardPage
+  // CustomerDashboardPage
 }
 ```
 
@@ -361,11 +291,21 @@ if (state.requiresProfileCompletion) {
 
 ---
 
-### 5. ProfileCompletionPage
+### 5. AiOnboardingPage
+
+**File:** `lib/features/auth/presentation/pages/ai_onboarding_page.dart`
+
+**Purpose:** Guided onboarding after OTP for new users (preferences, sizing context). Completing the flow leads to profile completion or dashboard depending on backend state.
+
+**Navigation:** Opened from `OTPPage` when `AuthOTPVerified.requiresProfileCompletion == true`.
+
+---
+
+### 6. ProfileCompletionPage
 
 **File:** `lib/features/auth/presentation/pages/profile_completion_page.dart`
 
-**Purpose:** Screen for new users to complete their profile information.
+**Purpose:** Standalone form for new users to complete profile (name, DOB, gender, location). Also used when AI onboarding still needs manual `AuthCompleteProfile`.
 
 **Features:**
 - Full name input (2-100 characters, letters only)
@@ -422,7 +362,7 @@ context.read<AuthBloc>().add(AuthCompleteProfile(
 
 ---
 
-### 6. LoginPage
+### 7. LoginPage
 
 **File:** `lib/features/auth/presentation/pages/login_page.dart`
 
@@ -463,14 +403,14 @@ context.read<AuthBloc>().add(AuthCompleteProfile(
 
 **File:** `lib/features/auth/presentation/bloc/auth_event.dart`
 
-1. **AuthCheckStatus** - Check if user is authenticated
+1. **AuthCheckStatus** - Check if user is authenticated (refresh + `/me`)
 2. **AuthSendOTP** - Send OTP to mobile number
-   - Contains: `String mobile`
 3. **AuthVerifyOTP** - Verify OTP
-   - Contains: `String mobile`, `String otp`
-4. **AuthCompleteProfile** - Complete user profile
-   - Contains: `String mobile`, `String name`, `DateTime dateOfBirth`, `String gender`, `Map<String, dynamic>? location`
-5. **AuthLogout** - Logout user
+4. **AuthLoginWithEmail** - Stub (backend does not support email login)
+5. **AuthCompleteProfile** - Complete user profile for new users
+6. **AuthLogout** - Logout user (API + clear local session)
+7. **AuthSessionExpired** - Clear session locally when refresh fails
+8. **AuthClearError** - Reset error state
 
 ---
 
@@ -585,11 +525,12 @@ Profile APIs (Module 2)
 ## Notes
 
 - All authentication is mobile OTP-based
-- Email login is not supported (LoginPage is placeholder)
-- Location permission is optional but requested for better UX
-- Profile completion is mandatory for new users
-- Token is saved automatically after successful authentication
-- Auth state is checked on app launch via SplashPage
+- Email login is not supported (`LoginWithEmail` throws in datasource)
+- Splash uses **local tokens first** so cold start works offline / during Render wake-up
+- Only `AuthenticationFailure` on refresh should clear login; network/5xx must not
+- New users: OTP → `AiOnboardingPage` → `ProfileCompletionPage` → `complete-profile`
+- Tokens: `accessToken`, `refreshToken`, serialized `user` in SharedPreferences
+- Extra pages: `TermsOfServicePage`, `PrivacyPolicyPage`, `LoginPage` (redirect to OTP)
 
 ---
 
@@ -597,11 +538,12 @@ Profile APIs (Module 2)
 
 ### Token Storage
 ```dart
-// Save token
-await prefs.setString(AppConstants.accessTokenKey, token);
+// Keys: AppConstants.accessTokenKey, refreshTokenKey, userKey
+await prefs.setString(AppConstants.accessTokenKey, accessToken);
+await prefs.setString(AppConstants.refreshTokenKey, refreshToken);
 
-// Retrieve token
-final token = prefs.getString(AppConstants.accessTokenKey);
+// API calls use GetValidAccessToken use case (refresh when expired)
+final result = await sl<GetValidAccessToken>().call();
 ```
 
 ### Navigation
