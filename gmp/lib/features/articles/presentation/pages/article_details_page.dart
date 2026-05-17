@@ -8,6 +8,7 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
@@ -854,13 +855,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Shoe care history coming soon'),
-                        ),
-                      );
-                    },
+                    onTap: () => showComingSoon(
+                      context,
+                      feature: 'Shoe care history',
+                    ),
                     borderRadius: BorderRadius.circular(10),
                     splashColor: Colors.transparent,
                     highlightColor: Colors.transparent,
@@ -945,11 +943,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         label: 'Rehome',
                         height: hButtons,
                         fontSize: (14 * scale).clamp(12.0, 15.0),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Rehome coming soon')),
-                          );
-                        },
+                        onTap: () => showComingSoon(
+                          context,
+                          feature: 'Rehome from rack',
+                        ),
                       ),
                     ),
                     SizedBox(width: buttonGap),
@@ -958,11 +955,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         label: 'Rent',
                         height: hButtons,
                         fontSize: (14 * scale).clamp(12.0, 15.0),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Rent coming soon')),
-                          );
-                        },
+                        onTap: () => showComingSoon(
+                          context,
+                          feature: 'Rent',
+                        ),
                       ),
                     ),
                   ],

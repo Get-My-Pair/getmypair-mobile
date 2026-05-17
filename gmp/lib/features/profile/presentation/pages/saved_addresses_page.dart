@@ -141,7 +141,10 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                     iconAsset:
                                         'assets/images/icons/profile/toggle-left.svg',
                                     label: 'Turn on Location',
-                                    onTap: () {},
+                                    onTap: () => showComingSoon(
+                                      context,
+                                      feature: 'Turn on location',
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),

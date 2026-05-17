@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 
 /// Account Settings → Manage Devices: view and remove sessions on other devices.
@@ -202,7 +203,10 @@ class _DeviceRow extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () {},
+                onPressed: () => showComingSoon(
+                  context,
+                  feature: 'Remove device',
+                ),
                 icon: SvgPicture.asset(
                   'assets/images/icons/profile/trash-2.svg',
                   width: 20,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/gradient_page_shell.dart';
 import '../widgets/product_card.dart';
@@ -36,9 +37,10 @@ class ProductListPage extends StatelessWidget {
                       final product = items[index];
                       return ProductCard(
                         product: product,
-                        onTap: () {
-                          // TODO: navigate to product detail
-                        },
+                        onTap: () => showComingSoon(
+                          context,
+                          feature: 'Product details',
+                        ),
                       );
                     },
                   ),

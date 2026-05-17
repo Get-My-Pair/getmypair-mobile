@@ -12,6 +12,7 @@ import '../../../auth/presentation/pages/mobile_otp_page.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/figma_home_assets.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
@@ -754,6 +755,11 @@ class _HomePageState extends State<HomePage> {
                                                         iconWidth: rentIconW,
                                                         iconHeight: rentIconH,
                                                         cellHeight: actionH,
+                                                        onTap: () =>
+                                                            showComingSoon(
+                                                          context,
+                                                          feature: 'Rent MyPair',
+                                                        ),
                                                       ),
                                                     ),
                                                     SizedBox(

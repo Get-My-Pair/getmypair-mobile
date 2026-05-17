@@ -9,6 +9,20 @@ enum AppFeedbackType {
   info,
 }
 
+/// Standard dialog when a screen action is not built yet.
+Future<void> showComingSoon(
+  BuildContext context, {
+  required String feature,
+}) {
+  if (!context.mounted) return Future.value();
+  return showAppFeedbackAlert(
+    context,
+    title: 'Coming soon',
+    message: '$feature is coming soon.',
+    type: AppFeedbackType.info,
+  );
+}
+
 /// Single-action alert dialog for consistent success / error / warning / info UX.
 Future<void> showAppFeedbackAlert(
   BuildContext context, {

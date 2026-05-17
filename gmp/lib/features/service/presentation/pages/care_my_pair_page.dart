@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/service/presentation/pages/maintain_my_pair_page.dart';
@@ -156,7 +157,13 @@ class CareMyPairPage extends StatelessWidget {
                               scrollDirection: Axis.horizontal,
                               itemCount: _videos.length,
                               separatorBuilder: (_, _) => const SizedBox(width: 14),
-                              itemBuilder: (_, i) => _VideoCard(data: _videos[i]),
+                              itemBuilder: (_, i) => _VideoCard(
+                                data: _videos[i],
+                                onTap: () => showComingSoon(
+                                  context,
+                                  feature: 'DIY videos',
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -175,7 +182,13 @@ class CareMyPairPage extends StatelessWidget {
                               scrollDirection: Axis.horizontal,
                               itemCount: _articles.length,
                               separatorBuilder: (_, _) => const SizedBox(width: 13),
-                              itemBuilder: (_, i) => _ArticleCard(data: _articles[i]),
+                              itemBuilder: (_, i) => _ArticleCard(
+                                data: _articles[i],
+                                onTap: () => showComingSoon(
+                                  context,
+                                  feature: 'Care articles',
+                                ),
+                              ),
                             ),
                           ),
                     ],
@@ -548,14 +561,20 @@ class _VideoCardData {
 
 class _VideoCard extends StatelessWidget {
   final _VideoCardData data;
+  final VoidCallback onTap;
 
-  const _VideoCard({required this.data});
+  const _VideoCard({required this.data, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 174,
-      child: ClipRRect(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: Stack(
           fit: StackFit.expand,
@@ -599,6 +618,8 @@ class _VideoCard extends StatelessWidget {
             ),
           ],
         ),
+          ),
+        ),
       ),
     );
   }
@@ -618,12 +639,18 @@ class _ArticleCardData {
 
 class _ArticleCard extends StatelessWidget {
   final _ArticleCardData data;
+  final VoidCallback onTap;
 
-  const _ArticleCard({required this.data});
+  const _ArticleCard({required this.data, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(5),
+        child: Container(
       width: 160,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -707,6 +734,8 @@ class _ArticleCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
         ),
       ),
     );

@@ -25,6 +25,7 @@ import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
 import 'family_profile_page.dart';
 import 'manage_devices_page.dart';
+import '../../../auth/presentation/pages/terms_of_service_page.dart';
 import '../../../service/presentation/pages/service_request_list_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -385,7 +386,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                             'assets/images/icons/profile/bell.svg',
                                         title: 'Notifications',
                                         scale: layoutScale,
-                                        onTap: () {},
+                                        onTap: () => showComingSoon(
+                                          context,
+                                          feature: 'Notifications',
+                                        ),
                                       ),
                                       _GradientMenuTile(
                                         iconAssetPath:
@@ -403,7 +407,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                             'assets/images/icons/profile/payment.svg',
                                         title: 'Payment',
                                         scale: layoutScale,
-                                        onTap: () {},
+                                        onTap: () => showComingSoon(
+                                          context,
+                                          feature: 'Payment',
+                                        ),
                                       ),
                                       _GradientMenuTile(
                                         icon: Icons.assignment_turned_in_outlined,
@@ -434,21 +441,33 @@ class _ProfilePageState extends State<ProfilePage> {
                                             'assets/images/icons/profile/faq.svg',
                                         title: 'FAQ',
                                         scale: layoutScale,
-                                        onTap: () {},
+                                        onTap: () => showComingSoon(
+                                          context,
+                                          feature: 'FAQ',
+                                        ),
                                       ),
                                       _GradientMenuTile(
                                         iconAssetPath:
                                             'assets/images/icons/profile/termscondition.svg',
                                         title: 'Terms & Conditions',
                                         scale: layoutScale,
-                                        onTap: () {},
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const TermsOfServicePage(),
+                                          ),
+                                        ),
                                       ),
                                       _GradientMenuTile(
                                         iconAssetPath:
                                             'assets/images/icons/profile/license.svg',
                                         title: 'License',
                                         scale: layoutScale,
-                                        onTap: () {},
+                                        onTap: () => showComingSoon(
+                                          context,
+                                          feature: 'License',
+                                        ),
                                       ),
                                     ],
                                   ),

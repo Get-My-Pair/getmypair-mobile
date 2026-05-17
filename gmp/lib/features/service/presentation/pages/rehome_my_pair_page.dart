@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -137,13 +138,10 @@ class RehomeMyPairPage extends StatelessWidget {
                                   'assets/images/noun-shoes-cleaning-7675732 1.svg',
                               iconSize: 64,
                               labelFontSize: 15,
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Sell My Pair coming soon'),
-                                  ),
-                                );
-                              },
+                              onTap: () => showComingSoon(
+                                context,
+                                feature: 'Sell MyPair',
+                              ),
                             ),
                           ),
                         ],
@@ -173,7 +171,13 @@ class RehomeMyPairPage extends StatelessWidget {
                           scrollDirection: Axis.horizontal,
                           itemCount: _journeyVideos.length,
                           separatorBuilder: (_, _) => const SizedBox(width: 14),
-                          itemBuilder: (_, i) => _VideoCard(data: _journeyVideos[i]),
+                          itemBuilder: (_, i) => GestureDetector(
+                            onTap: () => showComingSoon(
+                              context,
+                              feature: 'DIY videos',
+                            ),
+                            child: _VideoCard(data: _journeyVideos[i]),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -201,7 +205,13 @@ class RehomeMyPairPage extends StatelessWidget {
                           scrollDirection: Axis.horizontal,
                           itemCount: _sellingVideos.length,
                           separatorBuilder: (_, _) => const SizedBox(width: 14),
-                          itemBuilder: (_, i) => _VideoCard(data: _sellingVideos[i]),
+                          itemBuilder: (_, i) => GestureDetector(
+                            onTap: () => showComingSoon(
+                              context,
+                              feature: 'Selling videos',
+                            ),
+                            child: _VideoCard(data: _sellingVideos[i]),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -220,7 +230,13 @@ class RehomeMyPairPage extends StatelessWidget {
                           scrollDirection: Axis.horizontal,
                           itemCount: _articles.length,
                           separatorBuilder: (_, _) => const SizedBox(width: 13),
-                          itemBuilder: (_, i) => _ArticleCard(data: _articles[i]),
+                          itemBuilder: (_, i) => GestureDetector(
+                            onTap: () => showComingSoon(
+                              context,
+                              feature: 'Rehome articles',
+                            ),
+                            child: _ArticleCard(data: _articles[i]),
+                          ),
                         ),
                       ),
                     ],
