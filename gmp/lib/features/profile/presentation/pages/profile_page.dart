@@ -25,6 +25,7 @@ import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
 import 'family_profile_page.dart';
 import 'manage_devices_page.dart';
+import '../../../service/presentation/pages/service_request_list_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.showBottomNav = true});
@@ -405,6 +406,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                         onTap: () {},
                                       ),
                                       _GradientMenuTile(
+                                        icon: Icons.assignment_turned_in_outlined,
+                                        title: 'My Orders',
+                                        scale: layoutScale,
+                                        onTap: () => _openServiceRequests(context),
+                                      ),
+                                      _GradientMenuTile(
                                         iconAssetPath:
                                             'assets/images/icons/profile/managedevice.svg',
                                         title: 'Manage Devices',
@@ -519,6 +526,13 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ManageDevicesPage()),
+    );
+  }
+
+  void _openServiceRequests(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ServiceRequestListPage()),
     );
   }
 
