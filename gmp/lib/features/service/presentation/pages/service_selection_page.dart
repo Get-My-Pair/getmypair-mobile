@@ -666,6 +666,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -715,11 +716,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
+            child: Offstage(
+              offstage: MediaQuery.viewInsetsOf(context).bottom > 0,
+              child: const DashboardLinkedBottomNav(selectedTabIndex: 1),
+            ),
           ),
         ],
       ),
@@ -746,12 +750,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     final pillFs = (14 * layoutScale).clamp(11.0, 14.0);
     final actionFs = (14 * layoutScale).clamp(11.0, 14.0);
     final iconSz = (58 * layoutScale).clamp(36.0, 58.0);
+    final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
+    final viewInsetBottom = MediaQuery.viewInsetsOf(context).bottom;
+    final keyboardOpen = viewInsetBottom > 0;
+    final uploadTapHCompact = (72 * layoutScale).clamp(56.0, 88.0);
+    final effectiveUploadH = keyboardOpen ? uploadTapHCompact : uploadTapH;
 
     final title = widget.flowPageTitle ?? 'RepairMyPair';
     final articleName = (widget.articleName ?? '').trim();
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, navH + 6),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        keyboardOpen ? 12 : navH + 6,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -807,43 +821,44 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               ),
             ),
             SizedBox(height: 4 * layoutScale),
-            LayoutBuilder(
-              builder: (context, ac) {
-                final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
-                final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
-                return Center(
-                  child: SizedBox(
-                    width: imgW,
-                    height: imgH,
-                    child: Center(
-                      child: (widget.articleImageUrl ?? '').isEmpty
-                          ? Icon(
-                              Icons.checkroom_outlined,
-                              color: const Color(0xFF8D8D8D),
-                              size: iconSz,
-                            )
-                          : ArticleRackShoeImage(
-                              imageUrl: widget.articleImageUrl!,
-                              width: imgW,
-                              height: imgH,
-                              fit: BoxFit.contain,
-                              placeholder: Icon(
+            if (!keyboardOpen)
+              LayoutBuilder(
+                builder: (context, ac) {
+                  final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
+                  final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
+                  return Center(
+                    child: SizedBox(
+                      width: imgW,
+                      height: imgH,
+                      child: Center(
+                        child: (widget.articleImageUrl ?? '').isEmpty
+                            ? Icon(
                                 Icons.checkroom_outlined,
                                 color: const Color(0xFF8D8D8D),
                                 size: iconSz,
+                              )
+                            : ArticleRackShoeImage(
+                                imageUrl: widget.articleImageUrl!,
+                                width: imgW,
+                                height: imgH,
+                                fit: BoxFit.contain,
+                                placeholder: Icon(
+                                  Icons.checkroom_outlined,
+                                  color: const Color(0xFF8D8D8D),
+                                  size: iconSz,
+                                ),
+                                errorPlaceholder: Icon(
+                                  Icons.checkroom_outlined,
+                                  color: const Color(0xFF8D8D8D),
+                                  size: iconSz,
+                                ),
                               ),
-                              errorPlaceholder: Icon(
-                                Icons.checkroom_outlined,
-                                color: const Color(0xFF8D8D8D),
-                                size: iconSz,
-                              ),
-                            ),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            SizedBox(height: 10 * layoutScale),
+                  );
+                },
+              ),
+            if (!keyboardOpen) SizedBox(height: 10 * layoutScale),
           ],
           if (_error != null)
             Padding(
@@ -858,24 +873,30 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
           if (_repairStep == 0) ...[
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    _issuePrompt,
-                    style: GoogleFonts.montserrat(
-                      color: const Color(0xFF062F35),
-                      fontSize: fs,
-                      fontWeight: FontWeight.w400,
+              child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.viewInsetsOf(context).bottom + 8,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      _issuePrompt,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF062F35),
+                        fontSize: fs,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 4 * layoutScale),
-                  Expanded(
-                    child: TextField(
+                    SizedBox(height: 4 * layoutScale),
+                    TextField(
                       controller: _problemController,
-                      expands: true,
-                      maxLines: null,
-                      minLines: null,
+                      keyboardType: TextInputType.multiline,
+                      minLines: keyboardOpen ? 2 : 4,
+                      maxLines: keyboardOpen ? 5 : 8,
                       textAlignVertical: TextAlignVertical.top,
                       style: GoogleFonts.montserrat(
                         color: const Color(0xFF062F35),
@@ -918,174 +939,263 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 8 * layoutScale),
-                  Text(
-                    _uploadPrompt,
-                    style: GoogleFonts.montserrat(
-                      color: const Color(0xFF062F35),
-                      fontSize: fs,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  SizedBox(height: 4 * layoutScale),
-                  Expanded(
-                    child: InkWell(
-                      onTap: _submitting ? null : _pickImages,
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        alignment: Alignment.center,
-                        decoration: ShapeDecoration(
-                          color: Colors.white.withValues(alpha: 0.10),
-                          shape: RoundedRectangleBorder(
-                            side: const BorderSide(
-                              width: 1,
-                              color: Color(0x7F12899B),
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: _submitting ? null : _pickImages,
-                              child: Text(
-                                'Upload Photos ',
-                                style: GoogleFonts.boldonse(
-                                  color: const Color(0xFF12899B),
-                                  fontSize: actionFs,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              'or',
-                              style: GoogleFonts.boldonse(
-                                color: const Color(0xFFABABAB),
-                                fontSize: actionFs,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _submitting ? null : _takePicture,
-                              child: Text(
-                                ' Take Pictures',
-                                style: GoogleFonts.boldonse(
-                                  color: const Color(0xFF12899B),
-                                  fontSize: actionFs,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                    SizedBox(height: 8 * layoutScale),
+                    Text(
+                      _uploadPrompt,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF062F35),
+                        fontSize: fs,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
-                  ),
-                  SizedBox(height: 8 * layoutScale),
-                  Text(
-                    'How would you like to send us your footwear?',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.montserrat(
-                      color: const Color(0xFF062F35),
-                      fontSize: fs,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  SizedBox(height: 6 * layoutScale),
-                  SizedBox(
-                    height: pillH,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _repairPickupPill(
-                            label: 'Home Pickup',
-                            selected: _homePickup,
-                            height: pillH,
-                            fontSize: pillFs,
-                            onTap: () => _selectPickupMode(true),
-                          ),
-                        ),
-                        SizedBox(width: 12 * layoutScale),
-                        Expanded(
-                          child: _repairPickupPill(
-                            label: 'Cobblers Nearby',
-                            selected: !_homePickup,
-                            height: pillH,
-                            fontSize: pillFs,
-                            onTap: () => _selectPickupMode(false),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 10 * layoutScale),
-            Center(
-              child: SizedBox(
-                width: (164 * layoutScale).clamp(132.0, 180.0),
-                height: pillH,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.centerRight,
-                      end: Alignment.centerLeft,
-                      colors: [
-                        Color(0xFF0CADC5),
-                        Color(0xFF063239),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(100),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 4,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: TextButton(
-                    onPressed: _submitting ? null : _onRepairStepZeroNext,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                    ),
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                    SizedBox(height: 4 * layoutScale),
+                    SizedBox(
+                      height: effectiveUploadH,
+                      child: InkWell(
+                        onTap: _submitting ? null : _pickImages,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: ShapeDecoration(
+                            color: Colors.white.withValues(alpha: 0.10),
+                            shape: RoundedRectangleBorder(
+                              side: const BorderSide(
+                                width: 1,
+                                color: Color(0x7F12899B),
+                              ),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          )
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
+                          ),
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            alignment: WrapAlignment.center,
                             children: [
+                              GestureDetector(
+                                onTap: _submitting ? null : _pickImages,
+                                child: Text(
+                                  'Upload Photos ',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF12899B),
+                                    fontSize: actionFs,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
                               Text(
-                                'Next',
+                                'or',
                                 style: GoogleFonts.boldonse(
-                                  color: Colors.white,
-                                  fontSize: fs,
+                                  color: const Color(0xFFABABAB),
+                                  fontSize: actionFs,
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              SizedBox(width: 20 * layoutScale),
-                              Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: Colors.white,
-                                size: (16 * layoutScale).clamp(13.0, 16.0),
+                              GestureDetector(
+                                onTap: _submitting ? null : _takePicture,
+                                child: Text(
+                                  ' Take Pictures',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF12899B),
+                                    fontSize: actionFs,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                  ),
+                        ),
+                      ),
+                    ),
+                    if (_proofImages.isNotEmpty) ...[
+                      SizedBox(height: 8 * layoutScale),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${_proofImages.length}/$kMaxProofImages photo(s) added',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF12899B),
+                            fontSize: (12 * layoutScale).clamp(10.0, 13.0),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 6 * layoutScale),
+                      SizedBox(
+                        height: (76 * layoutScale).clamp(60.0, 92.0),
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _proofImages.length,
+                          separatorBuilder: (_, _) =>
+                              SizedBox(width: 8 * layoutScale),
+                          itemBuilder: (_, i) {
+                            final thumb = (72 * layoutScale).clamp(56.0, 88.0);
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: SizedBox(
+                                    width: thumb,
+                                    height: thumb,
+                                    child: FutureBuilder(
+                                      future: _proofImages[i].readAsBytes(),
+                                      builder: (context, snap) {
+                                        if (!snap.hasData) {
+                                          return Container(
+                                            color: const Color(0xFFDFE7E9),
+                                            child: const Center(
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Color(0xFF11999E),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return Image.memory(
+                                          snap.data!,
+                                          fit: BoxFit.cover,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Material(
+                                    color: const Color(0xFFB00020),
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: _submitting
+                                          ? null
+                                          : () => _removeImage(i),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(4),
+                                        child: Icon(
+                                          Icons.close,
+                                          size: (16 * layoutScale)
+                                              .clamp(14.0, 18.0),
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 8 * layoutScale),
+                    Text(
+                      'How would you like to send us your footwear?',
+                      maxLines: keyboardOpen ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF062F35),
+                        fontSize: fs,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    SizedBox(height: 6 * layoutScale),
+                    SizedBox(
+                      height: pillH,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _repairPickupPill(
+                              label: 'Home Pickup',
+                              selected: _homePickup,
+                              height: pillH,
+                              fontSize: pillFs,
+                              onTap: () => _selectPickupMode(true),
+                            ),
+                          ),
+                          SizedBox(width: 12 * layoutScale),
+                          Expanded(
+                            child: _repairPickupPill(
+                              label: 'Cobblers Nearby',
+                              selected: !_homePickup,
+                              height: pillH,
+                              fontSize: pillFs,
+                              onTap: () => _selectPickupMode(false),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 10 * layoutScale),
+                    Center(
+                      child: SizedBox(
+                        width: (164 * layoutScale).clamp(132.0, 180.0),
+                        height: pillH,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.centerRight,
+                              end: Alignment.centerLeft,
+                              colors: [
+                                Color(0xFF0CADC5),
+                                Color(0xFF063239),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(100),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x19000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextButton(
+                            onPressed:
+                                _submitting ? null : _onRepairStepZeroNext,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                            ),
+                            child: _submitting
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Next',
+                                        style: GoogleFonts.boldonse(
+                                          color: Colors.white,
+                                          fontSize: fs,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      SizedBox(width: 20 * layoutScale),
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: Colors.white,
+                                        size: (16 * layoutScale)
+                                            .clamp(13.0, 16.0),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1106,6 +1216,52 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                           fontWeight: FontWeight.w400,
                         ),
                       ),
+                      if (_proofImages.isNotEmpty) ...[
+                        SizedBox(height: 8 * layoutScale),
+                        Text(
+                          'Your uploaded photos (${_proofImages.length})',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF4E7F8A),
+                            fontSize: (12 * layoutScale).clamp(10.0, 13.0),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: 6 * layoutScale),
+                        SizedBox(
+                          height: (52 * layoutScale).clamp(44.0, 60.0),
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _proofImages.length,
+                            separatorBuilder: (_, _) =>
+                                SizedBox(width: 6 * layoutScale),
+                            itemBuilder: (_, i) {
+                              final w =
+                                  (48 * layoutScale).clamp(40.0, 56.0);
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: w,
+                                  height: w,
+                                  child: FutureBuilder(
+                                    future: _proofImages[i].readAsBytes(),
+                                    builder: (context, snap) {
+                                      if (!snap.hasData) {
+                                        return Container(
+                                          color: const Color(0xFFDFE7E9),
+                                        );
+                                      }
+                                      return Image.memory(
+                                        snap.data!,
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                       SizedBox(height: 8 * layoutScale),
                       Text(
                         'Please choose a time slot from the options below',
@@ -1945,7 +2101,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _proofImages.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   return Stack(
                     clipBehavior: Clip.none,
