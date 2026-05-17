@@ -831,20 +831,20 @@ class _HomeHeaderBell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = _homeHeaderChromeScale(context);
-    final bellSize = (44.0 * s).clamp(38.0, 50.0);
-    final bellPadH = (8.5 * s).clamp(7.0, 11.0);
-    final bellPadV = (8.5 * s).clamp(7.0, 11.0);
-    final bellBodyW = (17.0 * s).clamp(13.0, 19.0);
-    final bellBodyH = (14.0 * s).clamp(11.0, 16.5);
-    final bellClapperW = (8.8 * s).clamp(6.8, 10.5);
-    final bellClapperH = (5.2 * s).clamp(4.0, 6.4);
+    final bellSize = (30.0 * s).clamp(26.0, 34.0);
+    final bellPadH = (5.5 * s).clamp(4.5, 7.0);
+    final bellPadV = (5.5 * s).clamp(4.5, 7.0);
+    final bellBodyW = (11.5 * s).clamp(9.5, 13.0);
+    final bellBodyH = (9.5 * s).clamp(7.5, 11.0);
+    final bellClapperW = (6.0 * s).clamp(4.8, 7.2);
+    final bellClapperH = (3.5 * s).clamp(2.8, 4.4);
 
     // Glass chrome — scaled from header scale [s] so blur, rim, and lift stay proportional.
-    final blurSigma = (17.0 * s).clamp(14.0, 22.0);
-    final rimW = (1.15 * s).clamp(1.0, 1.45);
-    final liftBlur = (12.0 * s).clamp(10.0, 16.0);
-    final liftY = (4.5 * s).clamp(3.5, 6.5);
-    final haloBlur = (8.0 * s).clamp(6.0, 11.0);
+    final blurSigma = (14.0 * s).clamp(11.0, 18.0);
+    final rimW = (1.0 * s).clamp(0.85, 1.25);
+    final liftBlur = (9.0 * s).clamp(7.0, 12.0);
+    final liftY = (3.0 * s).clamp(2.5, 4.5);
+    final haloBlur = (6.0 * s).clamp(4.5, 9.0);
     final rimHighlightBlur = (2.0 * s).clamp(1.0, 3.0);
 
     return GestureDetector(
@@ -1021,8 +1021,7 @@ class _HomeHeaderBell extends StatelessWidget {
   }
 }
 
-/// Profile cluster beside location — [Row] + [Column] so rings never overlap
-/// or clip; photo only on the large avatar (no duplicate image on small rings).
+/// Profile avatar beside location — single ring; family members live in profile module.
 class _HomeProfileAvatarStack extends StatelessWidget {
   final String? imageUrl;
   final VoidCallback onTap;
@@ -1034,46 +1033,15 @@ class _HomeProfileAvatarStack extends StatelessWidget {
     final s = _homeHeaderChromeScale(context);
     final narrow = MediaQuery.sizeOf(context).width < 360;
     final rLarge = ((narrow ? 22.0 : 24.0) * s).clamp(20.0, 26.0);
-    final rSmall = ((narrow ? 10.0 : 11.0) * s).clamp(9.0, 12.5);
-    // Reduce left-side spacing so both small rings sit much closer.
-    final gapH = 0.0;
-    // Minimal vertical gap between the two small rings.
-    final gapV = (2.0 * s).clamp(1.5, 4.0);
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: (1.0 * s).clamp(0.0, 2.0)),
-            child: _avatarRing(radius: rLarge, imageUrl: imageUrl, isSmall: false),
-          ),
-          SizedBox(width: gapH),
-          Transform.translate(
-            offset: Offset((-2.4 * s).clamp(-4.0, -1.4), 0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                _avatarRing(radius: rSmall, imageUrl: null, isSmall: true),
-                SizedBox(height: gapV),
-                _avatarRing(radius: rSmall, imageUrl: null, isSmall: true),
-              ],
-            ),
-          ),
-        ],
-      ),
+      child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
     );
   }
 
-  Widget _avatarRing({
-    required double radius,
-    required String? imageUrl,
-    bool isSmall = false,
-  }) {
+  Widget _avatarRing({required double radius, required String? imageUrl}) {
     final url = imageUrl;
     final hasImage = url != null && url.isNotEmpty;
     return Container(
@@ -1095,7 +1063,7 @@ class _HomeProfileAvatarStack extends StatelessWidget {
             ? null
             : Icon(
                 Icons.person_rounded,
-                size: isSmall ? (radius * 1.15).clamp(14.0, 20.0) : (radius * 1.25).clamp(26.0, 34.0),
+                size: (radius * 1.25).clamp(26.0, 34.0),
                 color: Colors.white,
               ),
       ),

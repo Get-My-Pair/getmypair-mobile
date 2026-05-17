@@ -553,62 +553,85 @@ class _OverlappingAvatarCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final clusterW = (156 * scale).clamp(112.0, 156.0);
-    final clusterH = (92 * scale).clamp(68.0, 92.0);
-    final smallRadius = (22 * scale).clamp(16.0, 22.0);
+    // Single profile avatar — family ring icons hidden (see family profile module).
     final mainRadius = (39.5 * scale).clamp(28.0, 39.5);
     const border = BorderSide.none;
 
     final cluster = SizedBox(
-      width: clusterW,
-      height: clusterH,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: 0,
-            top: 0,
-            child: _RingAvatar(
-              radius: smallRadius,
-              border: border,
-              child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
-            ),
-          ),
-          Positioned(
-            right: (31 * scale).clamp(20.0, 31.0),
-            top: (6 * scale).clamp(3.0, 6.0),
-            child: _RingAvatar(
-              radius: mainRadius,
-              border: BorderSide.none,
-              child: profile.profileImage != null
-                  ? ClipOval(
-                      child: Image.network(
-                        profile.profileImage!,
-                        width: mainRadius * 2,
-                        height: mainRadius * 2,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _initialsAvatar(profile, mainRadius),
-                      ),
-                    )
-                  : _initialsAvatar(profile, mainRadius),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: _RingAvatar(
-              radius: smallRadius,
-              border: border,
-              child: _smallFill(
-                Icons.child_care_outlined,
-                (18 * scale).clamp(12.0, 18.0),
-              ),
-            ),
-          ),
-        ],
+      width: mainRadius * 2,
+      height: mainRadius * 2,
+      child: _RingAvatar(
+        radius: mainRadius,
+        border: border,
+        child: profile.profileImage != null
+            ? ClipOval(
+                child: Image.network(
+                  profile.profileImage!,
+                  width: mainRadius * 2,
+                  height: mainRadius * 2,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      _initialsAvatar(profile, mainRadius),
+                ),
+              )
+            : _initialsAvatar(profile, mainRadius),
       ),
     );
+
+    // Family emoji cluster — commented out; one profile only.
+    // final clusterW = (156 * scale).clamp(112.0, 156.0);
+    // final clusterH = (92 * scale).clamp(68.0, 92.0);
+    // final smallRadius = (22 * scale).clamp(16.0, 22.0);
+    // final cluster = SizedBox(
+    //   width: clusterW,
+    //   height: clusterH,
+    //   child: Stack(
+    //     clipBehavior: Clip.none,
+    //     children: [
+    //       Positioned(
+    //         right: 0,
+    //         top: 0,
+    //         child: _RingAvatar(
+    //           radius: smallRadius,
+    //           border: border,
+    //           child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
+    //         ),
+    //       ),
+    //       Positioned(
+    //         right: (31 * scale).clamp(20.0, 31.0),
+    //         top: (6 * scale).clamp(3.0, 6.0),
+    //         child: _RingAvatar(
+    //           radius: mainRadius,
+    //           border: BorderSide.none,
+    //           child: profile.profileImage != null
+    //               ? ClipOval(
+    //                   child: Image.network(
+    //                     profile.profileImage!,
+    //                     width: mainRadius * 2,
+    //                     height: mainRadius * 2,
+    //                     fit: BoxFit.cover,
+    //                     errorBuilder: (context, error, stackTrace) =>
+    //                         _initialsAvatar(profile, mainRadius),
+    //                   ),
+    //                 )
+    //               : _initialsAvatar(profile, mainRadius),
+    //         ),
+    //       ),
+    //       Positioned(
+    //         right: 0,
+    //         bottom: 0,
+    //         child: _RingAvatar(
+    //           radius: smallRadius,
+    //           border: border,
+    //           child: _smallFill(
+    //             Icons.child_care_outlined,
+    //             (18 * scale).clamp(12.0, 18.0),
+    //           ),
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
 
     if (onTap == null) return cluster;
 
@@ -642,13 +665,13 @@ class _OverlappingAvatarCluster extends StatelessWidget {
     );
   }
 
-  Widget _smallFill(IconData icon, double size) {
-    return Container(
-      color: Colors.white.withValues(alpha: 0.22),
-      alignment: Alignment.center,
-      child: Icon(icon, color: Colors.white, size: size),
-    );
-  }
+  // Widget _smallFill(IconData icon, double size) {
+  //   return Container(
+  //     color: Colors.white.withValues(alpha: 0.22),
+  //     alignment: Alignment.center,
+  //     child: Icon(icon, color: Colors.white, size: size),
+  //   );
+  // }
 }
 
 class _RingAvatar extends StatelessWidget {
