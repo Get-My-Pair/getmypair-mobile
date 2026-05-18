@@ -835,11 +835,15 @@ class _MenuSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ...children,
-        if (showDivider) _GradientSectionDivider(scale: scale),
-      ],
+    final menuHInset = (16 * scale).clamp(12.0, 20.0);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: menuHInset),
+      child: Column(
+        children: [
+          ...children,
+          if (showDivider) _GradientSectionDivider(scale: scale),
+        ],
+      ),
     );
   }
 }
