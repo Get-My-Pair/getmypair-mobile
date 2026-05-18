@@ -29,20 +29,44 @@ import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
-import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 
 const Color _kOnHeaderText = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
+const Color _kQuickActionDisabledBg = Color(0xFFB8C0C4);
+const Color _kQuickActionDisabledText = Color(0xFF5E6A6E);
+const Color _kQuickActionDisabledIcon = Color(0xFF6E7A7F);
 const Color _kRackCardBorderStart = Color(0xFF0F6876);
 const Color _kRackCardEdgeLight = _kRackCardBorderStart;
 const double _kRackCardRadius = 10;
-/// Rack card: flat top; teal line + rounding only at bottom corners.
-const BorderRadius _kRackCardBorderRadius = BorderRadius.only(
+/// My Rack top corners only — fill/clip, no accent line.
+const BorderRadius _kRackCardTopRadius = BorderRadius.only(
+  topLeft: Radius.circular(_kRackCardRadius),
+  topRight: Radius.circular(_kRackCardRadius),
+);
+/// My Rack bottom corners — teal accent border follows this curve.
+const BorderRadius _kRackCardBottomRadius = BorderRadius.only(
   bottomLeft: Radius.circular(_kRackCardRadius),
   bottomRight: Radius.circular(_kRackCardRadius),
 );
+/// Bottom edge only — avoids a teal hairline when top corners are rounded.
+const Border _kRackCardBottomAccentBorder = Border(
+  top: BorderSide.none,
+  left: BorderSide.none,
+  right: BorderSide.none,
+  bottom: BorderSide(
+    color: _kRackCardEdgeLight,
+    width: 3,
+  ),
+);
+
+BorderRadius _rackCardClipRadius() => BorderRadius.only(
+      topLeft: _kRackCardTopRadius.topLeft,
+      topRight: _kRackCardTopRadius.topRight,
+      bottomLeft: _kRackCardBottomRadius.bottomLeft,
+      bottomRight: _kRackCardBottomRadius.bottomRight,
+    );
 /// My Rack panel fill — design `#F0F0F0`.
 const Color _kRackCardBg = Color(0xFFE6E6E6);
 const Color _kSearchHintColor = Color(0x57000000);
@@ -517,6 +541,7 @@ class _HomePageState extends State<HomePage> {
                                       );
                                       // Keep original top spacing for the rack section.
                                       final topGap = baseTopGap.toDouble();
+                                      final rackClipRadius = _rackCardClipRadius();
                                       return Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
@@ -524,30 +549,30 @@ class _HomePageState extends State<HomePage> {
                                           SizedBox(height: topGap),
                                           SizedBox(
                                             height: rackHeight,
-                                            child: Container(
-                                              width: double.infinity,
-                                              decoration: BoxDecoration(
-                                                color: _kRackCardBg,
-                                                border: const Border(
-                                                  bottom: BorderSide(
-                                                    color: _kRackCardEdgeLight,
-                                                    width: 3,
-                                                  ),
+                                            child: ClipRRect(
+                                              borderRadius: rackClipRadius,
+                                              clipBehavior: Clip.hardEdge,
+                                              child: Container(
+                                                width: double.infinity,
+                                                decoration: const BoxDecoration(
+                                                  color: _kRackCardBg,
+                                                  border:
+                                                      _kRackCardBottomAccentBorder,
+                                                  // Bottom radius only — top stays clean.
+                                                  borderRadius:
+                                                      _kRackCardBottomRadius,
                                                 ),
-                                                borderRadius: _kRackCardBorderRadius,
-                                              ),
-                                              child: ClipRRect(
-                                                borderRadius: _kRackCardBorderRadius,
                                                 child: Stack(
                                                   children: [
-                                                  Padding(
-                                                    padding: EdgeInsets.fromLTRB(
-                                                      14,
-                                                      rackCardTopPadding,
-                                                      14,
-                                                      rackCardBottomPadding,
-                                                    ),
-                                                    child: Column(
+                                                    Padding(
+                                                      padding:
+                                                          EdgeInsets.fromLTRB(
+                                                        14,
+                                                        rackCardTopPadding,
+                                                        14,
+                                                        rackCardBottomPadding,
+                                                      ),
+                                                      child: Column(
                                                       crossAxisAlignment:
                                                           CrossAxisAlignment
                                                               .stretch,
@@ -750,6 +775,7 @@ class _HomePageState extends State<HomePage> {
                                                     Expanded(
                                                       child: _QuickActionCard(
                                                         label: 'Rent\nMyPair',
+                                                        grayed: true,
                                                         iconAssetUrl:
                                                             _kRentMyPairIconAsset,
                                                         iconWidth: rentIconW,
@@ -1627,6 +1653,7 @@ class _QuickActionCard extends StatelessWidget {
   final double iconHeight;
   final double? cellHeight;
   final bool highlight;
+  final bool grayed;
   final VoidCallback? onTap;
   final bool fullWidth;
 
@@ -1637,6 +1664,7 @@ class _QuickActionCard extends StatelessWidget {
     this.iconHeight = 24,
     this.cellHeight,
     this.highlight = false,
+    this.grayed = false,
     this.onTap,
     this.fullWidth = false,
   });
@@ -1647,7 +1675,12 @@ class _QuickActionCard extends StatelessWidget {
         .clamp(0.85, 1.15)
         .toDouble();
     final isTwoLine = label.contains('\n');
-    final textColor = highlight ? Colors.white : _kQuickActionMutedText;
+    final textColor = highlight
+        ? Colors.white
+        : grayed
+            ? _kQuickActionDisabledText
+            : _kQuickActionMutedText;
+    final iconColor = grayed ? _kQuickActionDisabledIcon : textColor;
     final resolvedHeight =
         cellHeight ??
         (isTwoLine
@@ -1668,7 +1701,11 @@ class _QuickActionCard extends StatelessWidget {
           height: resolvedHeight,
           padding: padding,
           decoration: BoxDecoration(
-            color: highlight ? null : _kQuickActionMutedBg,
+            color: highlight
+                ? null
+                : grayed
+                    ? _kQuickActionDisabledBg
+                    : _kQuickActionMutedBg,
             gradient: highlight
                 ? LinearGradient(
                     begin: const Alignment(1, 0.5),
@@ -1689,7 +1726,7 @@ class _QuickActionCard extends StatelessWidget {
               SizedBox(
                 width: iconWidth,
                 height: iconHeight,
-                child: _buildActionIcon(textColor),
+                child: _buildActionIcon(iconColor),
               ),
               SizedBox(width: (fullWidth ? 20 : 14) * s),
               Flexible(
