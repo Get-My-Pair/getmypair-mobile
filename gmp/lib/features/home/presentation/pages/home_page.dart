@@ -83,9 +83,10 @@ const String _kRehomeMyPairIconAsset =
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 
-/// Vertical gaps inside the hero (greeting → location → search → stats).
-const double _kHomeHeaderGreetingToLocation = 0;
-const double _kHomeHeaderSearchToStats = 20;
+/// Vertical gaps inside the hero (name → location → search → stats → bottom).
+const double _kHomeHeaderGreetingToLocation = 14;
+const double _kHomeHeaderSearchToStats = 30;
+const double _kHomeHeaderStatsToBottom = 14;
 
 /// Tile height for quick actions (reference @ 390px width).
 const double _kQuickActionCellHeight = 78;
@@ -101,7 +102,7 @@ double _homeUiScale(BuildContext context) {
 double _homeLocationToSearchGap(BuildContext context, double s) {
   final h = MediaQuery.sizeOf(context).height;
   // Base + small % of height; kept tight; scales down on narrow phones via [s].
-  return ((8 * s) + (h * 0.006)).clamp(8.0, 18.0);
+  return ((16 * s) + (h * 0.01)).clamp(16.0, 28.0);
 }
 
 /// Search bar height: scales with [s] and grows slightly on taller viewports.
@@ -1175,7 +1176,7 @@ class _HomeTopCard extends StatelessWidget {
     final addressLine = _addressLineForHome(currentAddress);
     final imageBleed = (4.0 * s).clamp(2.0, 6.0);
     final topPad = (66 * layoutScale).clamp(40.0, 76.0);
-    final bottomPad = (20 * layoutScale).clamp(10.0, 24.0);
+    final bottomPad = (26 * layoutScale).clamp(16.0, 32.0);
     final searchBarH = _homeSearchBarHeight(context, s);
     const headerRadius = BorderRadius.only(
       bottomLeft: Radius.circular(20),
@@ -1269,8 +1270,8 @@ class _HomeTopCard extends StatelessWidget {
                     ),
                     SizedBox(
                       height: (_kHomeHeaderGreetingToLocation * s).clamp(
-                        2.0,
-                        8.0,
+                        10.0,
+                        18.0,
                       ),
                     ),
                     Row(
@@ -1440,7 +1441,7 @@ class _HomeTopCard extends StatelessWidget {
                       ),
                     ),
                     SizedBox(
-                      height: (_kHomeHeaderSearchToStats * s).clamp(14.0, 30.0),
+                      height: (_kHomeHeaderSearchToStats * s).clamp(22.0, 40.0),
                     ),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1495,6 +1496,12 @@ class _HomeTopCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                    ),
+                    SizedBox(
+                      height: (_kHomeHeaderStatsToBottom * s).clamp(
+                        10.0,
+                        18.0,
+                      ),
                     ),
                   ],
                 ),
