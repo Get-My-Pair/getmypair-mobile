@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
-import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
@@ -71,12 +70,31 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    void onFieldChanged() {
+      if (mounted) setState(() {});
+    }
+    _modelController.addListener(onFieldChanged);
+    _brandController.addListener(onFieldChanged);
+    _colorController.addListener(onFieldChanged);
+  }
+
+  @override
   void dispose() {
     _modelController.dispose();
     _brandController.dispose();
     _colorController.dispose();
     super.dispose();
   }
+
+  bool get _canSave =>
+      !_submitting &&
+      _modelController.text.trim().isNotEmpty &&
+      _brandController.text.trim().isNotEmpty &&
+      _colorController.text.trim().isNotEmpty &&
+      _purchaseYear != null &&
+      _imageFiles.isNotEmpty;
 
   Future<void> _pickImages() async {
     final picker = ImagePicker();
@@ -272,11 +290,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                   isBusy: _submitting,
                 ),
                 const SizedBox(height: 24),
-                AppGradientNextStyleButton(
+                _buildActionButton(
                   label: 'Save Footwear',
-                  onPressed: _submit,
+                  onPressed: _canSave ? _submit : null,
                   isBusy: _submitting,
-                  minWidth: 200,
+                  showLoader: true,
                 ),
                 ],
               ),
@@ -682,30 +700,38 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
 
   Widget _buildActionButton({
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required bool isBusy,
     bool showLoader = false,
   }) {
     const teal = Color(0xFF12899B);
     const cyanBorder = Color(0xFF09DFFF);
+    const disabledFill = Color(0xFF6B7B80);
+    const disabledBorder = Color(0xFF8A9A9F);
+    const disabledLabel = Color(0xFFB8C4C8);
+
+    final enabled = onPressed != null && !isBusy;
 
     return SizedBox(
       height: 50,
       child: ElevatedButton(
-        onPressed: isBusy ? null : onPressed,
+        onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: teal,
-          disabledBackgroundColor: Colors.white,
-          disabledForegroundColor: teal,
-          elevation: 2,
+          backgroundColor: enabled ? Colors.white : disabledFill,
+          foregroundColor: enabled ? teal : disabledLabel,
+          disabledBackgroundColor: disabledFill,
+          disabledForegroundColor: disabledLabel,
+          elevation: enabled ? 2 : 0,
           shadowColor: Colors.black26,
           padding: const EdgeInsets.symmetric(horizontal: 24),
           minimumSize: const Size(0, 50),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100),
-            side: const BorderSide(color: cyanBorder, width: 1),
+            side: BorderSide(
+              color: enabled ? cyanBorder : disabledBorder,
+              width: 1,
+            ),
           ),
         ),
         child: showLoader && isBusy
@@ -722,7 +748,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 style: GoogleFonts.boldonse(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
-                  color: teal,
+                  color: enabled ? teal : disabledLabel,
                 ),
               ),
       ),
