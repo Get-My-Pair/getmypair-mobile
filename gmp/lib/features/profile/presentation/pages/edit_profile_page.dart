@@ -231,7 +231,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     h += labelLineHeight();
     h += sx(6, 3, 6);
     h += sx(14, 11, 14) * 1.34;
-    h += sx(4, 0, 4);
     h += sx(50, 44, 52);
 
     return h;
@@ -424,8 +423,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                           final padTop =
                               statusTop + (30 * contentScale).clamp(14.0, 30.0);
-                          final padBottom =
-                              (6 * contentScale).clamp(0.0, 6.0);
+                          const padBottom = 0.0;
                           final labelToFieldSpace =
                               (6 * contentScale).clamp(3.0, 6.0);
                           final fieldGroupSpace =
@@ -542,33 +540,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   height: (8 * contentScale).clamp(4.0, 8.0),
                                 ),
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: _footMetricChip(
-                                        'US:10',
-                                        contentScale,
-                                      ),
-                                    ),
+                                    _footMetricChip('US: 10', contentScale),
                                     SizedBox(
-                                      width: (8 * contentScale)
-                                          .clamp(4.0, 8.0),
+                                      width: (20 * contentScale)
+                                          .clamp(16.0, 24.0),
                                     ),
-                                    Expanded(
-                                      child: _footMetricChip(
-                                        'UK:09',
-                                        contentScale,
-                                      ),
-                                    ),
+                                    _footMetricChip('UK: 09', contentScale),
                                     SizedBox(
-                                      width: (8 * contentScale)
-                                          .clamp(4.0, 8.0),
+                                      width: (20 * contentScale)
+                                          .clamp(16.0, 24.0),
                                     ),
-                                    Expanded(
-                                      child: _footMetricChip(
-                                        'EURO:41',
-                                        contentScale,
-                                      ),
-                                    ),
+                                    _footMetricChip('EURO: 41', contentScale),
                                   ],
                                 ),
                                 SizedBox(
@@ -587,21 +571,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     color: Colors.white,
                                   ),
                                 ),
-                                SizedBox(
-                                  height:
-                                      (4 * contentScale).clamp(0.0, 4.0),
-                                ),
                                 Align(
-                                  alignment: Alignment.center,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal:
-                                          (8 * contentScale).clamp(4.0, 12.0),
-                                    ),
-                                    child: _buildSaveChangesButton(
-                                      scale: contentScale,
-                                      isBusy: isLoading,
-                                    ),
+                                  alignment: Alignment.centerRight,
+                                  child: _buildSaveChangesButton(
+                                    scale: contentScale,
+                                    isBusy: isLoading,
                                   ),
                                 ),
                               ],
@@ -820,15 +794,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Widget _footMetricChip(String value, double scale) {
-    return Container(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        value,
-        style: GoogleFonts.boldonse(
-          fontSize: (12 * scale).clamp(10.0, 12.0),
-          fontWeight: FontWeight.w400,
-          color: Colors.white,
-        ),
+    return Text(
+      value,
+      style: GoogleFonts.boldonse(
+        fontSize: (12 * scale).clamp(10.0, 12.0),
+        fontWeight: FontWeight.w400,
+        color: Colors.white,
       ),
     );
   }
