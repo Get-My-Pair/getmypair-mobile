@@ -64,7 +64,7 @@ class CareMyPairPage extends StatelessWidget {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
+              padding: const EdgeInsets.fromLTRB(8, 30, 8, 0),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),
@@ -80,7 +80,7 @@ class CareMyPairPage extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: _panelRadius,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
+                    padding: const EdgeInsets.fromLTRB(8, 12, 8, 120),
                     children: [
                           _Header(onBack: () => Navigator.maybePop(context)),
                           const SizedBox(height: 24),
@@ -100,26 +100,28 @@ class CareMyPairPage extends StatelessWidget {
                             onTap: () => _openRepairPage(context),
                           ),
                           const SizedBox(height: 19),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _SecondaryServiceCard(
-                                  label: 'Maintain\nMyPair',
-                                  iconAsset: 'assets/images/icons/caremypair/mmp.svg',
-                                  iconSize: 56,
-                                  labelFontSize: 13.2,
-                                  onTap: () => _openMaintainPage(context),
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: _SecondaryServiceCard(
+                                    label: 'Maintain\nMyPair',
+                                    iconAsset: 'assets/images/icons/caremypair/mmp.svg',
+                                    iconSize: 44,
+                                    onTap: () => _openMaintainPage(context),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: _SecondaryServiceCard(
-                                  label: 'Wash\nMyPair',
-                                  iconAsset: 'assets/images/icons/caremypair/wmp.svg',
-                                  onTap: () => _openWashPage(context),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _SecondaryServiceCard(
+                                    label: 'Wash\nMyPair',
+                                    iconAsset: 'assets/images/icons/caremypair/wmp.svg',
+                                    onTap: () => _openWashPage(context),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 16),
                           _MyServiceRequestsCard(
@@ -405,7 +407,7 @@ class _PrimaryServiceCard extends StatelessWidget {
 }
 
 class _SecondaryServiceCard extends StatelessWidget {
-  static const double _cardHeight = 86;
+  static const double _minCardHeight = 86;
   final String label;
   final String iconAsset;
   final double iconSize;
@@ -420,16 +422,47 @@ class _SecondaryServiceCard extends StatelessWidget {
     required this.onTap,
   });
 
+  TextStyle get _labelStyle => GoogleFonts.boldonse(
+        color: const Color(0xFF062F35),
+        fontSize: labelFontSize,
+        height: 1.1,
+        fontWeight: FontWeight.w400,
+      );
+
+  Widget _buildLabelText() {
+    final lines = label.split('\n');
+    if (lines.length >= 2) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(lines[0], style: _labelStyle),
+          const SizedBox(height: 5),
+          Text(lines[1], style: _labelStyle),
+        ],
+      );
+    }
+    return Text(
+      label,
+      maxLines: 2,
+      textAlign: TextAlign.center,
+      style: _labelStyle,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
+      clipBehavior: Clip.none,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: _cardHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: _minCardHeight),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           decoration: BoxDecoration(
             color: const Color(0xFFDFE7E9),
             borderRadius: BorderRadius.circular(10),
@@ -443,6 +476,7 @@ class _SecondaryServiceCard extends StatelessWidget {
             ],
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SvgPicture.asset(
                 iconAsset,
@@ -450,19 +484,7 @@ class _SecondaryServiceCard extends StatelessWidget {
                 height: iconSize,
               ),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  textAlign: TextAlign.left,
-                  style: GoogleFonts.boldonse(
-                    color: const Color(0xFF062F35),
-                    fontSize: labelFontSize,
-                    height: 1.7,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
+              Expanded(child: _buildLabelText()),
             ],
           ),
         ),
