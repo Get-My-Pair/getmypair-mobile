@@ -102,23 +102,17 @@ class FamilyProfilePage extends StatelessWidget {
                                 const ChevronScreenBackButton(
                                   iconColor: Colors.white,
                                 ),
-                                const SizedBox(width: 7),
+                                const SizedBox(width: 4),
                                 Expanded(
-                                  child: FittedBox(
-                                    alignment: Alignment.center,
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      'Family Profile',
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      overflow: TextOverflow.visible,
-                                      style: GoogleFonts.boldonse(
-                                        fontSize: titleSize,
-                                        fontWeight: FontWeight.w400,
-                                        color: const Color(0xFFDFE7E9),
-                                        height: 1,
-                                      ),
+                                  child: Text(
+                                    'Family Profile',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.boldonse(
+                                      fontSize: titleSize,
+                                      fontWeight: FontWeight.w400,
+                                      color: const Color(0xFFDFE7E9),
+                                      height: 1,
                                     ),
                                   ),
                                 ),
@@ -137,11 +131,17 @@ class FamilyProfilePage extends StatelessWidget {
                             Expanded(
                               child: SingleChildScrollView(
                                 physics: const ClampingScrollPhysics(),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    for (final name in names)
-                                      _FamilyRow(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: (16 * layoutScale)
+                                        .clamp(12.0, 20.0),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      for (final name in names)
+                                        _FamilyRow(
                                         title: name,
                                         scale: layoutScale,
                                         onTap: () {
@@ -161,7 +161,8 @@ class FamilyProfilePage extends StatelessWidget {
                                           );
                                         },
                                       ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
