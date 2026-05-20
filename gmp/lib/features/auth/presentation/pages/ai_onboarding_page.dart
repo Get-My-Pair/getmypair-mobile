@@ -83,6 +83,12 @@ String _rackReassuranceClosingStep(Set<String> rack) {
   return '';
 }
 
+/// Extra closing step only when the rack includes partner, kids, or elders.
+bool _rackNeedsClosingReassurance(Set<String> rack) =>
+    rack.contains('My Partner') ||
+    rack.contains('My Kids') ||
+    rack.contains('Elderly');
+
 String _aiOnboardingBody(
   int index,
   String nickname, {
@@ -152,8 +158,6 @@ class AiOnboardingPage extends StatefulWidget {
 
 class _AiOnboardingPageState extends State<AiOnboardingPage>
     with SingleTickerProviderStateMixin {
-  static const int _pageCount = 7;
-
   final PageController _controller = PageController();
   final TextEditingController _name = TextEditingController();
   final FlutterTts _tts = FlutterTts();
@@ -180,6 +184,19 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   /// True while [AuthCompleteProfile] is in flight after the last onboarding step.
   bool _isSubmittingProfile = false;
+
+  int get _pageCount => _rackNeedsClosingReassurance(_rack) ? 7 : 6;
+
+  void _clampPageIndexIfNeeded() {
+    final last = _pageCount - 1;
+    if (_index <= last) return;
+    if (!_controller.hasClients) {
+      setState(() => _index = last);
+      return;
+    }
+    _controller.jumpToPage(last);
+    unawaited(_onPageChanged(last));
+  }
 
   @override
   void initState() {
@@ -606,7 +623,10 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         child: _Checks(
           options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
           selected: _rack,
-          onChanged: () => setState(() {}),
+          onChanged: () {
+            setState(() {});
+            _clampPageIndexIfNeeded();
+          },
         ),
       ),
       _Step(
@@ -672,11 +692,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         leadingTitleFirst: true,
         child: const _FootSizeTable(),
       ),
-      _Step(
-        text: _aiOnboardingBody(6, nick, rack: _rack),
-        title: _aiOnboardingTitle(6, rack: _rack),
-      ),
-
+      if (_rackNeedsClosingReassurance(_rack))
+        _Step(
+          text: _aiOnboardingBody(6, nick, rack: _rack),
+          title: _aiOnboardingTitle(6, rack: _rack),
+        ),
     ];
 
     return BlocListener<AuthBloc, AuthState>(
