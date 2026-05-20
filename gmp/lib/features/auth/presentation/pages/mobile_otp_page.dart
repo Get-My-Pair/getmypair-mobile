@@ -12,6 +12,7 @@ import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../widgets/otp_dev_dialog.dart';
 import 'otp_page.dart';
 import 'privacy_policy_page.dart';
 import 'terms_of_service_page.dart';
@@ -165,51 +166,17 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   }
 
   void _showOtpDialog(String otp, String mobile) {
-    showDialog<void>(
+    showDevOtpDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('OTP Code (Development)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Your OTP code is:'),
-            const SizedBox(height: 10),
-            SelectableText(
-              otp.isEmpty ? '—' : otp,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: _kPrimary,
-                letterSpacing: 2,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Clipboard.setData(ClipboardData(text: otp));
-              Navigator.of(dialogContext).pop();
-              if (!context.mounted) return;
-              await showAppFeedbackAlert(
-                context,
-                message: 'OTP copied to clipboard',
-                type: AppFeedbackType.success,
-              );
-              if (!context.mounted) return;
-              _openOtpPage(mobile, otp: otp);
-            },
-            child: const Text('Copy & Continue'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              _openOtpPage(mobile, otp: otp);
-            },
-            child: const Text('Continue'),
-          ),
-        ],
+      otp: otp,
+      primaryActionLabel: 'Continue',
+      onPrimary: () => _openOtpPage(mobile, otp: otp),
+      secondaryActionLabel: 'Copy & Continue',
+      onSecondary: (dialogContext) => copyOtpAndCloseDialog(
+        dialogContext: dialogContext,
+        hostContext: context,
+        otp: otp,
+        onAfterCopy: () async => _openOtpPage(mobile, otp: otp),
       ),
     );
   }

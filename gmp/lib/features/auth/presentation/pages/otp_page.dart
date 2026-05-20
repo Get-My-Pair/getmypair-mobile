@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -13,6 +12,7 @@ import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../widgets/otp_dev_dialog.dart';
 import 'ai_onboarding_page.dart';
 
 class OTPPage extends StatefulWidget {
@@ -148,47 +148,18 @@ class _OTPPageState extends State<OTPPage> {
     _startResendTimer();
   }
 
-  void _showOtpDialog(BuildContext context, String otp) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('OTP Code (Development)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Your OTP code is:'),
-            const SizedBox(height: 10),
-            SelectableText(
-              otp.isEmpty ? '—' : otp,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: _kPrimary,
-                letterSpacing: 2,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Clipboard.setData(ClipboardData(text: otp));
-              Navigator.of(dialogContext).pop();
-              if (!context.mounted) return;
-              await showAppFeedbackAlert(
-                context,
-                message: 'OTP copied to clipboard',
-                type: AppFeedbackType.success,
-              );
-            },
-            child: const Text('Copy & Close'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
-          ),
-        ],
+  void _showOtpDialog(BuildContext hostContext, String otp) {
+    showDevOtpDialog(
+      context: hostContext,
+      otp: otp,
+      primaryActionLabel: 'Close',
+      onPrimary: () {},
+      secondaryActionLabel: 'Copy & Close',
+      onSecondary: (dialogContext) => copyOtpAndCloseDialog(
+        dialogContext: dialogContext,
+        hostContext: hostContext,
+        otp: otp,
+        onAfterCopy: () async {},
       ),
     );
   }
@@ -550,12 +521,13 @@ class _OtpCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: titleToOtp),
-                  MaterialPinField(
-                    length: 6,
-                    initialValue: initialOtpValue,
-                    onChanged: onChanged,
-                    onCompleted: onCompleted,
-                    theme: MaterialPinTheme(
+                  Center(
+                    child: MaterialPinField(
+                      length: 6,
+                      initialValue: initialOtpValue,
+                      onChanged: onChanged,
+                      onCompleted: onCompleted,
+                      theme: MaterialPinTheme(
                       shape: MaterialPinShape.outlined,
                       cellSize: Size(pinW, pinH),
                       spacing: pinGap,
@@ -579,10 +551,13 @@ class _OtpCard extends StatelessWidget {
                       entryAnimation: MaterialPinAnimation.scale,
                       animationDuration: const Duration(milliseconds: 250),
                       animationCurve: Curves.easeOut,
+                      ),
                     ),
                   ),
                   SizedBox(height: otpToTimer),
-                  InkWell(
+                  Align(
+                    alignment: Alignment.center,
+                    child: InkWell(
                     onTap: canResend ? onTapTimer : null,
                     borderRadius: BorderRadius.circular(100),
                     child: Container(
@@ -621,6 +596,7 @@ class _OtpCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                    ),
                     ),
                   ),
                 ],

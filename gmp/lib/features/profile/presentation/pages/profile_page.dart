@@ -25,6 +25,8 @@ import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
 import 'family_profile_page.dart';
 import 'manage_devices_page.dart';
+import 'faq_page.dart';
+import 'license_page.dart';
 import '../../../auth/presentation/pages/terms_of_service_page.dart';
 import '../../../service/presentation/pages/service_request_list_page.dart';
 
@@ -441,9 +443,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                             'assets/images/icons/profile/faq.svg',
                                         title: 'FAQ',
                                         scale: layoutScale,
-                                        onTap: () => showComingSoon(
+                                        onTap: () => Navigator.push(
                                           context,
-                                          feature: 'FAQ',
+                                          MaterialPageRoute(
+                                            builder: (_) => const FaqPage(),
+                                          ),
                                         ),
                                       ),
                                       _GradientMenuTile(
@@ -464,9 +468,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                             'assets/images/icons/profile/license.svg',
                                         title: 'License',
                                         scale: layoutScale,
-                                        onTap: () => showComingSoon(
+                                        onTap: () => Navigator.push(
                                           context,
-                                          feature: 'License',
+                                          MaterialPageRoute(
+                                            builder: (_) => const AppLicensePage(),
+                                          ),
                                         ),
                                       ),
                                     ],

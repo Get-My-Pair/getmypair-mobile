@@ -34,9 +34,11 @@ import '../../../../injection_container.dart';
 const Color _kOnHeaderText = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
-const Color _kQuickActionDisabledBg = Color(0xFFB8C0C4);
-const Color _kQuickActionDisabledText = Color(0xFF5E6A6E);
-const Color _kQuickActionDisabledIcon = Color(0xFF6E7A7F);
+/// Rent My Pair disabled style — matches article create Save (not enabled).
+const Color _kQuickActionDisabledBg = Color(0xFF6B7B80);
+const Color _kQuickActionDisabledBorder = Color(0xFF8A9A9F);
+const Color _kQuickActionDisabledText = Color(0xFFB8C4C8);
+const Color _kQuickActionDisabledIcon = Color(0xFFB8C4C8);
 const Color _kRackCardBorderStart = Color(0xFF0F6876);
 const Color _kRackCardEdgeLight = _kRackCardBorderStart;
 const double _kRackCardRadius = 10;
@@ -1724,6 +1726,9 @@ class _QuickActionCard extends StatelessWidget {
                   )
                 : null,
             borderRadius: BorderRadius.circular(12),
+            border: grayed && !highlight
+                ? Border.all(color: _kQuickActionDisabledBorder, width: 1)
+                : null,
           ),
           alignment: Alignment.center,
           child: Row(
