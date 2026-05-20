@@ -17,7 +17,14 @@ import 'package:gmp/injection_container.dart';
 class ArticleEditPage extends StatefulWidget {
   final String articleId;
 
-  const ArticleEditPage({super.key, required this.articleId});
+  /// When opened from details, skip the loading screen and show the form immediately.
+  final Article? initialArticle;
+
+  const ArticleEditPage({
+    super.key,
+    required this.articleId,
+    this.initialArticle,
+  });
 
   @override
   State<ArticleEditPage> createState() => _ArticleEditPageState();
@@ -75,10 +82,40 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   @override
   void initState() {
     super.initState();
+    final seed = widget.initialArticle;
+    if (seed != null && seed.id == widget.articleId) {
+      _applyArticle(seed);
+      _loading = false;
+    }
     _load();
   }
 
+  void _applyArticle(Article article) {
+    _article = article;
+    _error = null;
+    _brand = article.brand;
+    _model = article.model;
+    _category = article.category;
+    _condition = article.condition.isNotEmpty ? article.condition : 'good';
+    _color = article.color;
+    _purchaseYear = article.purchaseYear;
+    _materials.clear();
+    for (final m in article.materials) {
+      _materials.add({
+        'type': _materialTypes.contains(m.type) ? m.type : _materialTypes.first,
+        'percentage': m.percentage,
+      });
+    }
+  }
+
   Future<void> _load() async {
+    final keepExisting = _article != null;
+    if (!keepExisting && mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
     tokenResult.fold(
@@ -93,29 +130,15 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
           final article = await sl<GetArticleById>().call(token, widget.articleId);
           if (!mounted) return;
           setState(() {
-            _article = article;
+            _applyArticle(article);
             _loading = false;
-            _error = null;
-
-            _brand = article.brand;
-            _model = article.model;
-            _category = article.category;
-            _condition = article.condition.isNotEmpty ? article.condition : 'good';
-            _color = article.color;
-            _purchaseYear = article.purchaseYear;
-
-            _materials.clear();
-            for (final m in article.materials) {
-              _materials.add({
-                'type': _materialTypes.contains(m.type) ? m.type : _materialTypes.first,
-                'percentage': m.percentage,
-              });
-            }
           });
         } catch (e) {
           if (!mounted) return;
           setState(() {
-            _error = e.toString().replaceFirst('Exception: ', '');
+            if (!keepExisting) {
+              _error = e.toString().replaceFirst('Exception: ', '');
+            }
             _loading = false;
           });
         }
@@ -201,37 +224,10 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (_article == null && _loading) {
       return _buildWithBg(
-        appBar: buildGradientAppBar(
-          title: 'Edit Shoe',
-          leading: IconButton(
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
-            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-            icon: SvgPicture.asset(
-              'assets/images/chevron-left.svg',
-              width: 30,
-              height: 30,
-              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-          automaticallyImplyLeading: false,
-          centerTitle: true,
-        ),
         body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Colors.white),
-              SizedBox(height: 16),
-              Text(
-                'Loading shoe...',
-                style: TextStyle(fontSize: 14, color: AppColors.onGradientBody),
-              ),
-            ],
-          ),
+          child: CircularProgressIndicator(color: Colors.white),
         ),
       );
     }

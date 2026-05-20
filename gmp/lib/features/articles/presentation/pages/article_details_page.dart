@@ -712,8 +712,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         onPressed: () async {
                           await Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  ArticleEditPage(articleId: article.id),
+                              builder: (_) => ArticleEditPage(
+                                articleId: article.id,
+                                initialArticle: article,
+                              ),
                             ),
                           );
                           if (mounted) _load();
