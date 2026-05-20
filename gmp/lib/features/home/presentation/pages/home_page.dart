@@ -902,13 +902,13 @@ class _HomeHeaderBell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = _homeHeaderChromeScale(context);
-    final bellSize = (30.0 * s).clamp(26.0, 34.0);
-    final bellPadH = (5.5 * s).clamp(4.5, 7.0);
-    final bellPadV = (5.5 * s).clamp(4.5, 7.0);
-    final bellBodyW = (11.5 * s).clamp(9.5, 13.0);
-    final bellBodyH = (9.5 * s).clamp(7.5, 11.0);
-    final bellClapperW = (6.0 * s).clamp(4.8, 7.2);
-    final bellClapperH = (3.5 * s).clamp(2.8, 4.4);
+    final bellSize = (24.0 * s).clamp(22.0, 28.0);
+    final bellPadH = (4.5 * s).clamp(3.5, 6.0);
+    final bellPadV = (4.5 * s).clamp(3.5, 6.0);
+    final bellBodyW = (9.5 * s).clamp(8.0, 11.0);
+    final bellBodyH = (8.0 * s).clamp(6.5, 9.5);
+    final bellClapperW = (5.0 * s).clamp(4.0, 6.0);
+    final bellClapperH = (3.0 * s).clamp(2.4, 3.6);
 
     // Glass chrome — scaled from header scale [s] so blur, rim, and lift stay proportional.
     final blurSigma = (14.0 * s).clamp(11.0, 18.0);
