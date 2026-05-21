@@ -27,21 +27,6 @@ String _normalizeSpeech(String raw) {
 /// Global app-session guard: show voice-audibility hint only once.
 bool _hasShownVoicePlaybackHintGlobally = false;
 
-/// Foot blueprint size rows (table UI + TTS).
-const List<(String, String)> _kFootSizeRows = [
-  ('United States & Canada', '10'),
-  ('United Kingdom', '8'),
-  ('Europe (EU)', '40.5 \u2013 41'),
-  ('Japan (CM)', '26.5 cm'),
-  ('Australia', '10'),
-];
-
-String _speakableFootSizes() {
-  return _kFootSizeRows
-      .map((r) => '${r.$1} \u2014 ${r.$2}')
-      .join('\n');
-}
-
 /// Body on the step after rack selection (index 3), driven by step-3 choices.
 String _bodyAfterRackSelection(Set<String> rack) {
   if (rack.contains('My Partner')) {
@@ -63,7 +48,7 @@ String _bodyAfterRackSelection(Set<String> rack) {
       'for your own personal rotation?';
 }
 
-/// Reassurance copy on the final step (index 6) when the rack includes partner, kids, or elders.
+/// Reassurance copy on the final step (index 4) when the rack includes partner, kids, or elders.
 String _rackReassuranceClosingStep(Set<String> rack) {
   if (rack.contains('My Partner')) {
     return 'Don\u2019t worry, we haven\u2019t forgotten about your partner! '
@@ -104,8 +89,6 @@ String _aiOnboardingBody(
     case 3:
       return _bodyAfterRackSelection(rack);
     case 4:
-      return 'That sounds like a total nightmare, but don\'t worry! We\'ve got your back (and your feet) covered.';
-    case 5:
       return '';
     default:
       return '';
@@ -123,20 +106,7 @@ String _aiOnboardingTitle(int index, {Set<String> rack = const {}}) {
     case 3:
       return 'Time for some shoe therapy: what\u2019s the ultimate dealbreaker that usually stands between you and the perfect fit?';
     case 4:
-      return 'Let\u2019s dive in and find your perfect match by getting the lowdown on your unique foot shape and size!';
-    case 5:
-      return 'Here it is: the blueprint of your feet! Check out your custom foot type and size breakdown right here.';
-    case 6:
       return _rackReassuranceClosingStep(rack);
-    default:
-      return '';
-  }
-}
-
-String _aiOnboardingTrailingTitle(int index) {
-  switch (index) {
-    case 5:
-      return 'Detected Foot Profile: The \u201CHigh Arch\u201D';
     default:
       return '';
   }
@@ -166,7 +136,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   int _index = 0;
   DateTime? _birthDate;
   String? _gender;
-  bool _cameraAllowed = false;
   final Set<String> _rack = <String>{};
   final Set<String> _troubles = <String>{};
   bool _ttsReady = false;
@@ -185,7 +154,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   /// True while [AuthCompleteProfile] is in flight after the last onboarding step.
   bool _isSubmittingProfile = false;
 
-  int get _pageCount => _rackNeedsClosingReassurance(_rack) ? 7 : 6;
+  int get _pageCount => _rackNeedsClosingReassurance(_rack) ? 5 : 4;
 
   void _clampPageIndexIfNeeded() {
     final last = _pageCount - 1;
@@ -354,15 +323,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   String _speakableContentFor(int index) {
     final nickname = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
-    final body = index == 5
-        ? _speakableFootSizes()
-        : _aiOnboardingBody(index, nickname, rack: _rack);
+    final body = _aiOnboardingBody(index, nickname, rack: _rack);
     final title = _aiOnboardingTitle(index, rack: _rack);
-    final trailing = _aiOnboardingTrailingTitle(index);
-    if (index == 5) {
-      return _normalizeSpeech('$title $body $trailing');
-    }
-    return _normalizeSpeech('$body $title $trailing');
+    return _normalizeSpeech('$body $title');
   }
 
   Future<void> _stopSpeaking() async {
@@ -505,9 +468,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       case 3:
         return _troubles.isNotEmpty;
       case 4:
-        return _cameraAllowed;
-      case 5:
-      case 6:
         return true;
       default:
         return false;
@@ -565,11 +525,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       MaterialPageRoute(builder: (_) => const CustomerDashboardPage()),
       (_) => false,
     );
-  }
-
-  Future<void> _onCameraTap() async {
-    if (_cameraAllowed) return;
-    setState(() => _cameraAllowed = true);
   }
 
   Future<void> _pickBirthDate() async {
@@ -643,59 +598,10 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           onChanged: () => setState(() {}),
         ),
       ),
-      _Step(
-        text: _aiOnboardingBody(4, nick),
-        title: _aiOnboardingTitle(4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ElevatedButton(
-              onPressed: _cameraAllowed ? null : _onCameraTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _cameraAllowed
-                    ? const Color(0xFFABABAB)
-                    : Colors.white,
-                foregroundColor: _cameraAllowed
-                    ? const Color(0xFF5A5A5A)
-                    : const Color(0xFF12899B),
-                elevation: 2,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                side: const BorderSide(
-                  color: Color(0xFF09DFFF),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                _cameraAllowed ? 'Camera Allowed' : 'Allow Camera Access',
-                textAlign: TextAlign.center,
-                textHeightBehavior: _kOnboardingButtonTextHeight,
-                style: GoogleFonts.boldonse(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  height: 1.2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      _Step(
-        text: _aiOnboardingBody(5, nick),
-        title: _aiOnboardingTitle(5),
-        trailingTitle: _aiOnboardingTrailingTitle(5),
-        leadingTitleFirst: true,
-        child: const _FootSizeTable(),
-      ),
       if (_rackNeedsClosingReassurance(_rack))
         _Step(
-          text: _aiOnboardingBody(6, nick, rack: _rack),
-          title: _aiOnboardingTitle(6, rack: _rack),
+          text: _aiOnboardingBody(4, nick, rack: _rack),
+          title: _aiOnboardingTitle(4, rack: _rack),
         ),
     ];
 
@@ -1028,71 +934,6 @@ class _Step extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: columnChildren,
-      ),
-    );
-  }
-}
-
-/// Region / size grid for the foot blueprint step (small type, fits teal gradient).
-class _FootSizeTable extends StatelessWidget {
-  const _FootSizeTable();
-
-  static Widget _cell(
-    String label,
-    double fontSize, {
-    bool header = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Text(
-        label,
-        style: GoogleFonts.montserrat(
-          color: const Color(0xFFDFE7E9),
-          fontSize: header ? fontSize + 0.75 : fontSize,
-          fontWeight: header ? FontWeight.w600 : FontWeight.w400,
-          height: 1.25,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final dataFont = screenWidth < 360 ? 9.5 : 10.5;
-    final borderColor = Colors.white.withValues(alpha: 0.28);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-      ),
-      padding: const EdgeInsets.all(8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Table(
-          defaultColumnWidth: const FlexColumnWidth(1),
-          border: TableBorder.all(color: borderColor, width: 1),
-          children: [
-            TableRow(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
-              children: [
-                _cell('Region', dataFont, header: true),
-                _cell('Size Equivalent', dataFont, header: true),
-              ],
-            ),
-            for (final row in _kFootSizeRows)
-              TableRow(
-                children: [
-                  _cell(row.$1, dataFont),
-                  _cell(row.$2, dataFont),
-                ],
-              ),
-          ],
-        ),
       ),
     );
   }
