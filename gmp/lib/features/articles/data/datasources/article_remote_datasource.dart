@@ -18,6 +18,7 @@ abstract class ArticleRemoteDataSource {
     required String condition,
     required List<Map<String, dynamic>> materials,
     required List<String> imageUrls,
+    String? shoeSize,
   });
   Future<String> uploadArticleImage(String accessToken, {
     required String articleId,
@@ -142,6 +143,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
     required String condition,
     required List<Map<String, dynamic>> materials,
     required List<String> imageUrls,
+    String? shoeSize,
   }) async {
     try {
       final body = <String, dynamic>{
@@ -154,6 +156,9 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
         'images': imageUrls,
       };
       if (purchaseYear != null) body['purchaseYear'] = purchaseYear;
+      if (shoeSize != null && shoeSize.trim().isNotEmpty) {
+        body['shoeSize'] = shoeSize.trim();
+      }
       final response = await http
           .post(
             Uri.parse(ApiEndpoints.articlesCreate),

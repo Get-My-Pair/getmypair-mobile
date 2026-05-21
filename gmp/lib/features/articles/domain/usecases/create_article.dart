@@ -15,6 +15,7 @@ class CreateArticle {
     required String condition,
     required List<Map<String, dynamic>> materials,
     required List<String> imageUrls,
+    String? shoeSize,
   }) {
     return repository.createArticle(accessToken,
       brand: brand,
@@ -25,6 +26,7 @@ class CreateArticle {
       condition: condition,
       materials: materials,
       imageUrls: imageUrls,
+      shoeSize: shoeSize,
     );
   }
 }

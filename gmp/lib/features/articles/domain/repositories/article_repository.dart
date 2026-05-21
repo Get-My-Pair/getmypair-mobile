@@ -12,6 +12,7 @@ abstract class ArticleRepository {
     required String condition,
     required List<Map<String, dynamic>> materials,
     required List<String> imageUrls,
+    String? shoeSize,
   });
   Future<String> uploadArticleImage(String accessToken, {
     required String articleId,

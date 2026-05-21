@@ -18,6 +18,7 @@ import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
+import '../../../service/presentation/pages/rehome_my_pair_page.dart';
 import 'article_edit_page.dart';
 
 /// Module 3 – Article details. Figma rack-detail layout: gradient shell, panel, stats, actions.
@@ -220,7 +221,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     final raw = a.shoeSize?.trim();
     if (raw != null && raw.isNotEmpty) {
       final u = raw.toUpperCase();
-      if (u.startsWith('US')) return raw;
+      if (u.startsWith('US') || u.startsWith('UK') || u.startsWith('EU')) return raw;
       return 'US: $raw';
     }
     final idx = _rng(a.id, 'size').nextInt(_fallbackUsSizes.length);
@@ -945,9 +946,10 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         label: 'Rehome',
                         height: hButtons,
                         fontSize: (14 * scale).clamp(12.0, 15.0),
-                        onTap: () => showComingSoon(
-                          context,
-                          feature: 'Rehome from rack',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const RehomeMyPairPage(),
+                          ),
                         ),
                       ),
                     ),

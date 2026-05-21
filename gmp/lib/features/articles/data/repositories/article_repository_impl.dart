@@ -27,6 +27,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
     required String condition,
     required List<Map<String, dynamic>> materials,
     required List<String> imageUrls,
+    String? shoeSize,
   }) async {
     return remoteDataSource.createArticle(accessToken,
       brand: brand,
@@ -37,6 +38,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
       condition: condition,
       materials: materials,
       imageUrls: imageUrls,
+      shoeSize: shoeSize,
     );
   }
 

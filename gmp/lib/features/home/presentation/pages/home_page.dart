@@ -31,14 +31,16 @@ import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
 import '../../../../injection_container.dart';
 
-const Color _kOnHeaderText = Color(0xFFDFE7E9);
+/// Header copy on teal gradient — white for legibility (avoid washed-out light gray).
+const Color _kOnHeaderText = Color(0xFFFFFFFF);
+const Color _kOnHeaderTextMuted = Color(0xFFE8F4F6);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
-/// Rent My Pair disabled style — matches article create Save (not enabled).
+/// Rent My Pair disabled style — light label on mid-gray tile.
 const Color _kQuickActionDisabledBg = Color(0xFF6B7B80);
 const Color _kQuickActionDisabledBorder = Color(0xFF8A9A9F);
-const Color _kQuickActionDisabledText = Color(0xFFB8C4C8);
-const Color _kQuickActionDisabledIcon = Color(0xFFB8C4C8);
+const Color _kQuickActionDisabledText = Color(0xFFF5FAFB);
+const Color _kQuickActionDisabledIcon = Color(0xFFF5FAFB);
 const Color _kRackCardBorderStart = Color(0xFF0F6876);
 const Color _kRackCardEdgeLight = _kRackCardBorderStart;
 const double _kRackCardRadius = 10;
@@ -71,8 +73,10 @@ BorderRadius _rackCardClipRadius() => BorderRadius.only(
     );
 /// My Rack panel fill — design `#F0F0F0`.
 const Color _kRackCardBg = Color(0xFFE6E6E6);
-const Color _kSearchHintColor = Color(0x57000000);
-const Color _kHeaderIconTint = Color(0xFFDFE7E9);
+/// Secondary copy on light rack panel — darker than [AppColors.textTertiary].
+const Color _kRackMutedText = Color(0xFF4E7F8A);
+const Color _kSearchHintColor = Color(0xFF5C6E73);
+const Color _kHeaderIconTint = Color(0xFFFFFFFF);
 const String _kNotificationBellBodySvgAsset =
     'assets/images/allicons/notification1.svg';
 const String _kNotificationBellClapperSvgAsset =
@@ -338,7 +342,7 @@ class _HomePageState extends State<HomePage> {
           alignment: Alignment.center,
           child: const Icon(
             Icons.checkroom_outlined,
-            color: AppColors.textTertiary,
+            color: _kRackMutedText,
             size: 28,
           ),
         ),
@@ -351,7 +355,7 @@ class _HomePageState extends State<HomePage> {
         errorBuilder: (_, _, _) => const Center(
           child: Icon(
             Icons.checkroom_outlined,
-            color: AppColors.textTertiary,
+            color: _kRackMutedText,
             size: 28,
           ),
         ),
@@ -669,8 +673,11 @@ class _HomePageState extends State<HomePage> {
                                                                 style:
                                                                     const TextStyle(
                                                                   fontSize: 12,
-                                                                  color: AppColors
-                                                                      .textTertiary,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                  color:
+                                                                      _kRackMutedText,
                                                                 ),
                                                               ),
                                                             ),
@@ -688,8 +695,11 @@ class _HomePageState extends State<HomePage> {
                                                                         .center,
                                                                 style: TextStyle(
                                                                   fontSize: 12,
-                                                                  color: AppColors
-                                                                      .textTertiary,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                  color:
+                                                                      _kRackMutedText,
                                                                 ),
                                                               ),
                                                             ),
@@ -1103,7 +1113,7 @@ class _HomeProfileAvatarStack extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = _homeHeaderChromeScale(context);
     final narrow = MediaQuery.sizeOf(context).width < 360;
-    final rLarge = ((narrow ? 22.0 : 24.0) * s).clamp(20.0, 26.0);
+    final rLarge = ((narrow ? 28.0 : 30.0) * s).clamp(26.0, 32.0);
 
     return GestureDetector(
       onTap: onTap,
@@ -1134,7 +1144,7 @@ class _HomeProfileAvatarStack extends StatelessWidget {
             ? null
             : Icon(
                 Icons.person_rounded,
-                size: (radius * 1.25).clamp(26.0, 34.0),
+                size: (radius * 1.25).clamp(32.0, 42.0),
                 color: Colors.white,
               ),
       ),
@@ -1352,8 +1362,8 @@ class _HomeTopCard extends StatelessWidget {
                                           fontSize:
                                               ((compact ? 14.0 : 16.0) * s)
                                                   .clamp(10.0, 16.0),
-                                          fontWeight: FontWeight.w300,
-                                          color: _kOnHeaderText,
+                                          fontWeight: FontWeight.w400,
+                                          color: _kOnHeaderTextMuted,
                                           height: 1.2,
                                         ),
                                       ),
@@ -1535,8 +1545,8 @@ class _StatItem extends StatelessWidget {
     final labelSize = (11.5 * s).clamp(9.0, 12.0);
     final labelStyle = GoogleFonts.montserrat(
       fontSize: labelSize,
-      fontWeight: FontWeight.w400,
-      color: _kOnHeaderText,
+      fontWeight: FontWeight.w500,
+      color: _kOnHeaderTextMuted,
       height: 1.15,
     );
     return LayoutBuilder(

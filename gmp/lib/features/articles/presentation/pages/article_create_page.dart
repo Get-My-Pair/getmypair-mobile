@@ -11,9 +11,9 @@ import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
-import 'package:image_picker/image_picker.dart';
-
 import 'article_details_page.dart';
+import 'footwear_camera_capture_page.dart';
+import 'upload_footwear_page.dart';
 
 /// Module 3 – Add new shoe. Form relies on manual entry only (no auto-fill).
 /// POST /api/articles/create on submit, then navigate to ArticleDetailsPage.
@@ -30,9 +30,39 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   final _formKey = GlobalKey<FormState>();
   final _modelController = TextEditingController(text: 'Air Max');
   final _brandController = TextEditingController(text: 'Nike');
-  final _colorController = TextEditingController();
 
   String _category = 'sports_shoe';
+  String _sizeRegion = 'UK';
+  String? _selectedSizeNumber;
+  String? _selectedColorName;
+  final _customColorController = TextEditingController();
+
+  static const List<String> _ukSizes = [
+    '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14',
+  ];
+  static const List<String> _usSizes = [
+    '06', '07', '08', '09', '10', '11', '12', '13',
+  ];
+  static const List<String> _euSizes = [
+    '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
+  ];
+  static const List<String> _sizeRegions = ['UK', 'US', 'EU'];
+  static const List<String> _colorNames = [
+    'Black',
+    'White',
+    'Brown',
+    'Navy',
+    'Denim',
+    'Grey',
+    'Green',
+    'Red',
+    'Blue',
+    'Tan',
+    'Pink',
+    'Yellow',
+    'Orange',
+    'Other',
+  ];
   String _condition = 'good';
   int? _purchaseYear;
   static const List<String> _materialTypes = [
@@ -77,42 +107,79 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     }
     _modelController.addListener(onFieldChanged);
     _brandController.addListener(onFieldChanged);
-    _colorController.addListener(onFieldChanged);
+  }
+
+  List<String> get _sizesForRegion {
+    switch (_sizeRegion) {
+      case 'US':
+        return _usSizes;
+      case 'EU':
+        return _euSizes;
+      default:
+        return _ukSizes;
+    }
+  }
+
+  String? get _shoeSizePayload {
+    final num = _selectedSizeNumber?.trim();
+    if (num == null || num.isEmpty) return null;
+    return '$_sizeRegion: $num';
+  }
+
+  void _setSizeRegion(String region) {
+    setState(() {
+      _sizeRegion = region;
+      if (_selectedSizeNumber != null &&
+          !_sizesForRegion.contains(_selectedSizeNumber)) {
+        _selectedSizeNumber = null;
+      }
+    });
+  }
+
+  String? get _resolvedColor {
+    if (_selectedColorName == null) return null;
+    if (_selectedColorName == 'Other') {
+      final custom = _customColorController.text.trim();
+      return custom.isEmpty ? null : custom;
+    }
+    return _selectedColorName;
   }
 
   @override
   void dispose() {
     _modelController.dispose();
     _brandController.dispose();
-    _colorController.dispose();
+    _customColorController.dispose();
     super.dispose();
   }
+
+  static const int _minFootwearPhotos = FootwearCameraCapturePage.minAngles;
+  static const int _maxFootwearPhotos = FootwearCameraCapturePage.maxAngles;
 
   bool get _canSave =>
       !_submitting &&
       _modelController.text.trim().isNotEmpty &&
       _brandController.text.trim().isNotEmpty &&
-      _colorController.text.trim().isNotEmpty &&
+      _resolvedColor != null &&
+      _selectedSizeNumber != null &&
       _purchaseYear != null &&
-      _imageFiles.isNotEmpty;
+      _imageFiles.length >= _minFootwearPhotos &&
+      _imageFiles.length <= _maxFootwearPhotos;
 
-  Future<void> _pickImages() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickMultiImage();
-    if (picked.isEmpty || !mounted) return;
+  Future<void> _openUploadFootwear() async {
+    final files = await Navigator.of(context).push<List<File>>(
+      MaterialPageRoute(
+        builder: (_) => UploadFootwearPage(initialFiles: List<File>.from(_imageFiles)),
+      ),
+    );
+    if (!mounted) return;
+    if (files == null || files.isEmpty) return;
     setState(() {
-      for (final x in picked) {
-        _imageFiles.add(File(x.path));
-      }
-    });
-  }
-
-  void _removeImage(int index) {
-    setState(() {
-      _imageFiles.removeAt(index);
-      if (index < _uploadedImageUrls.length) {
-        _uploadedImageUrls.removeAt(index);
-      }
+      _imageFiles
+        ..clear()
+        ..addAll(files);
+      _uploadedImageUrls.clear();
+      _errorMessage = null;
     });
   }
 
@@ -123,6 +190,19 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
       setState(() {
         _errorMessage =
             'Please select a purchase year. The API requires this to register your footwear.';
+      });
+      return;
+    }
+    if (_imageFiles.length < _minFootwearPhotos) {
+      setState(() {
+        _errorMessage =
+            'Please upload at least $_minFootwearPhotos side-profile photos using Upload Footwear.';
+      });
+      return;
+    }
+    if (_selectedSizeNumber == null || _resolvedColor == null) {
+      setState(() {
+        _errorMessage = 'Please select shoe size and colour.';
       });
       return;
     }
@@ -149,11 +229,12 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             brand: _brandController.text.trim(),
             model: _modelController.text.trim(),
             category: _category,
-            color: _colorController.text.trim(),
+            color: _resolvedColor!,
             purchaseYear: _purchaseYear,
             condition: _condition,
             materials: materials,
             imageUrls: [], // Images added via upload-image after create
+            shoeSize: _shoeSizePayload,
           );
           if (!mounted) return;
 
@@ -275,20 +356,11 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 const SizedBox(height: 20),
                 _purchaseYearDropdown(),
                 const SizedBox(height: 20),
-                _field(
-                  _colorController,
-                  'Colour',
-                  placeholder: 'Denim',
-                  textCapitalization: TextCapitalization.words,
-                ),
-                const SizedBox(height: 20),
                 _dropdownWithLabel('Category', _category, _categories, (v) => setState(() => _category = v!)),
                 const SizedBox(height: 24),
-                _buildActionButton(
-                  label: 'Upload Footwear',
-                  onPressed: _pickImages,
-                  isBusy: _submitting,
-                ),
+                _uploadFootwearTopSection(),
+                const SizedBox(height: 20),
+                _sizeAndColorSection(),
                 const SizedBox(height: 24),
                 _buildActionButton(
                   label: 'Save Footwear',
@@ -629,71 +701,278 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     );
   }
 
-  Widget _imagesSection() {
+  Widget _sizeAndColorSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Photos',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-            fontFamily: _contentFontFamily,
-          ),
-        ),
-        const SizedBox(height: 10),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+        _sizeDropdown(),
+        const SizedBox(height: 20),
+        _colorDropdown(),
+      ],
+    );
+  }
+
+  Future<void> _openColorPickerSheet() async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF0D5B68),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                onTap: _submitting ? null : _pickImages,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withOpacity(0.22)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Text(
+                  'Select colour',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: const Icon(Icons.add_photo_alternate_outlined, color: Colors.white, size: 40),
                 ),
               ),
-              const SizedBox(width: 8),
-              ...List.generate(_imageFiles.length, (i) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          _imageFiles[i],
-                          width: 88,
-                          height: 88,
-                          fit: BoxFit.cover,
+              SizedBox(
+                height: 320,
+                child: ListView.builder(
+                  itemCount: _colorNames.length,
+                  itemBuilder: (context, index) {
+                    final name = _colorNames[index];
+                    final selected = _selectedColorName == name;
+                    return ListTile(
+                      title: Text(
+                        name,
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w400,
                         ),
                       ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () => _removeImage(i),
-                          child: const CircleAvatar(
-                            radius: 12,
-                            backgroundColor: AppColors.error,
-                            child: Icon(Icons.close, color: AppColors.textOnPrimary, size: 16),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
+                      trailing: selected
+                          ? const Icon(Icons.check, color: Color(0xFF09DFFF))
+                          : null,
+                      onTap: () => Navigator.pop(ctx, name),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
+        );
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedColorName = picked);
+    }
+  }
+
+  Widget _colorDropdown() {
+    final presetSelected = _selectedColorName != null &&
+        _colorNames.contains(_selectedColorName);
+    final displayLabel = _selectedColorName == 'Other'
+        ? (_customColorController.text.trim().isEmpty
+            ? 'Other (type below)'
+            : _customColorController.text.trim())
+        : _selectedColorName;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 6),
+          child: Text(
+            'Colour',
+            style: GoogleFonts.montserrat(
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
         ),
+        _glassInputShell(
+          child: InkWell(
+            onTap: _submitting ? null : _openColorPickerSheet,
+            borderRadius: BorderRadius.circular(100),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayLabel ?? 'Select colour',
+                      style: _inputTextStyle(
+                        color: displayLabel != null
+                            ? Colors.white
+                            : Colors.white70,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_selectedColorName == 'Other') ...[
+          const SizedBox(height: 10),
+          _glassInputShell(
+            child: TextFormField(
+              controller: _customColorController,
+              enabled: !_submitting,
+              style: _inputTextStyle(),
+              textCapitalization: TextCapitalization.words,
+              decoration: _glassInputDecoration(
+                hintText: 'Type colour name',
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        ] else if (presetSelected) ...[
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 2),
+            child: Text(
+              'Selected: $_selectedColorName',
+              style: GoogleFonts.montserrat(
+                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.75),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _sizeDropdown() {
+    final numbers = _sizesForRegion;
+    final sizeValue = _selectedSizeNumber != null &&
+            numbers.contains(_selectedSizeNumber)
+        ? _selectedSizeNumber
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 6),
+          child: Text(
+            'Size',
+            style: GoogleFonts.montserrat(
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              flex: 4,
+              child: _glassInputShell(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: _sizeRegion,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    dropdownColor: const Color(0xFF0D5B68),
+                    style: _inputTextStyle(),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.white,
+                    ),
+                    items: _sizeRegions
+                        .map(
+                          (r) => DropdownMenuItem<String>(
+                            value: r,
+                            child: Text(r),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _submitting
+                        ? null
+                        : (v) {
+                            if (v != null) _setSizeRegion(v);
+                          },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 6,
+              child: _glassInputShell(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: sizeValue,
+                    hint: Text(
+                      'Number',
+                      style: _inputTextStyle(color: Colors.white70),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    dropdownColor: const Color(0xFF0D5B68),
+                    style: _inputTextStyle(),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.white,
+                    ),
+                    items: numbers
+                        .map(
+                          (n) => DropdownMenuItem<String>(
+                            value: n,
+                            child: Text(n),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: _submitting
+                        ? null
+                        : (v) => setState(() => _selectedSizeNumber = v),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (sizeValue != null) ...[
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 2),
+            child: Text(
+              'Selected: $_sizeRegion $sizeValue',
+              style: GoogleFonts.montserrat(
+                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.75),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _uploadFootwearTopSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildActionButton(
+          label: 'Upload Footwear',
+          onPressed: _submitting ? null : _openUploadFootwear,
+          isBusy: _submitting,
+        ),
+        if (_imageFiles.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            '${_imageFiles.length}/$_maxFootwearPhotos photos added',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.montserrat(
+              color: Colors.white.withValues(alpha: 0.75),
+              fontSize: 12,
+            ),
+          ),
+        ],
       ],
     );
   }
