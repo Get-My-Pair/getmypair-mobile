@@ -15,6 +15,7 @@ class UpdateArticle {
     String? condition,
     List<Map<String, dynamic>>? materials,
     List<String>? imageUrls,
+    String? shoeSize,
   }) {
     return repository.updateArticle(accessToken, articleId,
       brand: brand,
@@ -25,6 +26,7 @@ class UpdateArticle {
       condition: condition,
       materials: materials,
       imageUrls: imageUrls,
+      shoeSize: shoeSize,
     );
   }
 }

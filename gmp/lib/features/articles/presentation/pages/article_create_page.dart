@@ -314,7 +314,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                     const SizedBox(width: 7),
                     Expanded(
                       child: Text(
-                        'Add New Footwear',
+                        'Add footwear content',
                         style: GoogleFonts.boldonse(
                           color: Colors.white,
                           fontSize: 24,

@@ -34,6 +34,7 @@ abstract class ArticleRemoteDataSource {
     String? condition,
     List<Map<String, dynamic>>? materials,
     List<String>? imageUrls,
+    String? shoeSize,
   });
   Future<void> deleteArticle(String accessToken, String articleId);
 }
@@ -232,6 +233,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
     String? condition,
     List<Map<String, dynamic>>? materials,
     List<String>? imageUrls,
+    String? shoeSize,
   }) async {
     try {
       final body = <String, dynamic>{};
@@ -243,6 +245,9 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       if (condition != null) body['condition'] = condition;
       if (materials != null) body['materials'] = materials;
       if (imageUrls != null) body['images'] = imageUrls;
+      if (shoeSize != null && shoeSize.trim().isNotEmpty) {
+        body['shoeSize'] = shoeSize.trim();
+      }
       final response = await http
           .put(
             Uri.parse(ApiEndpoints.articleUpdate(articleId)),
