@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
-import 'package:gmp/features/articles/data/footwear_background_remover.dart';
 import 'package:gmp/features/articles/data/footwear_image_validator.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
@@ -43,7 +42,6 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   String? _cameraError;
   bool _capturing = false;
   bool _validatingImage = false;
-  bool _isImageProcessing = false;
   String _processingLabel = 'Checking footwear…';
 
   late List<File> _images;
@@ -70,8 +68,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // ONNX / ML work can briefly pause the app — do not tear down mid-process.
-    if (_isImageProcessing) return;
+    if (_validatingImage) return;
 
     final controller = _cameraController;
     if (controller == null || !controller.value.isInitialized) {
@@ -92,18 +89,6 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     } else if (state == AppLifecycleState.resumed) {
       _initCamera();
     }
-  }
-
-  /// Free camera memory before heavy ONNX background removal.
-  Future<void> _releaseCameraForProcessing() async {
-    _disposeCamera();
-    if (mounted) {
-      setState(() {
-        _cameraInitializing = false;
-        _cameraError = null;
-      });
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 120));
   }
 
   int get _remaining => _maxPhotos - _images.length;
@@ -311,14 +296,6 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   Future<void> _processNewImage(File file) async {
     if (!mounted) return;
 
-    _isImageProcessing = true;
-    await _releaseCameraForProcessing();
-
-    if (!mounted) {
-      _isImageProcessing = false;
-      return;
-    }
-
     setState(() {
       _validatingImage = true;
       _processingLabel = 'Checking footwear…';
@@ -344,34 +321,13 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         return;
       }
 
-      if (mounted) {
-        setState(() => _processingLabel = 'Removing background…');
-      }
-
-      var processed = file;
-      final cutout = await FootwearBackgroundRemover.removeBackground(file);
-      if (cutout != null) processed = cutout;
-
-      if (!mounted) return;
-      await _reviewCapture(
-        processed,
-        backgroundRemoved: processed.path != file.path,
-      );
+      await _reviewCapture(file);
     } finally {
-      _isImageProcessing = false;
-      if (mounted) {
-        setState(() => _validatingImage = false);
-        if (_remaining > 0 && _cameraController == null) {
-          _initCamera();
-        }
-      }
+      if (mounted) setState(() => _validatingImage = false);
     }
   }
 
-  Future<void> _reviewCapture(
-    File file, {
-    bool backgroundRemoved = false,
-  }) async {
+  Future<void> _reviewCapture(File file) async {
     final action = await showModalBottomSheet<_CaptureReviewAction>(
       context: context,
       backgroundColor: const Color(0xFF0D5B68),
@@ -395,18 +351,6 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
                 ),
                 const SizedBox(height: 12),
                 FootwearCutoutPreview(file: file, height: 180),
-                if (backgroundRemoved) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Background removed — only your footwear is shown.',
-                    style: GoogleFonts.montserrat(
-                      color: const Color(0xFF09DFFF),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
                 const SizedBox(height: 16),
                 Text(
                   'Does this show a clear side profile?',
