@@ -242,7 +242,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           for (int i = 0; i < _imageFiles.length; i++) {
             if (!mounted) return;
             final bytes = await _imageFiles[i].readAsBytes();
-            final name = 'shoe_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+            final path = _imageFiles[i].path.toLowerCase();
+            final ext = path.endsWith('.png') ? 'png' : 'jpg';
+            final name =
+                'shoe_${DateTime.now().millisecondsSinceEpoch}_$i.$ext';
             await sl<UploadArticleImage>().call(token,
               articleId: article.id,
               imageBytes: bytes,

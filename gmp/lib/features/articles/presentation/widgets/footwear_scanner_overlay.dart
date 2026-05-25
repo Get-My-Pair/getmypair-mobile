@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_angle_overlay.dart';
 
 /// Scanner-style overlay for footwear camera: corners, dashed frame, shoe guide, scan line.
 class FootwearScannerOverlay extends StatefulWidget {
@@ -43,31 +43,36 @@ class _FootwearScannerOverlayState extends State<FootwearScannerOverlay>
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
+        final guideW = w * 0.78;
+        final guideH = h * 0.68;
 
-        return AnimatedBuilder(
-          animation: _scanController,
-          builder: (context, child) {
-            return CustomPaint(
-              size: Size(w, h),
-              painter: _FootwearScannerPainter(
-                scanProgress: widget.showScanLine ? _scanController.value : 0,
-                borderColor: widget.borderColor,
-                cornerColor: Colors.white,
-              ),
-              child: child,
-            );
-          },
-          child: Center(
-            child: SvgPicture.asset(
-              'assets/images/icons/shoe.svg',
-              width: w * 0.72,
-              height: h * 0.55,
-              colorFilter: ColorFilter.mode(
-                Colors.white.withValues(alpha: widget.shoeGuideOpacity),
-                BlendMode.srcIn,
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            AnimatedBuilder(
+              animation: _scanController,
+              builder: (context, _) {
+                return CustomPaint(
+                  size: Size(w, h),
+                  painter: _FootwearScannerPainter(
+                    scanProgress:
+                        widget.showScanLine ? _scanController.value : 0,
+                    borderColor: widget.borderColor,
+                    cornerColor: Colors.white,
+                  ),
+                );
+              },
+            ),
+            Center(
+              child: FootwearSideProfileGuide(
+                width: guideW,
+                height: guideH,
+                opacity: widget.shoeGuideOpacity,
+                outlineOnly: true,
+                guideColor: widget.borderColor,
               ),
             ),
-          ),
+          ],
         );
       },
     );

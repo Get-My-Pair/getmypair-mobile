@@ -295,6 +295,9 @@ class _FootwearCameraCapturePageState extends State<FootwearCameraCapturePage> {
               angleLabel: _acceptedCount >= _maxCaptures
                   ? 'Maximum photos captured'
                   : 'Photo ${_activeSlotIndex + 1} — align side profile in frame',
+              lightLineGuide: true,
+              shoeGuideOpacity: 0.9,
+              showShoeGuide: true,
             ),
             SafeArea(
               child: Column(

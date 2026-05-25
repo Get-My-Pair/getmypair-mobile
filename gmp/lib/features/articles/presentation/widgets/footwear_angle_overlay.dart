@@ -160,7 +160,71 @@ class _DashedRectPainter extends CustomPainter {
       oldDelegate.dashGap != dashGap;
 }
 
-/// Side-profile shoe guide for camera overlay.
+/// Side-profile shoe drawing for live camera preview alignment.
+class FootwearSideProfileGuide extends StatelessWidget {
+  const FootwearSideProfileGuide({
+    super.key,
+    required this.width,
+    required this.height,
+    this.opacity = 0.85,
+    this.outlineOnly = false,
+    this.guideColor = const Color(0xFF09DFFF),
+  });
+
+  final double width;
+  final double height;
+  final double opacity;
+  final bool outlineOnly;
+  final Color guideColor;
+
+  static const String _sideProfileAsset =
+      'assets/images/noun-shoes-cleaning-7675732 1.svg';
+
+  @override
+  Widget build(BuildContext context) {
+    final lineColor = guideColor.withValues(alpha: opacity);
+
+    if (outlineOnly) {
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: Size(width, height),
+            painter: _DashedShoeOutlinePainter(
+              color: lineColor,
+              strokeWidth: 2,
+              dashWidth: 8,
+              dashGap: 5,
+            ),
+          ),
+          Opacity(
+            opacity: opacity * 0.35,
+            child: SvgPicture.asset(
+              _sideProfileAsset,
+              width: width * 0.92,
+              height: height * 0.92,
+              fit: BoxFit.contain,
+              colorFilter: ColorFilter.mode(
+                Colors.white.withValues(alpha: 0.5),
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return SvgPicture.asset(
+      _sideProfileAsset,
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
+      colorFilter: ColorFilter.mode(lineColor, BlendMode.srcIn),
+    );
+  }
+}
+
+/// Side-profile shoe guide for camera overlay (legacy alias).
 class _LightShoeGuide extends StatelessWidget {
   const _LightShoeGuide({
     required this.width,
@@ -176,25 +240,11 @@ class _LightShoeGuide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lineColor = Colors.white.withValues(alpha: opacity);
-
-    if (outlineOnly) {
-      return CustomPaint(
-        size: Size(width, height),
-        painter: _DashedShoeOutlinePainter(
-          color: lineColor,
-          strokeWidth: 1.5,
-          dashWidth: 7,
-          dashGap: 5,
-        ),
-      );
-    }
-
-    return SvgPicture.asset(
-      'assets/images/icons/shoe.svg',
+    return FootwearSideProfileGuide(
       width: width,
       height: height,
-      colorFilter: ColorFilter.mode(lineColor, BlendMode.srcIn),
+      opacity: opacity,
+      outlineOnly: outlineOnly,
     );
   }
 }

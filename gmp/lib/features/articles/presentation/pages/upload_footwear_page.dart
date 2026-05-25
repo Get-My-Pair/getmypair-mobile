@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/features/articles/data/footwear_background_remover.dart';
 import 'package:gmp/features/articles/data/footwear_image_validator.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
@@ -321,7 +322,31 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         return;
       }
 
-      await _reviewCapture(file);
+      File imageForReview = file;
+      if (FootwearBackgroundRemover.isConfigured) {
+        if (mounted) {
+          setState(() => _processingLabel = 'Removing background…');
+        }
+        try {
+          imageForReview = await FootwearBackgroundRemover.removeBackground(file);
+        } on FootwearBackgroundRemoverException catch (e) {
+          if (!mounted) return;
+          await _showMessageDialog(
+            title: 'Background removal failed',
+            message: e.message,
+          );
+          return;
+        } catch (e) {
+          if (!mounted) return;
+          await _showMessageDialog(
+            title: 'Background removal failed',
+            message: e.toString().replaceFirst('Exception: ', ''),
+          );
+          return;
+        }
+      }
+
+      await _reviewCapture(imageForReview);
     } finally {
       if (mounted) setState(() => _validatingImage = false);
     }
@@ -598,7 +623,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
 
   /// Horizontal rectangle camera frame (Figma) + live preview with centered shoe guide.
   Widget _cameraFrameArea(double contentWidth) {
-    const guideOpacity = 0.72;
+    const guideOpacity = 0.88;
 
     final frameW = contentWidth * 0.88;
     // Figma landscape frame: width 88%, height ~55% of width (not square).
