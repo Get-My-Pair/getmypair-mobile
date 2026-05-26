@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
@@ -11,6 +9,7 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../utils/service_flow_layout.dart';
 import 'donate_my_pair_flow.dart';
 import 'service_selection_page.dart';
 
@@ -251,12 +250,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final navH = dashboardLinkedBottomNavStackHeight(context);
-    final maxH = constraints!.maxHeight.isFinite
-        ? constraints.maxHeight
-        : MediaQuery.sizeOf(context).height;
-    final layoutScale = math
-        .min(uiScale, ((maxH - navH) / 640).clamp(0.55, 1.0))
-        .toDouble();
+    final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
     final fs = (16 * layoutScale).clamp(12.0, 16.0);
     final titleFs = (24 * layoutScale).clamp(17.0, 24.0);
     final pillH = (48 * layoutScale).clamp(40.0, 52.0);

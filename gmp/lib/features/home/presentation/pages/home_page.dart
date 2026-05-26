@@ -89,8 +89,7 @@ const String _kRehomeMyPairIconAsset =
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 
-/// Vertical gaps inside the hero (name → location → search → stats → bottom).
-const double _kHomeHeaderGreetingToLocation = 14;
+/// Vertical gaps inside the hero (location → search → stats → bottom).
 const double _kHomeHeaderSearchToStats = 30;
 const double _kHomeHeaderStatsToBottom = 14;
 
@@ -1279,12 +1278,6 @@ class _HomeTopCard extends StatelessWidget {
                           },
                         ),
                       ],
-                    ),
-                    SizedBox(
-                      height: (_kHomeHeaderGreetingToLocation * s).clamp(
-                        10.0,
-                        18.0,
-                      ),
                     ),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,

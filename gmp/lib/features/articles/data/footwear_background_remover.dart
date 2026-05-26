@@ -40,6 +40,9 @@ class FootwearBackgroundRemover {
     request.fields['size'] = 'auto';
     request.fields['format'] = 'png';
     request.fields['type'] = 'product';
+    // Tight crop so previews/uploads show the shoe large, not a tiny subject in a huge canvas.
+    request.fields['crop'] = 'true';
+    request.fields['crop_margin'] = '8%';
 
     final lower = source.path.toLowerCase();
     final mime = lower.endsWith('.png')
