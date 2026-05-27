@@ -1704,8 +1704,6 @@ class _QuickActionCard extends StatelessWidget {
             vertical: (isTwoLine ? 18 : 8) * s,
           );
     const cardRadius = 12.0;
-    const borderWidth = AppColors.greyedButtonBorderWidth;
-    final innerRadius = cardRadius - borderWidth;
 
     final cardBody = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1748,15 +1746,17 @@ class _QuickActionCard extends StatelessWidget {
         child: grayed && !highlight
             ? Container(
                 height: resolvedHeight,
-                decoration: AppColors.greyedButtonOuterDecoration(cardRadius),
-                padding: const EdgeInsets.all(borderWidth),
-                child: Container(
-                  padding: padding,
-                  decoration:
-                      AppColors.greyedButtonInnerDecoration(innerRadius),
-                  alignment: Alignment.center,
-                  child: cardBody,
+                padding: padding,
+                decoration: BoxDecoration(
+                  color: AppColors.greyedButtonFill,
+                  borderRadius: BorderRadius.circular(cardRadius),
+                  border: Border.all(
+                    color: AppColors.greyedButtonLabel,
+                    width: 1,
+                  ),
                 ),
+                alignment: Alignment.center,
+                child: cardBody,
               )
             : Container(
                 height: resolvedHeight,

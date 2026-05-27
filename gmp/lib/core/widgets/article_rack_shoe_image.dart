@@ -11,6 +11,7 @@ class ArticleRackShoeImage extends StatelessWidget {
     this.width,
     this.height,
     this.fit = BoxFit.contain,
+    this.alignment = Alignment.center,
     this.borderRadius = const BorderRadius.all(Radius.circular(8)),
     this.placeholder,
     this.errorPlaceholder,
@@ -20,6 +21,7 @@ class ArticleRackShoeImage extends StatelessWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+  final Alignment alignment;
   final BorderRadius borderRadius;
   final Widget? placeholder;
   final Widget? errorPlaceholder;
@@ -35,7 +37,7 @@ class ArticleRackShoeImage extends StatelessWidget {
     Widget image = Image.network(
       imageUrl,
       fit: fit,
-      alignment: Alignment.center,
+      alignment: alignment,
       errorBuilder: (context, error, stackTrace) => errPh,
     );
 

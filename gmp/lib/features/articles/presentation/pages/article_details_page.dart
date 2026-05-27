@@ -339,8 +339,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         try {
           await sl<DeleteArticle>().call(token, _article!.id);
           if (!mounted) return;
+          final messenger = ScaffoldMessenger.of(context);
           Navigator.of(context).pop(true);
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Shoe removed'),
               backgroundColor: AppColors.success,
@@ -699,6 +700,29 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                           ),
                         ),
                       ),
+                      // Delete icon UI — hidden for now; _deleteArticle() still available.
+                      // IconButton(
+                      //   style: IconButton.styleFrom(
+                      //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      //     minimumSize: Size.zero,
+                      //     padding: EdgeInsets.zero,
+                      //     visualDensity: VisualDensity.compact,
+                      //   ),
+                      //   constraints: BoxConstraints.tightFor(
+                      //     width: math.max(30.0, 26 * scale),
+                      //     height: math.max(30.0, 26 * scale),
+                      //   ),
+                      //   onPressed: _deleteArticle,
+                      //   icon: SvgPicture.asset(
+                      //     'assets/images/icons/profile/trash-2.svg',
+                      //     width: (20 * scale).clamp(18.0, 22.0),
+                      //     height: (20 * scale).clamp(18.0, 22.0),
+                      //     colorFilter: const ColorFilter.mode(
+                      //       AppColors.error,
+                      //       BlendMode.srcIn,
+                      //     ),
+                      //   ),
+                      // ),
                       IconButton(
                         style: IconButton.styleFrom(
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,

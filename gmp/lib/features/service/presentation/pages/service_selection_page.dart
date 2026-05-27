@@ -776,7 +776,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -855,7 +855,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
+        (12 * layoutScale).clamp(10.0, 14.0),
         16,
         20,
         navH + 6,
@@ -863,51 +863,30 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: _submitting
-                    ? null
-                    : () {
-                        if (_repairStep > 0) {
-                          setState(() => _repairStep -= 1);
-                          return;
-                        }
-                        Navigator.pop(context);
-                      },
-                icon: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: const Color(0xFF062F35),
-                  size: (24 * layoutScale).clamp(18.0, 24.0),
-                ),
-                padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints.tightFor(width: 26, height: 26),
-              ),
-              SizedBox(width: 6 * layoutScale),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.boldonse(
-                    color: const Color(0xFF062F35),
-                    fontSize: titleFs,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            ],
+          _buildRepairFlowAppBar(
+            context,
+            title: title,
+            layoutScale: layoutScale,
+            titleFontSize: titleFs,
+            onBack: _submitting
+                ? null
+                : () {
+                    if (_repairStep > 0) {
+                      setState(() => _repairStep -= 1);
+                      return;
+                    }
+                    Navigator.pop(context);
+                  },
           ),
-          SizedBox(height: 10 * layoutScale),
           if (_repairStep == 0 && selectedArticles.isNotEmpty) ...[
+            SizedBox(height: 6 * layoutScale),
             _buildSelectedFootwearHeader(
               selectedArticles,
               layoutScale: layoutScale,
               fontSize: fs,
               iconSize: iconSz,
             ),
-            SizedBox(height: 10 * layoutScale),
+            SizedBox(height: 6 * layoutScale),
           ],
           if (_error != null)
             Padding(
@@ -922,18 +901,19 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
           if (_repairStep == 0) ...[
             Expanded(
-              child: SingleChildScrollView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                physics: const ClampingScrollPhysics(),
-                padding: EdgeInsets.only(
-                  bottom: keyboardInset + 8,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      _issuePrompt,
+              child: ClipRect(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const ClampingScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    bottom: keyboardInset + 8,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        _issuePrompt,
                       style: GoogleFonts.montserrat(
                         color: const Color(0xFF062F35),
                         fontSize: fs,
@@ -1268,9 +1248,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 ),
               ),
             ),
+            ),
           ] else
             Expanded(
-              child: SingleChildScrollView(
+              child: ClipRect(
+                child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
                 child: Padding(
                   padding: EdgeInsets.only(bottom: 8 * layoutScale),
@@ -1590,8 +1572,48 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 ),
               ),
             ),
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRepairFlowAppBar(
+    BuildContext context, {
+    required String title,
+    required double layoutScale,
+    required double titleFontSize,
+    required VoidCallback? onBack,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: onBack,
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: const Color(0xFF062F35),
+            size: (24 * layoutScale).clamp(18.0, 24.0),
+          ),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          alignment: Alignment.centerLeft,
+          constraints: const BoxConstraints.tightFor(width: 24, height: 26),
+        ),
+        SizedBox(width: 4 * layoutScale),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFF062F35),
+              fontSize: titleFontSize,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1604,13 +1626,19 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     if (articles.length == 1) {
       final article = articles.first;
       final name = article.name.trim();
-      if (name.isEmpty) return const SizedBox.shrink();
+      final subtitle = article.subtitle?.trim() ?? '';
+      if (name.isEmpty && subtitle.isEmpty && article.imageUrl.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      final imgW = (140 * layoutScale).clamp(118.0, 168.0);
+      final imgH = (96 * layoutScale).clamp(80.0, 112.0);
+      final subtitleFs = (fontSize * 0.88).clamp(11.0, 14.0);
+
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
+          if (name.isNotEmpty)
+            Text(
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1618,46 +1646,53 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 color: const Color(0xFF11899B),
                 fontSize: fontSize,
                 fontWeight: FontWeight.w400,
+                height: 1.05,
               ),
             ),
-          ),
-          SizedBox(height: 4 * layoutScale),
-          LayoutBuilder(
-            builder: (context, ac) {
-              final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
-              final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
-              return Center(
-                child: SizedBox(
-                  width: imgW,
-                  height: imgH,
-                  child: Center(
-                    child: article.imageUrl.isEmpty
-                        ? Icon(
-                            Icons.checkroom_outlined,
-                            color: const Color(0xFF8D8D8D),
-                            size: iconSize,
-                          )
-                        : ArticleRackShoeImage(
-                            imageUrl: article.imageUrl,
-                            width: imgW,
-                            height: imgH,
-                            fit: BoxFit.contain,
-                            placeholder: Icon(
-                              Icons.checkroom_outlined,
-                              color: const Color(0xFF8D8D8D),
-                              size: iconSize,
-                            ),
-                            errorPlaceholder: Icon(
-                              Icons.checkroom_outlined,
-                              color: const Color(0xFF8D8D8D),
-                              size: iconSize,
-                            ),
-                          ),
+          if (subtitle.isNotEmpty)
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.montserrat(
+                color: const Color(0xFF062F35),
+                fontSize: subtitleFs,
+                fontWeight: FontWeight.w400,
+                height: 1.15,
+              ),
+            ),
+          if (article.imageUrl.isNotEmpty)
+            SizedBox(
+              width: double.infinity,
+              child: Transform.translate(
+                offset: Offset(0, -(10 * layoutScale).clamp(6.0, 14.0)),
+                child: Center(
+                  child: SizedBox(
+                    width: imgW,
+                    height: imgH,
+                    child: ClipRect(
+                      child: ArticleRackShoeImage(
+                        imageUrl: article.imageUrl,
+                        width: imgW,
+                        height: imgH,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
+                        placeholder: Icon(
+                          Icons.checkroom_outlined,
+                          color: const Color(0xFF8D8D8D),
+                          size: iconSize,
+                        ),
+                        errorPlaceholder: Icon(
+                          Icons.checkroom_outlined,
+                          color: const Color(0xFF8D8D8D),
+                          size: iconSize,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
         ],
       );
     }

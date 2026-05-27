@@ -122,11 +122,20 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     return _articles
         .where((a) => _selectedArticleIds.contains(a.id))
         .map(
-          (a) => ServiceFlowArticle(
-            id: a.id,
-            name: _displayName(a),
-            imageUrl: _imageUrl(a.rackHeroImagePath),
-          ),
+          (a) {
+            final brand = a.brand.trim();
+            final model = a.model.trim();
+            return ServiceFlowArticle(
+              id: a.id,
+              name: brand.isNotEmpty
+                  ? brand
+                  : model.isNotEmpty
+                      ? model
+                      : _displayName(a),
+              subtitle: brand.isNotEmpty && model.isNotEmpty ? model : null,
+              imageUrl: _imageUrl(a.rackHeroImagePath),
+            );
+          },
         )
         .toList();
   }
