@@ -72,10 +72,8 @@ const Color _kRackCardBg = Color(0xFFE6E6E6);
 const Color _kRackMutedText = Color(0xFF4E7F8A);
 const Color _kSearchHintColor = Color(0xFF5C6E73);
 const Color _kHeaderIconTint = Color(0xFFFFFFFF);
-const String _kNotificationBellBodySvgAsset =
-    'assets/images/allicons/notification1.svg';
-const String _kNotificationBellClapperSvgAsset =
-    'assets/images/allicons/notification2.svg';
+const String _kNotificationBellSvgAsset =
+    'assets/images/allicons/bell icon.svg';
 const String _kHomeMapPinSvgAsset = 'assets/images/allicons/map-pin.svg';
 const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
@@ -87,6 +85,10 @@ const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 /// Vertical gaps inside the hero (location → search → stats → bottom).
 const double _kHomeHeaderSearchToStats = 30;
 const double _kHomeHeaderStatsToBottom = 14;
+/// Bottom corner radius on the hero card.
+const double _kHomeHeaderBottomRadius = 20;
+/// Visible gap between the hero bottom curve and the My Rack card.
+const double _kHomeHeaderToRackGap = 14;
 
 /// Tile height for quick actions (reference @ 390px width).
 const double _kQuickActionCellHeight = 78;
@@ -522,10 +524,9 @@ class _HomePageState extends State<HomePage> {
                                   child: LayoutBuilder(
                                     builder: (context, bodyConstraints) {
                                       final bodyH = bodyConstraints.maxHeight;
-                                      final baseTopGap = (bodyH * 0.048).clamp(
-                                        14.0,
-                                        28.0,
-                                      );
+                                      final headerToRackGap =
+                                          (_kHomeHeaderToRackGap * layoutScale)
+                                              .clamp(10.0, 18.0);
                                       final rackCardTopPaddingLoose =
                                           (64 * layoutScale).clamp(16.0, 26.0);
                                       final rackCardBottomPadding =
@@ -561,14 +562,12 @@ class _HomePageState extends State<HomePage> {
                                         56.0,
                                         96.0,
                                       );
-                                      // Keep original top spacing for the rack section.
-                                      final topGap = baseTopGap.toDouble();
                                       final rackClipRadius = _rackCardClipRadius();
                                       return Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
-                                          SizedBox(height: topGap),
+                                          SizedBox(height: headerToRackGap),
                                           SizedBox(
                                             height: rackHeight,
                                             child: ClipRRect(
@@ -927,13 +926,11 @@ class _HomeHeaderBell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = _homeHeaderChromeScale(context);
-    final bellSize = (24.0 * s).clamp(22.0, 28.0);
-    final bellPadH = (4.5 * s).clamp(3.5, 6.0);
-    final bellPadV = (4.5 * s).clamp(3.5, 6.0);
-    final bellBodyW = (10.5 * s).clamp(8.5, 12.0);
-    final bellBodyH = (9.0 * s).clamp(7.0, 10.5);
-    final bellClapperW = (3.5 * s).clamp(2.8, 4.2);
-    final bellClapperH = (2.1 * s).clamp(1.7, 2.5);
+    final bellSize = (32.0 * s).clamp(28.0, 38.0);
+    final bellPadH = (4.0 * s).clamp(3.0, 5.5);
+    final bellPadV = (4.0 * s).clamp(3.0, 5.5);
+    final bellIconW = (18.0 * s).clamp(16.0, 22.0);
+    final bellIconH = bellIconW * (16 / 14);
 
     // Glass chrome — scaled from header scale [s] so blur, rim, and lift stay proportional.
     final blurSigma = (14.0 * s).clamp(11.0, 18.0);
@@ -1074,35 +1071,21 @@ class _HomeHeaderBell extends StatelessWidget {
                       child: const SizedBox.expand(),
                     ),
                   ),
-                  // 7) Bell — layout and SVGs unchanged.
+                  // 7) Bell icon.
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: bellPadH,
                       vertical: bellPadV,
                     ),
                     child: Center(
-                      child: SizedBox(
-                        width: bellBodyW,
-                        height: bellBodyH + bellClapperH + (2.0 * s),
-                        child: Stack(
-                          alignment: Alignment.topCenter,
-                          children: [
-                            SvgPicture.asset(
-                              _kNotificationBellBodySvgAsset,
-                              width: bellBodyW,
-                              height: bellBodyH,
-                              fit: BoxFit.contain,
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              child: SvgPicture.asset(
-                                _kNotificationBellClapperSvgAsset,
-                                width: bellClapperW,
-                                height: bellClapperH,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ],
+                      child: SvgPicture.asset(
+                        _kNotificationBellSvgAsset,
+                        width: bellIconW,
+                        height: bellIconH,
+                        fit: BoxFit.contain,
+                        colorFilter: const ColorFilter.mode(
+                          _kHeaderIconTint,
+                          BlendMode.srcIn,
                         ),
                       ),
                     ),
@@ -1214,55 +1197,55 @@ class _HomeTopCard extends StatelessWidget {
     final bottomPad = (26 * layoutScale).clamp(16.0, 32.0);
     final searchBarH = _homeSearchBarHeight(context, s);
     const headerRadius = BorderRadius.only(
-      bottomLeft: Radius.circular(20),
-      bottomRight: Radius.circular(20),
+      bottomLeft: Radius.circular(_kHomeHeaderBottomRadius),
+      bottomRight: Radius.circular(_kHomeHeaderBottomRadius),
     );
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        borderRadius: headerRadius,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 5,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 16,
-            offset: Offset(0, 7),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: headerRadius,
-        // Hard clip avoids sub-pixel anti-alias seams on side edges.
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            Positioned(
-              top: -imageBleed,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Transform.scale(
-                // Crop transparent side pixels from the header asset.
-                scaleX: headerScaleX,
-                // Slight vertical overscan hides 1px seams on some DPR/width combos.
-                scaleY: 1.04,
-                alignment: Alignment.center,
-                child: Image.asset(
-                  _kHomeHeaderBgAsset,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                  errorBuilder: (_, _, _) => Image.asset(
-                    'assets/images/bg.png',
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                  ),
+    return Material(
+      color: Colors.transparent,
+      elevation: 1,
+      shadowColor: const Color(0x08000000),
+      borderRadius: headerRadius,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: headerRadius,
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.footwearHeroMid,
+                    AppColors.footwearHeroStart,
+                  ],
                 ),
               ),
             ),
+          ),
+          Positioned(
+            top: -imageBleed,
+            left: 0,
+            right: 0,
+            bottom: -imageBleed,
+            child: Transform.scale(
+              // Crop transparent side pixels from the header asset.
+              scaleX: headerScaleX,
+              scaleY: 1.02,
+              alignment: Alignment.topCenter,
+              child: Image.asset(
+                _kHomeHeaderBgAsset,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, _, _) => Image.asset(
+                  'assets/images/bg.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ),
             Padding(
               padding: EdgeInsets.fromLTRB(0, topPad, 0, bottomPad),
               child: Padding(

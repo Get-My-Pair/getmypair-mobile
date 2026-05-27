@@ -20,6 +20,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../utils/service_flow_article.dart';
 import '../utils/service_flow_layout.dart';
+import '../widgets/service_flow_pickup_pill.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
 
@@ -98,6 +99,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   MaintenancePlanData? _selectedMaintenancePlan;
   int _repairStep = 0;
   bool _homePickup = true;
+  bool _pickupModeChosen = false;
+  bool _showRepairStep0FieldErrors = true;
+  final FocusNode _problemFocusNode = FocusNode();
   int _selectedPickupDay = 0;
   int _selectedPickupSlot = -1;
   /// When user picks a place on the map for [cobbler_nearby], shown on the summary.
@@ -231,39 +235,82 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
   bool get _isSingleServiceFlow => _visibleOptions.length == 1;
 
+  bool get _repairStep0ProblemValid =>
+      _problemController.text.trim().isNotEmpty;
+
+  bool get _repairStep0PhotosValid => _proofImages.isNotEmpty;
+
+  bool get _repairStep0PickupValid => _pickupModeChosen;
+
+  bool get _repairStep0Complete =>
+      _repairStep0ProblemValid &&
+      _repairStep0PhotosValid &&
+      _repairStep0PickupValid;
+
   @override
   void initState() {
     super.initState();
     if (_isSingleServiceFlow) {
       _selectedService = _visibleOptions.first;
     }
+    _problemController.addListener(_onRepairStep0FieldsChanged);
+    _problemFocusNode.addListener(_onProblemFocusChanged);
     _load();
+  }
+
+  void _onRepairStep0FieldsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onProblemFocusChanged() {
+    if (_problemFocusNode.hasFocus || !mounted) return;
+    if (_problemController.text.trim().isEmpty) {
+      setState(() => _showRepairStep0FieldErrors = true);
+    }
   }
 
   @override
   void dispose() {
+    _problemController.removeListener(_onRepairStep0FieldsChanged);
+    _problemFocusNode.removeListener(_onProblemFocusChanged);
+    _problemFocusNode.dispose();
     _problemController.dispose();
     super.dispose();
   }
 
   Future<bool> _validateRepairStep0() async {
-    if (_problemController.text.trim().isEmpty) {
-      await showAppFeedbackAlert(
-        context,
-        message: _issuePrompt,
-        type: AppFeedbackType.warning,
-      );
-      return false;
-    }
-    if (_proofImages.isEmpty) {
-      await showAppFeedbackAlert(
-        context,
-        message: 'Please upload at least one photo',
-        type: AppFeedbackType.warning,
-      );
+    if (!_repairStep0Complete) {
+      setState(() => _showRepairStep0FieldErrors = true);
       return false;
     }
     return true;
+  }
+
+  Widget _repairStep0InlineError(String message, double layoutScale) {
+    return Padding(
+      padding: EdgeInsets.only(top: 4 * layoutScale),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: (16 * layoutScale).clamp(14.0, 18.0),
+            color: const Color(0xFFB00020),
+          ),
+          SizedBox(width: 4 * layoutScale),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.montserrat(
+                color: const Color(0xFFB00020),
+                fontSize: (12 * layoutScale).clamp(10.0, 13.0),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<bool> _validateRepairStep1() async {
@@ -342,7 +389,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     if (_proofImages.length >= kMaxProofImages) return;
     try {
       final list = await _picker.pickMultiImage(imageQuality: 85);
-      if (list.isEmpty || !mounted) return;
+      if (!mounted) return;
+      if (list.isEmpty) {
+        setState(() => _showRepairStep0FieldErrors = true);
+        return;
+      }
       setState(() {
         for (final f in list) {
           if (_proofImages.length >= kMaxProofImages) break;
@@ -354,8 +405,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         source: ImageSource.gallery,
         imageQuality: 85,
       );
-      if (single != null && mounted && _proofImages.length < kMaxProofImages) {
+      if (!mounted) return;
+      if (single != null && _proofImages.length < kMaxProofImages) {
         setState(() => _proofImages.add(single));
+      } else if (single == null) {
+        setState(() => _showRepairStep0FieldErrors = true);
       }
     }
   }
@@ -381,12 +435,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       source: ImageSource.camera,
       imageQuality: 85,
     );
-    if (photo != null && mounted) {
+    if (!mounted) return;
+    if (photo != null) {
       setState(() {
         if (_proofImages.length < kMaxProofImages) {
           _proofImages.add(photo);
         }
       });
+    } else {
+      setState(() => _showRepairStep0FieldErrors = true);
     }
   }
 
@@ -432,7 +489,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
   void _selectPickupMode(bool homePickup) {
     if (_submitting || !mounted) return;
-    setState(() => _homePickup = homePickup);
+    setState(() {
+      _homePickup = homePickup;
+      _pickupModeChosen = true;
+    });
   }
 
   Future<void> _onRepairStepZeroNext() async {
@@ -883,6 +943,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                     SizedBox(height: 4 * layoutScale),
                     TextField(
                       controller: _problemController,
+                      focusNode: _problemFocusNode,
                       keyboardType: TextInputType.multiline,
                       minLines: 4,
                       maxLines: 8,
@@ -928,6 +989,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         ),
                       ),
                     ),
+                    if (_showRepairStep0FieldErrors && !_repairStep0ProblemValid)
+                      _repairStep0InlineError(
+                        'Please fill out this field.',
+                        layoutScale,
+                      ),
                     SizedBox(height: 8 * layoutScale),
                     Text(
                       _uploadPrompt,
@@ -994,6 +1060,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         ),
                       ),
                     ),
+                    if (_showRepairStep0FieldErrors && !_repairStep0PhotosValid)
+                      _repairStep0InlineError(
+                        'Please upload images.',
+                        layoutScale,
+                      ),
                     if (_proofImages.isNotEmpty) ...[
                       SizedBox(height: 8 * layoutScale),
                       Align(
@@ -1097,9 +1168,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                       child: Row(
                         children: [
                           Expanded(
-                            child: _repairPickupPill(
+                            child: ServiceFlowPickupPill(
                               label: 'Home Pickup',
-                              selected: _homePickup,
+                              selected:
+                                  _pickupModeChosen && _homePickup,
                               height: pillH,
                               fontSize: pillFs,
                               onTap: () => _selectPickupMode(true),
@@ -1107,9 +1179,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                           ),
                           SizedBox(width: 12 * layoutScale),
                           Expanded(
-                            child: _repairPickupPill(
+                            child: ServiceFlowPickupPill(
                               label: 'Cobblers Nearby',
-                              selected: !_homePickup,
+                              selected:
+                                  _pickupModeChosen && !_homePickup,
                               height: pillH,
                               fontSize: pillFs,
                               onTap: () => _selectPickupMode(false),
@@ -1118,72 +1191,79 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 10 * layoutScale),
-                    Center(
-                      child: SizedBox(
-                        width: (164 * layoutScale).clamp(132.0, 180.0),
-                        height: pillH,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.centerRight,
-                              end: Alignment.centerLeft,
-                              colors: [
-                                Color(0xFF0CADC5),
-                                Color(0xFF063239),
+                    if (_showRepairStep0FieldErrors && !_repairStep0PickupValid)
+                      _repairStep0InlineError(
+                        'Please choose an option.',
+                        layoutScale,
+                      ),
+                    if (_repairStep0Complete) ...[
+                      SizedBox(height: 10 * layoutScale),
+                      Center(
+                        child: SizedBox(
+                          width: (164 * layoutScale).clamp(132.0, 180.0),
+                          height: pillH,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.centerRight,
+                                end: Alignment.centerLeft,
+                                colors: [
+                                  Color(0xFF0CADC5),
+                                  Color(0xFF063239),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(100),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x19000000),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 4),
+                                ),
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(100),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x19000000),
-                                blurRadius: 4,
-                                offset: Offset(0, 4),
+                            child: TextButton(
+                              onPressed:
+                                  _submitting ? null : _onRepairStepZeroNext,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
                               ),
-                            ],
-                          ),
-                          child: TextButton(
-                            onPressed:
-                                _submitting ? null : _onRepairStepZeroNext,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(100),
-                              ),
-                            ),
-                            child: _submitting
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Next',
-                                        style: GoogleFonts.boldonse(
-                                          color: Colors.white,
-                                          fontSize: fs,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                      SizedBox(width: 20 * layoutScale),
-                                      Icon(
-                                        Icons.arrow_forward_ios_rounded,
+                              child: _submitting
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
                                         color: Colors.white,
-                                        size: (16 * layoutScale)
-                                            .clamp(13.0, 16.0),
+                                        strokeWidth: 2,
                                       ),
-                                    ],
-                                  ),
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Next',
+                                          style: GoogleFonts.boldonse(
+                                            color: Colors.white,
+                                            fontSize: fs,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                        SizedBox(width: 20 * layoutScale),
+                                        Icon(
+                                          Icons.arrow_forward_ios_rounded,
+                                          color: Colors.white,
+                                          size: (16 * layoutScale)
+                                              .clamp(13.0, 16.0),
+                                        ),
+                                      ],
+                                    ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -1656,54 +1736,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     );
   }
 
-  Widget _repairPickupPill({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-    double height = 48,
-    double fontSize = 14,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(100),
-      child: Container(
-        height: height,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-                )
-              : null,
-          color: selected ? null : const Color(0xFFDFE7E9),
-          borderRadius: BorderRadius.circular(100),
-          border: Border.all(
-            width: 1,
-            color: selected ? Colors.transparent : const Color(0xFF0F6876),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 4,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.boldonse(
-            color: selected ? Colors.white : const Color(0xFF062F35),
-            fontSize: fontSize,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildRepairFlowBody(double horizontal) {
     return ListView(
       padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
@@ -1944,35 +1976,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     required bool selected,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return ServiceFlowPickupPill(
+      label: label,
+      selected: selected,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-                )
-              : null,
-          color: selected ? null : AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? Colors.transparent : AppColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-            fontSize: 12.5,
-          ),
-        ),
-      ),
+      height: 38,
+      fontSize: 12.5,
     );
   }
 

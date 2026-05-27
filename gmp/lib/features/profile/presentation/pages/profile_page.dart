@@ -369,118 +369,132 @@ class _ProfilePageState extends State<ProfilePage> {
                                       16.0,
                                     ),
                                   ),
-                                  _MenuSection(
-                                    scale: layoutScale,
-                                    children: [
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/familyprofile.svg',
-                                        title: 'Family Profile',
-                                        scale: layoutScale,
-                                        onTap: () => _openFamilyProfile(
-                                          context,
-                                          profile,
-                                          token,
-                                        ),
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      physics: const ClampingScrollPhysics(),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _MenuSection(
+                                            scale: layoutScale,
+                                            children: [
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/familyprofile.svg',
+                                                title: 'Family Profile',
+                                                scale: layoutScale,
+                                                onTap: () => _openFamilyProfile(
+                                                  context,
+                                                  profile,
+                                                  token,
+                                                ),
+                                              ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/bell.svg',
+                                                title: 'Notifications',
+                                                scale: layoutScale,
+                                                onTap: () => showComingSoon(
+                                                  context,
+                                                  feature: 'Notifications',
+                                                ),
+                                              ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/location.svg',
+                                                title: 'Location',
+                                                scale: layoutScale,
+                                                onTap: () => _openSavedAddresses(
+                                                  context,
+                                                  profile,
+                                                  token,
+                                                ),
+                                              ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/payment.svg',
+                                                title: 'Payment',
+                                                scale: layoutScale,
+                                                onTap: () => showComingSoon(
+                                                  context,
+                                                  feature: 'Payment',
+                                                ),
+                                              ),
+                                              _GradientMenuTile(
+                                                icon: Icons
+                                                    .assignment_turned_in_outlined,
+                                                title: 'My Orders',
+                                                scale: layoutScale,
+                                                onTap: () =>
+                                                    _openServiceRequests(context),
+                                              ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/managedevice.svg',
+                                                title: 'Manage Devices',
+                                                scale: layoutScale,
+                                                onTap: () =>
+                                                    _openManageDevices(context),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(
+                                            height: (10 * layoutScale).clamp(
+                                              3.0,
+                                              10.0,
+                                            ),
+                                          ),
+                                          _MenuSection(
+                                            scale: layoutScale,
+                                            children: [
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/faq.svg',
+                                                title: 'FAQ',
+                                                scale: layoutScale,
+                                                onTap: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const FaqPage(),
+                                                  ),
+                                                ),
+                                              ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/termscondition.svg',
+                                                title: 'Terms & Conditions',
+                                                scale: layoutScale,
+                                                onTap: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const TermsOfServicePage(),
+                                                  ),
+                                                ),
+                                              ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/license.svg',
+                                                title: 'License',
+                                                scale: layoutScale,
+                                                onTap: () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const AppLicensePage(),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/bell.svg',
-                                        title: 'Notifications',
-                                        scale: layoutScale,
-                                        onTap: () => showComingSoon(
-                                          context,
-                                          feature: 'Notifications',
-                                        ),
-                                      ),
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/location.svg',
-                                        title: 'Location',
-                                        scale: layoutScale,
-                                        onTap: () => _openSavedAddresses(
-                                          context,
-                                          profile,
-                                          token,
-                                        ),
-                                      ),
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/payment.svg',
-                                        title: 'Payment',
-                                        scale: layoutScale,
-                                        onTap: () => showComingSoon(
-                                          context,
-                                          feature: 'Payment',
-                                        ),
-                                      ),
-                                      _GradientMenuTile(
-                                        icon: Icons.assignment_turned_in_outlined,
-                                        title: 'My Orders',
-                                        scale: layoutScale,
-                                        onTap: () => _openServiceRequests(context),
-                                      ),
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/managedevice.svg',
-                                        title: 'Manage Devices',
-                                        scale: layoutScale,
-                                        onTap: () => _openManageDevices(context),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(
-                                    height: (10 * layoutScale).clamp(
-                                      3.0,
-                                      10.0,
                                     ),
-                                  ),
-                                  _MenuSection(
-                                    scale: layoutScale,
-                                    children: [
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/faq.svg',
-                                        title: 'FAQ',
-                                        scale: layoutScale,
-                                        onTap: () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => const FaqPage(),
-                                          ),
-                                        ),
-                                      ),
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/termscondition.svg',
-                                        title: 'Terms & Conditions',
-                                        scale: layoutScale,
-                                        onTap: () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                const TermsOfServicePage(),
-                                          ),
-                                        ),
-                                      ),
-                                      _GradientMenuTile(
-                                        iconAssetPath:
-                                            'assets/images/icons/profile/license.svg',
-                                        title: 'License',
-                                        scale: layoutScale,
-                                        onTap: () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => const AppLicensePage(),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                   SizedBox(
                                     height: (8 * layoutScale).clamp(4.0, 12.0),
                                   ),
-                                  const Spacer(),
                                   _MenuSection(
                                     scale: layoutScale,
                                     showDivider: false,

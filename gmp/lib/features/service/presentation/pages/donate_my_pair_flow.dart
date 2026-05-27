@@ -19,6 +19,7 @@ import 'package:intl/intl.dart';
 
 import '../utils/service_flow_article.dart';
 import '../utils/service_flow_layout.dart';
+import '../widgets/service_flow_pickup_pill.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
 import 'service_selection_page.dart';
@@ -69,40 +70,83 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
   Address? _selectedAddress;
 
   bool _homePickup = true;
+  bool _pickupModeChosen = false;
+  bool _showDonateDetailsFieldErrors = true;
+  final FocusNode _reasonFocusNode = FocusNode();
   final TextEditingController _reasonController = TextEditingController();
   final List<XFile> _proofImages = [];
   final ImagePicker _picker = ImagePicker();
 
+  bool get _donateReasonValid => _reasonController.text.trim().isNotEmpty;
+
+  bool get _donatePhotosValid => _proofImages.isNotEmpty;
+
+  bool get _donatePickupValid => _pickupModeChosen;
+
+  bool get _donateDetailsComplete =>
+      _donateReasonValid && _donatePhotosValid && _donatePickupValid;
+
   @override
   void initState() {
     super.initState();
+    _reasonController.addListener(_onDonateDetailsFieldsChanged);
+    _reasonFocusNode.addListener(_onReasonFocusChanged);
     _loadProfile();
+  }
+
+  void _onDonateDetailsFieldsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onReasonFocusChanged() {
+    if (_reasonFocusNode.hasFocus || !mounted) return;
+    if (_reasonController.text.trim().isEmpty) {
+      setState(() => _showDonateDetailsFieldErrors = true);
+    }
   }
 
   @override
   void dispose() {
+    _reasonController.removeListener(_onDonateDetailsFieldsChanged);
+    _reasonFocusNode.removeListener(_onReasonFocusChanged);
+    _reasonFocusNode.dispose();
     _reasonController.dispose();
     super.dispose();
   }
 
   Future<bool> _validateDonateDetails() async {
-    if (_reasonController.text.trim().isEmpty) {
-      await showAppFeedbackAlert(
-        context,
-        message: 'Please describe why you are donating',
-        type: AppFeedbackType.warning,
-      );
-      return false;
-    }
-    if (_proofImages.isEmpty) {
-      await showAppFeedbackAlert(
-        context,
-        message: 'Please upload at least one photo',
-        type: AppFeedbackType.warning,
-      );
+    if (!_donateDetailsComplete) {
+      setState(() => _showDonateDetailsFieldErrors = true);
       return false;
     }
     return true;
+  }
+
+  Widget _donateDetailsInlineError(String message, double layoutScale) {
+    return Padding(
+      padding: EdgeInsets.only(top: 4 * layoutScale),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: (16 * layoutScale).clamp(14.0, 18.0),
+            color: const Color(0xFFB00020),
+          ),
+          SizedBox(width: 4 * layoutScale),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.montserrat(
+                color: const Color(0xFFB00020),
+                fontSize: (12 * layoutScale).clamp(10.0, 13.0),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadProfile() async {
@@ -143,7 +187,11 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     if (_proofImages.length >= _kMaxDonatePhotos) return;
     try {
       final list = await _picker.pickMultiImage(imageQuality: 85);
-      if (list.isEmpty || !mounted) return;
+      if (!mounted) return;
+      if (list.isEmpty) {
+        setState(() => _showDonateDetailsFieldErrors = true);
+        return;
+      }
       setState(() {
         for (final f in list) {
           if (_proofImages.length >= _kMaxDonatePhotos) break;
@@ -155,10 +203,11 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
         source: ImageSource.gallery,
         imageQuality: 85,
       );
-      if (single != null &&
-          mounted &&
-          _proofImages.length < _kMaxDonatePhotos) {
+      if (!mounted) return;
+      if (single != null && _proofImages.length < _kMaxDonatePhotos) {
         setState(() => _proofImages.add(single));
+      } else if (single == null) {
+        setState(() => _showDonateDetailsFieldErrors = true);
       }
     }
   }
@@ -169,10 +218,11 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
       source: ImageSource.camera,
       imageQuality: 85,
     );
-    if (photo != null &&
-        mounted &&
-        _proofImages.length < _kMaxDonatePhotos) {
+    if (!mounted) return;
+    if (photo != null && _proofImages.length < _kMaxDonatePhotos) {
       setState(() => _proofImages.add(photo));
+    } else if (photo == null) {
+      setState(() => _showDonateDetailsFieldErrors = true);
     }
   }
 
@@ -455,6 +505,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   SizedBox(height: 4 * layoutScale),
                   TextField(
                     controller: _reasonController,
+                    focusNode: _reasonFocusNode,
                     keyboardType: TextInputType.multiline,
                     minLines: 4,
                     maxLines: 8,
@@ -500,6 +551,11 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                       ),
                     ),
                   ),
+                  if (_showDonateDetailsFieldErrors && !_donateReasonValid)
+                    _donateDetailsInlineError(
+                      'Please fill out this field.',
+                      layoutScale,
+                    ),
                   SizedBox(height: 8 * layoutScale),
                   Text(
                     'Upload photos for donation',
@@ -566,6 +622,11 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                       ),
                     ),
                   ),
+                  if (_showDonateDetailsFieldErrors && !_donatePhotosValid)
+                    _donateDetailsInlineError(
+                      'Please upload images.',
+                      layoutScale,
+                    ),
                   SizedBox(height: 8 * layoutScale),
                   Text(
                     'How would you like to send us your footwear?',
@@ -583,98 +644,111 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: _pickupPill(
+                          child: ServiceFlowPickupPill(
                             label: 'Home Pickup',
-                            selected: _homePickup,
+                            selected: _pickupModeChosen && _homePickup,
                             height: pillH,
                             fontSize: pillFs,
                             onTap: () {
                               if (_busy) return;
-                              setState(() => _homePickup = true);
+                              setState(() {
+                                _homePickup = true;
+                                _pickupModeChosen = true;
+                              });
                             },
                           ),
                         ),
                         SizedBox(width: 12 * layoutScale),
                         Expanded(
-                          child: _pickupPill(
+                          child: ServiceFlowPickupPill(
                             label: 'Cobblers Nearby',
-                            selected: !_homePickup,
+                            selected: _pickupModeChosen && !_homePickup,
                             height: pillH,
                             fontSize: pillFs,
                             onTap: () {
                               if (_busy) return;
-                              setState(() => _homePickup = false);
+                              setState(() {
+                                _homePickup = false;
+                                _pickupModeChosen = true;
+                              });
                             },
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 10 * layoutScale),
-                  Center(
-                    child: SizedBox(
-                      width: (164 * layoutScale).clamp(132.0, 180.0),
-                      height: pillH,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.centerRight,
-                            end: Alignment.centerLeft,
-                            colors: [
-                              Color(0xFF0CADC5),
-                              Color(0xFF063239),
+                  if (_showDonateDetailsFieldErrors && !_donatePickupValid)
+                    _donateDetailsInlineError(
+                      'Please choose an option.',
+                      layoutScale,
+                    ),
+                  if (_donateDetailsComplete) ...[
+                    SizedBox(height: 10 * layoutScale),
+                    Center(
+                      child: SizedBox(
+                        width: (164 * layoutScale).clamp(132.0, 180.0),
+                        height: pillH,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.centerRight,
+                              end: Alignment.centerLeft,
+                              colors: [
+                                Color(0xFF0CADC5),
+                                Color(0xFF063239),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(100),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x19000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 4),
+                              ),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(100),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x19000000),
-                              blurRadius: 4,
-                              offset: Offset(0, 4),
+                          child: TextButton(
+                            onPressed: _busy ? null : _onNext,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(100),
+                              ),
                             ),
-                          ],
-                        ),
-                        child: TextButton(
-                          onPressed: _busy ? null : _onNext,
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(100),
-                            ),
-                          ),
-                          child: _busy
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Next',
-                                      style: GoogleFonts.boldonse(
-                                        color: Colors.white,
-                                        fontSize: fs,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                    SizedBox(width: 20 * layoutScale),
-                                    Icon(
-                                      Icons.arrow_forward_ios_rounded,
+                            child: _busy
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
                                       color: Colors.white,
-                                      size:
-                                          (16 * layoutScale).clamp(13.0, 16.0),
+                                      strokeWidth: 2,
                                     ),
-                                  ],
-                                ),
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Next',
+                                        style: GoogleFonts.boldonse(
+                                          color: Colors.white,
+                                          fontSize: fs,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                      SizedBox(width: 20 * layoutScale),
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: Colors.white,
+                                        size: (16 * layoutScale)
+                                            .clamp(13.0, 16.0),
+                                      ),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -684,53 +758,6 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     );
   }
 
-  Widget _pickupPill({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-    double height = 48,
-    double fontSize = 14,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(100),
-      child: Container(
-        height: height,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-                )
-              : null,
-          color: selected ? null : const Color(0xFFDFE7E9),
-          borderRadius: BorderRadius.circular(100),
-          border: Border.all(
-            width: 1,
-            color: selected ? Colors.transparent : const Color(0xFF0F6876),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 4,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.boldonse(
-            color: selected ? Colors.white : const Color(0xFF062F35),
-            fontSize: fontSize,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Step 3 — home pickup schedule + address (full-screen page).
