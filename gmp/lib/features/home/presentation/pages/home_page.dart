@@ -1200,10 +1200,7 @@ class _HomeTopCard extends StatelessWidget {
       bottomLeft: Radius.circular(_kHomeHeaderBottomRadius),
       bottomRight: Radius.circular(_kHomeHeaderBottomRadius),
     );
-    return Material(
-      color: Colors.transparent,
-      elevation: 1,
-      shadowColor: const Color(0x08000000),
+    return ClipRRect(
       borderRadius: headerRadius,
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -1510,19 +1507,13 @@ class _HomeTopCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(
-                      height: (_kHomeHeaderStatsToBottom * s).clamp(
-                        10.0,
-                        18.0,
-                      ),
-                    ),
+                    
                   ],
                 ),
               ),
             ),
           ],
         ),
-      ),
     );
   }
 }
