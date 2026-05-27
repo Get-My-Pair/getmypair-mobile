@@ -13,6 +13,9 @@ class FootwearAngleOverlay extends StatelessWidget {
     this.lightLineGuide = false,
     this.frameStrokeWidth = 2,
     this.frameStrokeOpacity = 0.9,
+    this.captureReady = false,
+    this.showDashedFrame = true,
+    this.guideColor = const Color(0xFF09DFFF),
   });
 
   final String? angleLabel;
@@ -32,6 +35,15 @@ class FootwearAngleOverlay extends StatelessWidget {
   final double frameStrokeWidth;
   final double frameStrokeOpacity;
 
+  /// Green frame when side-profile shoe is detected in the live preview.
+  final bool captureReady;
+
+  /// When false, only the shoe guide is drawn (no dashed border on camera preview).
+  final bool showDashedFrame;
+
+  /// Shoe silhouette / outline tint (defaults to Figma cyan).
+  final Color guideColor;
+
   /// Figma upload-footwear frame proportions (compact).
   static Size figmaFrameSize(Size parent) {
     return Size(parent.width * 0.88, parent.height * 0.55);
@@ -45,13 +57,15 @@ class FootwearAngleOverlay extends StatelessWidget {
         final h = constraints.maxHeight;
         final frameW = fillParent ? w : (compact ? w * 0.88 : w * 0.82);
         final frameH = fillParent ? h : (compact ? h * 0.55 : h * 0.48);
-        final strokeWidth = lightLineGuide ? 1.5 : frameStrokeWidth;
-        final frameAlpha = lightLineGuide ? 0.92 : frameStrokeOpacity;
-        final frameColor = lightLineGuide
-            ? const Color(0xFF09DFFF)
-            : Colors.white;
-        final dashW = lightLineGuide ? 8.0 : 10.0;
-        final dashGap = lightLineGuide ? 6.0 : 7.0;
+        final strokeWidth =
+            captureReady ? 2.5 : (lightLineGuide ? 1.5 : frameStrokeWidth);
+        final frameAlpha =
+            captureReady ? 1.0 : (lightLineGuide ? 0.92 : frameStrokeOpacity);
+        final frameColor = captureReady
+            ? const Color(0xFF4CAF50)
+            : (lightLineGuide ? const Color(0xFF09DFFF) : Colors.white);
+        final dashW = captureReady ? 14.0 : (lightLineGuide ? 8.0 : 10.0);
+        final dashGap = captureReady ? 0.0 : (lightLineGuide ? 6.0 : 7.0);
         final shoeAlpha = lightLineGuide
             ? shoeGuideOpacity.clamp(0.55, 0.85)
             : shoeGuideOpacity;
@@ -72,30 +86,46 @@ class FootwearAngleOverlay extends StatelessWidget {
                   ),
                 ),
               ),
-            CustomPaint(
-              size: Size(frameW, frameH),
-              painter: _DashedRectPainter(
-                color: frameColor.withValues(alpha: frameAlpha),
-                strokeWidth: strokeWidth,
-                dashWidth: dashW,
-                dashGap: dashGap,
-                borderRadius: 12,
-              ),
-              child: SizedBox(
+            if (showDashedFrame)
+              CustomPaint(
+                size: Size(frameW, frameH),
+                painter: _DashedRectPainter(
+                  color: frameColor.withValues(alpha: frameAlpha),
+                  strokeWidth: strokeWidth,
+                  dashWidth: dashW,
+                  dashGap: dashGap,
+                  borderRadius: 12,
+                ),
+                child: SizedBox(
+                  width: frameW,
+                  height: frameH,
+                  child: showShoeGuide
+                      ? Center(
+                          child: _LightShoeGuide(
+                            width: frameW * 0.72,
+                            height: frameH * 0.55,
+                            opacity: shoeAlpha,
+                            outlineOnly: lightLineGuide,
+                            guideColor: guideColor,
+                          ),
+                        )
+                      : null,
+                ),
+              )
+            else if (showShoeGuide)
+              SizedBox(
                 width: frameW,
                 height: frameH,
-                child: showShoeGuide
-                    ? Center(
-                        child: _LightShoeGuide(
-                          width: frameW * 0.72,
-                          height: frameH * 0.55,
-                          opacity: shoeAlpha,
-                          outlineOnly: lightLineGuide,
-                        ),
-                      )
-                    : null,
+                child: Center(
+                  child: _LightShoeGuide(
+                    width: frameW * 0.72,
+                    height: frameH * 0.55,
+                    opacity: shoeAlpha,
+                    outlineOnly: lightLineGuide,
+                    guideColor: guideColor,
+                  ),
+                ),
               ),
-            ),
           ],
         );
       },
@@ -231,12 +261,14 @@ class _LightShoeGuide extends StatelessWidget {
     required this.height,
     required this.opacity,
     required this.outlineOnly,
+    required this.guideColor,
   });
 
   final double width;
   final double height;
   final double opacity;
   final bool outlineOnly;
+  final Color guideColor;
 
   @override
   Widget build(BuildContext context) {
@@ -245,6 +277,7 @@ class _LightShoeGuide extends StatelessWidget {
       height: height,
       opacity: opacity,
       outlineOnly: outlineOnly,
+      guideColor: guideColor,
     );
   }
 }

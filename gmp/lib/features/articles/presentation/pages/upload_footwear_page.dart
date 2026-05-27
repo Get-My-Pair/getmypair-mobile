@@ -11,7 +11,6 @@ import 'package:gmp/features/articles/data/footwear_background_remover.dart';
 import 'package:gmp/features/articles/data/footwear_image_validator.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
-import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -288,8 +287,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   ) {
     return _showMessageDialog(
       title: FootwearImageValidator.dialogTitle(result),
-      message: result.message ??
-          'Only footwear photos are accepted. Please capture or upload a clear side profile of your shoes.',
+      message: result.message ?? FootwearImageValidator.rejectionMessage,
       isError: true,
     );
   }
@@ -322,40 +320,47 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         return;
       }
 
-      File imageForReview = file;
+      File imageToSave = file;
       if (FootwearBackgroundRemover.isConfigured) {
         if (mounted) {
-          setState(() => _processingLabel = 'Removing background…');
+          setState(() => _processingLabel = 'Preparing photo…');
         }
         try {
-          imageForReview = await FootwearBackgroundRemover.removeBackground(file);
+          imageToSave = await FootwearBackgroundRemover.removeBackground(file);
         } on FootwearBackgroundRemoverException catch (e) {
           if (!mounted) return;
           await _showMessageDialog(
-            title: 'Background removal failed',
+            title: 'Photo preparation failed',
             message: e.message,
           );
           return;
         } catch (e) {
           if (!mounted) return;
           await _showMessageDialog(
-            title: 'Background removal failed',
+            title: 'Photo preparation failed',
             message: e.toString().replaceFirst('Exception: ', ''),
           );
           return;
         }
       }
 
-      await _reviewCapture(imageForReview);
+      await _reviewCapture(
+        previewFile: file,
+        saveFile: imageToSave,
+      );
     } finally {
       if (mounted) setState(() => _validatingImage = false);
     }
   }
 
-  Future<void> _reviewCapture(File file) async {
+  Future<void> _reviewCapture({
+    required File previewFile,
+    required File saveFile,
+  }) async {
     final action = await showModalBottomSheet<_CaptureReviewAction>(
       context: context,
       backgroundColor: const Color(0xFF0D5B68),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -375,7 +380,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
                   ),
                 ),
                 const SizedBox(height: 12),
-                FootwearCutoutPreview(file: file, height: 180),
+                FootwearCutoutPreview(file: previewFile, height: 220),
                 const SizedBox(height: 16),
                 Text(
                   'Does this show a clear side profile?',
@@ -426,7 +431,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     );
 
     if (!mounted || action != _CaptureReviewAction.accept) return;
-    setState(() => _images.add(file));
+    setState(() => _images.add(saveFile));
   }
 
   void _removeImage(int index) {
@@ -544,10 +549,10 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           return CameraPreview(controller);
         }
 
-        // Fill scanner frame with live preview (cover, centered).
+        // Fit full shoe in frame (contain) so capture is not cropped before upload.
         return ClipRect(
           child: FittedBox(
-            fit: BoxFit.cover,
+            fit: BoxFit.contain,
             alignment: Alignment.center,
             child: SizedBox(
               width: previewSize.height,
@@ -621,12 +626,12 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     );
   }
 
-  /// Horizontal rectangle camera frame (Figma) + live preview with centered shoe guide.
-  Widget _cameraFrameArea(double contentWidth) {
-    const guideOpacity = 0.88;
+  static const String _cameraShoeGuideAsset =
+      'assets/images/icons/myrack/shoe.png';
 
+  /// Centered camera frame + shoe guide (Figma layout).
+  Widget _captureRow(double contentWidth) {
     final frameW = contentWidth * 0.88;
-    // Figma landscape frame: width 88%, height ~55% of width (not square).
     final frameH = frameW * (0.55 / 0.88);
 
     return Padding(
@@ -636,54 +641,146 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         child: SizedBox(
           width: frameW,
           height: frameH,
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.hardEdge,
+          child: _cameraPreviewStack(),
+        ),
+      ),
+    );
+  }
+
+  Widget _capturedPhotosStrip() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Photos (${_images.length}/$_maxPhotos) — tap × to remove',
+          maxLines: 2,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserrat(
+            color: Colors.white.withValues(alpha: 0.85),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 88,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
             children: [
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: ColoredBox(
-                    color: Colors.black,
-                    child: _liveCameraPreview(),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: FootwearScannerOverlay(
-                    shoeGuideOpacity: guideOpacity,
-                  ),
-                ),
-              ),
-              if (_validatingImage)
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(color: Colors.white),
-                        const SizedBox(height: 12),
-                        Text(
-                          _processingLabel,
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+              for (var i = 0; i < _images.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Stack(
+                    children: [
+                      SizedBox(
+                        width: 88,
+                        height: 88,
+                        child: FootwearCutoutPreview(
+                          file: _images[i],
+                          height: 88,
+                          fit: BoxFit.contain,
+                          borderRadius: 12,
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: _validatingImage ? null : () => _removeImage(i),
+                          child: const CircleAvatar(
+                            radius: 12,
+                            backgroundColor: AppColors.error,
+                            child: Icon(
+                              Icons.close,
+                              color: AppColors.textOnPrimary,
+                              size: 16,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
             ],
           ),
         ),
-      ),
+      ],
+    );
+  }
+
+  /// Figma dashed shoe outline — camera preview center only.
+  Widget _cameraShoeGuideOverlay() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        return Center(
+          child: Opacity(
+            opacity: 0.9,
+            child: Image.asset(
+              _cameraShoeGuideAsset,
+              width: w * 0.78,
+              height: h * 0.68,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.checkroom_outlined,
+                size: (w * 0.35).clamp(48.0, 72.0),
+                color: Colors.white.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _cameraPreviewStack() {
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.hardEdge,
+      children: [
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ColoredBox(
+              color: Colors.black,
+              child: _liveCameraPreview(),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _cameraShoeGuideOverlay(),
+            ),
+          ),
+        ),
+        if (_validatingImage)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: Colors.white),
+                  const SizedBox(height: 12),
+                  Text(
+                    _processingLabel,
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -754,70 +851,21 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _headerSection(),
-                          _cameraFrameArea(contentWidth),
+                          _captureRow(contentWidth),
                           _captureActionsSection(),
                           if (_images.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Photos (${_images.length}/$_maxPhotos) — Choose your best one',
-                              maxLines: 2,
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 96,
-                              child: ListView(
-                                scrollDirection: Axis.horizontal,
-                                children: [
-                                  for (var i = 0; i < _images.length; i++)
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 10),
-                                      child: Stack(
-                                        children: [
-                                          SizedBox(
-                                            width: 88,
-                                            height: 88,
-                                            child: FootwearCutoutPreview(
-                                              file: _images[i],
-                                              height: 88,
-                                              fit: BoxFit.contain,
-                                              borderRadius: 12,
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 4,
-                                            right: 4,
-                                            child: GestureDetector(
-                                              onTap: () => _removeImage(i),
-                                              child: const CircleAvatar(
-                                                radius: 12,
-                                                backgroundColor: AppColors.error,
-                                                child: Icon(
-                                                  Icons.close,
-                                                  color: AppColors.textOnPrimary,
-                                                  size: 16,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
+                            const SizedBox(height: 12),
+                            _capturedPhotosStrip(),
+                          ],
+                          if (_images.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 12, bottom: 24),
                               child: _actionButton(
                                 label: 'Done',
                                 onPressed: _finish,
                               ),
-                            ),
-                          ] else
+                            )
+                          else
                             const SizedBox(height: 24),
                           SizedBox(
                             height: MediaQuery.paddingOf(context).bottom + 16,

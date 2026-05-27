@@ -1,9 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
@@ -11,6 +10,8 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../utils/service_flow_article.dart';
+import '../utils/service_flow_layout.dart';
 import 'donate_my_pair_flow.dart';
 import 'service_selection_page.dart';
 
@@ -24,7 +25,7 @@ class RepairMyPairPage extends StatefulWidget {
     this.pageTitle = 'RepairMyPair',
     this.allowedServiceTypes = const ['repair'],
     this.description =
-        'RepairMyPair is a service that restores any part of your footwear.\n\nPlease select the footwear you\'d like to repair.',
+        'RepairMyPair is a service that restores any part of your footwear.\n\nSelect one or more pairs you\'d like to repair.',
   });
 
   @override
@@ -45,7 +46,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
   bool _submitting = false;
   String? _error;
   List<Article> _articles = const [];
-  String? _selectedArticleId;
+  final Set<String> _selectedArticleIds = {};
 
   @override
   void initState() {
@@ -107,29 +108,59 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
       widget.allowedServiceTypes.length == 1 &&
       widget.allowedServiceTypes.first.trim().toLowerCase() == 'donate';
 
+  void _toggleArticleSelection(String articleId) {
+    setState(() {
+      if (_selectedArticleIds.contains(articleId)) {
+        _selectedArticleIds.remove(articleId);
+      } else {
+        _selectedArticleIds.add(articleId);
+      }
+    });
+  }
+
+  List<ServiceFlowArticle> get _selectedFlowArticles {
+    return _articles
+        .where((a) => _selectedArticleIds.contains(a.id))
+        .map(
+          (a) => ServiceFlowArticle(
+            id: a.id,
+            name: _displayName(a),
+            imageUrl: _imageUrl(a.rackHeroImagePath),
+          ),
+        )
+        .toList();
+  }
+
   Future<void> _goNext() async {
-    if (_selectedArticleId == null || _submitting) return;
-    final selectedArticle = _articles.firstWhere(
-      (article) => article.id == _selectedArticleId,
-    );
+    if (_submitting) return;
+    if (_selectedArticleIds.isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select at least one pair of footwear',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
+    final selectedArticles = _selectedFlowArticles;
+    if (selectedArticles.isEmpty) return;
     setState(() => _submitting = true);
     final allowed = widget.allowedServiceTypes;
     final isDonateOnly = allowed.length == 1 &&
         allowed.first.trim().toLowerCase() == 'donate';
+    final primary = selectedArticles.first;
 
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => isDonateOnly
             ? DonateMyPairDetailsPage(
-                articleId: _selectedArticleId!,
-                articleName: _displayName(selectedArticle),
-                articleImageUrl: _imageUrl(selectedArticle.rackHeroImagePath),
+                articleId: primary.id,
+                articleName: primary.name,
+                articleImageUrl: primary.imageUrl,
+                selectedArticles: selectedArticles,
               )
-            : ServiceSelectionPage(
-                articleId: _selectedArticleId!,
+            : ServiceSelectionPage.multi(
+                selectedArticles: selectedArticles,
                 allowedServiceTypes: widget.allowedServiceTypes,
-                articleName: _displayName(selectedArticle),
-                articleImageUrl: _imageUrl(selectedArticle.rackHeroImagePath),
                 flowPageTitle: widget.pageTitle,
               ),
       ),
@@ -251,12 +282,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final navH = dashboardLinkedBottomNavStackHeight(context);
-    final maxH = constraints!.maxHeight.isFinite
-        ? constraints.maxHeight
-        : MediaQuery.sizeOf(context).height;
-    final layoutScale = math
-        .min(uiScale, ((maxH - navH) / 640).clamp(0.55, 1.0))
-        .toDouble();
+    final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
     final fs = (16 * layoutScale).clamp(12.0, 16.0);
     final titleFs = (24 * layoutScale).clamp(17.0, 24.0);
     final pillH = (48 * layoutScale).clamp(40.0, 52.0);
@@ -323,8 +349,8 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                     layoutScale: layoutScale,
                     label: _displayName(article),
                     imageUrl: _imageUrl(article.rackHeroImagePath),
-                    selected: _selectedArticleId == article.id,
-                    onTap: () => setState(() => _selectedArticleId = article.id),
+                    selected: _selectedArticleIds.contains(article.id),
+                    onTap: () => _toggleArticleSelection(article.id),
                   ),
                 );
               }),
@@ -333,69 +359,68 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
         }),
         SizedBox(height: 18 * layoutScale),
         Center(
-          child: SizedBox(
-            width: (164 * layoutScale).clamp(132.0, 180.0),
-            height: pillH,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [
-                    Color(0xFF0CADC5),
-                    Color(0xFF063239),
+            child: SizedBox(
+              width: (164 * layoutScale).clamp(132.0, 180.0),
+              height: pillH,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    colors: [
+                      Color(0xFF0CADC5),
+                      Color(0xFF063239),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(100),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x19000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 4),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(100),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x19000000),
-                    blurRadius: 4,
-                    offset: Offset(0, 4),
+                child: TextButton(
+                  onPressed: _submitting ? null : _goNext,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
                   ),
-                ],
-              ),
-              child: TextButton(
-                onPressed:
-                    _selectedArticleId == null || _submitting ? null : _goNext,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                ),
-                child: _submitting
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Next',
-                            style: GoogleFonts.boldonse(
-                              color: Colors.white,
-                              fontSize: fs,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          SizedBox(width: 20 * layoutScale),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
                             color: Colors.white,
-                            size: (16 * layoutScale).clamp(13.0, 16.0),
+                            strokeWidth: 2,
                           ),
-                        ],
-                      ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Next',
+                              style: GoogleFonts.boldonse(
+                                color: Colors.white,
+                                fontSize: fs,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            SizedBox(width: 20 * layoutScale),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Colors.white,
+                              size: (16 * layoutScale).clamp(13.0, 16.0),
+                            ),
+                          ],
+                        ),
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -455,8 +480,8 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                   child: _ShoeOption(
                     label: _displayName(article),
                     imageUrl: _imageUrl(article.rackHeroImagePath),
-                    selected: _selectedArticleId == article.id,
-                    onTap: () => setState(() => _selectedArticleId = article.id),
+                    selected: _selectedArticleIds.contains(article.id),
+                    onTap: () => _toggleArticleSelection(article.id),
                   ),
                 );
               }),
@@ -488,8 +513,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                 ],
               ),
               child: TextButton(
-                onPressed:
-                    _selectedArticleId == null || _submitting ? null : _goNext,
+                onPressed: _submitting ? null : _goNext,
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(

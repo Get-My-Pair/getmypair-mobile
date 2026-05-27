@@ -149,43 +149,20 @@ class FootwearImageValidator {
     return key;
   }
 
-  static String _articleFor(String phrase) {
-    final first = phrase.trim().isEmpty ? 'x' : phrase.trim()[0].toLowerCase();
-    if ('aeiou'.contains(first)) return 'an';
-    return 'a';
-  }
+  /// Shown when the image is not accepted as footwear (no ML label in copy).
+  static const String rejectionMessage =
+      'Not a footwear image. Please upload your footwear image.';
 
-  /// Dynamic rejection copy based on the strongest non-footwear label.
   static String buildRejectedMessage({
     String? detectedItem,
     bool weakShoe = false,
-  }) {
-    if (weakShoe) {
-      return 'Footwear is not clear enough in this photo. Move closer and show a side profile of your shoes.';
-    }
+  }) =>
+      rejectionMessage;
 
-    if (detectedItem != null && detectedItem.isNotEmpty) {
-      final article = _articleFor(detectedItem);
-      return 'You captured $article $detectedItem. '
-          'Please upload a clear side profile photo of your footwear (shoes) instead.';
-    }
-
-    return 'This image does not look like footwear. '
-        'Please capture or upload a clear side profile photo of your shoes.';
-  }
-
-  static String? _dialogTitleFor(String? detectedItem) {
-    if (detectedItem == null || detectedItem.isEmpty) {
-      return 'Image not accepted';
-    }
-    final capitalized = detectedItem[0].toUpperCase() + detectedItem.substring(1);
-    return 'Not footwear — looks like $capitalized';
-  }
-
-  /// Title for the error popup (short, dynamic).
+  /// Title for the error popup (fixed; no detected-item label).
   static String dialogTitle(FootwearImageValidationResult result) {
     if (result.isFootwear) return 'Accepted';
-    return _dialogTitleFor(result.detectedItem) ?? 'Image not accepted';
+    return 'Image not accepted';
   }
 
   static Future<FootwearImageValidationResult> validate(File file) async {

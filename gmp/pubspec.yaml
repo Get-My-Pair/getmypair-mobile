@@ -133,6 +133,7 @@ flutter:
     - assets/images/icons/caremypair/wmp.svg
     - assets/images/icons/myrack/
     - assets/images/icons/myrack/filter.svg
+    - assets/images/icons/myrack/shoe.png
     - assets/images/icons/auth/
     - assets/images/icons/auth/apple.svg
     - assets/images/icons/auth/google.svg

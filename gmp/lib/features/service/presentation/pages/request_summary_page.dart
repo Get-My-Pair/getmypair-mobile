@@ -19,7 +19,7 @@ import 'package:image_picker/image_picker.dart';
 import 'service_selection_page.dart';
 
 class RequestSummaryPage extends StatefulWidget {
-  final String articleId;
+  final List<String> articleIds;
   final ServiceOptionData service;
   final Address address;
   final List<XFile> proofImages;
@@ -34,9 +34,10 @@ class RequestSummaryPage extends StatefulWidget {
   /// Matches API `requestedPickupAt` (ISO 8601) from the selected day + slot.
   final DateTime? requestedPickupAt;
 
-  const RequestSummaryPage({
+  RequestSummaryPage({
     super.key,
-    required this.articleId,
+    String? articleId,
+    List<String>? articleIds,
     required this.service,
     required this.address,
     required this.proofImages,
@@ -48,7 +49,8 @@ class RequestSummaryPage extends StatefulWidget {
     this.pickupScheduleLabel,
     this.homePickup = true,
     this.requestedPickupAt,
-  });
+  }) : assert(articleIds != null || articleId != null),
+       articleIds = articleIds ?? [articleId!];
 
   @override
   State<RequestSummaryPage> createState() => _RequestSummaryPageState();
@@ -58,7 +60,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   bool _loading = true;
   bool _submitting = false;
   String? _error;
-  Article? _article;
+  List<Article> _articles = const [];
 
   bool get _isStyledSingleServiceSummary =>
       widget.service.value == 'repair' ||
@@ -112,6 +114,19 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       widget.service.value == 'donate' ||
       widget.service.value == 'dispose';
 
+  bool get _articlesLoaded => _articles.isNotEmpty;
+
+  String get _footwearDisplayName {
+    if (!_articlesLoaded) return 'Loading...';
+    return _articles
+        .map((a) => '${a.brand} ${a.model}'.trim())
+        .where((n) => n.isNotEmpty)
+        .join(', ');
+  }
+
+  int get _totalEstimatedRupees =>
+      widget.estimatedCostRupees * widget.articleIds.length;
+
   @override
   void initState() {
     super.initState();
@@ -133,10 +148,13 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       }),
       (token) async {
         try {
-          final a = await sl<GetArticleById>().call(token, widget.articleId);
+          final loaded = <Article>[];
+          for (final id in widget.articleIds) {
+            loaded.add(await sl<GetArticleById>().call(token, id));
+          }
           if (!mounted) return;
           setState(() {
-            _article = a;
+            _articles = loaded;
             _loading = false;
           });
         } catch (e) {
@@ -181,46 +199,54 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
             videoUrls.add(url);
           }
 
-          final body = <String, dynamic>{
-            'articleId': widget.articleId,
-            'serviceType': widget.service.value,
-            'addressId': widget.address.id,
-            'photos': photoUrls,
-            'videos': videoUrls,
-            'estimatedCost': widget.estimatedCostRupees,
-            'pickupMode': widget.homePickup ? 'home_pickup' : 'cobbler_nearby',
-          };
           final desc = widget.problemDescription?.trim();
-          if (desc != null && desc.isNotEmpty) {
-            body['problemDescription'] = desc;
-          }
           final pickupAt = widget.requestedPickupAt;
-          if (pickupAt != null) {
-            body['requestedPickupAt'] = pickupAt.toUtc().toIso8601String();
-          }
           final plan = widget.maintenancePlan;
-          if (plan != null) {
-            body['maintenancePlanId'] = plan.id;
-            body['maintenancePlanLabel'] = plan.label;
+          final createdIds = <String>[];
+
+          for (final articleId in widget.articleIds) {
+            final body = <String, dynamic>{
+              'articleId': articleId,
+              'serviceType': widget.service.value,
+              'addressId': widget.address.id,
+              'photos': photoUrls,
+              'videos': videoUrls,
+              'estimatedCost': widget.estimatedCostRupees,
+              'pickupMode': widget.homePickup ? 'home_pickup' : 'cobbler_nearby',
+            };
+            if (desc != null && desc.isNotEmpty) {
+              body['problemDescription'] = desc;
+            }
+            if (pickupAt != null) {
+              body['requestedPickupAt'] = pickupAt.toUtc().toIso8601String();
+            }
+            if (plan != null) {
+              body['maintenancePlanId'] = plan.id;
+              body['maintenancePlanLabel'] = plan.label;
+            }
+
+            final res = await sl<DioClient>().post(
+              ApiEndpoints.serviceCreate,
+              accessToken: token,
+              body: body,
+            );
+
+            final requestId =
+                (res['data'] is Map && (res['data'] as Map)['request'] is Map)
+                    ? ((res['data'] as Map)['request'] as Map)['_id']?.toString()
+                    : null;
+            if (requestId != null) createdIds.add(requestId);
           }
-
-          final res = await sl<DioClient>().post(
-            ApiEndpoints.serviceCreate,
-            accessToken: token,
-            body: body,
-          );
-
-          final requestId =
-              (res['data'] is Map && (res['data'] as Map)['request'] is Map)
-              ? ((res['data'] as Map)['request'] as Map)['_id']?.toString()
-              : null;
 
           if (!mounted) return;
+          final count = widget.articleIds.length;
           await showAppFeedbackAlert(
             context,
-            message: requestId != null
-                ? 'Request created ($requestId)'
-                : 'Request created',
+            message: count > 1
+                ? '$count service requests created'
+                : createdIds.isNotEmpty
+                    ? 'Request created (${createdIds.first})'
+                    : 'Request created',
             type: AppFeedbackType.success,
           );
           if (!mounted) return;
@@ -319,9 +345,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                       _row('Type of service', widget.service.title),
                       _row(
                         'Name of footwear',
-                        _article == null
-                            ? 'Loading...'
-                            : '${_article!.brand} ${_article!.model}',
+                        _footwearDisplayName,
                       ),
                       _row(
                         'Pickup scheduled on',
@@ -432,9 +456,11 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                 _card(
                   title: 'Article',
                   child: Text(
-                    _article == null
+                    !_articlesLoaded
                         ? 'Article details unavailable'
-                        : '${_article!.brand} ${_article!.model}\n${_article!.category}',
+                        : _articles.length == 1
+                            ? '${_articles.first.brand} ${_articles.first.model}\n${_articles.first.category}'
+                            : _footwearDisplayName,
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       height: 1.3,
@@ -457,7 +483,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _submitting || _article == null
+                    onPressed: _submitting || !_articlesLoaded
                         ? null
                         : _confirmRequest,
                     style: ElevatedButton.styleFrom(
@@ -482,7 +508,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                           ),
                   ),
                 ),
-                if (_article == null) ...[
+                if (!_articlesLoaded) ...[
                   const SizedBox(height: 10),
                   TextButton(
                     onPressed: _loadArticle,
@@ -495,9 +521,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   }
 
   Widget _buildRepairSummaryPage() {
-    final footwearName = _article == null
-        ? 'Loading...'
-        : '${_article!.brand} ${_article!.model}';
+    final footwearName = _footwearDisplayName;
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final problemText = widget.problemDescription?.trim().isNotEmpty == true
         ? widget.problemDescription!.trim()
@@ -585,7 +609,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                             if (!_hideEstimationRow)
                               _summaryLine(
                                 'Estimation cost:',
-                                '₹${widget.estimatedCostRupees}',
+                                widget.articleIds.length > 1
+                                    ? '₹${widget.estimatedCostRupees} × ${widget.articleIds.length} = ₹$_totalEstimatedRupees'
+                                    : '₹${widget.estimatedCostRupees}',
                               ),
                             _summaryLine('Problem described:', ''),
                             const SizedBox(height: 2),
@@ -621,7 +647,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                     ],
                                   ),
                                   child: TextButton(
-                                    onPressed: _submitting || _article == null
+                                    onPressed: _submitting || !_articlesLoaded
                                         ? null
                                         : _confirmRequest,
                                     style: TextButton.styleFrom(

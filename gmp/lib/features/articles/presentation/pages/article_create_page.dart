@@ -6,11 +6,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/greyed_button_shell.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
+
 import 'article_details_page.dart';
 import 'footwear_camera_capture_page.dart';
 import 'upload_footwear_page.dart';
@@ -317,7 +320,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                     const SizedBox(width: 7),
                     Expanded(
                       child: Text(
-                        'Add footwear content',
+                        'Add Footwear',
                         style: GoogleFonts.boldonse(
                           color: Colors.white,
                           fontSize: 24,
@@ -966,13 +969,32 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           isBusy: _submitting,
         ),
         if (_imageFiles.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             '${_imageFiles.length}/$_maxFootwearPhotos photos added',
             textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
               color: Colors.white.withValues(alpha: 0.75),
               fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 100,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _imageFiles.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                return SizedBox(
+                  width: 100,
+                  child: FootwearCutoutPreview(
+                    file: _imageFiles[index],
+                    height: 100,
+                    borderRadius: 12,
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -988,51 +1010,65 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   }) {
     const teal = Color(0xFF12899B);
     const cyanBorder = Color(0xFF09DFFF);
-    const disabledFill = Color(0xFF6B7B80);
-    const disabledBorder = Color(0xFF8A9A9F);
-    const disabledLabel = Color(0xFFB8C4C8);
 
     final enabled = onPressed != null && !isBusy;
+
+    if (!enabled) {
+      return GreyedButtonShell(
+        height: 50,
+        child: Material(
+          color: Colors.transparent,
+          child: Center(
+            child: showLoader && isBusy
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      color: AppColors.greyedButtonLabel,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: GoogleFonts.boldonse(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.greyedButtonLabel,
+                    ),
+                  ),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
       height: 50,
       child: ElevatedButton(
-        onPressed: enabled ? onPressed : null,
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: enabled ? Colors.white : disabledFill,
-          foregroundColor: enabled ? teal : disabledLabel,
-          disabledBackgroundColor: disabledFill,
-          disabledForegroundColor: disabledLabel,
-          elevation: enabled ? 2 : 0,
+          backgroundColor: Colors.white,
+          foregroundColor: teal,
+          elevation: 2,
           shadowColor: Colors.black26,
           padding: const EdgeInsets.symmetric(horizontal: 24),
           minimumSize: const Size(0, 50),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100),
-            side: BorderSide(
-              color: enabled ? cyanBorder : disabledBorder,
+            side: const BorderSide(
+              color: cyanBorder,
               width: 1,
             ),
           ),
         ),
-        child: showLoader && isBusy
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(
-                  color: teal,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                label,
-                style: GoogleFonts.boldonse(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: enabled ? teal : disabledLabel,
-                ),
-              ),
+        child: Text(
+          label,
+          style: GoogleFonts.boldonse(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: teal,
+          ),
+        ),
       ),
     );
   }

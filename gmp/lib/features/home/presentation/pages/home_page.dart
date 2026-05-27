@@ -36,11 +36,6 @@ const Color _kOnHeaderText = Color(0xFFFFFFFF);
 const Color _kOnHeaderTextMuted = Color(0xFFE8F4F6);
 const Color _kQuickActionMutedBg = Color(0xFFDFE7E9);
 const Color _kQuickActionMutedText = Color(0xFF062F35);
-/// Rent My Pair disabled style — light label on mid-gray tile.
-const Color _kQuickActionDisabledBg = Color(0xFF6B7B80);
-const Color _kQuickActionDisabledBorder = Color(0xFF8A9A9F);
-const Color _kQuickActionDisabledText = Color(0xFFF5FAFB);
-const Color _kQuickActionDisabledIcon = Color(0xFFF5FAFB);
 const Color _kRackCardBorderStart = Color(0xFF0F6876);
 const Color _kRackCardEdgeLight = _kRackCardBorderStart;
 const double _kRackCardRadius = 10;
@@ -89,8 +84,7 @@ const String _kRehomeMyPairIconAsset =
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 
-/// Vertical gaps inside the hero (name → location → search → stats → bottom).
-const double _kHomeHeaderGreetingToLocation = 14;
+/// Vertical gaps inside the hero (location → search → stats → bottom).
 const double _kHomeHeaderSearchToStats = 30;
 const double _kHomeHeaderStatsToBottom = 14;
 
@@ -161,6 +155,32 @@ class _HomePageState extends State<HomePage> {
   AddressParts? _detectedLocationParts;
   bool _locationSavePromptHandled = false;
 
+  static String _formatPlacemarkForHomeHeader(Placemark p) {
+    final subLocality = p.subLocality?.trim();
+    final locality = p.locality?.trim();
+    final administrativeArea = p.administrativeArea?.trim();
+
+    // If we have a neighborhood (e.g. Mylapore), show only that.
+    if (subLocality != null && subLocality.isNotEmpty) {
+      final sLower = subLocality.toLowerCase();
+      if (sLower == 'mylapore' || sLower == 'mylapur') {
+        return '📍 Mylapur';
+      }
+      return '📍 $subLocality';
+    }
+
+    // Otherwise show only the main area name (e.g. Chennai).
+    if (locality != null && locality.isNotEmpty) {
+      return '📍 $locality';
+    }
+
+    if (administrativeArea != null && administrativeArea.isNotEmpty) {
+      return '📍 $administrativeArea';
+    }
+
+    return _fallbackAddress;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -204,11 +224,7 @@ class _HomePageState extends State<HomePage> {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
       if (placemarks.isEmpty) return _fallbackAddress;
       Placemark p = placemarks[0];
-      final locality =
-          p.subLocality ?? p.locality ?? p.administrativeArea ?? '';
-      final area = p.administrativeArea ?? p.country ?? '';
-      if (locality.isEmpty && area.isEmpty) return _fallbackAddress;
-      return '📍 ${[locality, area].where((e) => e.isNotEmpty).join(', ')}';
+      return _formatPlacemarkForHomeHeader(p);
     } catch (_) {
       return _fallbackAddress;
     }
@@ -251,8 +267,7 @@ class _HomePageState extends State<HomePage> {
         Placemark place = placemarks[0];
         _detectedLocationParts = AddressParts.fromPlacemark(place);
         setState(() {
-          _currentAddress =
-              '📍 ${place.subLocality ?? place.locality}, ${place.administrativeArea}';
+          _currentAddress = _formatPlacemarkForHomeHeader(place);
         });
         _maybePromptSaveDetectedLocation();
       } else {
@@ -915,10 +930,10 @@ class _HomeHeaderBell extends StatelessWidget {
     final bellSize = (24.0 * s).clamp(22.0, 28.0);
     final bellPadH = (4.5 * s).clamp(3.5, 6.0);
     final bellPadV = (4.5 * s).clamp(3.5, 6.0);
-    final bellBodyW = (9.5 * s).clamp(8.0, 11.0);
-    final bellBodyH = (8.0 * s).clamp(6.5, 9.5);
-    final bellClapperW = (5.0 * s).clamp(4.0, 6.0);
-    final bellClapperH = (3.0 * s).clamp(2.4, 3.6);
+    final bellBodyW = (10.5 * s).clamp(8.5, 12.0);
+    final bellBodyH = (9.0 * s).clamp(7.0, 10.5);
+    final bellClapperW = (3.5 * s).clamp(2.8, 4.2);
+    final bellClapperH = (2.1 * s).clamp(1.7, 2.5);
 
     // Glass chrome — scaled from header scale [s] so blur, rim, and lift stay proportional.
     final blurSigma = (14.0 * s).clamp(11.0, 18.0);
@@ -1169,8 +1184,16 @@ class _HomeTopCard extends StatelessWidget {
 
   static String _addressLineForHome(String raw) {
     final s = raw.replaceFirst(RegExp(r'^📍\s*'), '').trim();
-    if (s.isEmpty) return 'HSR Layout, Bangalore';
-    return s;
+    final cleanedSegments = s
+        .split(',')
+        .map((e) => e.trim())
+        .where(
+          (e) =>
+              e.isNotEmpty && e.toLowerCase() != 'null' && e.toLowerCase() != 'undefined',
+        )
+        .toList();
+    if (cleanedSegments.isEmpty) return 'HSR Layout, Bangalore';
+    return cleanedSegments.join(', ');
   }
 
   @override
@@ -1214,14 +1237,14 @@ class _HomeTopCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: headerRadius,
         // Hard clip avoids sub-pixel anti-alias seams on side edges.
-        clipBehavior: Clip.hardEdge,
+        clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
             Positioned(
               top: -imageBleed,
               left: 0,
               right: 0,
-              bottom: -1,
+              bottom: 0,
               child: Transform.scale(
                 // Crop transparent side pixels from the header asset.
                 scaleX: headerScaleX,
@@ -1280,12 +1303,7 @@ class _HomeTopCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(
-                      height: (_kHomeHeaderGreetingToLocation * s).clamp(
-                        10.0,
-                        18.0,
-                      ),
-                    ),
+                    SizedBox(height: (8 * s).clamp(4.0, 14.0)),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -1353,7 +1371,7 @@ class _HomeTopCard extends StatelessWidget {
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: (2 * s).clamp(1.0, 2.0)),
+                                      SizedBox(height: (4 * s).clamp(2.0, 6.0)),
                                       Text(
                                         addressLine,
                                         maxLines: 1,
@@ -1697,9 +1715,9 @@ class _QuickActionCard extends StatelessWidget {
     final textColor = highlight
         ? Colors.white
         : grayed
-            ? _kQuickActionDisabledText
+            ? AppColors.greyedButtonLabel
             : _kQuickActionMutedText;
-    final iconColor = grayed ? _kQuickActionDisabledIcon : textColor;
+    final iconColor = grayed ? AppColors.greyedButtonLabel : textColor;
     final resolvedHeight =
         cellHeight ??
         (isTwoLine
@@ -1711,71 +1729,81 @@ class _QuickActionCard extends StatelessWidget {
             horizontal: 12 * s,
             vertical: (isTwoLine ? 18 : 8) * s,
           );
+    const cardRadius = 12.0;
+    const borderWidth = AppColors.greyedButtonBorderWidth;
+    final innerRadius = cardRadius - borderWidth;
+
+    final cardBody = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: iconWidth,
+          height: iconHeight,
+          child: _buildActionIcon(iconColor),
+        ),
+        SizedBox(width: (fullWidth ? 20 : 14) * s),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              maxLines: 2,
+              textAlign: TextAlign.left,
+              style: GoogleFonts.boldonse(
+                fontSize:
+                    ((MediaQuery.sizeOf(context).width < 360 ? 14.0 : 16.0) *
+                            s)
+                        .clamp(11.0, 16.0),
+                fontWeight: FontWeight.w400,
+                color: textColor,
+                height: isTwoLine ? 1.6 : 1.08,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          height: resolvedHeight,
-          padding: padding,
-          decoration: BoxDecoration(
-            color: highlight
-                ? null
-                : grayed
-                    ? _kQuickActionDisabledBg
-                    : _kQuickActionMutedBg,
-            gradient: highlight
-                ? LinearGradient(
-                    begin: const Alignment(1, 0.5),
-                    end: const Alignment(0, 0.5),
-                    colors: [
-                      AppColors.primaryLight,
-                      AppColors.footwearHeroStart,
-                    ],
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(12),
-            border: grayed && !highlight
-                ? Border.all(color: _kQuickActionDisabledBorder, width: 1)
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: iconWidth,
-                height: iconHeight,
-                child: _buildActionIcon(iconColor),
-              ),
-              SizedBox(width: (fullWidth ? 20 : 14) * s),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    label,
-                    maxLines: 2,
-                    textAlign: TextAlign.left,
-                    style: GoogleFonts.boldonse(
-                      fontSize:
-                          ((MediaQuery.sizeOf(context).width < 360
-                                      ? 14.0
-                                      : 16.0) *
-                                  s)
-                              .clamp(11.0, 16.0),
-                      fontWeight: FontWeight.w400,
-                      color: textColor,
-                      height: isTwoLine ? 1.6 : 1.08,
-                    ),
-                  ),
+        borderRadius: BorderRadius.circular(cardRadius),
+        child: grayed && !highlight
+            ? Container(
+                height: resolvedHeight,
+                decoration: AppColors.greyedButtonOuterDecoration(cardRadius),
+                padding: const EdgeInsets.all(borderWidth),
+                child: Container(
+                  padding: padding,
+                  decoration:
+                      AppColors.greyedButtonInnerDecoration(innerRadius),
+                  alignment: Alignment.center,
+                  child: cardBody,
                 ),
+              )
+            : Container(
+                height: resolvedHeight,
+                padding: padding,
+                decoration: BoxDecoration(
+                  color: _kQuickActionMutedBg,
+                  gradient: highlight
+                      ? const LinearGradient(
+                          begin: Alignment(1, 0.5),
+                          end: Alignment(0, 0.5),
+                          colors: [
+                            AppColors.primaryLight,
+                            AppColors.footwearHeroStart,
+                          ],
+                        )
+                      : null,
+                  borderRadius: BorderRadius.circular(cardRadius),
+                ),
+                alignment: Alignment.center,
+                child: cardBody,
               ),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -17,6 +17,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../utils/service_flow_article.dart';
+import '../utils/service_flow_layout.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
 import 'service_selection_page.dart';
@@ -32,13 +34,22 @@ class DonateMyPairDetailsPage extends StatefulWidget {
   final String articleId;
   final String articleName;
   final String articleImageUrl;
+  final List<ServiceFlowArticle> selectedArticles;
 
-  const DonateMyPairDetailsPage({
+  DonateMyPairDetailsPage({
     super.key,
     required this.articleId,
     required this.articleName,
     required this.articleImageUrl,
-  });
+    List<ServiceFlowArticle>? selectedArticles,
+  }) : selectedArticles = selectedArticles ??
+            [
+              ServiceFlowArticle(
+                id: articleId,
+                name: articleName,
+                imageUrl: articleImageUrl,
+              ),
+            ];
 
   @override
   State<DonateMyPairDetailsPage> createState() => _DonateMyPairDetailsPageState();
@@ -72,6 +83,26 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
   void dispose() {
     _reasonController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _validateDonateDetails() async {
+    if (_reasonController.text.trim().isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please describe why you are donating',
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    if (_proofImages.isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please upload at least one photo',
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    return true;
   }
 
   Future<void> _loadProfile() async {
@@ -147,6 +178,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
 
   Future<void> _onNext() async {
     if (_busy || !mounted) return;
+    if (!await _validateDonateDetails()) return;
     if (_selectedAddress == null) {
       await showAppFeedbackAlert(
         context,
@@ -164,9 +196,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
         final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => DonateMyPairPickupPage(
-              articleId: widget.articleId,
-              articleName: widget.articleName,
-              articleImageUrl: widget.articleImageUrl,
+              selectedArticles: widget.selectedArticles,
               reason: reason,
               proofImages: List<XFile>.from(_proofImages),
               selectedAddress: _selectedAddress!,
@@ -198,7 +228,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
         final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => RequestSummaryPage(
-              articleId: widget.articleId,
+              articleIds: widget.selectedArticles.map((a) => a.id).toList(),
               service: _donateService,
               address: _selectedAddress!,
               proofImages: List<XFile>.from(_proofImages),
@@ -227,12 +257,10 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
-    const topInset = 52.0;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -244,7 +272,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   horizontalInset,
-                  topInset,
+                  kServiceFlowTopInset,
                   horizontalInset,
                   0,
                 ),
@@ -268,10 +296,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                               color: Color(0xFF11999E),
                             ),
                           )
-                        : LayoutBuilder(
-                            builder: (context, constraints) =>
-                                _buildDonateDetailsBody(context, constraints),
-                          ),
+                        : _buildDonateDetailsBody(context),
                   ),
                 ),
               ),
@@ -291,19 +316,11 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     );
   }
 
-  Widget _buildDonateDetailsBody(
-    BuildContext context,
-    BoxConstraints constraints,
-  ) {
+  Widget _buildDonateDetailsBody(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final navH = dashboardLinkedBottomNavStackHeight(context);
-    final maxH = constraints.maxHeight.isFinite
-        ? constraints.maxHeight
-        : MediaQuery.sizeOf(context).height;
-    final layoutScale = math
-        .min(uiScale, ((maxH - navH) / 640).clamp(0.55, 1.0))
-        .toDouble();
+    final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
     final fs = (16 * layoutScale).clamp(12.0, 16.0);
     final titleFs = (24 * layoutScale).clamp(17.0, 24.0);
     final pillH = (48 * layoutScale).clamp(40.0, 52.0);
@@ -311,17 +328,15 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
     final actionFs = (14 * layoutScale).clamp(11.0, 14.0);
     final iconSz = (58 * layoutScale).clamp(36.0, 58.0);
     final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
-    final viewInsetBottom = MediaQuery.viewInsetsOf(context).bottom;
-    final keyboardOpen = viewInsetBottom > 0;
-    final uploadTapHCompact = (72 * layoutScale).clamp(56.0, 88.0);
-    final effectiveUploadH = keyboardOpen ? uploadTapHCompact : uploadTapH;
+    final effectiveUploadH = uploadTapH;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
         20,
         16,
         20,
-        keyboardOpen ? 12 : navH + 6,
+        navH + 6,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -369,44 +384,43 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
               ),
             ),
             SizedBox(height: 4 * layoutScale),
-            if (!keyboardOpen)
-              LayoutBuilder(
-                builder: (context, ac) {
-                  final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
-                  final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
-                  return Center(
-                    child: SizedBox(
-                      width: imgW,
-                      height: imgH,
-                      child: Center(
-                        child: widget.articleImageUrl.isEmpty
-                            ? Icon(
+            LayoutBuilder(
+              builder: (context, ac) {
+                final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
+                final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
+                return Center(
+                  child: SizedBox(
+                    width: imgW,
+                    height: imgH,
+                    child: Center(
+                      child: widget.articleImageUrl.isEmpty
+                          ? Icon(
+                              Icons.checkroom_outlined,
+                              color: const Color(0xFF8D8D8D),
+                              size: iconSz,
+                            )
+                          : ArticleRackShoeImage(
+                              imageUrl: widget.articleImageUrl,
+                              width: imgW,
+                              height: imgH,
+                              fit: BoxFit.contain,
+                              placeholder: Icon(
                                 Icons.checkroom_outlined,
                                 color: const Color(0xFF8D8D8D),
                                 size: iconSz,
-                              )
-                            : ArticleRackShoeImage(
-                                imageUrl: widget.articleImageUrl,
-                                width: imgW,
-                                height: imgH,
-                                fit: BoxFit.contain,
-                                placeholder: Icon(
-                                  Icons.checkroom_outlined,
-                                  color: const Color(0xFF8D8D8D),
-                                  size: iconSz,
-                                ),
-                                errorPlaceholder: Icon(
-                                  Icons.checkroom_outlined,
-                                  color: const Color(0xFF8D8D8D),
-                                  size: iconSz,
-                                ),
                               ),
-                      ),
+                              errorPlaceholder: Icon(
+                                Icons.checkroom_outlined,
+                                color: const Color(0xFF8D8D8D),
+                                size: iconSz,
+                              ),
+                            ),
                     ),
-                  );
-                },
-              ),
-            if (!keyboardOpen) SizedBox(height: 10 * layoutScale),
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: 10 * layoutScale),
           ],
           if (_error != null)
             Padding(
@@ -425,7 +439,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   ScrollViewKeyboardDismissBehavior.onDrag,
               physics: const ClampingScrollPhysics(),
               padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(context).bottom + 8,
+                bottom: keyboardInset + 8,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -442,8 +456,8 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   TextField(
                     controller: _reasonController,
                     keyboardType: TextInputType.multiline,
-                    minLines: keyboardOpen ? 2 : 4,
-                    maxLines: keyboardOpen ? 5 : 8,
+                    minLines: 4,
+                    maxLines: 8,
                     textAlignVertical: TextAlignVertical.top,
                     style: GoogleFonts.montserrat(
                       color: const Color(0xFF062F35),
@@ -555,7 +569,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   SizedBox(height: 8 * layoutScale),
                   Text(
                     'How would you like to send us your footwear?',
-                    maxLines: keyboardOpen ? 1 : 2,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.montserrat(
                       color: const Color(0xFF062F35),
@@ -721,18 +735,14 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
 
 /// Step 3 — home pickup schedule + address (full-screen page).
 class DonateMyPairPickupPage extends StatefulWidget {
-  final String articleId;
-  final String articleName;
-  final String articleImageUrl;
+  final List<ServiceFlowArticle> selectedArticles;
   final String reason;
   final List<XFile> proofImages;
   final Address selectedAddress;
 
   const DonateMyPairPickupPage({
     super.key,
-    required this.articleId,
-    required this.articleName,
-    required this.articleImageUrl,
+    required this.selectedArticles,
     required this.reason,
     required this.proofImages,
     required this.selectedAddress,
@@ -751,7 +761,7 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
   );
 
   bool _submitting = false;
-  int _selectedPickupSlot = 0;
+  int _selectedPickupSlot = -1;
   late Address _selectedAddress = widget.selectedAddress;
 
   List<DateTime> get _pickupDays {
@@ -820,6 +830,14 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
 
   Future<void> _goSummary() async {
     if (_submitting) return;
+    if (_selectedPickupSlot < 0) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a pickup time slot',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
     setState(() => _submitting = true);
     final scheduleLabel =
         '${_pickupDayLabels.first}, '
@@ -830,7 +848,7 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => RequestSummaryPage(
-          articleId: widget.articleId,
+          articleIds: widget.selectedArticles.map((a) => a.id).toList(),
           service: _donateService,
           address: _selectedAddress,
           proofImages: List<XFile>.from(widget.proofImages),
@@ -1201,40 +1219,40 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
                 ),
                 child: TextButton(
                   onPressed: _submitting ? null : _goSummary,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100),
+                      ),
                     ),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Next',
-                              style: GoogleFonts.boldonse(
-                                color: Colors.white,
-                                fontSize: fs,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            SizedBox(width: 20 * layoutScale),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
                               color: Colors.white,
-                              size: (16 * layoutScale).clamp(13.0, 16.0),
+                              strokeWidth: 2,
                             ),
-                          ],
-                        ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Next',
+                                style: GoogleFonts.boldonse(
+                                  color: Colors.white,
+                                  fontSize: fs,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              SizedBox(width: 20 * layoutScale),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: Colors.white,
+                                size: (16 * layoutScale).clamp(13.0, 16.0),
+                              ),
+                            ],
+                          ),
                 ),
               ),
             ),

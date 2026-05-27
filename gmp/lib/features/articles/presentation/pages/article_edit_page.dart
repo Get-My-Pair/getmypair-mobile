@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/greyed_button_shell.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
@@ -1064,51 +1065,65 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   }) {
     const teal = Color(0xFF12899B);
     const cyanBorder = Color(0xFF09DFFF);
-    const disabledFill = Color(0xFF6B7B80);
-    const disabledBorder = Color(0xFF8A9A9F);
-    const disabledLabel = Color(0xFFB8C4C8);
 
     final enabled = onPressed != null && !isBusy;
+
+    if (!enabled) {
+      return GreyedButtonShell(
+        height: 50,
+        child: Material(
+          color: Colors.transparent,
+          child: Center(
+            child: showLoader && isBusy
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      color: AppColors.greyedButtonLabel,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: GoogleFonts.boldonse(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.greyedButtonLabel,
+                    ),
+                  ),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
       height: 50,
       child: ElevatedButton(
-        onPressed: enabled ? onPressed : null,
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: enabled ? Colors.white : disabledFill,
-          foregroundColor: enabled ? teal : disabledLabel,
-          disabledBackgroundColor: disabledFill,
-          disabledForegroundColor: disabledLabel,
-          elevation: enabled ? 2 : 0,
+          backgroundColor: Colors.white,
+          foregroundColor: teal,
+          elevation: 2,
           shadowColor: Colors.black26,
           padding: const EdgeInsets.symmetric(horizontal: 24),
           minimumSize: const Size(0, 50),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100),
-            side: BorderSide(
-              color: enabled ? cyanBorder : disabledBorder,
+            side: const BorderSide(
+              color: cyanBorder,
               width: 1,
             ),
           ),
         ),
-        child: showLoader && isBusy
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(
-                  color: teal,
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(
-                label,
-                style: GoogleFonts.boldonse(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: enabled ? teal : disabledLabel,
-                ),
-              ),
+        child: Text(
+          label,
+          style: GoogleFonts.boldonse(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: teal,
+          ),
+        ),
       ),
     );
   }
