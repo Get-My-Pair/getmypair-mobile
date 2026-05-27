@@ -11,7 +11,6 @@ import 'package:gmp/features/articles/data/footwear_background_remover.dart';
 import 'package:gmp/features/articles/data/footwear_image_validator.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
-import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -627,127 +626,115 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     );
   }
 
-  static const double _leftThumbColumnWidth = 76;
-  static const double _captureRowGap = 10;
+  static const String _cameraShoeGuideAsset =
+      'assets/images/icons/myrack/shoe.png';
 
-  /// Left: captured photo slots. Center: live camera preview + shoe guide overlay.
+  /// Centered camera frame + shoe guide (Figma layout).
   Widget _captureRow(double contentWidth) {
-    const guideOpacity = 0.88;
-    final cameraW = (contentWidth - _leftThumbColumnWidth - _captureRowGap) * 0.92;
-    final frameH = cameraW * (0.55 / 0.88);
+    final frameW = contentWidth * 0.88;
+    final frameH = frameW * (0.55 / 0.88);
 
     return Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: _leftThumbColumnWidth,
-            height: frameH,
-            child: _leftImageColumn(),
-          ),
-          const SizedBox(width: _captureRowGap),
-          Expanded(
-            child: SizedBox(
-              height: frameH,
-              child: Align(
-                alignment: Alignment.center,
-                child: SizedBox(
-                  width: cameraW,
-                  height: frameH,
-                  child: _cameraPreviewStack(guideOpacity: guideOpacity),
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: Align(
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: frameW,
+          height: frameH,
+          child: _cameraPreviewStack(),
+        ),
       ),
     );
   }
 
-  Widget _leftImageColumn() {
-    const slotGap = 8.0;
-
+  Widget _capturedPhotosStrip() {
     return Column(
-      children: List.generate(_maxPhotos, (index) {
-        final hasImage = index < _images.length;
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: index < _maxPhotos - 1 ? slotGap : 0),
-            child: hasImage
-                ? _leftImageThumb(index)
-                : _leftEmptySlot(index + 1),
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _leftEmptySlot(int slotNumber) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.45),
-          width: 1.2,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          '$slotNumber',
-          style: GoogleFonts.montserrat(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _leftImageThumb(int index) {
-    return Stack(
-      clipBehavior: Clip.none,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Positioned.fill(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: ColoredBox(
-              color: const Color(0xFF1A2E33),
-              child: Image.file(
-                _images[index],
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-                errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.broken_image_outlined,
-                  color: Colors.white.withValues(alpha: 0.5),
-                  size: 28,
-                ),
-              ),
-            ),
+        Text(
+          'Photos (${_images.length}/$_maxPhotos) — tap × to remove',
+          maxLines: 2,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserrat(
+            color: Colors.white.withValues(alpha: 0.85),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        Positioned(
-          top: 2,
-          right: 2,
-          child: GestureDetector(
-            onTap: _validatingImage ? null : () => _removeImage(index),
-            child: const CircleAvatar(
-              radius: 10,
-              backgroundColor: AppColors.error,
-              child: Icon(
-                Icons.close,
-                color: AppColors.textOnPrimary,
-                size: 14,
-              ),
-            ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 88,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (var i = 0; i < _images.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Stack(
+                    children: [
+                      SizedBox(
+                        width: 88,
+                        height: 88,
+                        child: FootwearCutoutPreview(
+                          file: _images[i],
+                          height: 88,
+                          fit: BoxFit.contain,
+                          borderRadius: 12,
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: _validatingImage ? null : () => _removeImage(i),
+                          child: const CircleAvatar(
+                            radius: 12,
+                            backgroundColor: AppColors.error,
+                            child: Icon(
+                              Icons.close,
+                              color: AppColors.textOnPrimary,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _cameraPreviewStack({required double guideOpacity}) {
+  /// Figma dashed shoe outline — camera preview center only.
+  Widget _cameraShoeGuideOverlay() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        return Center(
+          child: Opacity(
+            opacity: 0.9,
+            child: Image.asset(
+              _cameraShoeGuideAsset,
+              width: w * 0.78,
+              height: h * 0.68,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.checkroom_outlined,
+                size: (w * 0.35).clamp(48.0, 72.0),
+                color: Colors.white.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _cameraPreviewStack() {
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.hardEdge,
@@ -763,8 +750,9 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         ),
         Positioned.fill(
           child: IgnorePointer(
-            child: FootwearScannerOverlay(
-              shoeGuideOpacity: guideOpacity,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _cameraShoeGuideOverlay(),
             ),
           ),
         ),
@@ -864,20 +852,11 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
                         children: [
                           _headerSection(),
                           _captureRow(contentWidth),
-                          if (_images.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'Photos (${_images.length}/$_maxPhotos) — tap × to remove',
-                              maxLines: 2,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
                           _captureActionsSection(),
+                          if (_images.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _capturedPhotosStrip(),
+                          ],
                           if (_images.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 12, bottom: 24),
