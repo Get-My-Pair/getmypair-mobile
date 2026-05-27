@@ -69,7 +69,8 @@ class ServiceSelectionPage extends StatefulWidget {
   State<ServiceSelectionPage> createState() => _ServiceSelectionPageState();
 }
 
-class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
+class _ServiceSelectionPageState extends State<ServiceSelectionPage>
+    with WidgetsBindingObserver {
   static const BorderRadius _repairFlowPanelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
@@ -102,6 +103,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   bool _pickupModeChosen = false;
   bool _showRepairStep0FieldErrors = true;
   final FocusNode _problemFocusNode = FocusNode();
+  final GlobalKey _problemFieldKey = GlobalKey();
+  final ScrollController _repairStep0ScrollController = ScrollController();
   int _selectedPickupDay = 0;
   int _selectedPickupSlot = -1;
   /// When user picks a place on the map for [cobbler_nearby], shown on the summary.
@@ -250,6 +253,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (_isSingleServiceFlow) {
       _selectedService = _visibleOptions.first;
     }
@@ -258,22 +262,54 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     _load();
   }
 
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    if (_problemFocusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future<void>.delayed(const Duration(milliseconds: 150), () {
+          if (mounted) _scrollProblemFieldIntoView();
+        });
+      });
+    }
+  }
+
   void _onRepairStep0FieldsChanged() {
     if (mounted) setState(() {});
   }
 
   void _onProblemFocusChanged() {
-    if (_problemFocusNode.hasFocus || !mounted) return;
+    if (!mounted) return;
+    if (_problemFocusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollProblemFieldIntoView();
+      });
+      return;
+    }
     if (_problemController.text.trim().isEmpty) {
       setState(() => _showRepairStep0FieldErrors = true);
     }
   }
 
+  void _scrollProblemFieldIntoView() {
+    if (!mounted || !_problemFocusNode.hasFocus) return;
+    final target = _problemFieldKey.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      alignment: 0.22,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _problemController.removeListener(_onRepairStep0FieldsChanged);
     _problemFocusNode.removeListener(_onProblemFocusChanged);
     _problemFocusNode.dispose();
+    _repairStep0ScrollController.dispose();
     _problemController.dispose();
     super.dispose();
   }
@@ -849,6 +885,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
     final effectiveUploadH = uploadTapH;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    // resizeToAvoidBottomInset already shrinks the body; do not add keyboard
+    // height again or the column overflows (~59px).
+    final panelBottomPad = keyboardInset > 0 ? 8.0 : navH + 6;
 
     final title = widget.flowPageTitle ?? 'RepairMyPair';
     final selectedArticles = widget.selectedArticles;
@@ -858,36 +897,30 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
         (12 * layoutScale).clamp(10.0, 14.0),
         16,
         20,
-        navH + 6,
+        panelBottomPad,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildRepairFlowAppBar(
-            context,
-            title: title,
-            layoutScale: layoutScale,
-            titleFontSize: titleFs,
-            onBack: _submitting
-                ? null
-                : () {
-                    if (_repairStep > 0) {
-                      setState(() => _repairStep -= 1);
-                      return;
-                    }
-                    Navigator.pop(context);
-                  },
-          ),
-          if (_repairStep == 0 && selectedArticles.isNotEmpty) ...[
-            SizedBox(height: 6 * layoutScale),
-            _buildSelectedFootwearHeader(
-              selectedArticles,
-              layoutScale: layoutScale,
-              fontSize: fs,
-              iconSize: iconSz,
+          if (_repairStep != 0)
+            ColoredBox(
+              color: const Color(0xFFF0F0F0),
+              child: _buildRepairFlowAppBar(
+                context,
+                title: title,
+                layoutScale: layoutScale,
+                titleFontSize: titleFs,
+                onBack: _submitting
+                    ? null
+                    : () {
+                        if (_repairStep > 0) {
+                          setState(() => _repairStep -= 1);
+                          return;
+                        }
+                        Navigator.pop(context);
+                      },
+              ),
             ),
-            SizedBox(height: 6 * layoutScale),
-          ],
           if (_error != null)
             Padding(
               padding: EdgeInsets.only(bottom: 8 * layoutScale),
@@ -901,32 +934,70 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
           if (_repairStep == 0) ...[
             Expanded(
-              child: ClipRect(
+              child: ColoredBox(
+                color: const Color(0xFFF0F0F0),
                 child: SingleChildScrollView(
+                  controller: _repairStep0ScrollController,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   physics: const ClampingScrollPhysics(),
-                  padding: EdgeInsets.only(
-                    bottom: keyboardInset + 8,
-                  ),
+                  padding: const EdgeInsets.only(bottom: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        _issuePrompt,
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF062F35),
-                        fontSize: fs,
-                        fontWeight: FontWeight.w400,
+                      _buildRepairFlowAppBar(
+                        context,
+                        title: title,
+                        layoutScale: layoutScale,
+                        titleFontSize: titleFs,
+                        onBack: _submitting
+                            ? null
+                            : () {
+                                if (_repairStep > 0) {
+                                  setState(() => _repairStep -= 1);
+                                  return;
+                                }
+                                Navigator.pop(context);
+                              },
                       ),
-                    ),
-                    SizedBox(height: 4 * layoutScale),
-                    TextField(
+                      SizedBox(
+                        height: keyboardInset > 0
+                            ? 8
+                            : (26 * layoutScale).clamp(20.0, 36.0),
+                      ),
+                      if (selectedArticles.isNotEmpty) ...[
+                        _buildSelectedFootwearHeader(
+                          selectedArticles,
+                          layoutScale: layoutScale,
+                          fontSize: fs,
+                          iconSize: iconSz,
+                        ),
+                        SizedBox(height: 8 * layoutScale),
+                      ],
+                      KeyedSubtree(
+                        key: _problemFieldKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              _issuePrompt,
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF062F35),
+                                fontSize: fs,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            SizedBox(height: 4 * layoutScale),
+                            TextField(
                       controller: _problemController,
                       focusNode: _problemFocusNode,
                       keyboardType: TextInputType.multiline,
                       minLines: 4,
                       maxLines: 8,
+                      scrollPadding: const EdgeInsets.only(
+                        top: 72,
+                        bottom: 24,
+                      ),
                       textAlignVertical: TextAlignVertical.top,
                       style: GoogleFonts.montserrat(
                         color: const Color(0xFF062F35),
@@ -969,6 +1040,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         ),
                       ),
                     ),
+                          ],
+                        ),
+                      ),
                     if (_showRepairStep0FieldErrors && !_repairStep0ProblemValid)
                       _repairStep0InlineError(
                         'Please fill out this field.',
@@ -1063,69 +1137,73 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                         height: (76 * layoutScale).clamp(60.0, 92.0),
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.hardEdge,
                           itemCount: _proofImages.length,
                           separatorBuilder: (_, _) =>
                               SizedBox(width: 8 * layoutScale),
                           itemBuilder: (_, i) {
                             final thumb = (72 * layoutScale).clamp(56.0, 88.0);
-                            return Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: SizedBox(
-                                    width: thumb,
-                                    height: thumb,
-                                    child: FutureBuilder(
-                                      future: _proofImages[i].readAsBytes(),
-                                      builder: (context, snap) {
-                                        if (!snap.hasData) {
-                                          return Container(
-                                            color: const Color(0xFFDFE7E9),
-                                            child: const Center(
-                                              child: SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Color(0xFF11999E),
+                            return SizedBox(
+                              width: thumb,
+                              height: thumb,
+                              child: Stack(
+                                clipBehavior: Clip.hardEdge,
+                                children: [
+                                  Positioned.fill(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: FutureBuilder(
+                                        future: _proofImages[i].readAsBytes(),
+                                        builder: (context, snap) {
+                                          if (!snap.hasData) {
+                                            return Container(
+                                              color: const Color(0xFFDFE7E9),
+                                              child: const Center(
+                                                child: SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    color: Color(0xFF11999E),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
+                                            );
+                                          }
+                                          return Image.memory(
+                                            snap.data!,
+                                            fit: BoxFit.cover,
                                           );
-                                        }
-                                        return Image.memory(
-                                          snap.data!,
-                                          fit: BoxFit.cover,
-                                        );
-                                      },
+                                        },
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                  top: -4,
-                                  right: -4,
-                                  child: Material(
-                                    color: const Color(0xFFB00020),
-                                    shape: const CircleBorder(),
-                                    child: InkWell(
-                                      customBorder: const CircleBorder(),
-                                      onTap: _submitting
-                                          ? null
-                                          : () => _removeImage(i),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(4),
-                                        child: Icon(
-                                          Icons.close,
-                                          size: (16 * layoutScale)
-                                              .clamp(14.0, 18.0),
-                                          color: Colors.white,
+                                  Positioned(
+                                    top: 2,
+                                    right: 2,
+                                    child: Material(
+                                      color: const Color(0xFFB00020),
+                                      shape: const CircleBorder(),
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: _submitting
+                                            ? null
+                                            : () => _removeImage(i),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(3),
+                                          child: Icon(
+                                            Icons.close,
+                                            size: (14 * layoutScale)
+                                                .clamp(12.0, 16.0),
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             );
                           },
                         ),
@@ -1248,7 +1326,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 ),
               ),
             ),
-            ),
+          ),
           ] else
             Expanded(
               child: ClipRect(
@@ -1259,6 +1337,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      SizedBox(
+                        height: (26 * layoutScale).clamp(20.0, 36.0),
+                      ),
                       Text(
                         'Home Pickup',
                         style: GoogleFonts.boldonse(
@@ -1267,6 +1348,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                           fontWeight: FontWeight.w400,
                         ),
                       ),
+                      SizedBox(height: (16 * layoutScale).clamp(12.0, 20.0)),
                       if (_proofImages.isNotEmpty) ...[
                         SizedBox(height: 8 * layoutScale),
                         Text(
@@ -1661,38 +1743,32 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                 height: 1.15,
               ),
             ),
-          if (article.imageUrl.isNotEmpty)
-            SizedBox(
-              width: double.infinity,
-              child: Transform.translate(
-                offset: Offset(0, -(10 * layoutScale).clamp(6.0, 14.0)),
-                child: Center(
-                  child: SizedBox(
-                    width: imgW,
-                    height: imgH,
-                    child: ClipRect(
-                      child: ArticleRackShoeImage(
-                        imageUrl: article.imageUrl,
-                        width: imgW,
-                        height: imgH,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                        placeholder: Icon(
-                          Icons.checkroom_outlined,
-                          color: const Color(0xFF8D8D8D),
-                          size: iconSize,
-                        ),
-                        errorPlaceholder: Icon(
-                          Icons.checkroom_outlined,
-                          color: const Color(0xFF8D8D8D),
-                          size: iconSize,
-                        ),
-                      ),
-                    ),
+          if (article.imageUrl.isNotEmpty) ...[
+            SizedBox(height: 2 * layoutScale),
+            Center(
+              child: SizedBox(
+                width: imgW,
+                height: imgH,
+                child: ArticleRackShoeImage(
+                  imageUrl: article.imageUrl,
+                  width: imgW,
+                  height: imgH,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  placeholder: Icon(
+                    Icons.checkroom_outlined,
+                    color: const Color(0xFF8D8D8D),
+                    size: iconSize,
+                  ),
+                  errorPlaceholder: Icon(
+                    Icons.checkroom_outlined,
+                    color: const Color(0xFF8D8D8D),
+                    size: iconSize,
                   ),
                 ),
               ),
             ),
+          ],
         ],
       );
     }
