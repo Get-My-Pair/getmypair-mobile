@@ -18,6 +18,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../utils/service_flow_article.dart';
 import '../utils/service_flow_layout.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
@@ -36,20 +37,32 @@ class MaintenancePlanData {
 }
 
 class ServiceSelectionPage extends StatefulWidget {
-  final String articleId;
+  final List<ServiceFlowArticle> selectedArticles;
   final List<String>? allowedServiceTypes;
-  final String? articleName;
-  final String? articleImageUrl;
   final String? flowPageTitle;
 
-  const ServiceSelectionPage({
+  /// Single-article entry (e.g. from article rack).
+  ServiceSelectionPage({
     super.key,
-    required this.articleId,
+    required String articleId,
     this.allowedServiceTypes,
-    this.articleName,
-    this.articleImageUrl,
+    String? articleName,
+    String? articleImageUrl,
     this.flowPageTitle,
-  });
+  }) : selectedArticles = [
+          ServiceFlowArticle(
+            id: articleId,
+            name: articleName ?? '',
+            imageUrl: articleImageUrl ?? '',
+          ),
+        ];
+
+  ServiceSelectionPage.multi({
+    super.key,
+    required this.selectedArticles,
+    this.allowedServiceTypes,
+    this.flowPageTitle,
+  }) : assert(selectedArticles.length > 0);
 
   @override
   State<ServiceSelectionPage> createState() => _ServiceSelectionPageState();
@@ -86,7 +99,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   int _repairStep = 0;
   bool _homePickup = true;
   int _selectedPickupDay = 0;
-  int _selectedPickupSlot = 0;
+  int _selectedPickupSlot = -1;
   /// When user picks a place on the map for [cobbler_nearby], shown on the summary.
   String? _cobblerNearbyLocationSummary;
   final TextEditingController _problemController = TextEditingController();
@@ -231,6 +244,46 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
   void dispose() {
     _problemController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _validateRepairStep0() async {
+    if (_problemController.text.trim().isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: _issuePrompt,
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    if (_proofImages.isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please upload at least one photo',
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _validateRepairStep1() async {
+    if (_selectedPickupSlot < 0) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a pickup time slot',
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    if (_selectedAddress == null) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a pickup address',
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    return true;
   }
 
   Future<void> _load() async {
@@ -384,6 +437,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
   Future<void> _onRepairStepZeroNext() async {
     if (_submitting || !mounted) return;
+    if (!await _validateRepairStep0()) return;
     if (_homePickup) {
       setState(() => _repairStep = 1);
       return;
@@ -410,6 +464,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
 
   Future<void> _submit() async {
     if (_submitting) return;
+    if (_isSingleServiceFlow && _repairStep == 1) {
+      if (!await _validateRepairStep1()) return;
+    }
     if (_selectedService == null) {
       await showAppFeedbackAlert(
         context,
@@ -428,18 +485,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
       );
       return;
     }
-    if (_selectedAddress == null) {
+    if (_homePickup) {
+      if (!await _validateRepairStep1()) return;
+    } else if (_selectedAddress == null) {
       await showAppFeedbackAlert(
         context,
         message: 'Please select a pickup address',
-        type: AppFeedbackType.warning,
-      );
-      return;
-    }
-    if (_homePickup && _selectedPickupSlot < 0) {
-      await showAppFeedbackAlert(
-        context,
-        message: 'Please select a pickup time slot',
         type: AppFeedbackType.warning,
       );
       return;
@@ -459,7 +510,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => RequestSummaryPage(
-          articleId: widget.articleId,
+          articleIds:
+              widget.selectedArticles.map((a) => a.id).toList(growable: false),
           service: _selectedService!,
           address: _selectedAddress!,
           proofImages: List<XFile>.from(_proofImages),
@@ -739,7 +791,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     final title = widget.flowPageTitle ?? 'RepairMyPair';
-    final articleName = (widget.articleName ?? '').trim();
+    final selectedArticles = widget.selectedArticles;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -788,56 +840,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ],
           ),
           SizedBox(height: 10 * layoutScale),
-          if (_repairStep == 0 && articleName.isNotEmpty) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                articleName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.boldonse(
-                  color: const Color(0xFF11899B),
-                  fontSize: fs,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            SizedBox(height: 4 * layoutScale),
-            LayoutBuilder(
-              builder: (context, ac) {
-                final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
-                final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
-                return Center(
-                  child: SizedBox(
-                    width: imgW,
-                    height: imgH,
-                    child: Center(
-                      child: (widget.articleImageUrl ?? '').isEmpty
-                          ? Icon(
-                              Icons.checkroom_outlined,
-                              color: const Color(0xFF8D8D8D),
-                              size: iconSz,
-                            )
-                          : ArticleRackShoeImage(
-                              imageUrl: widget.articleImageUrl!,
-                              width: imgW,
-                              height: imgH,
-                              fit: BoxFit.contain,
-                              placeholder: Icon(
-                                Icons.checkroom_outlined,
-                                color: const Color(0xFF8D8D8D),
-                                size: iconSz,
-                              ),
-                              errorPlaceholder: Icon(
-                                Icons.checkroom_outlined,
-                                color: const Color(0xFF8D8D8D),
-                                size: iconSz,
-                              ),
-                            ),
-                    ),
-                  ),
-                );
-              },
+          if (_repairStep == 0 && selectedArticles.isNotEmpty) ...[
+            _buildSelectedFootwearHeader(
+              selectedArticles,
+              layoutScale: layoutScale,
+              fontSize: fs,
+              iconSize: iconSz,
             ),
             SizedBox(height: 10 * layoutScale),
           ],
@@ -1507,6 +1515,147 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
     );
   }
 
+  Widget _buildSelectedFootwearHeader(
+    List<ServiceFlowArticle> articles, {
+    required double layoutScale,
+    required double fontSize,
+    required double iconSize,
+  }) {
+    if (articles.length == 1) {
+      final article = articles.first;
+      final name = article.name.trim();
+      if (name.isEmpty) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.boldonse(
+                color: const Color(0xFF11899B),
+                fontSize: fontSize,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+          SizedBox(height: 4 * layoutScale),
+          LayoutBuilder(
+            builder: (context, ac) {
+              final imgW = (ac.maxWidth * 0.52).clamp(120.0, 230.0);
+              final imgH = (imgW * 96 / 230).clamp(48.0, 96.0);
+              return Center(
+                child: SizedBox(
+                  width: imgW,
+                  height: imgH,
+                  child: Center(
+                    child: article.imageUrl.isEmpty
+                        ? Icon(
+                            Icons.checkroom_outlined,
+                            color: const Color(0xFF8D8D8D),
+                            size: iconSize,
+                          )
+                        : ArticleRackShoeImage(
+                            imageUrl: article.imageUrl,
+                            width: imgW,
+                            height: imgH,
+                            fit: BoxFit.contain,
+                            placeholder: Icon(
+                              Icons.checkroom_outlined,
+                              color: const Color(0xFF8D8D8D),
+                              size: iconSize,
+                            ),
+                            errorPlaceholder: Icon(
+                              Icons.checkroom_outlined,
+                              color: const Color(0xFF8D8D8D),
+                              size: iconSize,
+                            ),
+                          ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
+
+    final thumb = (72 * layoutScale).clamp(56.0, 88.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '${articles.length} pairs selected',
+          style: GoogleFonts.boldonse(
+            color: const Color(0xFF11899B),
+            fontSize: fontSize,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        SizedBox(height: 6 * layoutScale),
+        SizedBox(
+          height: thumb + 22 * layoutScale,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: articles.length,
+            separatorBuilder: (_, _) => SizedBox(width: 10 * layoutScale),
+            itemBuilder: (_, i) {
+              final article = articles[i];
+              final label = article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
+              return SizedBox(
+                width: thumb,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: thumb,
+                      height: thumb,
+                      child: article.imageUrl.isEmpty
+                          ? Icon(
+                              Icons.checkroom_outlined,
+                              color: const Color(0xFF8D8D8D),
+                              size: iconSize,
+                            )
+                          : ArticleRackShoeImage(
+                              imageUrl: article.imageUrl,
+                              width: thumb,
+                              height: thumb,
+                              fit: BoxFit.contain,
+                              placeholder: Icon(
+                                Icons.checkroom_outlined,
+                                color: const Color(0xFF8D8D8D),
+                                size: iconSize,
+                              ),
+                              errorPlaceholder: Icon(
+                                Icons.checkroom_outlined,
+                                color: const Color(0xFF8D8D8D),
+                                size: iconSize,
+                              ),
+                            ),
+                    ),
+                    SizedBox(height: 4 * layoutScale),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.boldonse(
+                        color: const Color(0xFF11899B),
+                        fontSize: (12 * layoutScale).clamp(10.0, 12.0),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _repairPickupPill({
     required String label,
     required bool selected,
@@ -1574,76 +1723,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
             ),
           ),
         ],
-        if ((widget.articleName ?? '').trim().isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.articleName!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          height: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.articleName!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 116,
-                  height: 72,
-                  child: (widget.articleImageUrl ?? '').isEmpty
-                      ? const Icon(
-                          Icons.checkroom_outlined,
-                          color: AppColors.textTertiary,
-                          size: 52,
-                        )
-                      : ArticleRackShoeImage(
-                          imageUrl: widget.articleImageUrl!,
-                          width: 116,
-                          height: 72,
-                          fit: BoxFit.contain,
-                          placeholder: const Icon(
-                            Icons.checkroom_outlined,
-                            color: AppColors.textTertiary,
-                            size: 52,
-                          ),
-                          errorPlaceholder: const Icon(
-                            Icons.checkroom_outlined,
-                            color: AppColors.textTertiary,
-                            size: 52,
-                          ),
-                        ),
-                ),
-              ],
+        if (widget.selectedArticles.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildSelectedFootwearHeader(
+              widget.selectedArticles,
+              layoutScale: 1,
+              fontSize: 16,
+              iconSize: 52,
             ),
           ),
-          const SizedBox(height: 12),
         ],
         if (_repairStep == 0) ...[
           _sectionTitle(
@@ -1738,7 +1827,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
           SizedBox(
             height: 50,
             child: ElevatedButton(
-              onPressed: _submitting ? null : () => setState(() => _repairStep = 1),
+              onPressed: _submitting
+                  ? null
+                  : () async {
+                      if (!await _validateRepairStep0()) return;
+                      setState(() => _repairStep = 1);
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.textOnPrimary,
@@ -1770,7 +1864,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
                     ? null
                     : (_) => setState(() {
                         _selectedPickupDay = index;
-                        _selectedPickupSlot = 0;
+                        _selectedPickupSlot = -1;
                       }),
               );
             }),

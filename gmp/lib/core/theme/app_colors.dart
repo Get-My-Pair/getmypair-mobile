@@ -43,7 +43,36 @@ class AppColors {
  
   // Disabled
   static const Color disabled = Color(0xFFBDBDBD);
- 
+
+  /// Greyed / inactive pill buttons — light fill, dark label, light cyan gradient border.
+  static const Color greyedButtonFill = disabled;
+  static const Color greyedButtonLabel = Color(0xFF666666);
+  static const double greyedButtonBorderWidth = 0.8;
+
+  static const LinearGradient greyedButtonBorderGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [
+      Color(0xFF8ADCE8),
+      Color(0xFF9AE6F0),
+      Color(0xFFA8EEF5),
+      Color(0xFF8ADCE8),
+    ],
+    stops: [0.0, 0.38, 0.62, 1.0],
+  );
+
+  static BoxDecoration greyedButtonOuterDecoration(double radius) =>
+      BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: greyedButtonBorderGradient,
+      );
+
+  static BoxDecoration greyedButtonInnerDecoration(double radius) =>
+      BoxDecoration(
+        color: greyedButtonFill,
+        borderRadius: BorderRadius.circular(radius),
+      );
+
   // Hero gradient (splash / onboarding: dark teal → mid teal → bright cyan)
   static const Color footwearHeroStart = Color(0xFF062F35);
   static const Color footwearHeroMid = Color(0xFF0F6876);

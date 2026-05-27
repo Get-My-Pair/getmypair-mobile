@@ -19,7 +19,22 @@ class CareMyPairPage extends StatelessWidget {
     bottomRight: Radius.circular(50),
   );
 
-  static const List<_VideoCardData> _videos = [
+  static const List<_VideoCardData> _repairVideos = [
+    _VideoCardData(
+      title: 'Fix Scuffs Fast: At-Home Sole & Upper Repair',
+      image: 'assets/images/img/caremypair/vid13.png',
+    ),
+    _VideoCardData(
+      title: 'Glue & Patch: Save a Separating Sole',
+      image: 'assets/images/img/caremypair/vid2.png',
+    ),
+    _VideoCardData(
+      title: 'Stitch-Free Fixes for Everyday Wear',
+      image: 'assets/images/img/caremypair/vid13.png',
+    ),
+  ];
+
+  static const List<_VideoCardData> _maintainVideos = [
     _VideoCardData(
       title: 'Suede Saver: How to Clean and Protect Suede Shoes',
       image: 'assets/images/img/caremypair/vid13.png',
@@ -31,6 +46,21 @@ class CareMyPairPage extends StatelessWidget {
     _VideoCardData(
       title: 'Odor-Free Feet: How to De-Stink Your Shoes Naturally',
       image: 'assets/images/img/caremypair/vid13.png',
+    ),
+  ];
+
+  static const List<_VideoCardData> _washVideos = [
+    _VideoCardData(
+      title: 'Deep Clean Sneakers: Brush & Soap Method',
+      image: 'assets/images/img/caremypair/vid2.png',
+    ),
+    _VideoCardData(
+      title: 'Refresh White Soles in 10 Minutes',
+      image: 'assets/images/img/caremypair/vid13.png',
+    ),
+    _VideoCardData(
+      title: 'Dry & Store: Keep Shape After a Wash',
+      image: 'assets/images/img/caremypair/vid2.png',
     ),
   ];
 
@@ -52,19 +82,47 @@ class CareMyPairPage extends StatelessWidget {
     ),
   ];
 
+  static const TextStyle _sectionTitleStyle = TextStyle(
+    color: Color(0xFF062F35),
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+  );
+
+  static TextStyle _sectionTitle(BuildContext context) =>
+      GoogleFonts.boldonse(textStyle: _sectionTitleStyle);
+
+  static TextStyle _subsectionLabel(BuildContext context) =>
+      GoogleFonts.montserrat(
+        color: Colors.black,
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+      );
+
   @override
   Widget build(BuildContext context) {
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    const topInset = 52.0;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
           ...BgTheme.background(),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 30, 8, 0),
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalInset,
+                  topInset,
+                  horizontalInset,
+                  0,
+                ),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),
@@ -80,140 +138,136 @@ class CareMyPairPage extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: _panelRadius,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(8, 12, 8, 120),
+                    padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
                     children: [
-                          _Header(onBack: () => Navigator.maybePop(context)),
-                          const SizedBox(height: 24),
-                          const _SearchBar(),
-                          const SizedBox(height: 28),
-                          Text(
-                            'Our Services',
-                            style: GoogleFonts.boldonse(
-                              color: const Color(0xFF062F35),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          _PrimaryServiceCard(
-                            label: 'RepairMyPair',
-                            onTap: () => _openRepairPage(context),
-                          ),
-                          const SizedBox(height: 19),
-                          IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: _SecondaryServiceCard(
-                                    label: 'Maintain\nMyPair',
-                                    iconAsset: 'assets/images/icons/caremypair/mmp.svg',
-                                    iconSize: 44,
-                                    onTap: () => _openMaintainPage(context),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _SecondaryServiceCard(
-                                    label: 'Wash\nMyPair',
-                                    iconAsset: 'assets/images/icons/caremypair/wmp.svg',
-                                    onTap: () => _openWashPage(context),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _MyServiceRequestsCard(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      const ServiceRequestListPage(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 32),
-                          Text(
-                            'DIY Solutions',
-                            style: GoogleFonts.boldonse(
-                              color: const Color(0xFF062F35),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Videos',
-                            style: GoogleFonts.montserrat(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            height: 113,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _videos.length,
-                              separatorBuilder: (_, _) => const SizedBox(width: 14),
-                              itemBuilder: (_, i) => _VideoCard(
-                                data: _videos[i],
-                                onTap: () => showComingSoon(
-                                  context,
-                                  feature: 'DIY videos',
-                                ),
+                      _Header(onBack: () => Navigator.maybePop(context)),
+                      const SizedBox(height: 24),
+                      const _SearchBar(),
+                      const SizedBox(height: 28),
+                      Text('Our Services', style: _sectionTitle(context)),
+                      const SizedBox(height: 14),
+                      _PrimaryServiceCard(
+                        label: 'RepairMyPair',
+                        onTap: () => _openRepairPage(context),
+                      ),
+                      const SizedBox(height: 19),
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _SecondaryServiceCard(
+                                label: 'Maintain\nMyPair',
+                                iconAsset:
+                                    'assets/images/icons/caremypair/mmp.svg',
+                                iconSize: 44,
+                                onTap: () => _openMaintainPage(context),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Articles',
-                            style: GoogleFonts.montserrat(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            height: 172,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _articles.length,
-                              separatorBuilder: (_, _) => const SizedBox(width: 13),
-                              itemBuilder: (_, i) => _ArticleCard(
-                                data: _articles[i],
-                                onTap: () => showComingSoon(
-                                  context,
-                                  feature: 'Care articles',
-                                ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _SecondaryServiceCard(
+                                label: 'Wash\nMyPair',
+                                iconAsset:
+                                    'assets/images/icons/caremypair/wmp.svg',
+                                onTap: () => _openWashPage(context),
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _MyServiceRequestsCard(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ServiceRequestListPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                      ..._buildVideoSections(context),
+                      const SizedBox(height: 24),
+                      Text('Articles', style: _subsectionLabel(context)),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 172,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _articles.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(width: 13),
+                          itemBuilder: (_, i) => _ArticleCard(
+                            data: _articles[i],
+                            onTap: () => showComingSoon(
+                              context,
+                              feature: 'Care articles',
+                            ),
                           ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          Positioned(
+          ),
+          const Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const DashboardLinkedBottomNav(selectedTabIndex: 1),
-                SizedBox(height: bottomSafe),
-              ],
-            ),
+            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildVideoSections(BuildContext context) {
+    const sections = <({String title, List<_VideoCardData> videos, String feature})>[
+      (
+        title: 'Repair at Home: Quick Fixes',
+        videos: _repairVideos,
+        feature: 'Repair DIY videos',
+      ),
+      (
+        title: 'Everyday Care & Maintenance',
+        videos: _maintainVideos,
+        feature: 'Maintenance DIY videos',
+      ),
+      (
+        title: 'Wash & Restore at Home',
+        videos: _washVideos,
+        feature: 'Wash DIY videos',
+      ),
+    ];
+
+    return [
+      for (var i = 0; i < sections.length; i++) ...[
+        if (i > 0) const SizedBox(height: 24),
+        Text(sections[i].title, style: _sectionTitle(context)),
+        const SizedBox(height: 14),
+        Text('Videos', style: _subsectionLabel(context)),
+        const SizedBox(height: 20),
+        SizedBox(
+          height: 113,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: sections[i].videos.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
+            itemBuilder: (_, index) => _VideoCard(
+              data: sections[i].videos[index],
+              onTap: () => showComingSoon(
+                context,
+                feature: sections[i].feature,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ];
   }
 
   void _openMaintainPage(BuildContext context) {

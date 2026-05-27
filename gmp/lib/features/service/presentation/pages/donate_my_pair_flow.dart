@@ -17,6 +17,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../utils/service_flow_article.dart';
 import '../utils/service_flow_layout.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
@@ -33,13 +34,22 @@ class DonateMyPairDetailsPage extends StatefulWidget {
   final String articleId;
   final String articleName;
   final String articleImageUrl;
+  final List<ServiceFlowArticle> selectedArticles;
 
-  const DonateMyPairDetailsPage({
+  DonateMyPairDetailsPage({
     super.key,
     required this.articleId,
     required this.articleName,
     required this.articleImageUrl,
-  });
+    List<ServiceFlowArticle>? selectedArticles,
+  }) : selectedArticles = selectedArticles ??
+            [
+              ServiceFlowArticle(
+                id: articleId,
+                name: articleName,
+                imageUrl: articleImageUrl,
+              ),
+            ];
 
   @override
   State<DonateMyPairDetailsPage> createState() => _DonateMyPairDetailsPageState();
@@ -73,6 +83,26 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
   void dispose() {
     _reasonController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _validateDonateDetails() async {
+    if (_reasonController.text.trim().isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please describe why you are donating',
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    if (_proofImages.isEmpty) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please upload at least one photo',
+        type: AppFeedbackType.warning,
+      );
+      return false;
+    }
+    return true;
   }
 
   Future<void> _loadProfile() async {
@@ -148,6 +178,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
 
   Future<void> _onNext() async {
     if (_busy || !mounted) return;
+    if (!await _validateDonateDetails()) return;
     if (_selectedAddress == null) {
       await showAppFeedbackAlert(
         context,
@@ -165,9 +196,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
         final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => DonateMyPairPickupPage(
-              articleId: widget.articleId,
-              articleName: widget.articleName,
-              articleImageUrl: widget.articleImageUrl,
+              selectedArticles: widget.selectedArticles,
               reason: reason,
               proofImages: List<XFile>.from(_proofImages),
               selectedAddress: _selectedAddress!,
@@ -199,7 +228,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
         final created = await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
             builder: (_) => RequestSummaryPage(
-              articleId: widget.articleId,
+              articleIds: widget.selectedArticles.map((a) => a.id).toList(),
               service: _donateService,
               address: _selectedAddress!,
               proofImages: List<XFile>.from(_proofImages),
@@ -706,18 +735,14 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
 
 /// Step 3 — home pickup schedule + address (full-screen page).
 class DonateMyPairPickupPage extends StatefulWidget {
-  final String articleId;
-  final String articleName;
-  final String articleImageUrl;
+  final List<ServiceFlowArticle> selectedArticles;
   final String reason;
   final List<XFile> proofImages;
   final Address selectedAddress;
 
   const DonateMyPairPickupPage({
     super.key,
-    required this.articleId,
-    required this.articleName,
-    required this.articleImageUrl,
+    required this.selectedArticles,
     required this.reason,
     required this.proofImages,
     required this.selectedAddress,
@@ -736,7 +761,7 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
   );
 
   bool _submitting = false;
-  int _selectedPickupSlot = 0;
+  int _selectedPickupSlot = -1;
   late Address _selectedAddress = widget.selectedAddress;
 
   List<DateTime> get _pickupDays {
@@ -805,6 +830,14 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
 
   Future<void> _goSummary() async {
     if (_submitting) return;
+    if (_selectedPickupSlot < 0) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please select a pickup time slot',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
     setState(() => _submitting = true);
     final scheduleLabel =
         '${_pickupDayLabels.first}, '
@@ -815,7 +848,7 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => RequestSummaryPage(
-          articleId: widget.articleId,
+          articleIds: widget.selectedArticles.map((a) => a.id).toList(),
           service: _donateService,
           address: _selectedAddress,
           proofImages: List<XFile>.from(widget.proofImages),
@@ -1186,40 +1219,40 @@ class _DonateMyPairPickupPageState extends State<DonateMyPairPickupPage> {
                 ),
                 child: TextButton(
                   onPressed: _submitting ? null : _goSummary,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100),
+                      ),
                     ),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Next',
-                              style: GoogleFonts.boldonse(
-                                color: Colors.white,
-                                fontSize: fs,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            SizedBox(width: 20 * layoutScale),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
                               color: Colors.white,
-                              size: (16 * layoutScale).clamp(13.0, 16.0),
+                              strokeWidth: 2,
                             ),
-                          ],
-                        ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Next',
+                                style: GoogleFonts.boldonse(
+                                  color: Colors.white,
+                                  fontSize: fs,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              SizedBox(width: 20 * layoutScale),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: Colors.white,
+                                size: (16 * layoutScale).clamp(13.0, 16.0),
+                              ),
+                            ],
+                          ),
                 ),
               ),
             ),
