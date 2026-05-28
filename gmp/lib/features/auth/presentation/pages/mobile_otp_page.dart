@@ -48,6 +48,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   String? _phoneError;
   double _sendingProgress = 0.0;
   Timer? _sendingProgressTimer;
+  /// Full viewport height captured while the keyboard is closed (Android
+  /// `adjustResize` shrinks [MediaQuery.size] even when [resizeToAvoidBottomInset]
+  /// is false).
+  double? _layoutViewportHeight;
 
   @override
   void dispose() {
@@ -181,9 +185,36 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     );
   }
 
+  bool _isKeyboardVisible(MediaQueryData mediaQuery) =>
+      mediaQuery.viewInsets.bottom > 0;
+
+  /// Android `adjustResize` shrinks [MediaQuery.size] without always setting
+  /// [MediaQuery.viewInsets].
+  bool _isViewportShrunkByKeyboard(MediaQueryData mediaQuery) {
+    final cached = _layoutViewportHeight;
+    if (cached == null) return false;
+    return mediaQuery.size.height < cached * 0.9;
+  }
+
+  void _syncLayoutViewportHeight(MediaQueryData mediaQuery) {
+    final height = mediaQuery.size.height;
+    if (_isKeyboardVisible(mediaQuery) || _isViewportShrunkByKeyboard(mediaQuery)) {
+      _layoutViewportHeight ??= height;
+      return;
+    }
+    _layoutViewportHeight = height;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
+    final mediaQuery = MediaQuery.of(context);
+    _syncLayoutViewportHeight(mediaQuery);
+    final layoutHeight = _layoutViewportHeight!;
+    final layoutMediaQuery = mediaQuery.copyWith(
+      size: Size(mediaQuery.size.width, layoutHeight),
+      viewInsets: EdgeInsets.zero,
+    );
+    final size = layoutMediaQuery.size;
     final widthScale = (size.width / Responsive.designFrameWidth).clamp(0.88, 1.14);
     final heightScale = (size.height / 852.0).clamp(0.74, 1.08);
     final textScaleTightness = (1.06 / MediaQuery.textScalerOf(context).scale(1.0)).clamp(
@@ -198,7 +229,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     final bodyTitleSize = (20.0 * scale).clamp(15.0, 24.0);
     final bodySize = (20.0 * scale).clamp(14.0, 22.0);
     final fieldTextSize = (16.0 * scale).clamp(13.0, 18.0);
-    final topInset = MediaQuery.paddingOf(context).top;
+    final topInset = layoutMediaQuery.padding.top;
     // Keep hero responsive across short/tall phones.
     // Previous 0.95 factor made this almost always hit max height.
     final headerSweepHeight = (size.height * 0.25).clamp(132.0, 205.0);
@@ -206,9 +237,19 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
 
     return Scaffold(
       // Keep hero + card geometry stable when the keyboard opens (avoid inset resize +
-      // Column Spacer() reflow that pushes content upward).
+      // Column reflow that pushes content upward).
       resizeToAvoidBottomInset: false,
-      body: BlocListener<AuthBloc, AuthState>(
+      body: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topCenter,
+          minHeight: layoutHeight,
+          maxHeight: layoutHeight,
+          child: MediaQuery(
+            data: layoutMediaQuery,
+            child: SizedBox(
+              height: layoutHeight,
+              width: layoutMediaQuery.size.width,
+              child: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthOTPSent) {
             setState(() => _isSendingOtp = false);
@@ -326,14 +367,34 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                             ),
                           ),
                           SizedBox(height: verticalGapXs.clamp(4.0, 12.0)),
-                          Text(
-                            "We’ll text you a quick verification\ncode",
-                            style: GoogleFonts.montserrat(
-                              color: _kBodyMuted,
-                              fontSize: bodySize,
-                              fontWeight: FontWeight.w500,
-                              height: 1.2,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'We’ll text you a quick verification',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: GoogleFonts.montserrat(
+                                    color: _kBodyMuted,
+                                    fontSize: bodySize,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'code',
+                                style: GoogleFonts.montserrat(
+                                  color: _kBodyMuted,
+                                  fontSize: bodySize,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
                           ),
                           SizedBox(height: verticalGapMd.clamp(12.0, 28.0)),
                           LayoutBuilder(
@@ -432,6 +493,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                               focusNode: _phoneFocusNode,
                                               keyboardType: TextInputType.phone,
                                               textAlignVertical: TextAlignVertical.center,
+                                              scrollPadding: EdgeInsets.zero,
                                               maxLength: _maxNationalDigits,
                                               inputFormatters: [
                                                 FilteringTextInputFormatter.digitsOnly,
@@ -707,8 +769,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               );
                             },
                           ),
-                          const Spacer(),
-                                               ],
+                        ],
                       ),
                     );
                       },
@@ -718,6 +779,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               ),
             ),
           ],
+        ),
+              ),
+            ),
+          ),
         ),
       ),
     );
