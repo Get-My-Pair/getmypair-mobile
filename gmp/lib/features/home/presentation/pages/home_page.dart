@@ -90,13 +90,28 @@ const double _kHomeHeaderBottomRadius = 20;
 /// Visible gap between the hero bottom curve and the My Rack card.
 const double _kHomeHeaderToRackGap = 14;
 
-/// Tile height for quick actions (reference @ 390px width).
+/// Tile height for quick actions (tuned on Edge 60 Pro @ 412×915).
 const double _kQuickActionCellHeight = 78;
 
-/// Scales home chrome from a 390px-wide design frame so the same UI fits smaller devices.
-double _homeUiScale(BuildContext context) {
+/// Motorola Edge 60 Pro — home dashboard reference frame (logical px).
+const double _kHomeDesignWidth = 412;
+const double _kHomeDesignHeight = 915;
+
+/// Width scale from reference device; never larger than Edge layout on big phones.
+double _homeWidthScale(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
-  return (w / Responsive.designFrameWidth).clamp(0.72, 1.0);
+  return (w / _kHomeDesignWidth).clamp(0.72, 1.0);
+}
+
+/// Height scale from reference device.
+double _homeHeightScale(BuildContext context) {
+  final h = MediaQuery.sizeOf(context).height;
+  return (h / _kHomeDesignHeight).clamp(0.55, 1.0);
+}
+
+/// Unified scale: same proportions as Edge 60 Pro, scaled down on smaller screens.
+double _homeLayoutScale(BuildContext context) {
+  return math.min(_homeWidthScale(context), _homeHeightScale(context));
 }
 
 /// Vertical gap between the location row and the search field: design scale plus a
@@ -157,7 +172,10 @@ double _homeTwoLineActionLabelSize({
   required double textMaxHeight,
 }) {
   final base =
-      ((MediaQuery.sizeOf(context).width < 360 ? 14.0 : 16.0) * contentScale)
+      ((MediaQuery.sizeOf(context).width < _kHomeDesignWidth * 0.88
+              ? 14.0
+              : 16.0) *
+          contentScale)
           .clamp(12.0, 20.0);
   if (textMaxWidth <= 0 || textMaxHeight <= 0) return base;
 
@@ -540,7 +558,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final uiScale = _homeUiScale(context);
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -576,9 +593,7 @@ class _HomePageState extends State<HomePage> {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final w = constraints.maxWidth;
-                      final screenH = MediaQuery.sizeOf(context).height;
-                      final heightScale = (screenH / 760).clamp(0.5, 1.0);
-                      final layoutScale = math.min(uiScale, heightScale);
+                      final layoutScale = _homeLayoutScale(context);
                       final bottomNavPad = _homeViewportBottomReserve(context);
 
                       return SizedBox(
@@ -931,8 +946,8 @@ class _HomePageState extends State<HomePage> {
                                                 final widthScale =
                                                     (MediaQuery.sizeOf(context)
                                                                 .width /
-                                                            430)
-                                                        .clamp(0.85, 1.15);
+                                                            _kHomeDesignWidth)
+                                                        .clamp(0.72, 1.0);
                                                 final heightScale =
                                                     (equalBlockH /
                                                             _kQuickActionCellHeight)
@@ -1091,7 +1106,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 double _homeHeaderChromeScale(BuildContext context) {
-  return (MediaQuery.sizeOf(context).width / 430).clamp(0.85, 1.15).toDouble();
+  return _homeWidthScale(context);
 }
 
 /// Notification bell — top row with greeting (Figma row 1).
@@ -1362,8 +1377,9 @@ class _HomeTopCard extends StatelessWidget {
     final shortestSide = MediaQuery.sizeOf(context).shortestSide;
     final compact = width < 360;
     final headerScaleX = _homeHeaderScaleXForWidth(width);
-    final s = _homeUiScale(context) * layoutScale;
-    final deviceIconScale = (shortestSide / 390).clamp(0.82, 1.35).toDouble();
+    final s = layoutScale;
+    final deviceIconScale =
+        (shortestSide / _kHomeDesignWidth).clamp(0.82, 1.0).toDouble();
     final locationIconSize = (20 * s * deviceIconScale).clamp(15.0, 28.0);
     final greetingName = userName.isEmpty ? 'Aashi' : userName;
     final horizontal = Responsive.horizontalPaddingOf(context);
@@ -1708,8 +1724,8 @@ class _StatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = _homeUiScale(context);
-    final narrow = MediaQuery.sizeOf(context).width < 360;
+    final s = _homeLayoutScale(context);
+    final narrow = MediaQuery.sizeOf(context).width < _kHomeDesignWidth * 0.88;
     final valueSize = ((narrow ? 22.0 : 26.0) * s).clamp(18.0, 28.0);
     final labelSize = (11.5 * s).clamp(9.0, 12.0);
     final labelStyle = GoogleFonts.montserrat(
@@ -1902,9 +1918,7 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final widthScale = (MediaQuery.sizeOf(context).width / 430)
-        .clamp(0.85, 1.15)
-        .toDouble();
+    final widthScale = _homeWidthScale(context);
     final heightScale = cellHeight != null
         ? (cellHeight! / _kQuickActionCellHeight).clamp(0.88, 1.38)
         : 1.0;
@@ -1937,9 +1951,12 @@ class _QuickActionCard extends StatelessWidget {
             vertical: verticalPad,
           );
     const cardRadius = 12.0;
-    final labelSize =
-        ((MediaQuery.sizeOf(context).width < 360 ? 14.0 : 16.0) * contentScale)
-            .clamp(12.0, 20.0);
+    final labelSize = ((MediaQuery.sizeOf(context).width <
+                _kHomeDesignWidth * 0.88
+            ? 14.0
+            : 16.0) *
+        contentScale)
+        .clamp(12.0, 20.0);
     final resolvedLabelSize = labelFontSize ?? labelSize;
 
     final cardBody = Row(
