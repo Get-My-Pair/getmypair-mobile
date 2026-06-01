@@ -23,6 +23,27 @@ class _LoginPageState extends State<LoginPage> {
   final CountryCode _selectedCountry = CountryCode.popularCountries[0];
   final TextEditingController _phoneController = TextEditingController();
 
+  /// Full viewport height while the keyboard is closed (keeps hero + card stable).
+  double? _layoutViewportHeight;
+
+  bool _isKeyboardVisible(MediaQueryData mediaQuery) =>
+      mediaQuery.viewInsets.bottom > 0;
+
+  bool _isViewportShrunkByKeyboard(MediaQueryData mediaQuery) {
+    final cached = _layoutViewportHeight;
+    if (cached == null) return false;
+    return mediaQuery.size.height < cached * 0.9;
+  }
+
+  void _syncLayoutViewportHeight(MediaQueryData mediaQuery) {
+    final height = mediaQuery.size.height;
+    if (_isKeyboardVisible(mediaQuery) || _isViewportShrunkByKeyboard(mediaQuery)) {
+      _layoutViewportHeight ??= height;
+      return;
+    }
+    _layoutViewportHeight = height;
+  }
+
   @override
   void dispose() {
     _phoneController.dispose();
@@ -37,11 +58,29 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.paddingOf(context).top;
-    final cardTop = topInset + MediaQuery.sizeOf(context).height * 0.27;
+    final mediaQuery = MediaQuery.of(context);
+    _syncLayoutViewportHeight(mediaQuery);
+    final layoutHeight = _layoutViewportHeight ?? mediaQuery.size.height;
+    final layoutMediaQuery = mediaQuery.copyWith(
+      size: Size(mediaQuery.size.width, layoutHeight),
+      viewInsets: EdgeInsets.zero,
+    );
+    final topInset = layoutMediaQuery.padding.top;
+    final cardTop = topInset + layoutHeight * 0.27;
 
     return Scaffold(
-      body: Stack(
+      resizeToAvoidBottomInset: false,
+      body: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topCenter,
+          minHeight: layoutHeight,
+          maxHeight: layoutHeight,
+          child: MediaQuery(
+            data: layoutMediaQuery,
+            child: SizedBox(
+              height: layoutHeight,
+              width: layoutMediaQuery.size.width,
+              child: Stack(
         fit: StackFit.expand,
         children: [
           const Positioned.fill(
@@ -111,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                       final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
                       final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 62.0);
                       final countryWidth = (constraints.maxWidth * 0.26).clamp(86.0, 110.0);
-                      return SingleChildScrollView(
+                      return Padding(
                         padding: EdgeInsets.fromLTRB(
                           horizontalPad,
                           topPad,
@@ -208,6 +247,7 @@ class _LoginPageState extends State<LoginPage> {
                                       child: TextField(
                                         controller: _phoneController,
                                         keyboardType: TextInputType.phone,
+                                        scrollPadding: EdgeInsets.zero,
                                         decoration: InputDecoration(
                                           hintText: 'Phone',
                                           hintStyle: GoogleFonts.montserrat(
@@ -308,6 +348,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

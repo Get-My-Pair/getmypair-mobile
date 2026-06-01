@@ -549,10 +549,10 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           return CameraPreview(controller);
         }
 
-        // Fit full shoe in frame (contain) so capture is not cropped before upload.
+        // Cover the frame so no letterboxing (black bars) on the sides.
         return ClipRect(
           child: FittedBox(
-            fit: BoxFit.contain,
+            fit: BoxFit.cover,
             alignment: Alignment.center,
             child: SizedBox(
               width: previewSize.height,
@@ -742,10 +742,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         Positioned.fill(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: ColoredBox(
-              color: Colors.black,
-              child: _liveCameraPreview(),
-            ),
+            child: _liveCameraPreview(),
           ),
         ),
         Positioned.fill(

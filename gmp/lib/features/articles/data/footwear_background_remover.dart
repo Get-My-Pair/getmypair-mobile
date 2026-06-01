@@ -18,7 +18,7 @@ class FootwearBackgroundRemover {
 
   static const String apiKey = String.fromEnvironment(
     'REMOVE_BG_API_KEY',
-    defaultValue: '',
+    defaultValue: 'B65RYRfc5QaDTs6CRGaXdodd',
   );
 
   static bool get isConfigured => apiKey.isNotEmpty;
