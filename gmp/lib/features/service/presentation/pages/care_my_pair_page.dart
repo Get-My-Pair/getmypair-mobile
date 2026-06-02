@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/constants/api_endpoints.dart';
+import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/injection_container.dart';
 import 'package:gmp/features/service/presentation/pages/maintain_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/pages/repair_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/pages/service_request_list_page.dart';
@@ -177,16 +181,7 @@ class CareMyPairPage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _MyServiceRequestsCard(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const ServiceRequestListPage(),
-                            ),
-                          );
-                        },
-                      ),
+                      const _MyServiceRequestsSection(),
                       const SizedBox(height: 32),
                       ..._buildVideoSections(context),
                       const SizedBox(height: 24),
@@ -547,6 +542,71 @@ class _SecondaryServiceCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Shows the "My service requests" entry only once the user has at least one
+/// created request. Hidden entirely (including its top spacing) otherwise.
+class _MyServiceRequestsSection extends StatefulWidget {
+  const _MyServiceRequestsSection();
+
+  @override
+  State<_MyServiceRequestsSection> createState() =>
+      _MyServiceRequestsSectionState();
+}
+
+class _MyServiceRequestsSectionState extends State<_MyServiceRequestsSection> {
+  bool _hasRequests = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHasRequests();
+  }
+
+  Future<void> _loadHasRequests() async {
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+
+    await tokenResult.fold(
+      (_) async {},
+      (token) async {
+        try {
+          final res = await sl<DioClient>().get(
+            ApiEndpoints.serviceMy,
+            accessToken: token,
+          );
+          final list =
+              ((res['data'] as Map<String, dynamic>?)?['requests'] as List?) ??
+                  const [];
+          if (!mounted) return;
+          setState(() => _hasRequests = list.isNotEmpty);
+        } catch (_) {
+          // Keep hidden on failure.
+        }
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasRequests) return const SizedBox.shrink();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 16),
+        _MyServiceRequestsCard(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ServiceRequestListPage(),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
