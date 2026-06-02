@@ -1,4 +1,5 @@
 import '../entities/address.dart';
+import '../entities/user_profile.dart';
 import '../repositories/profile_repository.dart';
 
 class AddAddress {
@@ -54,5 +55,53 @@ class DeleteAddress {
       repository.deleteAddress(
         accessToken: accessToken,
         addressId: addressId,
+      );
+}
+
+class AddFamilyMember {
+  final ProfileRepository repository;
+  AddFamilyMember(this.repository);
+
+  Future<FamilyMember> call({
+    required String accessToken,
+    required String name,
+    required String relation,
+  }) =>
+      repository.addFamilyMember(
+        accessToken: accessToken,
+        name: name,
+        relation: relation,
+      );
+}
+
+class UpdateFamilyMember {
+  final ProfileRepository repository;
+  UpdateFamilyMember(this.repository);
+
+  Future<FamilyMember> call({
+    required String accessToken,
+    required String memberId,
+    String? name,
+    String? relation,
+  }) =>
+      repository.updateFamilyMember(
+        accessToken: accessToken,
+        memberId: memberId,
+        name: name,
+        relation: relation,
+      );
+}
+
+class DeleteFamilyMember {
+  final ProfileRepository repository;
+  DeleteFamilyMember(this.repository);
+
+  Future<void> call({
+    required String accessToken,
+    required String memberId,
+  }) =>
+      repository.deleteFamilyMember(
+        accessToken: accessToken,
+        memberId: memberId,
       );
 }

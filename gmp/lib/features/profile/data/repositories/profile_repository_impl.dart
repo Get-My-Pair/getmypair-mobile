@@ -4,7 +4,6 @@ import '../../domain/entities/address.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../datasources/profile_remote_datasource.dart';
-import '../models/address_model.dart';
 
 class ProfileRepositoryImpl implements ProfileRepository {
   final ProfileRemoteDataSource remoteDataSource;
@@ -25,12 +24,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
     required String accessToken,
     String? name,
     String? email,
+    String? householdType,
   }) async {
     try {
       return await remoteDataSource.updateProfile(
         accessToken: accessToken,
         name: name,
         email: email,
+        householdType: householdType,
       );
     } on ServerException catch (e) {
       throw ServerException(e.message);
@@ -107,6 +108,57 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await remoteDataSource.deleteAddress(
         accessToken: accessToken,
         addressId: addressId,
+      );
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
+  @override
+  Future<FamilyMember> addFamilyMember({
+    required String accessToken,
+    required String name,
+    required String relation,
+  }) async {
+    try {
+      return await remoteDataSource.addFamilyMember(
+        accessToken: accessToken,
+        name: name,
+        relation: relation,
+      );
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
+  @override
+  Future<FamilyMember> updateFamilyMember({
+    required String accessToken,
+    required String memberId,
+    String? name,
+    String? relation,
+  }) async {
+    try {
+      return await remoteDataSource.updateFamilyMember(
+        accessToken: accessToken,
+        memberId: memberId,
+        name: name,
+        relation: relation,
+      );
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
+  @override
+  Future<void> deleteFamilyMember({
+    required String accessToken,
+    required String memberId,
+  }) async {
+    try {
+      await remoteDataSource.deleteFamilyMember(
+        accessToken: accessToken,
+        memberId: memberId,
       );
     } on ServerException catch (e) {
       throw ServerException(e.message);

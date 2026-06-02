@@ -13,6 +13,7 @@ class CompleteProfile {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    required String householdType,
     Map<String, dynamic>? location,
   }) async {
     return await repository.completeProfile(
@@ -20,6 +21,7 @@ class CompleteProfile {
       name: name,
       dateOfBirth: dateOfBirth,
       gender: gender,
+      householdType: householdType,
       location: location,
     );
   }

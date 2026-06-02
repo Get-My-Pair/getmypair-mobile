@@ -24,6 +24,7 @@ import '../profile_screen_system_ui.dart';
 import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
 import 'family_profile_page.dart';
+import 'notifications_page.dart';
 import 'manage_devices_page.dart';
 import 'faq_page.dart';
 import 'license_page.dart';
@@ -161,8 +162,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ? state.profile!
               : null;
 
-          final token = _accessToken ?? '';
-
           if (profile == null) {
             return AnnotatedRegion<SystemUiOverlayStyle>(
               value: kProfileLightScaffoldSystemUi,
@@ -205,6 +204,9 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             );
           }
+
+          final token = _accessToken ?? '';
+          final isJustMe = profile.householdType == 'just_me';
 
           final statusTop = MediaQuery.paddingOf(context).top;
           final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -381,22 +383,29 @@ class _ProfilePageState extends State<ProfilePage> {
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/familyprofile.svg',
-                                                title: 'Family Profile',
+                                                title: isJustMe ? 'Profile' : 'Family Profile',
                                                 scale: layoutScale,
-                                                onTap: () => _openFamilyProfile(
-                                                  context,
-                                                  profile,
-                                                  token,
-                                                ),
+                                                onTap: () {
+                                                  if (isJustMe) {
+                                                    _openEditProfile(context, profile, token);
+                                                    return;
+                                                  }
+                                                  _openFamilyProfile(context, profile, token);
+                                                },
                                               ),
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/bell.svg',
                                                 title: 'Notifications',
                                                 scale: layoutScale,
-                                                onTap: () => showComingSoon(
+                                                onTap: () => Navigator.push(
                                                   context,
-                                                  feature: 'Notifications',
+                                                  MaterialPageRoute(
+                                                    builder: (_) => BlocProvider.value(
+                                                      value: context.read<ProfileBloc>(),
+                                                      child: const NotificationsPage(),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                               _GradientMenuTile(

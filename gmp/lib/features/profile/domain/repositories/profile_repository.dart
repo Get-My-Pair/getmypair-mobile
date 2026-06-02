@@ -11,6 +11,7 @@ abstract class ProfileRepository {
     required String accessToken,
     String? name,
     String? email,
+    String? householdType,
   });
 
   /// POST /api/user/profile/upload-image (multipart)
@@ -43,5 +44,23 @@ abstract class ProfileRepository {
   Future<void> deleteAddress({
     required String accessToken,
     required String addressId,
+  });
+
+  Future<FamilyMember> addFamilyMember({
+    required String accessToken,
+    required String name,
+    required String relation,
+  });
+
+  Future<FamilyMember> updateFamilyMember({
+    required String accessToken,
+    required String memberId,
+    String? name,
+    String? relation,
+  });
+
+  Future<void> deleteFamilyMember({
+    required String accessToken,
+    required String memberId,
   });
 }

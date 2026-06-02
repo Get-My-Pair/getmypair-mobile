@@ -169,6 +169,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       name: event.name,
       dateOfBirth: event.dateOfBirth,
       gender: event.gender,
+      householdType: event.householdType,
       location: event.location,
     );
 

@@ -117,6 +117,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    required String householdType,
     Map<String, dynamic>? location,
   }) async {
     if (await networkInfo.isConnected) {
@@ -126,6 +127,7 @@ class AuthRepositoryImpl implements AuthRepository {
           name: name,
           dateOfBirth: dateOfBirth,
           gender: gender,
+          householdType: householdType,
           location: location,
         );
 

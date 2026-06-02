@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../domain/entities/user_profile.dart';
 import '../models/address_model.dart';
 import '../models/user_profile_model.dart';
 
@@ -13,6 +14,7 @@ abstract class ProfileRemoteDataSource {
     required String accessToken,
     String? name,
     String? email,
+    String? householdType,
   });
   Future<String> uploadProfileImage({
     required String accessToken,
@@ -37,6 +39,21 @@ abstract class ProfileRemoteDataSource {
   Future<void> deleteAddress({
     required String accessToken,
     required String addressId,
+  });
+  Future<FamilyMember> addFamilyMember({
+    required String accessToken,
+    required String name,
+    required String relation,
+  });
+  Future<FamilyMember> updateFamilyMember({
+    required String accessToken,
+    required String memberId,
+    String? name,
+    String? relation,
+  });
+  Future<void> deleteFamilyMember({
+    required String accessToken,
+    required String memberId,
   });
 }
 
@@ -91,6 +108,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     required String accessToken,
     String? name,
     String? email,
+    String? householdType,
   }) async {
     try {
       final body = <String, dynamic>{};
@@ -98,9 +116,12 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       if (email != null && email.trim().isNotEmpty) {
         body['email'] = email.trim();
       }
+      if (householdType != null && householdType.trim().isNotEmpty) {
+        body['householdType'] = householdType.trim();
+      }
       if (body.isEmpty) {
         throw ServerException(
-          'Nothing to update. Provide a new name or email.',
+          'Nothing to update. Provide a new name, email, or household type.',
         );
       }
 
@@ -218,6 +239,82 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException('Failed to delete address: $e');
+    }
+  }
+
+  @override
+  Future<FamilyMember> addFamilyMember({
+    required String accessToken,
+    required String name,
+    required String relation,
+  }) async {
+    try {
+      final response = await http
+          .post(Uri.parse(ApiEndpoints.userProfileAddFamilyMember),
+              headers: _headers(accessToken),
+              body: jsonEncode({
+                'name': name.trim(),
+                'relation': relation.trim(),
+              }))
+          .timeout(_timeout);
+      final json = _handleResponse(response);
+      final member = (json['data'] as Map<String, dynamic>)['member'] as Map<String, dynamic>;
+      return FamilyMember(
+        id: member['_id']?.toString() ?? member['id']?.toString() ?? '',
+        name: member['name']?.toString() ?? '',
+        relation: member['relation']?.toString() ?? '',
+        profileImage: member['profileImage']?.toString(),
+      );
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Failed to add family member: $e');
+    }
+  }
+
+  @override
+  Future<FamilyMember> updateFamilyMember({
+    required String accessToken,
+    required String memberId,
+    String? name,
+    String? relation,
+  }) async {
+    try {
+      final body = <String, dynamic>{'memberId': memberId};
+      if (name != null) body['name'] = name;
+      if (relation != null) body['relation'] = relation;
+      final response = await http
+          .put(Uri.parse(ApiEndpoints.userProfileUpdateFamilyMember),
+              headers: _headers(accessToken),
+              body: jsonEncode(body))
+          .timeout(_timeout);
+      final json = _handleResponse(response);
+      final member = (json['data'] as Map<String, dynamic>)['member'] as Map<String, dynamic>;
+      return FamilyMember(
+        id: member['_id']?.toString() ?? member['id']?.toString() ?? '',
+        name: member['name']?.toString() ?? '',
+        relation: member['relation']?.toString() ?? '',
+        profileImage: member['profileImage']?.toString(),
+      );
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Failed to update family member: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteFamilyMember({
+    required String accessToken,
+    required String memberId,
+  }) async {
+    try {
+      final response = await http
+          .delete(Uri.parse(ApiEndpoints.userProfileDeleteFamilyMember(memberId)),
+              headers: _headers(accessToken))
+          .timeout(_timeout);
+      _handleResponse(response);
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Failed to delete family member: $e');
     }
   }
 }

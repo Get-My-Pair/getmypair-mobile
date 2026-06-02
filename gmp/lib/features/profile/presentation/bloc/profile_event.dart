@@ -18,13 +18,15 @@ class ProfileUpdateRequested extends ProfileEvent {
   final String accessToken;
   final String? name;
   final String? email;
+  final String? householdType;
   const ProfileUpdateRequested({
     required this.accessToken,
     this.name,
     this.email,
+    this.householdType,
   });
   @override
-  List<Object?> get props => [accessToken, name, email];
+  List<Object?> get props => [accessToken, name, email, householdType];
 }
 
 class ProfileImageUploadRequested extends ProfileEvent {
@@ -85,4 +87,17 @@ class AddressDeleteRequested extends ProfileEvent {
   });
   @override
   List<Object?> get props => [accessToken, addressId];
+}
+
+class FamilyMemberAddRequested extends ProfileEvent {
+  final String accessToken;
+  final String name;
+  final String relation;
+  const FamilyMemberAddRequested({
+    required this.accessToken,
+    required this.name,
+    required this.relation,
+  });
+  @override
+  List<Object?> get props => [accessToken, name, relation];
 }

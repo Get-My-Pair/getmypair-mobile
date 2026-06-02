@@ -90,6 +90,13 @@ bool _rackNeedsClosingReassurance(Set<String> rack) =>
     rack.contains('My Kids') ||
     rack.contains('Elderly');
 
+String _householdTypeFromRack(Set<String> rack) {
+  if (rack.contains('My Partner')) return 'with_partner';
+  if (rack.contains('My Kids')) return 'with_children';
+  if (rack.contains('Elderly')) return 'with_elder';
+  return 'just_me';
+}
+
 String _aiOnboardingBody(
   int index,
   String nickname, {
@@ -576,6 +583,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
               name: name,
               dateOfBirth: _birthDate!,
               gender: _gender!.toLowerCase(),
+              householdType: _householdTypeFromRack(_rack),
               location: null,
             ),
           );

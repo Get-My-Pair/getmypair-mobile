@@ -19,6 +19,7 @@ abstract class AuthRemoteDataSource {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    required String householdType,
     Map<String, dynamic>? location,
   });
   Future<UserModel> getCurrentUser(String accessToken);
@@ -173,6 +174,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String name,
     required DateTime dateOfBirth,
     required String gender,
+    required String householdType,
     Map<String, dynamic>? location,
   }) async {
     try {
@@ -187,6 +189,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'name': name,
         'dateOfBirth': dateOfBirth.toIso8601String().split('T')[0], // YYYY-MM-DD format
         'gender': gender.toLowerCase(),
+        'householdType': householdType,
       };
       // Backend auth.validation only allows location: { lat, lng, address }
       if (location != null && location.isNotEmpty) {

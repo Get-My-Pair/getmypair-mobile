@@ -18,7 +18,9 @@ import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
+import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../profile/presentation/utils/profile_notifications.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -1157,8 +1159,12 @@ double _homeHeaderChromeScale(BuildContext context) {
 /// Notification bell — top row with greeting (Figma row 1).
 class _HomeHeaderBell extends StatelessWidget {
   final VoidCallback onTap;
+  final int notificationCount;
 
-  const _HomeHeaderBell({required this.onTap});
+  const _HomeHeaderBell({
+    required this.onTap,
+    this.notificationCount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1180,7 +1186,10 @@ class _HomeHeaderBell extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: RepaintBoundary(
-        child: Container(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
           width: bellSize,
           height: bellSize,
           decoration: BoxDecoration(
@@ -1331,6 +1340,35 @@ class _HomeHeaderBell extends StatelessWidget {
               ),
             ),
           ),
+        ),
+            if (notificationCount > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 1.3),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    notificationCount > 99 ? '99+' : '$notificationCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -1506,16 +1544,37 @@ class _HomeTopCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        _HomeHeaderBell(
-                          onTap: () {
-                            final profileBloc = context.read<ProfileBloc>();
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => BlocProvider.value(
-                                  value: profileBloc,
-                                  child: const ProfilePage(),
-                                ),
-                              ),
+                        BlocBuilder<ProfileBloc, ProfileState>(
+                          buildWhen: (prev, curr) =>
+                              curr is ProfileLoaded ||
+                              curr is ProfileUpdating ||
+                              curr is ProfileImageUploading ||
+                              curr is AddressActionLoading,
+                          builder: (context, profileState) {
+                            final profile = profileState is ProfileLoaded
+                                ? profileState.profile
+                                : profileState is ProfileUpdating
+                                    ? profileState.profile
+                                    : profileState is ProfileImageUploading
+                                        ? profileState.profile
+                                        : profileState is AddressActionLoading
+                                            ? profileState.profile
+                                            : null;
+                            final notificationCount =
+                                buildProfileNotifications(profile).length;
+                            return _HomeHeaderBell(
+                              notificationCount: notificationCount,
+                              onTap: () {
+                                final profileBloc = context.read<ProfileBloc>();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => BlocProvider.value(
+                                      value: profileBloc,
+                                      child: const NotificationsPage(),
+                                    ),
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),

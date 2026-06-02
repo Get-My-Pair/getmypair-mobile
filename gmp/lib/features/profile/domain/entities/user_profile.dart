@@ -1,6 +1,23 @@
 import 'package:equatable/equatable.dart';
 import 'address.dart';
 
+class FamilyMember extends Equatable {
+  final String id;
+  final String name;
+  final String relation;
+  final String? profileImage;
+
+  const FamilyMember({
+    required this.id,
+    required this.name,
+    required this.relation,
+    this.profileImage,
+  });
+
+  @override
+  List<Object?> get props => [id, name, relation, profileImage];
+}
+
 class UserProfile extends Equatable {
   final String id;
   final String userId;
@@ -9,6 +26,8 @@ class UserProfile extends Equatable {
   final String? email;
   final String? profileImage;
   final List<Address> addresses;
+  final String householdType;
+  final List<FamilyMember> familyMembers;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -20,6 +39,8 @@ class UserProfile extends Equatable {
     this.email,
     this.profileImage,
     required this.addresses,
+    this.householdType = 'just_me',
+    this.familyMembers = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -33,6 +54,8 @@ class UserProfile extends Equatable {
         email,
         profileImage,
         addresses,
+        householdType,
+        familyMembers,
         createdAt,
         updatedAt,
       ];
@@ -45,6 +68,8 @@ class UserProfile extends Equatable {
     String? email,
     String? profileImage,
     List<Address>? addresses,
+    String? householdType,
+    List<FamilyMember>? familyMembers,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -56,6 +81,8 @@ class UserProfile extends Equatable {
       email: email ?? this.email,
       profileImage: profileImage ?? this.profileImage,
       addresses: addresses ?? this.addresses,
+      householdType: householdType ?? this.householdType,
+      familyMembers: familyMembers ?? this.familyMembers,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

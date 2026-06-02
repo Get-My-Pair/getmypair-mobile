@@ -10,10 +10,12 @@ import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
+import '../bloc/profile_event.dart';
+import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
 import 'edit_profile_page.dart';
 
-class FamilyProfilePage extends StatelessWidget {
+class FamilyProfilePage extends StatefulWidget {
   final UserProfile profile;
   final String accessToken;
 
@@ -24,27 +26,129 @@ class FamilyProfilePage extends StatelessWidget {
   });
 
   @override
+  State<FamilyProfilePage> createState() => _FamilyProfilePageState();
+}
+
+class _FamilyProfilePageState extends State<FamilyProfilePage> {
+  Future<void> _openAddFamilyMemberDialog() async {
+    final nameController = TextEditingController();
+    String relation = 'partner';
+    final formKey = GlobalKey<FormState>();
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Create Family Profile'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  validator: (value) {
+                    if (value == null || value.trim().length < 2) {
+                      return 'Enter valid name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: relation,
+                  decoration: const InputDecoration(labelText: 'Relation'),
+                  items: const [
+                    DropdownMenuItem(value: 'partner', child: Text('Partner')),
+                    DropdownMenuItem(value: 'child', child: Text('Child')),
+                    DropdownMenuItem(value: 'elder', child: Text('Elder')),
+                  ],
+                  onChanged: (value) {
+                    relation = value ?? 'partner';
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) return;
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (submitted != true || !mounted) return;
+
+    context.read<ProfileBloc>().add(
+          FamilyMemberAddRequested(
+            accessToken: widget.accessToken,
+            name: nameController.text.trim(),
+            relation: relation,
+          ),
+        );
+  }
+
+  String _relationLabel(String relation) {
+    switch (relation) {
+      case 'partner':
+        return 'Partner';
+      case 'child':
+        return 'Child';
+      case 'elder':
+        return 'Elder';
+      default:
+        return relation;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final names = <String>[
-      profile.name.trim().isEmpty ? 'Profile' : profile.name.trim(),
-      'Mohan Ramaratnam',
-      'Vignesh R',
-    ];
+    return BlocConsumer<ProfileBloc, ProfileState>(
+      listener: (context, state) {},
+      builder: (context, state) {
+        final currentProfile = state is ProfileLoaded
+            ? state.profile
+            : state is ProfileUpdating
+                ? state.profile
+                : state is ProfileImageUploading
+                    ? state.profile
+                    : state is AddressActionLoading
+                        ? state.profile
+                        : state is ProfileError && state.profile != null
+                            ? state.profile!
+                            : widget.profile;
+        final names = <String>[
+          currentProfile.name.trim().isEmpty ? 'Profile' : currentProfile.name.trim(),
+          ...currentProfile.familyMembers.map(
+            (m) => '${m.name.trim()} (${_relationLabel(m.relation)})',
+          ),
+        ];
 
-    final statusTop = MediaQuery.paddingOf(context).top;
-    final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
+        final statusTop = MediaQuery.paddingOf(context).top;
+        final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: kProfileGradientHeaderSystemUi,
-      child: Scaffold(
-        extendBody: true,
-        body: SafeArea(
-          top: false,
-          bottom: false,
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: kProfileGradientHeaderSystemUi,
+          child: Scaffold(
+            extendBody: true,
+            body: SafeArea(
+              top: false,
+              bottom: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.vertical(
                       bottom: Radius.circular(22),
@@ -120,10 +224,20 @@ class FamilyProfilePage extends StatelessWidget {
                                   width: (12 * layoutScale).clamp(6.0, 12.0),
                                 ),
                                 _AvatarCluster(
-                                  profile: profile,
+                                  profile: currentProfile,
                                   scale: (layoutScale * 0.9).clamp(0.68, 1.0),
                                 ),
                               ],
+                            ),
+                            SizedBox(
+                              height: (10 * layoutScale).clamp(3.0, 12.0),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: ElevatedButton(
+                                onPressed: _openAddFamilyMemberDialog,
+                                child: const Text('Profile'),
+                              ),
                             ),
                             SizedBox(
                               height: (12 * layoutScale).clamp(3.0, 12.0),
@@ -148,13 +262,11 @@ class FamilyProfilePage extends StatelessWidget {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                                  BlocProvider.value(
-                                                value: context
-                                                    .read<ProfileBloc>(),
+                                              builder: (_) => BlocProvider.value(
+                                                value: context.read<ProfileBloc>(),
                                                 child: EditProfilePage(
-                                                  profile: profile,
-                                                  accessToken: accessToken,
+                                                  profile: currentProfile,
+                                                  accessToken: widget.accessToken,
                                                 ),
                                               ),
                                             ),
@@ -173,12 +285,14 @@ class FamilyProfilePage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
-              const DashboardLinkedBottomNav(selectedTabIndex: 2),
-            ],
+                  const SizedBox(height: 14),
+                  const DashboardLinkedBottomNav(selectedTabIndex: 2),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

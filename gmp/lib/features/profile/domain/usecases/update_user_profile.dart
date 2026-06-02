@@ -9,10 +9,12 @@ class UpdateUserProfile {
     required String accessToken,
     String? name,
     String? email,
+    String? householdType,
   }) =>
       repository.updateProfile(
         accessToken: accessToken,
         name: name,
         email: email,
+        householdType: householdType,
       );
 }

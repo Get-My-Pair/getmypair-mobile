@@ -51,6 +51,7 @@ class AuthCompleteProfile extends AuthEvent {
   final String name;
   final DateTime dateOfBirth;
   final String gender;
+  final String householdType;
   final Map<String, dynamic>? location;
 
   const AuthCompleteProfile({
@@ -58,11 +59,12 @@ class AuthCompleteProfile extends AuthEvent {
     required this.name,
     required this.dateOfBirth,
     required this.gender,
+    required this.householdType,
     this.location,
   });
 
   @override
-  List<Object?> get props => [mobile, name, dateOfBirth, gender, location];
+  List<Object?> get props => [mobile, name, dateOfBirth, gender, householdType, location];
 }
 
 class AuthLogout extends AuthEvent {

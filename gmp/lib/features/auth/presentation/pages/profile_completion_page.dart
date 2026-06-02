@@ -172,6 +172,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
       name: _nameController.text.trim(),
       dateOfBirth: _selectedDate!,
       gender: _selectedGender!,
+      householdType: 'just_me',
       location: location,
     ));
   }

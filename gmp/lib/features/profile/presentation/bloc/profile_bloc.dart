@@ -16,6 +16,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final AddAddress addAddress;
   final UpdateAddress updateAddress;
   final DeleteAddress deleteAddress;
+  final AddFamilyMember addFamilyMember;
 
   ProfileBloc({
     required this.getUserProfile,
@@ -24,6 +25,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     required this.addAddress,
     required this.updateAddress,
     required this.deleteAddress,
+    required this.addFamilyMember,
   }) : super(ProfileInitial()) {
     on<ProfileLoadRequested>(_onLoad);
     on<ProfileUpdateRequested>(_onUpdate);
@@ -31,6 +33,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<AddressAddRequested>(_onAddAddress);
     on<AddressUpdateRequested>(_onUpdateAddress);
     on<AddressDeleteRequested>(_onDeleteAddress);
+    on<FamilyMemberAddRequested>(_onAddFamilyMember);
   }
 
   UserProfile? _currentProfile() {
@@ -65,6 +68,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         accessToken: event.accessToken,
         name: event.name,
         email: event.email,
+        householdType: event.householdType,
       );
       emit(ProfileLoaded(profile));
     } on ServerException catch (e) {
@@ -165,6 +169,27 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
       emit(ProfileError('Failed to delete address: $e', profile: current));
+    }
+  }
+
+  Future<void> _onAddFamilyMember(
+      FamilyMemberAddRequested event, Emitter<ProfileState> emit) async {
+    final current = _currentProfile();
+    if (current != null) emit(AddressActionLoading(current));
+    try {
+      final member = await addFamilyMember(
+        accessToken: event.accessToken,
+        name: event.name,
+        relation: event.relation,
+      );
+      final updatedMembers = List<FamilyMember>.from(current?.familyMembers ?? [])
+        ..add(member);
+      final updated = current?.copyWith(familyMembers: updatedMembers);
+      emit(ProfileLoaded(updated ?? (await getUserProfile(event.accessToken))));
+    } on ServerException catch (e) {
+      emit(ProfileError(e.message, profile: current));
+    } catch (e) {
+      emit(ProfileError('Failed to add family member: $e', profile: current));
     }
   }
 }

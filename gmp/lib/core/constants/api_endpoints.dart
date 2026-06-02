@@ -57,6 +57,12 @@ class ApiEndpoints {
       '$baseUrl$userProfilePrefix/address/update';
   static String userProfileDeleteAddress(String addressId) =>
       '$baseUrl$userProfilePrefix/address/delete/$addressId';
+  static String get userProfileAddFamilyMember =>
+      '$baseUrl$userProfilePrefix/family-members/add';
+  static String get userProfileUpdateFamilyMember =>
+      '$baseUrl$userProfilePrefix/family-members/update';
+  static String userProfileDeleteFamilyMember(String memberId) =>
+      '$baseUrl$userProfilePrefix/family-members/delete/$memberId';
 
   // Articles (Module 3 – Digital Shoe Passport)
   static const String articlesPrefix = '/api/articles';

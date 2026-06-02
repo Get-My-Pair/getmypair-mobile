@@ -156,6 +156,9 @@ Future<void> init() async {
   if (!sl.isRegistered<DeleteAddress>()) {
     sl.registerLazySingleton(() => DeleteAddress(sl()));
   }
+  if (!sl.isRegistered<AddFamilyMember>()) {
+    sl.registerLazySingleton(() => AddFamilyMember(sl()));
+  }
   if (!sl.isRegistered<ProfileBloc>()) {
     sl.registerFactory(
       () => ProfileBloc(
@@ -165,6 +168,7 @@ Future<void> init() async {
         addAddress: sl(),
         updateAddress: sl(),
         deleteAddress: sl(),
+        addFamilyMember: sl(),
       ),
     );
   }
