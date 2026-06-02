@@ -9,6 +9,7 @@ import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/articles/data/footwear_background_remover.dart';
 import 'package:gmp/features/articles/data/footwear_image_validator.dart';
+import 'package:gmp/features/articles/data/footwear_orientation_detector.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
 import 'package:image_picker/image_picker.dart';
@@ -342,6 +343,20 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           );
           return;
         }
+      }
+
+      if (mounted) {
+        setState(() => _processingLabel = 'Checking orientation…');
+      }
+      final orientation =
+          await FootwearOrientationDetector.detect(imageToSave);
+      if (!mounted) return;
+      if (!orientation.isRightFacing) {
+        await _showMessageDialog(
+          title: 'Wrong side',
+          message: FootwearOrientationDetector.wrongSideMessage,
+        );
+        return;
       }
 
       await _reviewCapture(
