@@ -101,3 +101,18 @@ class FamilyMemberAddRequested extends ProfileEvent {
   @override
   List<Object?> get props => [accessToken, name, relation];
 }
+
+class FamilyMemberUpdateRequested extends ProfileEvent {
+  final String accessToken;
+  final String memberId;
+  final String name;
+  final String relation;
+  const FamilyMemberUpdateRequested({
+    required this.accessToken,
+    required this.memberId,
+    required this.name,
+    required this.relation,
+  });
+  @override
+  List<Object?> get props => [accessToken, memberId, name, relation];
+}

@@ -17,6 +17,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final UpdateAddress updateAddress;
   final DeleteAddress deleteAddress;
   final AddFamilyMember addFamilyMember;
+  final UpdateFamilyMember updateFamilyMember;
 
   ProfileBloc({
     required this.getUserProfile,
@@ -26,6 +27,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     required this.updateAddress,
     required this.deleteAddress,
     required this.addFamilyMember,
+    required this.updateFamilyMember,
   }) : super(ProfileInitial()) {
     on<ProfileLoadRequested>(_onLoad);
     on<ProfileUpdateRequested>(_onUpdate);
@@ -34,6 +36,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<AddressUpdateRequested>(_onUpdateAddress);
     on<AddressDeleteRequested>(_onDeleteAddress);
     on<FamilyMemberAddRequested>(_onAddFamilyMember);
+    on<FamilyMemberUpdateRequested>(_onUpdateFamilyMember);
   }
 
   UserProfile? _currentProfile() {
@@ -190,6 +193,29 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
       emit(ProfileError('Failed to add family member: $e', profile: current));
+    }
+  }
+
+  Future<void> _onUpdateFamilyMember(
+      FamilyMemberUpdateRequested event, Emitter<ProfileState> emit) async {
+    final current = _currentProfile();
+    if (current != null) emit(AddressActionLoading(current));
+    try {
+      final updatedMember = await updateFamilyMember(
+        accessToken: event.accessToken,
+        memberId: event.memberId,
+        name: event.name,
+        relation: event.relation,
+      );
+      final updatedMembers = (current?.familyMembers ?? [])
+          .map((m) => m.id == event.memberId ? updatedMember : m)
+          .toList();
+      final updated = current?.copyWith(familyMembers: updatedMembers);
+      emit(ProfileLoaded(updated ?? (await getUserProfile(event.accessToken))));
+    } on ServerException catch (e) {
+      emit(ProfileError(e.message, profile: current));
+    } catch (e) {
+      emit(ProfileError('Failed to update family member: $e', profile: current));
     }
   }
 }

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,6 +26,7 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
   bool _isRemoving = false;
   String? _currentSessionId;
   final List<_SessionItem> _sessions = [];
+  final Set<String> _selectedSessionIds = <String>{};
 
   @override
   void initState() {
@@ -80,6 +80,9 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
         _sessions
           ..clear()
           ..addAll(sessions);
+        _selectedSessionIds.removeWhere(
+          (id) => !_sessions.any((s) => s.id == id && s.id != _currentSessionId),
+        );
         _isLoading = false;
       });
     } catch (e) {
@@ -166,6 +169,76 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
     }
   }
 
+  Future<void> _removeSelectedSessions() async {
+    final token = _accessToken;
+    if (token == null || _isRemoving || _selectedSessionIds.isEmpty) return;
+    final selectedIds = _selectedSessionIds
+        .where((id) => id != _currentSessionId)
+        .toList(growable: false);
+    if (selectedIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Remove selected devices'),
+        content: Text(
+          'Are you sure you want to sign out from ${selectedIds.length} selected device(s)?',
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isRemoving = true);
+    try {
+      final client = di.sl<DioClient>();
+      for (final sessionId in selectedIds) {
+        await client.delete(
+          ApiEndpoints.authSession(sessionId),
+          accessToken: token,
+        );
+      }
+      await _loadSessions(token);
+      if (!mounted) return;
+      await showAppFeedbackAlert(
+        context,
+        message: 'Selected devices removed successfully.',
+        type: AppFeedbackType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      await showAppFeedbackAlert(
+        context,
+        message: e is ServerException ? e.message : e.toString(),
+        type: AppFeedbackType.failure,
+      );
+    } finally {
+      if (mounted) setState(() => _isRemoving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final _SessionItem? currentSession = _sessions
@@ -174,6 +247,12 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
 
     final otherSessions =
         _sessions.where((s) => s.id != _currentSessionId).toList();
+    final selectableSessions = otherSessions
+        .where((s) => s.id.isNotEmpty)
+        .toList(growable: false);
+    final hasAnySelected = _selectedSessionIds.isNotEmpty;
+    final allSelected = selectableSessions.isNotEmpty &&
+        _selectedSessionIds.length == selectableSessions.length;
 
     return Scaffold(
       body: SafeArea(
@@ -278,6 +357,52 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      if (!_isLoading && selectableSessions.isNotEmpty)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CheckboxListTile(
+                                value: allSelected,
+                                onChanged: _isRemoving
+                                    ? null
+                                    : (value) {
+                                        setState(() {
+                                          if (value == true) {
+                                            _selectedSessionIds
+                                              ..clear()
+                                              ..addAll(
+                                                selectableSessions.map((e) => e.id),
+                                              );
+                                          } else {
+                                            _selectedSessionIds.clear();
+                                          }
+                                        });
+                                      },
+                                contentPadding: EdgeInsets.zero,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                title: Text(
+                                  'Select all',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: _isRemoving || !hasAnySelected
+                                  ? null
+                                  : _removeSelectedSessions,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Delete Selected'),
+                            ),
+                          ],
+                        ),
                       if (_isLoading)
                         const SizedBox.shrink()
                       else if (otherSessions.isEmpty)
@@ -298,6 +423,18 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
                             iconAsset: _iconAssetForDeviceInfo(s.deviceInfo),
                             label: s.deviceInfo,
                             showTopDivider: false,
+                            isSelected: _selectedSessionIds.contains(s.id),
+                            onSelect: _isRemoving
+                                ? null
+                                : (value) {
+                                    setState(() {
+                                      if (value) {
+                                        _selectedSessionIds.add(s.id);
+                                      } else {
+                                        _selectedSessionIds.remove(s.id);
+                                      }
+                                    });
+                                  },
                             onRemove: _isRemoving
                                 ? null
                                 : () => _removeSession(s),
@@ -350,12 +487,16 @@ class _DeviceRow extends StatelessWidget {
   final String iconAsset;
   final String label;
   final bool showTopDivider;
+  final bool isSelected;
+  final ValueChanged<bool>? onSelect;
   final VoidCallback? onRemove;
 
   const _DeviceRow({
     required this.iconAsset,
     required this.label,
     this.showTopDivider = true,
+    this.isSelected = false,
+    this.onSelect,
     this.onRemove,
   });
 
@@ -382,6 +523,10 @@ class _DeviceRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 40),
           child: Row(
             children: [
+              Checkbox(
+                value: isSelected,
+                onChanged: onSelect == null ? null : (v) => onSelect!(v ?? false),
+              ),
               SvgPicture.asset(
                 iconAsset,
                 width: 20,

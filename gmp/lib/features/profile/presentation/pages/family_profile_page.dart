@@ -13,7 +13,6 @@ import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
-import 'edit_profile_page.dart';
 
 class FamilyProfilePage extends StatefulWidget {
   final UserProfile profile;
@@ -99,6 +98,76 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
         );
   }
 
+  Future<void> _openEditFamilyMemberDialog(FamilyMember member) async {
+    final nameController = TextEditingController(text: member.name);
+    String relation = member.relation;
+    final formKey = GlobalKey<FormState>();
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit Family Profile'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  validator: (value) {
+                    if (value == null || value.trim().length < 2) {
+                      return 'Enter valid name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: relation,
+                  decoration: const InputDecoration(labelText: 'Relation'),
+                  items: const [
+                    DropdownMenuItem(value: 'partner', child: Text('Partner')),
+                    DropdownMenuItem(value: 'child', child: Text('Child')),
+                    DropdownMenuItem(value: 'elder', child: Text('Elder')),
+                  ],
+                  onChanged: (value) {
+                    relation = value ?? relation;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() != true) return;
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (submitted != true || !mounted) return;
+
+    context.read<ProfileBloc>().add(
+          FamilyMemberUpdateRequested(
+            accessToken: widget.accessToken,
+            memberId: member.id,
+            name: nameController.text.trim(),
+            relation: relation,
+          ),
+        );
+  }
+
   String _relationLabel(String relation) {
     switch (relation) {
       case 'partner':
@@ -128,12 +197,7 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                         : state is ProfileError && state.profile != null
                             ? state.profile!
                             : widget.profile;
-        final names = <String>[
-          currentProfile.name.trim().isEmpty ? 'Profile' : currentProfile.name.trim(),
-          ...currentProfile.familyMembers.map(
-            (m) => '${m.name.trim()} (${_relationLabel(m.relation)})',
-          ),
-        ];
+        final members = currentProfile.familyMembers;
 
         final statusTop = MediaQuery.paddingOf(context).top;
         final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -236,7 +300,7 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                               alignment: Alignment.centerRight,
                               child: ElevatedButton(
                                 onPressed: _openAddFamilyMemberDialog,
-                                child: const Text('Profile'),
+                                child: const Text('Family'),
                               ),
                             ),
                             SizedBox(
@@ -254,24 +318,13 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      for (final name in names)
+                                      for (final member in members)
                                         _FamilyRow(
-                                        title: name,
+                                        title:
+                                            '${member.name.trim()} (${_relationLabel(member.relation)})',
                                         scale: layoutScale,
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => BlocProvider.value(
-                                                value: context.read<ProfileBloc>(),
-                                                child: EditProfilePage(
-                                                  profile: currentProfile,
-                                                  accessToken: widget.accessToken,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
+                                        onTap: () =>
+                                            _openEditFamilyMemberDialog(member),
                                       ),
                                     ],
                                   ),
