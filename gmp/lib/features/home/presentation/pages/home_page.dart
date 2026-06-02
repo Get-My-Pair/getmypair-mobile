@@ -114,6 +114,18 @@ double _homeLayoutScale(BuildContext context) {
   return math.min(_homeWidthScale(context), _homeHeightScale(context));
 }
 
+/// Design px at Edge 60 Pro → scaled for current screen.
+double _homeScaled(double designPx, double layoutScale) =>
+    designPx * layoutScale;
+
+/// Edge reference heights for dashboard body (logical px @ scale 1.0).
+const double _kHomeDesignMinActionH = 84.0;
+const double _kHomeDesignMaxActionH = 116.0;
+const double _kHomeDesignMinActionHCramped = 68.0;
+const double _kHomeDesignMinRackH = 80.0;
+const double _kHomeDesignRackContentH = 128.0;
+const double _kHomeDesignRackHeaderH = 24.0;
+
 /// Vertical gap between the location row and the search field: design scale plus a
 /// fraction of screen height so tall/narrow devices keep similar visual balance.
 double _homeLocationToSearchGap(BuildContext context, double s) {
@@ -157,9 +169,10 @@ double _homeSectionGap(double layoutScale) =>
 double _homeCareSectionGap(double layoutScale) =>
     (14 * layoutScale).clamp(12.0, 18.0);
 
-/// Scales icons/text inside action cards with [actionBlockH].
-double _homeActionContentScale(double actionBlockH) =>
-    (actionBlockH / _kQuickActionCellHeight).clamp(0.88, 1.38);
+/// Scales icons/text inside action cards vs Edge reference cell height.
+double _homeActionContentScale(double actionBlockH, double layoutScale) =>
+    (actionBlockH / (_kQuickActionCellHeight * layoutScale))
+        .clamp(0.72, 1.38);
 
 const _kRentRehomeActionLabels = ['Rent\nMyPair', 'Rehome\nMyPair'];
 const _kPairActionLineHeight = 1.35;
@@ -168,19 +181,22 @@ const _kPairActionLineHeight = 1.35;
 double _homeTwoLineActionLabelSize({
   required BuildContext context,
   required double contentScale,
+  required double layoutScale,
   required double textMaxWidth,
   required double textMaxHeight,
 }) {
-  final base =
-      ((MediaQuery.sizeOf(context).width < _kHomeDesignWidth * 0.88
+  final base = ((MediaQuery.sizeOf(context).width < _kHomeDesignWidth * 0.88
               ? 14.0
               : 16.0) *
           contentScale)
-          .clamp(12.0, 20.0);
+      .clamp(
+    _homeScaled(10, layoutScale),
+    _homeScaled(20, layoutScale),
+  );
   if (textMaxWidth <= 0 || textMaxHeight <= 0) return base;
 
   var size = base;
-  const minSize = 12.0;
+  final minSize = _homeScaled(12, layoutScale).clamp(10.0, 12.0);
   final textDirection = Directionality.of(context);
   while (size >= minSize) {
     final style = GoogleFonts.boldonse(
@@ -221,9 +237,9 @@ double _homeTwoLineActionLabelSize({
   return minSize;
 }
 
-/// Scales My Rack inner content (title, thumbs, icons) with card height.
-double _homeRackContentScale(double rackHeight) =>
-    (rackHeight / 128.0).clamp(0.88, 1.38);
+/// Scales My Rack inner content (title, thumbs, icons) vs Edge reference.
+double _homeRackContentScale(double rackHeight, double layoutScale) =>
+    (rackHeight / (_kHomeDesignRackContentH * layoutScale)).clamp(0.72, 1.38);
 
 double _clampSafe(double value, double lower, double upper) {
   final lo = math.min(lower, upper);
@@ -231,26 +247,30 @@ double _clampSafe(double value, double lower, double upper) {
   return value.clamp(lo, hi);
 }
 
-/// Figma: My Rack a bit taller; CareMyPair and Rent/Rehome share equal height.
+/// My Rack taller; CareMyPair and Rent/Rehome share equal [actionBlockH].
 ({double rackHeight, double actionBlockH}) _homeFigmaBodyHeights({
   required double bodyHeight,
   required double headerToRackGap,
   required double sectionGap,
   required double rackMinHeight,
+  required double layoutScale,
 }) {
-  const minActionH = 84.0;
-  const maxActionH = 116.0;
   const rackOverAction = 1.26;
+  final minActionH = _homeScaled(_kHomeDesignMinActionH, layoutScale);
+  final maxActionH = _homeScaled(_kHomeDesignMaxActionH, layoutScale);
+  final minActionCramped = _homeScaled(_kHomeDesignMinActionHCramped, layoutScale);
+  final minRackCramped = _homeScaled(_kHomeDesignMinRackH, layoutScale);
   final slack = math.max(
     0.0,
     bodyHeight - headerToRackGap - (sectionGap * 2),
   );
 
-  if (slack < minActionH * 2 + 80) {
-    final actionBlockH = _clampSafe(slack * 0.34, 68.0, maxActionH);
+  if (slack < minActionH * 2 + _homeScaled(80, layoutScale)) {
+    final actionBlockH =
+        _clampSafe(slack * 0.34, minActionCramped, maxActionH);
     final rackHeight = _clampSafe(
       slack - actionBlockH * 2,
-      80.0,
+      minRackCramped,
       slack - actionBlockH * 2,
     );
     return (rackHeight: rackHeight, actionBlockH: actionBlockH);
@@ -258,7 +278,7 @@ double _clampSafe(double value, double lower, double upper) {
 
   final cappedRackMin = math.min(rackMinHeight * 1.07, slack * 0.45);
 
-  // Care + Rent/Rehome: equal base, then grow together from leftover space.
+  // Care + Rent/Rehome: equal height, scaled from Edge reference.
   var actionBlockH = _clampSafe(slack * 0.315, minActionH, maxActionH);
   final rackCap = math.max(cappedRackMin, actionBlockH * 1.38);
   var rackHeight = _clampSafe(
@@ -273,7 +293,7 @@ double _clampSafe(double value, double lower, double upper) {
     remaining = slack - rackHeight - (actionBlockH * 2);
     if (remaining > 0) {
       rackHeight = _clampSafe(
-        rackHeight + math.min(remaining, 14.0),
+        rackHeight + math.min(remaining, _homeScaled(14, layoutScale)),
         cappedRackMin,
         rackCap,
       );
@@ -681,32 +701,57 @@ class _HomePageState extends State<HomePage> {
                                       final rackThumbRowMin =
                                           (62 * layoutScale).clamp(54.0, 70.0);
                                       final rackMinHeight = rackCardTopPadding +
-                                          24 +
+                                          _homeScaled(
+                                            _kHomeDesignRackHeaderH,
+                                            layoutScale,
+                                          ) +
                                           rackThumbGap +
                                           rackThumbRowMin +
                                           rackCardBottomPadding +
-                                          4;
+                                          _homeScaled(4, layoutScale);
                                       final figmaHeights = _homeFigmaBodyHeights(
                                         bodyHeight: bodyH,
                                         headerToRackGap: headerToRackGap,
                                         sectionGap: careSectionGap,
                                         rackMinHeight: rackMinHeight,
+                                        layoutScale: layoutScale,
                                       );
                                       final rackHeight = figmaHeights.rackHeight;
-                                      // CareMyPair + Rent/Rehome only (Figma).
+                                      // CareMyPair + Rent/Rehome: same height, scaled together.
                                       final equalBlockH = figmaHeights.actionBlockH;
                                       final actionContentScale =
-                                          _homeActionContentScale(equalBlockH);
+                                          _homeActionContentScale(
+                                        equalBlockH,
+                                        layoutScale,
+                                      );
                                       final rackContentScale =
-                                          _homeRackContentScale(rackHeight);
-                                      final rackTitleSize =
-                                          (16 * rackContentScale).clamp(14.0, 20.0);
-                                      final rackMaximizeSize =
-                                          (24 * rackContentScale).clamp(20.0, 30.0);
-                                      final rackMutedFontSize =
-                                          (12 * rackContentScale).clamp(10.0, 15.0);
-                                      final rackHeaderH =
-                                          rackMaximizeSize.clamp(22.0, 30.0);
+                                          _homeRackContentScale(
+                                        rackHeight,
+                                        layoutScale,
+                                      );
+                                      final rackTitleSize = (16 * rackContentScale)
+                                          .clamp(
+                                        _homeScaled(12, layoutScale),
+                                        _homeScaled(20, layoutScale),
+                                      );
+                                      final rackMaximizeSize = (24 * rackContentScale)
+                                          .clamp(
+                                        _homeScaled(18, layoutScale),
+                                        _homeScaled(30, layoutScale),
+                                      );
+                                      final rackMutedFontSize = (12 * rackContentScale)
+                                          .clamp(
+                                        _homeScaled(9, layoutScale),
+                                        _homeScaled(15, layoutScale),
+                                      );
+                                      final rackHeaderH = rackMaximizeSize.clamp(
+                                        _homeScaled(20, layoutScale),
+                                        _homeScaled(30, layoutScale),
+                                      );
+                                      final rackHorizontalPad =
+                                          _homeScaled(14, layoutScale);
+                                      final rackThumbStripGap =
+                                          _homeScaled(10, layoutScale);
                                       final rackClipRadius = _rackCardClipRadius();
                                       return Column(
                                         crossAxisAlignment:
@@ -735,9 +780,9 @@ class _HomePageState extends State<HomePage> {
                                                       child: Padding(
                                                         padding:
                                                             EdgeInsets.fromLTRB(
-                                                          14,
+                                                          rackHorizontalPad,
                                                           rackCardTopPadding,
-                                                          14,
+                                                          rackHorizontalPad,
                                                           rackCardBottomPadding,
                                                         ),
                                                         child: Column(
@@ -876,7 +921,7 @@ class _HomePageState extends State<HomePage> {
                                                                             articles: _rackArticles!
                                                                                 .take(3)
                                                                                 .toList(),
-                                                                            gap: 10,
+                                                                            gap: rackThumbStripGap,
                                                                             onOpen:
                                                                                 _openArticleDetails,
                                                                             articleImageUrl:
@@ -904,14 +949,17 @@ class _HomePageState extends State<HomePage> {
                                               highlight: true,
                                               fullWidth: true,
                                               iconAssetUrl: _kCareMyPairIconAsset,
-                                              iconWidth: (48 *
-                                                      layoutScale *
-                                                      actionContentScale)
-                                                  .clamp(34.0, 58.0),
-                                              iconHeight: (48 *
-                                                      layoutScale *
-                                                      actionContentScale)
-                                                  .clamp(34.0, 58.0),
+                                              layoutScale: layoutScale,
+                                              iconWidth: (48 * actionContentScale)
+                                                  .clamp(
+                                                _homeScaled(34, layoutScale),
+                                                _homeScaled(58, layoutScale),
+                                              ),
+                                              iconHeight: (48 * actionContentScale)
+                                                  .clamp(
+                                                _homeScaled(34, layoutScale),
+                                                _homeScaled(58, layoutScale),
+                                              ),
                                               cellHeight: equalBlockH,
                                               onTap: () =>
                                                   Navigator.of(context).push(
@@ -930,44 +978,38 @@ class _HomePageState extends State<HomePage> {
                                               builder: (context, constraints) {
                                                 // Shared icon box so both cards leave equal room for text.
                                                 final pairIconW =
-                                                    (44 *
-                                                            layoutScale *
-                                                            actionContentScale)
-                                                        .clamp(32.0, 50.0);
+                                                    (44 * actionContentScale)
+                                                        .clamp(
+                                                  _homeScaled(28, layoutScale),
+                                                  _homeScaled(50, layoutScale),
+                                                );
                                                 final pairIconH =
-                                                    (42 *
-                                                            layoutScale *
-                                                            actionContentScale)
-                                                        .clamp(30.0, 48.0);
+                                                    (42 * actionContentScale)
+                                                        .clamp(
+                                                  _homeScaled(26, layoutScale),
+                                                  _homeScaled(48, layoutScale),
+                                                );
                                                 final rentIconW = pairIconW;
                                                 final rentIconH = pairIconH;
                                                 final rehomeIconW = pairIconW;
                                                 final rehomeIconH = pairIconH;
-                                                final widthScale =
-                                                    (MediaQuery.sizeOf(context)
-                                                                .width /
-                                                            _kHomeDesignWidth)
-                                                        .clamp(0.72, 1.0);
-                                                final heightScale =
-                                                    (equalBlockH /
-                                                            _kQuickActionCellHeight)
-                                                        .clamp(0.88, 1.38);
-                                                final contentScale =
-                                                    widthScale * heightScale;
                                                 final halfCardW =
                                                     (constraints.maxWidth -
                                                             sectionGap) /
                                                         2;
                                                 final horizontalPad =
-                                                    10.0 * contentScale;
+                                                    _homeScaled(10, layoutScale);
                                                 final iconGap =
-                                                    12.0 * contentScale;
+                                                    _homeScaled(12, layoutScale);
                                                 final maxIconW = pairIconW;
                                                 final maxIconH = pairIconH;
                                                 final verticalPad =
                                                     ((equalBlockH - maxIconH) *
                                                             0.2)
-                                                        .clamp(10.0, 20.0);
+                                                        .clamp(
+                                                  _homeScaled(8, layoutScale),
+                                                  _homeScaled(20, layoutScale),
+                                                );
                                                 final textMaxW = halfCardW -
                                                     horizontalPad * 2 -
                                                     maxIconW -
@@ -978,7 +1020,8 @@ class _HomePageState extends State<HomePage> {
                                                 final pairLabelSize =
                                                     _homeTwoLineActionLabelSize(
                                                   context: context,
-                                                  contentScale: contentScale,
+                                                  contentScale: actionContentScale,
+                                                  layoutScale: layoutScale,
                                                   textMaxWidth: textMaxW,
                                                   textMaxHeight: textMaxH,
                                                 );
@@ -997,6 +1040,7 @@ class _HomePageState extends State<HomePage> {
                                                         iconWidth: rentIconW,
                                                         iconHeight: rentIconH,
                                                         cellHeight: equalBlockH,
+                                                        layoutScale: layoutScale,
                                                         labelFontSize:
                                                             pairLabelSize,
                                                         onTap: () =>
@@ -1017,6 +1061,7 @@ class _HomePageState extends State<HomePage> {
                                                         iconWidth: rehomeIconW,
                                                         iconHeight: rehomeIconH,
                                                         cellHeight: equalBlockH,
+                                                        layoutScale: layoutScale,
                                                         labelFontSize:
                                                             pairLabelSize,
                                                         onTap: () =>
@@ -1806,8 +1851,8 @@ class _RackThumbStrip extends StatelessWidget {
       builder: (context, constraints) {
         final fitCount = articles.length <= 3 ? articles.length : 3;
         final visible = articles.take(fitCount).toList();
-        final safeGap = gap.clamp(6.0, 10.0);
-        final radius = BorderRadius.circular(12);
+        final safeGap = gap.clamp(4.0, 14.0);
+        final radius = BorderRadius.circular((12 * (gap / 10)).clamp(8.0, 12.0));
         final cellW =
             (constraints.maxWidth - safeGap * (visible.length - 1)) /
             visible.length;
@@ -1898,6 +1943,7 @@ class _QuickActionCard extends StatelessWidget {
   final double iconHeight;
   final double? cellHeight;
   final double? labelFontSize;
+  final double layoutScale;
   final bool highlight;
   final bool grayed;
   final VoidCallback? onTap;
@@ -1910,6 +1956,7 @@ class _QuickActionCard extends StatelessWidget {
     this.iconHeight = 24,
     this.cellHeight,
     this.labelFontSize,
+    this.layoutScale = 1.0,
     this.highlight = false,
     this.grayed = false,
     this.onTap,
@@ -1920,7 +1967,8 @@ class _QuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final widthScale = _homeWidthScale(context);
     final heightScale = cellHeight != null
-        ? (cellHeight! / _kQuickActionCellHeight).clamp(0.88, 1.38)
+        ? (cellHeight! / (_kQuickActionCellHeight * layoutScale))
+            .clamp(0.72, 1.38)
         : 1.0;
     final contentScale = widthScale * heightScale;
     final isTwoLine = label.contains('\n');
@@ -1937,26 +1985,35 @@ class _QuickActionCard extends StatelessWidget {
             : _kQuickActionCellHeight * contentScale);
     // Same vertical inset for CareMyPair and Rent/Rehome when heights are paired.
     final verticalPad = cellHeight != null
-        ? ((cellHeight! - iconHeight) * 0.2).clamp(10.0, 20.0)
+        ? ((cellHeight! - iconHeight) * 0.2).clamp(
+            _homeScaled(8, layoutScale),
+            _homeScaled(20, layoutScale),
+          )
         : (isTwoLine ? 18 : 8) * contentScale;
     final padding = highlight
         ? EdgeInsets.fromLTRB(
-            18 * contentScale,
+            _homeScaled(18, layoutScale),
             verticalPad,
-            18 * contentScale,
+            _homeScaled(18, layoutScale),
             verticalPad,
           )
         : EdgeInsets.symmetric(
-            horizontal: (labelFontSize != null ? 10 : 12) * contentScale,
+            horizontal: _homeScaled(
+              labelFontSize != null ? 10 : 12,
+              layoutScale,
+            ),
             vertical: verticalPad,
           );
-    const cardRadius = 12.0;
+    final cardRadius = _homeScaled(12, layoutScale);
     final labelSize = ((MediaQuery.sizeOf(context).width <
                 _kHomeDesignWidth * 0.88
             ? 14.0
             : 16.0) *
         contentScale)
-        .clamp(12.0, 20.0);
+        .clamp(
+      _homeScaled(10, layoutScale),
+      _homeScaled(20, layoutScale),
+    );
     final resolvedLabelSize = labelFontSize ?? labelSize;
 
     final cardBody = Row(
@@ -1968,7 +2025,9 @@ class _QuickActionCard extends StatelessWidget {
           height: iconHeight,
           child: _buildActionIcon(iconColor),
         ),
-        SizedBox(width: (fullWidth ? 20 : 14) * contentScale),
+        SizedBox(
+          width: _homeScaled(fullWidth ? 20 : 14, layoutScale),
+        ),
         if (isTwoLine)
           Expanded(
             child: _PairActionLabel(
