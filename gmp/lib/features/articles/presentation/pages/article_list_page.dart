@@ -504,16 +504,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    SvgPicture.asset(
-                      'assets/images/icons/myrack/filter.svg',
-                      width: 20,
-                      height: 20,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFF0F6876),
-                        BlendMode.srcIn,
-                      ),
-                    ),
                     const SizedBox(width: 6),
                   ],
                 ),
@@ -1472,16 +1462,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SvgPicture.asset(
-                    'assets/images/icons/myrack/filter.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: ColorFilter.mode(
-                      Colors.black.withValues(alpha: 0.34),
-                      BlendMode.srcIn,
                     ),
                   ),
                 ],

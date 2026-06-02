@@ -39,6 +39,11 @@ class ApiEndpoints {
   static String get logout => '$baseUrl$apiPrefix/logout';
   static String get me => '$baseUrl$apiPrefix/me';
 
+  // Manage Devices (active sessions)
+  static String get authSessions => '$baseUrl$apiPrefix/sessions';
+  static String authSession(String sessionId) =>
+      '$baseUrl$apiPrefix/sessions/$sessionId';
+
   // User Profile endpoints (getmypair-api: server/src/routes/userProfile.routes.js)
   // Profile row is created by POST /api/auth/complete-profile (see completeProfile above), not here.
   static const String userProfilePrefix = '/api/user/profile';

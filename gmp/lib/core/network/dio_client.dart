@@ -11,11 +11,15 @@ class DioClient {
   Future<Map<String, dynamic>> get(
     String endpoint, {
     String? accessToken,
+    Map<String, String>? extraHeaders,
   }) async {
     try {
+      final headers = ApiEndpoints.getHeaders(accessToken: accessToken);
+      if (extraHeaders != null) headers.addAll(extraHeaders);
+
       final response = await http.get(
         Uri.parse(endpoint),
-        headers: ApiEndpoints.getHeaders(accessToken: accessToken),
+        headers: headers,
       ).timeout(_timeoutDuration, onTimeout: () {
         throw NetworkException(
           'Connection timeout. Please check your internet connection and try again.'
@@ -46,11 +50,15 @@ class DioClient {
     String endpoint, {
     Map<String, dynamic>? body,
     String? accessToken,
+    Map<String, String>? extraHeaders,
   }) async {
     try {
+      final headers = ApiEndpoints.getHeaders(accessToken: accessToken);
+      if (extraHeaders != null) headers.addAll(extraHeaders);
+
       final response = await http.post(
         Uri.parse(endpoint),
-        headers: ApiEndpoints.getHeaders(accessToken: accessToken),
+        headers: headers,
         body: body != null ? jsonEncode(body) : null,
       ).timeout(_timeoutDuration, onTimeout: () {
         throw NetworkException(
@@ -89,11 +97,15 @@ class DioClient {
     String endpoint, {
     Map<String, dynamic>? body,
     String? accessToken,
+    Map<String, String>? extraHeaders,
   }) async {
     try {
+      final headers = ApiEndpoints.getHeaders(accessToken: accessToken);
+      if (extraHeaders != null) headers.addAll(extraHeaders);
+
       final response = await http.put(
         Uri.parse(endpoint),
-        headers: ApiEndpoints.getHeaders(accessToken: accessToken),
+        headers: headers,
         body: body != null ? jsonEncode(body) : null,
       ).timeout(_timeoutDuration, onTimeout: () {
         throw NetworkException(
@@ -129,11 +141,15 @@ class DioClient {
   Future<Map<String, dynamic>> delete(
     String endpoint, {
     String? accessToken,
+    Map<String, String>? extraHeaders,
   }) async {
     try {
+      final headers = ApiEndpoints.getHeaders(accessToken: accessToken);
+      if (extraHeaders != null) headers.addAll(extraHeaders);
+
       final response = await http.delete(
         Uri.parse(endpoint),
-        headers: ApiEndpoints.getHeaders(accessToken: accessToken),
+        headers: headers,
       ).timeout(_timeoutDuration, onTimeout: () {
         throw NetworkException(
           'Connection timeout. Please check your internet connection and try again.'

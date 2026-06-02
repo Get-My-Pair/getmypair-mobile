@@ -1,3 +1,4 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
@@ -29,6 +30,63 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final DioClient client;
 
   AuthRemoteDataSourceImpl({required this.client});
+
+  /// Real device name for the "device-info" header / sessions list.
+  /// Examples: "Motorola moto g60", "Samsung SM-G991B", "iPhone 14 Pro".
+  Future<String> _deviceInfoHeaderValue() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+
+      if (kIsWeb) {
+        final web = await deviceInfo.webBrowserInfo;
+        final browser = web.browserName.name;
+        return browser.isNotEmpty ? 'Web ($browser)' : 'Web browser';
+      }
+
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.android:
+          final android = await deviceInfo.androidInfo;
+          return _composeName(android.manufacturer, android.model, 'Android');
+        case TargetPlatform.iOS:
+          final ios = await deviceInfo.iosInfo;
+          // utsname.machine -> identifier (e.g. iPhone15,2); name -> user device name.
+          final model = ios.name.trim().isNotEmpty ? ios.name : ios.model;
+          return model.trim().isNotEmpty ? model.trim() : 'iPhone / iPad';
+        default:
+          return 'This device';
+      }
+    } catch (_) {
+      // Fallback to platform label if the plugin fails for any reason.
+      if (kIsWeb) return 'Web browser';
+      return defaultTargetPlatform == TargetPlatform.android
+          ? 'Android'
+          : defaultTargetPlatform == TargetPlatform.iOS
+              ? 'iPhone / iPad'
+              : 'This device';
+    }
+  }
+
+  /// Combine manufacturer + model into a readable name, avoiding duplicates
+  /// (e.g. manufacturer "samsung" + model "Galaxy S21" -> "Samsung Galaxy S21").
+  String _composeName(String manufacturer, String model, String fallback) {
+    final mfr = manufacturer.trim();
+    final mdl = model.trim();
+    if (mfr.isEmpty && mdl.isEmpty) return fallback;
+    if (mfr.isEmpty) return mdl;
+    if (mdl.isEmpty) return _capitalize(mfr);
+
+    final mfrCap = _capitalize(mfr);
+    // Avoid "Samsung Samsung ..." when model already contains manufacturer.
+    if (mdl.toLowerCase().startsWith(mfr.toLowerCase())) {
+      return mdl;
+    }
+    return '$mfrCap $mdl';
+  }
+
+  String _capitalize(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toUpperCase() + value.substring(1);
+  }
 
   @override
   Future<Map<String, dynamic>> sendOTP(String mobile) async {
@@ -74,11 +132,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Ensure OTP is a clean 6-digit string (remove any spaces or non-numeric chars)
       final cleanOtp = otp.trim().replaceAll(RegExp(r'[^0-9]'), '');
 
+      final deviceInfo = await _deviceInfoHeaderValue();
       final response = await client.post(
         ApiEndpoints.verifyOtp,
         body: {
           'mobile': normalizedMobile,
           'otp': cleanOtp,
+        },
+        extraHeaders: {
+          'device-info': deviceInfo,
         },
       );
 
