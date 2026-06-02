@@ -700,60 +700,65 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                           ),
                         ),
                       ),
-                      // Delete icon UI — hidden for now; _deleteArticle() still available.
-                      // IconButton(
-                      //   style: IconButton.styleFrom(
-                      //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      //     minimumSize: Size.zero,
-                      //     padding: EdgeInsets.zero,
-                      //     visualDensity: VisualDensity.compact,
-                      //   ),
-                      //   constraints: BoxConstraints.tightFor(
-                      //     width: math.max(30.0, 26 * scale),
-                      //     height: math.max(30.0, 26 * scale),
-                      //   ),
-                      //   onPressed: _deleteArticle,
-                      //   icon: SvgPicture.asset(
-                      //     'assets/images/icons/profile/trash-2.svg',
-                      //     width: (20 * scale).clamp(18.0, 22.0),
-                      //     height: (20 * scale).clamp(18.0, 22.0),
-                      //     colorFilter: const ColorFilter.mode(
-                      //       AppColors.error,
-                      //       BlendMode.srcIn,
-                      //     ),
-                      //   ),
-                      // ),
-                      IconButton(
-                        style: IconButton.styleFrom(
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          minimumSize: Size.zero,
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        constraints: BoxConstraints.tightFor(
-                          width: math.max(30.0, 26 * scale),
-                          height: math.max(30.0, 26 * scale),
-                        ),
-                        onPressed: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ArticleEditPage(
-                                articleId: article.id,
-                                initialArticle: article,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            style: IconButton.styleFrom(
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              minimumSize: Size.zero,
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            constraints: BoxConstraints.tightFor(
+                              width: math.max(30.0, 26 * scale),
+                              height: math.max(30.0, 26 * scale),
+                            ),
+                            onPressed: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ArticleEditPage(
+                                    articleId: article.id,
+                                    initialArticle: article,
+                                  ),
+                                ),
+                              );
+                              if (mounted) _load();
+                            },
+                            icon: SvgPicture.asset(
+                              'assets/images/icons/profile/edit.svg',
+                              width: (20 * scale).clamp(18.0, 22.0),
+                              height: (20 * scale).clamp(18.0, 22.0),
+                              colorFilter: const ColorFilter.mode(
+                                _rackTealAccent,
+                                BlendMode.srcIn,
                               ),
                             ),
-                          );
-                          if (mounted) _load();
-                        },
-                        icon: SvgPicture.asset(
-                          'assets/images/icons/profile/edit.svg',
-                          width: (20 * scale).clamp(18.0, 22.0),
-                          height: (20 * scale).clamp(18.0, 22.0),
-                          colorFilter: const ColorFilter.mode(
-                            _rackTealAccent,
-                            BlendMode.srcIn,
                           ),
-                        ),
+                          SizedBox(width: (10 * scale).clamp(8.0, 14.0)),
+                          IconButton(
+                            style: IconButton.styleFrom(
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              minimumSize: Size.zero,
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            constraints: BoxConstraints.tightFor(
+                              width: math.max(30.0, 26 * scale),
+                              height: math.max(30.0, 26 * scale),
+                            ),
+                            onPressed: _deleteArticle,
+                            icon: SvgPicture.asset(
+                              'assets/images/icons/profile/trash-2.svg',
+                              width: (20 * scale).clamp(18.0, 22.0),
+                              height: (20 * scale).clamp(18.0, 22.0),
+                              colorFilter: const ColorFilter.mode(
+                                AppColors.error,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
