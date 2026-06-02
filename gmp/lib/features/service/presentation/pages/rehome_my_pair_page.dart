@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -410,17 +411,19 @@ class _PrimaryDonateCard extends StatelessWidget {
             ],
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SvgPicture.asset(
                 'assets/images/icons/caremypair/rmp.svg',
                 width: 40,
                 height: 40,
               ),
-              const SizedBox(width: 8),
-              Expanded(
+              const SizedBox(width: 12),
+              Flexible(
                 child: Text(
                   'Donate\nMyPair',
                   maxLines: 2,
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.boldonse(
                     color: Colors.white,
                     fontSize: 16,
@@ -456,7 +459,7 @@ class _SecondaryServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const radius = BorderRadius.all(Radius.circular(10));
-    const borderSide = BorderSide(color: Color(0xFF0F6876));
+    const borderSide = BorderSide(color: AppColors.greyedButtonLabel);
 
     return RepaintBoundary(
       child: DecoratedBox(
@@ -471,7 +474,7 @@ class _SecondaryServiceCard extends StatelessWidget {
           ],
         ),
         child: Material(
-          color: const Color(0xFFDFE7E9),
+          color: AppColors.greyedButtonFill,
           shape: const RoundedRectangleBorder(
             borderRadius: radius,
             side: borderSide,
@@ -486,20 +489,25 @@ class _SecondaryServiceCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SvgPicture.asset(
                       iconAsset,
                       width: iconSize,
                       height: iconSize,
+                      colorFilter: const ColorFilter.mode(
+                        AppColors.greyedButtonLabel,
+                        BlendMode.srcIn,
+                      ),
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
+                    const SizedBox(width: 12),
+                    Flexible(
                       child: Text(
                         label,
                         maxLines: 2,
-                        textAlign: TextAlign.left,
+                        textAlign: TextAlign.center,
                         style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
+                          color: AppColors.greyedButtonLabel,
                           fontSize: labelFontSize,
                     height: 1.9,
                           fontWeight: FontWeight.w400,
