@@ -1210,5 +1210,16 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
     );
   }
 
-  String _label(String raw) => raw.replaceAll('_', ' ').trim();
+  String _label(String raw) {
+    final cleaned = raw.replaceAll('_', ' ').trim();
+    if (cleaned.isEmpty) return cleaned;
+    return cleaned
+        .split(RegExp(r'\s+'))
+        .map(
+          (word) => word.isEmpty
+              ? word
+              : '${word[0].toUpperCase()}${word.substring(1)}',
+        )
+        .join(' ');
+  }
 }
