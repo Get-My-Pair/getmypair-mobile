@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
@@ -136,6 +137,42 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
     final tracking = (r['trackingState'] ?? '').toString();
     if (tracking.isEmpty) return 'Progress';
     return tracking.replaceAll('_', ' ');
+  }
+
+  /// Resolves a usable image URL from a raw upload path.
+  static String _resolveImageUrl(String path) {
+    final p = path.trim();
+    if (p.isEmpty) return '';
+    if (p.startsWith('http')) return p;
+    final base = ApiEndpoints.baseUrl;
+    if (p.startsWith('/')) return '$base$p';
+    return '$base/uploads/$p';
+  }
+
+  /// Picks one article image for the request thumbnail.
+  ///
+  /// `articleId` is populated by the API as an object with an `images` list.
+  /// When multiple articles/images exist we just show the first available one.
+  static String _articleImageUrl(Map<String, dynamic> r) {
+    final article = r['articleId'];
+    if (article is Map) {
+      final images = article['images'];
+      if (images is List) {
+        for (final img in images) {
+          final url = _resolveImageUrl(img?.toString() ?? '');
+          if (url.isNotEmpty) return url;
+        }
+      }
+    }
+    // Fallback: first proof photo if the article has no image.
+    final photos = r['photos'];
+    if (photos is List) {
+      for (final p in photos) {
+        final url = _resolveImageUrl(p?.toString() ?? '');
+        if (url.isNotEmpty) return url;
+      }
+    }
+    return '';
   }
 
   @override
@@ -299,6 +336,8 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
                                                 _progressValue(r);
                                             final trackLabel =
                                                 _trackingLabel(r);
+                                            final imageUrl =
+                                                _articleImageUrl(r);
 
                                             return Padding(
                                               padding: const EdgeInsets.only(
@@ -352,11 +391,23 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
                                                         ),
                                                       ],
                                                     ),
-                                                    child: Column(
+                                                    child: Row(
                                                       crossAxisAlignment:
                                                           CrossAxisAlignment
                                                               .start,
                                                       children: [
+                                                        _ArticleThumb(
+                                                          imageUrl: imageUrl,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 12,
+                                                        ),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
                                                         Row(
                                                           crossAxisAlignment:
                                                               CrossAxisAlignment
@@ -511,6 +562,9 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
                                                             ),
                                                           ],
                                                         ),
+                                                            ],
+                                                          ),
+                                                        ),
                                                       ],
                                                     ),
                                                   ),
@@ -540,6 +594,53 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Square article thumbnail shown on the left of each service request card.
+class _ArticleThumb extends StatelessWidget {
+  final String imageUrl;
+
+  const _ArticleThumb({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    const double size = 92;
+    final placeholder = Container(
+      color: const Color(0xFFEAF3F4),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.checkroom_rounded,
+        size: 34,
+        color: const Color(0xFF0F6876).withValues(alpha: 0.45),
+      ),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF3F4),
+          border: Border.all(
+            color: const Color(0xFF0F6876).withValues(alpha: 0.18),
+          ),
+        ),
+        child: imageUrl.isEmpty
+            ? placeholder
+            : Padding(
+                padding: const EdgeInsets.all(6),
+                child: ArticleRackShoeImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain,
+                  borderRadius: BorderRadius.circular(8),
+                  placeholder: placeholder,
+                  errorPlaceholder: placeholder,
+                ),
+              ),
       ),
     );
   }
