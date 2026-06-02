@@ -160,7 +160,7 @@ class CareMyPairPage extends StatelessWidget {
                                 label: 'Maintain\nMyPair',
                                 iconAsset:
                                     'assets/images/icons/caremypair/mmp.svg',
-                                iconSize: 44,
+                                iconSize: 68,
                                 onTap: () => _openMaintainPage(context),
                               ),
                             ),
@@ -170,6 +170,7 @@ class CareMyPairPage extends StatelessWidget {
                                 label: 'Wash\nMyPair',
                                 iconAsset:
                                     'assets/images/icons/caremypair/wmp.svg',
+                                iconLabelGap: 20,
                                 onTap: () => _openWashPage(context),
                               ),
                             ),
@@ -466,6 +467,7 @@ class _SecondaryServiceCard extends StatelessWidget {
   final String iconAsset;
   final double iconSize;
   final double labelFontSize;
+  final double iconLabelGap;
   final VoidCallback onTap;
 
   const _SecondaryServiceCard({
@@ -473,6 +475,7 @@ class _SecondaryServiceCard extends StatelessWidget {
     required this.iconAsset,
     this.iconSize = 38,
     this.labelFontSize = 16,
+    this.iconLabelGap = 12,
     required this.onTap,
   });
 
@@ -487,13 +490,13 @@ class _SecondaryServiceCard extends StatelessWidget {
     final lines = label.split('\n');
     if (lines.length >= 2) {
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(lines[0], style: _labelStyle),
+          Text(lines[0], textAlign: TextAlign.center, style: _labelStyle),
           const SizedBox(height: 5),
-          Text(lines[1], style: _labelStyle),
+          Text(lines[1], textAlign: TextAlign.center, style: _labelStyle),
         ],
       );
     }
@@ -530,6 +533,7 @@ class _SecondaryServiceCard extends StatelessWidget {
             ],
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SvgPicture.asset(
@@ -537,8 +541,8 @@ class _SecondaryServiceCard extends StatelessWidget {
                 width: iconSize,
                 height: iconSize,
               ),
-              const SizedBox(width: 6),
-              Expanded(child: _buildLabelText()),
+              SizedBox(width: iconLabelGap),
+              Flexible(child: _buildLabelText()),
             ],
           ),
         ),
