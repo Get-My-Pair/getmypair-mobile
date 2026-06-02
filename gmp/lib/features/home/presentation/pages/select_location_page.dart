@@ -111,16 +111,19 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   bool _isConfirmingLocation = false;
   bool _isSatelliteView = true;
   double _currentZoom = _initialZoom;
-  double _selectedRangeKm = 5;
+  double _selectedRangeKm = 3;
   static const double _minRangeKm = 0;
-  static const double _maxRangeKm = 150;
-  /// 0–150 km in 5 km steps (radio list).
-  static final List<double> _rangeOptionsKm = List<double>.unmodifiable(
-    List<double>.generate(
-      ((_maxRangeKm - _minRangeKm) ~/ 5) + 1,
-      (i) => _minRangeKm + i * 5,
-    ),
-  );
+  static const double _maxRangeKm = 15;
+  /// Allowed search ranges (km): 0, 1, 3, 6, 9, 12, 15.
+  static const List<double> _rangeOptionsKm = <double>[
+    0,
+    1,
+    3,
+    6,
+    9,
+    12,
+    15,
+  ];
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   /// Synced from [_searchFocusNode] listener — never read [FocusNode.hasFocus] in [build] on web.
