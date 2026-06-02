@@ -453,6 +453,48 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     setState(() => _images.removeAt(index));
   }
 
+  Future<void> _showPhotoPreview(File file) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: FootwearCutoutPreview(
+                file: file,
+                height: 360,
+                fit: BoxFit.contain,
+                borderRadius: 16,
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.black54,
+                  child: Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _showMultiplePhotosWarning() async {
     await showDialog<void>(
       context: context,
@@ -667,59 +709,113 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Photos (${_images.length}/$_maxPhotos) — tap × to remove',
-          maxLines: 2,
+          'Choose the best one  (${_images.length}/$_maxPhotos)',
+          maxLines: 1,
           textAlign: TextAlign.center,
           style: GoogleFonts.montserrat(
-            color: Colors.white.withValues(alpha: 0.85),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 88,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              for (var i = 0; i < _images.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: Stack(
-                    children: [
-                      SizedBox(
-                        width: 88,
-                        height: 88,
-                        child: FootwearCutoutPreview(
-                          file: _images[i],
-                          height: 88,
-                          fit: BoxFit.contain,
-                          borderRadius: 12,
-                        ),
-                      ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: _validatingImage ? null : () => _removeImage(i),
-                          child: const CircleAvatar(
-                            radius: 12,
-                            backgroundColor: AppColors.error,
-                            child: Icon(
-                              Icons.close,
-                              color: AppColors.textOnPrimary,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+        const SizedBox(height: 4),
+        Text(
+          'Tap a photo to preview · tap × to remove',
+          maxLines: 1,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserrat(
+            color: Colors.white.withValues(alpha: 0.75),
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
           ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < _maxPhotos; i++)
+              Padding(
+                padding: EdgeInsets.only(right: i < _maxPhotos - 1 ? 12 : 0),
+                child: _photoSlot(i),
+              ),
+          ],
         ),
       ],
+    );
+  }
+
+  static const double _slotSize = 92;
+
+  Widget _photoSlot(int index) {
+    final hasImage = index < _images.length;
+    if (!hasImage) {
+      return Container(
+        width: _slotSize,
+        height: _slotSize,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: Opacity(
+            opacity: 0.4,
+            child: Image.asset(
+              _cameraShoeGuideAsset,
+              width: _slotSize * 0.6,
+              height: _slotSize * 0.6,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.checkroom_outlined,
+                size: _slotSize * 0.4,
+                color: Colors.white.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final file = _images[index];
+    return SizedBox(
+      width: _slotSize,
+      height: _slotSize,
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: () => _showPhotoPreview(file),
+            child: SizedBox(
+              width: _slotSize,
+              height: _slotSize,
+              child: FootwearCutoutPreview(
+                file: file,
+                height: _slotSize,
+                fit: BoxFit.contain,
+                borderRadius: 12,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: _validatingImage ? null : () => _removeImage(index),
+              child: const CircleAvatar(
+                radius: 12,
+                backgroundColor: AppColors.error,
+                child: Icon(
+                  Icons.close,
+                  color: AppColors.textOnPrimary,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -865,10 +961,8 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
                           _headerSection(),
                           _captureRow(contentWidth),
                           _captureActionsSection(),
-                          if (_images.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            _capturedPhotosStrip(),
-                          ],
+                          const SizedBox(height: 16),
+                          _capturedPhotosStrip(),
                           if (_images.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 12, bottom: 24),
