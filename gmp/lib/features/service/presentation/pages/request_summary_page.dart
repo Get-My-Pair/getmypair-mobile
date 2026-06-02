@@ -725,21 +725,15 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: SizedBox(
-              height: 22,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: GoogleFonts.montserrat(
-                    color: Colors.black,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+            child: Text(
+              value,
+              maxLines: singleLineValue ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+              softWrap: !singleLineValue,
+              style: GoogleFonts.montserrat(
+                color: Colors.black,
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ),
