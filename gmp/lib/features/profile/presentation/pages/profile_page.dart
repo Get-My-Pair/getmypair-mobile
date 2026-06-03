@@ -23,7 +23,8 @@ import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
 import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
-import 'family_profile_page.dart';
+// MVP: single profile only — restore for family / multi-profile.
+// import 'family_profile_page.dart';
 import 'notifications_page.dart';
 import 'manage_devices_page.dart';
 import 'faq_page.dart';
@@ -206,7 +207,8 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           final token = _accessToken ?? '';
-          final isJustMe = profile.householdType == 'just_me';
+          // MVP: single profile only — restore householdType branching later.
+          // final isJustMe = profile.householdType == 'just_me';
 
           final statusTop = MediaQuery.paddingOf(context).top;
           final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -383,16 +385,28 @@ class _ProfilePageState extends State<ProfilePage> {
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/familyprofile.svg',
-                                                title: isJustMe ? 'Profile' : 'Family Profile',
+                                                title: 'Profile',
                                                 scale: layoutScale,
-                                                onTap: () {
-                                                  if (isJustMe) {
-                                                    _openEditProfile(context, profile, token);
-                                                    return;
-                                                  }
-                                                  _openFamilyProfile(context, profile, token);
-                                                },
+                                                onTap: () => _openEditProfile(
+                                                  context,
+                                                  profile,
+                                                  token,
+                                                ),
                                               ),
+                                              // MVP: family profile — restore when multi-profile ships.
+                                              // _GradientMenuTile(
+                                              //   iconAssetPath:
+                                              //       'assets/images/icons/profile/familyprofile.svg',
+                                              //   title: isJustMe ? 'Profile' : 'Family Profile',
+                                              //   scale: layoutScale,
+                                              //   onTap: () {
+                                              //     if (isJustMe) {
+                                              //       _openEditProfile(context, profile, token);
+                                              //       return;
+                                              //     }
+                                              //     _openFamilyProfile(context, profile, token);
+                                              //   },
+                                              // ),
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/bell.svg',
@@ -538,21 +552,22 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _openFamilyProfile(
-    BuildContext context,
-    UserProfile profile,
-    String token,
-  ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<ProfileBloc>(),
-          child: FamilyProfilePage(profile: profile, accessToken: token),
-        ),
-      ),
-    );
-  }
+  // MVP: single profile only — restore for family / multi-profile.
+  // void _openFamilyProfile(
+  //   BuildContext context,
+  //   UserProfile profile,
+  //   String token,
+  // ) {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (_) => BlocProvider.value(
+  //         value: context.read<ProfileBloc>(),
+  //         child: FamilyProfilePage(profile: profile, accessToken: token),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   void _openSavedAddresses(
     BuildContext context,

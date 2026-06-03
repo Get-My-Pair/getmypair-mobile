@@ -45,50 +45,55 @@ bool _hasShownVoicePlaybackHintGlobally = false;
 
 /// Body on the step after rack selection (index 3), driven by step-3 choices.
 String _bodyAfterRackSelection(Set<String> rack) {
-  if (rack.contains('My Partner')) {
-    return 'Crafting a curated masterpiece for two? Let\u2019s design this rack '
-        'to perfectly balance your personal rotation with your partner\u2019s '
-        'favourites.\n\nBut first, let\u2019s set you up together...';
-  }
-  if (rack.contains('My Kids')) {
-    return 'Building a fun and family-ready shoe collection? Let\u2019s create a rack '
-        'that keeps up with your style while making space for your kids\u2019 everyday '
-        'adventures, school days, and tiny trendsetters.\n\nBut first, let\u2019s set you up...';
-  }
-  if (rack.contains('Elderly')) {
-    return 'Creating a thoughtful shared collection for you and your elders? Let\u2019s design '
-        'a comfortable and organized rack that blends your personal style with everyday comfort, '
-        'accessibility, and timeless favourites for the family.\n\nBut first, let\u2019s set you up...';
-  }
+  // MVP: single profile — restore family rack branches when multi-profile ships.
+  // if (rack.contains('My Partner')) {
+  //   return 'Crafting a curated masterpiece for two? Let\u2019s design this rack '
+  //       'to perfectly balance your personal rotation with your partner\u2019s '
+  //       'favourites.\n\nBut first, let\u2019s set you up together...';
+  // }
+  // if (rack.contains('My Kids')) {
+  //   return 'Building a fun and family-ready shoe collection? Let\u2019s create a rack '
+  //       'that keeps up with your style while making space for your kids\u2019 everyday '
+  //       'adventures, school days, and tiny trendsetters.\n\nBut first, let\u2019s set you up...';
+  // }
+  // if (rack.contains('Elderly')) {
+  //   return 'Creating a thoughtful shared collection for you and your elders? Let\u2019s design '
+  //       'a comfortable and organized rack that blends your personal style with everyday comfort, '
+  //       'accessibility, and timeless favourites for the family.\n\nBut first, let\u2019s set you up...';
+  // }
   return 'Going for a solo masterpiece, I see! Keeping this entire rack strictly '
       'for your own personal rotation?';
 }
 
 /// Reassurance copy on the final step (index 4) when the rack includes partner, kids, or elders.
 String _rackReassuranceClosingStep(Set<String> rack) {
-  if (rack.contains('My Partner')) {
-    return 'Don\u2019t worry, we haven\u2019t forgotten about your partner! '
-        'We\u2019ll get their side of the rack styled and ready to go as soon as '
-        'we\u2019ve finished perfecting your fit.';
-  }
-  if (rack.contains('My Kids')) {
-    return 'Don\u2019t worry, the little ones aren\u2019t left out! We\u2019ll set up '
-        'their side of the rack with styles ready for school days, playtime, and '
-        'every family adventure once your fit is complete.';
-  }
-  if (rack.contains('Elderly')) {
-    return 'Don\u2019t worry, we haven\u2019t forgotten about your elders! We\u2019ll '
-        'thoughtfully arrange their side of the rack with comfort-first styles and '
-        'everyday essentials right after we perfect your setup.';
-  }
+  // MVP: single profile — restore when family rack options return.
+  // if (rack.contains('My Partner')) {
+  //   return 'Don\u2019t worry, we haven\u2019t forgotten about your partner! '
+  //       'We\u2019ll get their side of the rack styled and ready to go as soon as '
+  //       'we\u2019ve finished perfecting your fit.';
+  // }
+  // if (rack.contains('My Kids')) {
+  //   return 'Don\u2019t worry, the little ones aren\u2019t left out! We\u2019ll set up '
+  //       'their side of the rack with styles ready for school days, playtime, and '
+  //       'every family adventure once your fit is complete.';
+  // }
+  // if (rack.contains('Elderly')) {
+  //   return 'Don\u2019t worry, we haven\u2019t forgotten about your elders! We\u2019ll '
+  //       'thoughtfully arrange their side of the rack with comfort-first styles and '
+  //       'everyday essentials right after we perfect your setup.';
+  // }
   return '';
 }
 
 /// Extra closing step only when the rack includes partner, kids, or elders.
-bool _rackNeedsClosingReassurance(Set<String> rack) =>
-    rack.contains('My Partner') ||
-    rack.contains('My Kids') ||
-    rack.contains('Elderly');
+bool _rackNeedsClosingReassurance(Set<String> rack) {
+  // MVP: single profile only — no extra closing step.
+  return false;
+  // return rack.contains('My Partner') ||
+  //     rack.contains('My Kids') ||
+  //     rack.contains('Elderly');
+}
 
 String _householdTypeFromRack(Set<String> rack) {
   if (rack.contains('My Partner')) return 'with_partner';
@@ -132,7 +137,9 @@ String _aiOnboardingTitle(int index, {Set<String> rack = const {}}) {
     case 1:
       return 'Since I\'m all about getting to know the real you, tell me: when were you born, and what are your preferred pronouns?';
     case 2:
-      return 'Will this be a solo collection, or are we making room for the whole crew?';
+      // MVP: solo rack only.
+      return 'Let\u2019s set up your personal shoe rack!';
+      // return 'Will this be a solo collection, or are we making room for the whole crew?';
     case 3:
       return 'Time for some shoe therapy: what\u2019s the ultimate dealbreaker that usually stands between you and the perfect fit?';
     case 4:
@@ -650,7 +657,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         text: _aiOnboardingBody(2, nick),
         title: _aiOnboardingTitle(2),
         child: _Checks(
-          options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
+          // MVP: single profile — restore family rack options later.
+          options: const ['Just Me'],
+          // options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
           selected: _rack,
           onChanged: () {
             setState(() {});
@@ -722,11 +731,12 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       //   leadingTitleFirst: true,
       //   child: const _FootSizeTable(),
       // ),
-      if (_rackNeedsClosingReassurance(_rack))
-        _Step(
-          text: _aiOnboardingBody(4, nick, rack: _rack),
-          title: _aiOnboardingTitle(4, rack: _rack),
-        ),
+      // MVP: family closing reassurance step disabled (single profile).
+      // if (_rackNeedsClosingReassurance(_rack))
+      //   _Step(
+      //     text: _aiOnboardingBody(4, nick, rack: _rack),
+      //     title: _aiOnboardingTitle(4, rack: _rack),
+      //   ),
       // Closing reassurance (old index 6) when footwear steps enabled:
       // if (_rackNeedsClosingReassurance(_rack))
       //   _Step(
