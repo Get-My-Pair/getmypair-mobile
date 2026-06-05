@@ -27,143 +27,38 @@ String _normalizeSpeech(String raw) {
 /// Global app-session guard: show voice-audibility hint only once.
 bool _hasShownVoicePlaybackHintGlobally = false;
 
-// Footwear / foot-scan steps hidden in flow — keep for re-enable:
-// /// Foot blueprint size rows (table UI + TTS).
-// const List<(String, String)> _kFootSizeRows = [
-//   ('United States & Canada', '10'),
-//   ('United Kingdom', '8'),
-//   ('Europe (EU)', '40.5 \u2013 41'),
-//   ('Japan (CM)', '26.5 cm'),
-//   ('Australia', '10'),
-// ];
-//
-// String _speakableFootSizes() {
-//   return _kFootSizeRows
-//       .map((r) => '${r.$1} \u2014 ${r.$2}')
-//       .join('\n');
-// }
+const int _kOnboardingPageCount = 2;
 
-/// Body on the step after rack selection (index 3), driven by step-3 choices.
-String _bodyAfterRackSelection(Set<String> rack) {
-  // MVP: single profile — restore family rack branches when multi-profile ships.
-  // if (rack.contains('My Partner')) {
-  //   return 'Crafting a curated masterpiece for two? Let\u2019s design this rack '
-  //       'to perfectly balance your personal rotation with your partner\u2019s '
-  //       'favourites.\n\nBut first, let\u2019s set you up together...';
-  // }
-  // if (rack.contains('My Kids')) {
-  //   return 'Building a fun and family-ready shoe collection? Let\u2019s create a rack '
-  //       'that keeps up with your style while making space for your kids\u2019 everyday '
-  //       'adventures, school days, and tiny trendsetters.\n\nBut first, let\u2019s set you up...';
-  // }
-  // if (rack.contains('Elderly')) {
-  //   return 'Creating a thoughtful shared collection for you and your elders? Let\u2019s design '
-  //       'a comfortable and organized rack that blends your personal style with everyday comfort, '
-  //       'accessibility, and timeless favourites for the family.\n\nBut first, let\u2019s set you up...';
-  // }
-  return 'Going for a solo masterpiece, I see! Keeping this entire rack strictly '
-      'for your own personal rotation?';
-}
-
-/// Reassurance copy on the final step (index 4) when the rack includes partner, kids, or elders.
-String _rackReassuranceClosingStep(Set<String> rack) {
-  // MVP: single profile — restore when family rack options return.
-  // if (rack.contains('My Partner')) {
-  //   return 'Don\u2019t worry, we haven\u2019t forgotten about your partner! '
-  //       'We\u2019ll get their side of the rack styled and ready to go as soon as '
-  //       'we\u2019ve finished perfecting your fit.';
-  // }
-  // if (rack.contains('My Kids')) {
-  //   return 'Don\u2019t worry, the little ones aren\u2019t left out! We\u2019ll set up '
-  //       'their side of the rack with styles ready for school days, playtime, and '
-  //       'every family adventure once your fit is complete.';
-  // }
-  // if (rack.contains('Elderly')) {
-  //   return 'Don\u2019t worry, we haven\u2019t forgotten about your elders! We\u2019ll '
-  //       'thoughtfully arrange their side of the rack with comfort-first styles and '
-  //       'everyday essentials right after we perfect your setup.';
-  // }
-  return '';
-}
-
-/// Extra closing step only when the rack includes partner, kids, or elders.
-bool _rackNeedsClosingReassurance(Set<String> rack) {
-  // MVP: single profile only — no extra closing step.
-  return false;
-  // return rack.contains('My Partner') ||
-  //     rack.contains('My Kids') ||
-  //     rack.contains('Elderly');
-}
-
-String _householdTypeFromRack(Set<String> rack) {
-  if (rack.contains('My Partner')) return 'with_partner';
-  if (rack.contains('My Kids')) return 'with_children';
-  if (rack.contains('Elderly')) return 'with_elder';
-  return 'just_me';
-}
-
-String _aiOnboardingBody(
-  int index,
-  String nickname, {
-  Set<String> rack = const {},
-}) {
+String _aiOnboardingBody(int index, String nickname) {
   switch (index) {
     case 0:
       return 'Welcome, Collector!\n\nI\u2019m your AI friend KIX!\n\nI\u2019m here to help you nail the perfect fit, discover brands that work for you, and vibe with your style.\n\nBut first let\u2019s get to know you better!';
     case 1:
       return '$nickname! That\u2019s a great name!!';
-    case 2:
-      return 'That\u2019s the spirit! Let\u2019s get your personalized rack ready!';
-    case 3:
-      return _bodyAfterRackSelection(rack);
-    case 4:
-      return '';
-    // Footwear steps (old index 4–5) — hidden:
-    // case 4:
-    //   return 'That sounds like a total nightmare, but don\'t worry! We\'ve got your back (and your feet) covered.';
-    // case 5:
-    //   return '';
-    // case 6:
-    //   return '';
+    // case 2:
+    //   return 'That\u2019s the spirit! Let\u2019s get your personalized rack ready!';
+    // case 3:
+    //   return 'Going for a solo masterpiece, I see! Keeping this entire rack strictly '
+    //       'for your own personal rotation?';
     default:
       return '';
   }
 }
 
-String _aiOnboardingTitle(int index, {Set<String> rack = const {}}) {
+String _aiOnboardingTitle(int index) {
   switch (index) {
     case 0:
       return 'What should we call you?\nDo you go by a nickname?';
     case 1:
       return 'Since I\'m all about getting to know the real you, tell me: when were you born, and what are your preferred pronouns?';
-    case 2:
-      // MVP: solo rack only.
-      return 'Let\u2019s set up your personal shoe rack!';
-      // return 'Will this be a solo collection, or are we making room for the whole crew?';
-    case 3:
-      return 'Time for some shoe therapy: what\u2019s the ultimate dealbreaker that usually stands between you and the perfect fit?';
-    case 4:
-      return _rackReassuranceClosingStep(rack);
-    // Footwear steps (old index 4–5) — hidden:
-    // case 4:
-    //   return 'Let\u2019s dive in and find your perfect match by getting the lowdown on your unique foot shape and size!';
-    // case 5:
-    //   return 'Here it is: the blueprint of your feet! Check out your custom foot type and size breakdown right here.';
-    // case 6:
-    //   return _rackReassuranceClosingStep(rack);
+    // case 2:
+    //   return 'Let\u2019s set up your personal shoe rack!';
+    // case 3:
+    //   return 'Time for some shoe therapy: what\u2019s the ultimate dealbreaker that usually stands between you and the perfect fit?';
     default:
       return '';
   }
 }
-
-// String _aiOnboardingTrailingTitle(int index) {
-//   switch (index) {
-//     case 5:
-//       return 'Detected Foot Profile: The \u201CHigh Arch\u201D';
-//     default:
-//       return '';
-//   }
-// }
 
 class AiOnboardingPage extends StatefulWidget {
   const AiOnboardingPage({
@@ -189,9 +84,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   int _index = 0;
   DateTime? _birthDate;
   String? _gender;
-  // bool _cameraAllowed = false;
-  final Set<String> _rack = <String>{};
-  final Set<String> _troubles = <String>{};
+  // final Set<String> _troubles = <String>{};
   bool _ttsReady = false;
   String? _ttsError;
   String? _selectedVoiceName;
@@ -207,20 +100,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   /// True while [AuthCompleteProfile] is in flight after the last onboarding step.
   bool _isSubmittingProfile = false;
-
-  // With footwear steps: ? 7 : 6
-  int get _pageCount => _rackNeedsClosingReassurance(_rack) ? 5 : 4;
-
-  void _clampPageIndexIfNeeded() {
-    final last = _pageCount - 1;
-    if (_index <= last) return;
-    if (!_controller.hasClients) {
-      setState(() => _index = last);
-      return;
-    }
-    _controller.jumpToPage(last);
-    unawaited(_onPageChanged(last));
-  }
 
   @override
   void initState() {
@@ -378,24 +257,10 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   String _speakableContentFor(int index) {
     final nickname = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
-    final body = _aiOnboardingBody(index, nickname, rack: _rack);
-    final title = _aiOnboardingTitle(index, rack: _rack);
+    final body = _aiOnboardingBody(index, nickname);
+    final title = _aiOnboardingTitle(index);
     return _normalizeSpeech('$body $title');
   }
-
-  // Footwear TTS (old index 5) — hidden:
-  // String _speakableContentForFootwear(int index) {
-  //   final nickname = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
-  //   final body = index == 5
-  //       ? _speakableFootSizes()
-  //       : _aiOnboardingBody(index, nickname, rack: _rack);
-  //   final title = _aiOnboardingTitle(index, rack: _rack);
-  //   final trailing = _aiOnboardingTrailingTitle(index);
-  //   if (index == 5) {
-  //     return _normalizeSpeech('$title $body $trailing');
-  //   }
-  //   return _normalizeSpeech('$body $title $trailing');
-  // }
 
   Future<void> _stopSpeaking() async {
     try {
@@ -532,18 +397,10 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         return _name.text.trim().isNotEmpty;
       case 1:
         return _birthDate != null && _gender != null;
-      case 2:
-        return _rack.isNotEmpty;
-      case 3:
-        return _troubles.isNotEmpty;
-      case 4:
-        return true;
-      // Footwear steps — hidden:
-      // case 4:
-      //   return _cameraAllowed;
-      // case 5:
-      // case 6:
+      // case 2:
       //   return true;
+      // case 3:
+      //   return _troubles.isNotEmpty;
       default:
         return false;
     }
@@ -559,7 +416,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   void _next() {
     if (!_canNext || _isSubmittingProfile) return;
-    if (_index == _pageCount - 1) {
+    if (_index == _kOnboardingPageCount - 1) {
       unawaited(_finish());
       return;
     }
@@ -590,7 +447,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
               name: name,
               dateOfBirth: _birthDate!,
               gender: _gender!.toLowerCase(),
-              householdType: _householdTypeFromRack(_rack),
+              householdType: 'just_me',
               location: null,
             ),
           );
@@ -602,11 +459,6 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       (_) => false,
     );
   }
-
-  // Future<void> _onCameraTap() async {
-  //   if (_cameraAllowed) return;
-  //   setState(() => _cameraAllowed = true);
-  // }
 
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
@@ -626,7 +478,8 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     _ensureBgGradientController();
     final bgGradientController = _bgGradientController!;
     final nick = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
-    final steps = <Widget>[      _Step(
+    final steps = <Widget>[
+      _Step(
         text: _aiOnboardingBody(0, nick),
         title: _aiOnboardingTitle(0),
         child: _Input(
@@ -653,96 +506,24 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           ],
         ),
       ),
-      _Step(
-        text: _aiOnboardingBody(2, nick),
-        title: _aiOnboardingTitle(2),
-        child: _Checks(
-          // MVP: single profile — restore family rack options later.
-          options: const ['Just Me'],
-          // options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
-          selected: _rack,
-          onChanged: () {
-            setState(() {});
-            _clampPageIndexIfNeeded();
-          },
-        ),
-      ),
-      _Step(
-        text: _aiOnboardingBody(3, nick, rack: _rack),
-        title: _aiOnboardingTitle(3),
-        child: _Checks(
-          options: const [
-            'Hard to find the right fit!',
-            'No strong support at heel.',
-            'No extra room for toe',
-            'Insole cushioning',
-          ],
-          selected: _troubles,
-          onChanged: () => setState(() {}),
-        ),
-      ),
-      // Footwear steps (camera + foot blueprint) — hidden:
       // _Step(
-      //   text: _aiOnboardingBody(4, nick),
-      //   title: _aiOnboardingTitle(4),
-      //   child: Column(
-      //     crossAxisAlignment: CrossAxisAlignment.stretch,
-      //     children: [
-      //       ElevatedButton(
-      //         onPressed: _cameraAllowed ? null : _onCameraTap,
-      //         style: ElevatedButton.styleFrom(
-      //           backgroundColor: _cameraAllowed
-      //               ? const Color(0xFFABABAB)
-      //               : Colors.white,
-      //           foregroundColor: _cameraAllowed
-      //               ? const Color(0xFF5A5A5A)
-      //               : const Color(0xFF12899B),
-      //           elevation: 2,
-      //           padding: const EdgeInsets.symmetric(
-      //             horizontal: 24,
-      //             vertical: 14,
-      //           ),
-      //           shape: RoundedRectangleBorder(
-      //             borderRadius: BorderRadius.circular(100),
-      //           ),
-      //           side: const BorderSide(
-      //             color: Color(0xFF09DFFF),
-      //             width: 1,
-      //           ),
-      //         ),
-      //         child: Text(
-      //           _cameraAllowed ? 'Camera Allowed' : 'Allow Camera Access',
-      //           textAlign: TextAlign.center,
-      //           textHeightBehavior: _kOnboardingButtonTextHeight,
-      //           style: GoogleFonts.boldonse(
-      //             fontSize: 14,
-      //             fontWeight: FontWeight.w400,
-      //             height: 1.2,
-      //           ),
-      //         ),
-      //       ),
+      //   text: _aiOnboardingBody(2, nick),
+      //   title: _aiOnboardingTitle(2),
+      // ),
+      // _Step(
+      //   text: _aiOnboardingBody(3, nick),
+      //   title: _aiOnboardingTitle(3),
+      //   child: _Checks(
+      //     options: const [
+      //       'Hard to find the right fit!',
+      //       'No strong support at heel.',
+      //       'No extra room for toe',
+      //       'Insole cushioning',
       //     ],
+      //     selected: _troubles,
+      //     onChanged: () => setState(() {}),
       //   ),
       // ),
-      // _Step(
-      //   text: _aiOnboardingBody(5, nick),
-      //   title: _aiOnboardingTitle(5),
-      //   trailingTitle: _aiOnboardingTrailingTitle(5),
-      //   leadingTitleFirst: true,
-      //   child: const _FootSizeTable(),
-      // ),
-      // MVP: family closing reassurance step disabled (single profile).
-      // if (_rackNeedsClosingReassurance(_rack))
-      //   _Step(
-      //     text: _aiOnboardingBody(4, nick, rack: _rack),
-      //     title: _aiOnboardingTitle(4, rack: _rack),
-      //   ),
-      // Closing reassurance (old index 6) when footwear steps enabled:
-      // if (_rackNeedsClosingReassurance(_rack))
-      //   _Step(
-      //     text: _aiOnboardingBody(6, nick, rack: _rack),
-      //     title: _aiOnboardingTitle(6, rack: _rack),
-      //   ),
     ];
 
     return BlocListener<AuthBloc, AuthState>(
@@ -937,7 +718,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: OnboardingBottomProgress(
                               currentIndex: _index,
-                              totalSteps: _pageCount,
+                              totalSteps: _kOnboardingPageCount,
                             ),
                           ),
                         ),
@@ -979,22 +760,12 @@ class _Step extends StatelessWidget {
   _Step({
     required this.text,
     required this.title,
-    this.trailingTitle = '',
-    this.leadingTitleFirst = false,
     this.child,
-    this.prominentBody = false,
   });
 
   final String text;
   final String title;
-  final String trailingTitle;
-
-  /// When true, [title] is shown above [text] (e.g. foot blueprint step).
-  final bool leadingTitleFirst;
   final Widget? child;
-
-  /// Boldonse body at the same size as [title] (e.g. foot blueprint headline).
-  final bool prominentBody;
 
   @override
   Widget build(BuildContext context) {
@@ -1008,66 +779,33 @@ class _Step extends StatelessWidget {
       letterSpacing: 0.2,
       height: 1.59,
     );
-    final bodyStyle = prominentBody
-        ? titleStyle
-        : GoogleFonts.montserrat(
-            color: const Color(0xFFDFE7E9),
-            fontSize: bodySize,
-            fontWeight: FontWeight.w300,
-            height: 1.25,
-          );
-
-    final bodyWidget = Text(
-      text,
-      style: bodyStyle,
-      textHeightBehavior:
-          prominentBody ? _kOnboardingButtonTextHeight : null,
+    final bodyStyle = GoogleFonts.montserrat(
+      color: const Color(0xFFDFE7E9),
+      fontSize: bodySize,
+      fontWeight: FontWeight.w300,
+      height: 1.25,
     );
+
+    final bodyWidget = Text(text, style: bodyStyle);
     final titleWidget = Text(
       title,
       style: titleStyle,
       textHeightBehavior: _kOnboardingButtonTextHeight,
     );
-    final trailingTitleWidget = Text(
-      trailingTitle,
-      style: titleStyle,
-      textHeightBehavior: _kOnboardingButtonTextHeight,
-    );
     final hasTitle = title.trim().isNotEmpty;
     final hasBodyText = text.trim().isNotEmpty;
-    final hasTrailingTitle = trailingTitle.trim().isNotEmpty;
 
-    final columnChildren = leadingTitleFirst
-        ? <Widget>[
-            if (hasTitle) ...[
-              titleWidget,
-              const SizedBox(height: 50),
-            ],
-            if (hasBodyText) bodyWidget,
-            if (child != null) ...[
-              if (hasBodyText) const SizedBox(height: 24),
-              child!,
-            ],
-            if (hasTrailingTitle) ...[
-              const SizedBox(height: 24),
-              trailingTitleWidget,
-            ],
-          ]
-        : <Widget>[
-            if (hasBodyText) bodyWidget,
-            if (hasTitle) ...[
-              const SizedBox(height: 50),
-              titleWidget,
-            ],
-            if (child != null) ...[
-              SizedBox(height: hasTitle ? 80 : 24),
-              child!,
-            ],
-            if (hasTrailingTitle) ...[
-              const SizedBox(height: 24),
-              trailingTitleWidget,
-            ],
-          ];
+    final columnChildren = <Widget>[
+      if (hasBodyText) bodyWidget,
+      if (hasTitle) ...[
+        const SizedBox(height: 50),
+        titleWidget,
+      ],
+      if (child != null) ...[
+        SizedBox(height: hasTitle ? 80 : 24),
+        child!,
+      ],
+    ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -1078,71 +816,6 @@ class _Step extends StatelessWidget {
     );
   }
 }
-
-// /// Region / size grid for the foot blueprint step (small type, fits teal gradient).
-// class _FootSizeTable extends StatelessWidget {
-//   const _FootSizeTable();
-//
-//   static Widget _cell(
-//     String label,
-//     double fontSize, {
-//     bool header = false,
-//   }) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-//       child: Text(
-//         label,
-//         style: GoogleFonts.montserrat(
-//           color: const Color(0xFFDFE7E9),
-//           fontSize: header ? fontSize + 0.75 : fontSize,
-//           fontWeight: header ? FontWeight.w600 : FontWeight.w400,
-//           height: 1.25,
-//         ),
-//       ),
-//     );
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final screenWidth = MediaQuery.sizeOf(context).width;
-//     final dataFont = screenWidth < 360 ? 9.5 : 10.5;
-//     final borderColor = Colors.white.withValues(alpha: 0.28);
-//
-//     return Container(
-//       decoration: BoxDecoration(
-//         color: Colors.black.withValues(alpha: 0.22),
-//         borderRadius: BorderRadius.circular(12),
-//         border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-//       ),
-//       padding: const EdgeInsets.all(8),
-//       child: ClipRRect(
-//         borderRadius: BorderRadius.circular(8),
-//         child: Table(
-//           defaultColumnWidth: const FlexColumnWidth(1),
-//           border: TableBorder.all(color: borderColor, width: 1),
-//           children: [
-//             TableRow(
-//               decoration: BoxDecoration(
-//                 color: Colors.white.withValues(alpha: 0.08),
-//               ),
-//               children: [
-//                 _cell('Region', dataFont, header: true),
-//                 _cell('Size Equivalent', dataFont, header: true),
-//               ],
-//             ),
-//             for (final row in _kFootSizeRows)
-//               TableRow(
-//                 children: [
-//                   _cell(row.$1, dataFont),
-//                   _cell(row.$2, dataFont),
-//                 ],
-//               ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 class _BirthdayPill extends StatelessWidget {
   // ignore: prefer_const_constructors_in_immutables
@@ -1345,93 +1018,93 @@ class _GenderRadios extends StatelessWidget {
   }
 }
 
-class _Checks extends StatelessWidget {
-  // ignore: prefer_const_constructors_in_immutables
-  _Checks({
-    required this.options,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<String> options;
-  final Set<String> selected;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final optionSize = screenWidth < 360 ? 20.0 : 24.0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'You Choose multiple options',
-          style: GoogleFonts.montserrat(
-            color: const Color(0xFFDFE7E9).withValues(alpha: 0.8),
-            fontSize: screenWidth < 360 ? 14.0 : 15.0,
-            fontWeight: FontWeight.w400,
-            height: 1.35,
-          ),
-        ),
-        const SizedBox(height: 18),
-        ...options.map((option) {
-          final active = selected.contains(option);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: InkWell(
-              onTap: () {
-                if (active) {
-                  selected.remove(option);
-                } else {
-                  selected.add(option);
-                }
-                onChanged();
-              },
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: const Color(0xFFDFE7E9),
-                        width: 3,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                      color: active
-                          ? const Color(0xFFDFE7E9).withValues(alpha: .2)
-                          : Colors.transparent,
-                    ),
-                    child: active
-                        ? const Icon(
-                            Icons.check,
-                            color: Color(0xFFDFE7E9),
-                            size: 22,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Text(
-                      option,
-                      textHeightBehavior: _kOnboardingButtonTextHeight,
-                      style: GoogleFonts.boldonse(
-                        color: const Color(0xFFDFE7E9),
-                        fontSize: optionSize,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
+// class _Checks extends StatelessWidget {
+//   // ignore: prefer_const_constructors_in_immutables
+//   _Checks({
+//     required this.options,
+//     required this.selected,
+//     required this.onChanged,
+//   });
+//
+//   final List<String> options;
+//   final Set<String> selected;
+//   final VoidCallback onChanged;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final screenWidth = MediaQuery.sizeOf(context).width;
+//     final optionSize = screenWidth < 360 ? 20.0 : 24.0;
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Text(
+//           'You Choose multiple options',
+//           style: GoogleFonts.montserrat(
+//             color: const Color(0xFFDFE7E9).withValues(alpha: 0.8),
+//             fontSize: screenWidth < 360 ? 14.0 : 15.0,
+//             fontWeight: FontWeight.w400,
+//             height: 1.35,
+//           ),
+//         ),
+//         const SizedBox(height: 18),
+//         ...options.map((option) {
+//           final active = selected.contains(option);
+//           return Padding(
+//             padding: const EdgeInsets.only(bottom: 12),
+//             child: InkWell(
+//               onTap: () {
+//                 if (active) {
+//                   selected.remove(option);
+//                 } else {
+//                   selected.add(option);
+//                 }
+//                 onChanged();
+//               },
+//               child: Row(
+//                 children: [
+//                   AnimatedContainer(
+//                     duration: const Duration(milliseconds: 160),
+//                     width: 34,
+//                     height: 34,
+//                     decoration: BoxDecoration(
+//                       border: Border.all(
+//                         color: const Color(0xFFDFE7E9),
+//                         width: 3,
+//                       ),
+//                       borderRadius: BorderRadius.circular(6),
+//                       color: active
+//                           ? const Color(0xFFDFE7E9).withValues(alpha: .2)
+//                           : Colors.transparent,
+//                     ),
+//                     child: active
+//                         ? const Icon(
+//                             Icons.check,
+//                             color: Color(0xFFDFE7E9),
+//                             size: 22,
+//                           )
+//                         : null,
+//                   ),
+//                   const SizedBox(width: 18),
+//                   Expanded(
+//                     child: Text(
+//                       option,
+//                       textHeightBehavior: _kOnboardingButtonTextHeight,
+//                       style: GoogleFonts.boldonse(
+//                         color: const Color(0xFFDFE7E9),
+//                         fontSize: optionSize,
+//                         height: 1.5,
+//                       ),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           );
+//         }),
+//       ],
+//     );
+//   }
+// }
 
 class _NavCircleButton extends StatelessWidget {
   // ignore: prefer_const_constructors_in_immutables
