@@ -11,6 +11,8 @@ import 'features/profile/presentation/bloc/profile_bloc.dart';
 import 'injection_container.dart' as di;
 import 'features/shop/presentation/pages/product_list_page.dart';
 import 'features/articles/presentation/pages/article_list_page.dart';
+import 'features/payment/presentation/bloc/payment_bloc.dart';
+import 'features/payment/presentation/pages/payment_history_page.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -24,6 +26,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String products = '/products';
   static const String articleList = '/articles';
+  static const String paymentHistory = '/payment/history';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -65,6 +68,13 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const ProductListPage());
       case articleList:
         return MaterialPageRoute(builder: (_) => const ArticleListPage());
+      case paymentHistory:
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider(
+            create: (_) => di.sl<PaymentBloc>(),
+            child: const PaymentHistoryPage(),
+          ),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

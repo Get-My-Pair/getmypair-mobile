@@ -31,6 +31,11 @@ import 'features/articles/domain/usecases/create_article.dart';
 import 'features/articles/domain/usecases/upload_article_image.dart';
 import 'features/articles/domain/usecases/update_article.dart';
 import 'features/articles/domain/usecases/delete_article.dart';
+import 'features/payment/data/datasources/payment_remote_datasource.dart';
+import 'features/payment/data/repositories/payment_repository_impl.dart';
+import 'features/payment/domain/repositories/payment_repository.dart';
+import 'features/payment/domain/usecases/payment_usecases.dart';
+import 'features/payment/presentation/bloc/payment_bloc.dart';
 import 'core/network/dio_client.dart';
 import 'core/network/network_info.dart';
 
@@ -205,6 +210,47 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<DeleteArticle>()) {
     sl.registerLazySingleton(() => DeleteArticle(sl()));
+  }
+
+  //! Features - Payment (Module 5)
+  if (!sl.isRegistered<PaymentRemoteDataSource>()) {
+    sl.registerLazySingleton<PaymentRemoteDataSource>(
+      () => PaymentRemoteDataSourceImpl(client: sl()),
+    );
+  }
+  if (!sl.isRegistered<PaymentRepository>()) {
+    sl.registerLazySingleton<PaymentRepository>(
+      () => PaymentRepositoryImpl(remoteDataSource: sl()),
+    );
+  }
+  if (!sl.isRegistered<GetPaymentHistory>()) {
+    sl.registerLazySingleton(() => GetPaymentHistory(sl()));
+  }
+  if (!sl.isRegistered<GetPaymentDetails>()) {
+    sl.registerLazySingleton(() => GetPaymentDetails(sl()));
+  }
+  if (!sl.isRegistered<CreatePaymentLink>()) {
+    sl.registerLazySingleton(() => CreatePaymentLink(sl()));
+  }
+  if (!sl.isRegistered<VerifyPayment>()) {
+    sl.registerLazySingleton(() => VerifyPayment(sl()));
+  }
+  if (!sl.isRegistered<RefreshPaymentStatus>()) {
+    sl.registerLazySingleton(() => RefreshPaymentStatus(sl()));
+  }
+  if (!sl.isRegistered<GetPaymentByServiceRequest>()) {
+    sl.registerLazySingleton(() => GetPaymentByServiceRequest(sl()));
+  }
+  if (!sl.isRegistered<PaymentBloc>()) {
+    sl.registerFactory(
+      () => PaymentBloc(
+        getPaymentHistory: sl(),
+        getPaymentDetails: sl(),
+        createPaymentLink: sl(),
+        verifyPayment: sl(),
+        refreshPaymentStatus: sl(),
+      ),
+    );
   }
 
   _isInitialized = true;
