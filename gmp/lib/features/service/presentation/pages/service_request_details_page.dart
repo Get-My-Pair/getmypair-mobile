@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/payment/presentation/bloc/payment_bloc.dart';
+import 'package:gmp/features/payment/presentation/pages/payment_request_page.dart';
+import 'package:gmp/features/payment/presentation/widgets/pay_now_button.dart';
 import 'package:gmp/features/service/presentation/widgets/service_request_bg_layer.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -265,6 +269,43 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
 
   bool _rejectedUserCost(Map<String, dynamic> r) =>
       _hasActualCost(r) && _decisionStr(r) == 'rejected';
+
+  String _paymentStateStr(Map<String, dynamic> r) =>
+      _str(r['paymentState']).trim().toUpperCase();
+
+  bool _needsPayment(Map<String, dynamic> r) {
+    if (!_acceptedUserCost(r)) return false;
+    final state = _paymentStateStr(r);
+    return state != 'PAYMENT_SUCCESS';
+  }
+
+  bool _isPaymentComplete(Map<String, dynamic> r) =>
+      _paymentStateStr(r) == 'PAYMENT_SUCCESS';
+
+  double _payableAmount(Map<String, dynamic> r) {
+    final v = r['actualCost'];
+    if (v is num) return v.toDouble();
+    return double.tryParse(_str(v)) ?? 0;
+  }
+
+  void _openPaymentFlow(Map<String, dynamic> r) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => sl<PaymentBloc>(),
+          child: PaymentRequestPage(
+            serviceRequestId: widget.requestId,
+            amount: _payableAmount(r),
+            serviceType: _str(r['serviceType']).isEmpty
+                ? null
+                : _str(r['serviceType']),
+            requestLabel: 'Request #${widget.requestId.substring(0, 8)}…',
+          ),
+        ),
+      ),
+    ).then((_) => _load());
+  }
 
   String _fmtAmount(dynamic v) {
     if (v == null) return '—';
@@ -749,10 +790,79 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                                   ),
                                 ),
                               ),
+                            if (_isPaymentComplete(_request!)) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: AppColors.success,
+                                      size: 18,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Payment completed',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.success,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                       ),
                     ),
+                    if (_needsPayment(_request!)) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Payment required',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Your cost has been approved. Complete payment to schedule pickup.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                                height: 1.35,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            PayNowButton(
+                              onPressed: () => _openPaymentFlow(_request!),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     _card(
                       title: 'Assignment',

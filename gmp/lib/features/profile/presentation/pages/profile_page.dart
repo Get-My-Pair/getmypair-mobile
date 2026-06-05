@@ -31,6 +31,8 @@ import 'faq_page.dart';
 import 'license_page.dart';
 import '../../../auth/presentation/pages/terms_of_service_page.dart';
 import '../../../service/presentation/pages/service_request_list_page.dart';
+import '../../../payment/presentation/bloc/payment_bloc.dart';
+import '../../../payment/presentation/pages/payment_history_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.showBottomNav = true});
@@ -438,10 +440,20 @@ class _ProfilePageState extends State<ProfilePage> {
                                                     'assets/images/icons/profile/payment.svg',
                                                 title: 'Payment',
                                                 scale: layoutScale,
-                                                onTap: () => showComingSoon(
-                                                  context,
-                                                  feature: 'Payment',
-                                                ),
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          BlocProvider(
+                                                        create: (_) => di
+                                                            .sl<PaymentBloc>(),
+                                                        child:
+                                                            const PaymentHistoryPage(),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                               _GradientMenuTile(
                                                 icon: Icons
