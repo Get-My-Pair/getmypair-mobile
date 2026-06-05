@@ -89,6 +89,10 @@ dependencies:
   # Pixel-level decoding for footwear orientation detection
   image: ^4.3.0
 
+  # Payment checkout
+  url_launcher: ^6.3.1
+  webview_flutter: ^4.10.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

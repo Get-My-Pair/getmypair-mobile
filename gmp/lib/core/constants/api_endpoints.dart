@@ -95,6 +95,20 @@ class ApiEndpoints {
   static String get serviceRespondActualCost =>
       '$baseUrl$servicePrefix/respond-actual-cost';
 
+  // Module 5 – Payments (Zoho Checkout)
+  static const String paymentPrefix = '/api/payment';
+  static String get paymentLink => '$baseUrl$paymentPrefix/link';
+  static String get paymentVerify => '$baseUrl$paymentPrefix/verify';
+  static String get paymentOrder => '$baseUrl$paymentPrefix/order';
+  static String paymentHistory({int page = 1, int limit = 20}) =>
+      '$baseUrl$paymentPrefix/history?page=$page&limit=$limit';
+  static String paymentById(String paymentId) =>
+      '$baseUrl$paymentPrefix/$paymentId';
+  static String paymentByServiceRequest(String serviceRequestId) =>
+      '$baseUrl$paymentPrefix/by-service-request/$serviceRequestId';
+  static String paymentStatus(String orderId, {bool refresh = false}) =>
+      '$baseUrl$paymentPrefix/status/$orderId${refresh ? '?refresh=true' : ''}';
+
   // Cobblers for customer nearby discovery
   /// Query must match backend `GET /api/cobbler/profile/nearby` (auth + role checks on server).
   static String cobblerNearby({
