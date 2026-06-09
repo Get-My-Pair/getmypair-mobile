@@ -32,17 +32,20 @@ class _DotGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Full-screen image used by onboarding flows.
+/// Full-screen onboarding backdrop (gradient + GetMyPair watermark).
 class OnboardingGradientBackdrop extends StatelessWidget {
   const OnboardingGradientBackdrop({super.key});
+
+  static const String assetPath = 'assets/images/bg/onboarding_bg.png';
 
   @override
   Widget build(BuildContext context) {
     return const RepaintBoundary(
       child: SizedBox.expand(
         child: Image(
-          image: AssetImage('assets/images/bg/onbording.png'),
+          image: AssetImage(assetPath),
           fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
           filterQuality: FilterQuality.high,
         ),
       ),

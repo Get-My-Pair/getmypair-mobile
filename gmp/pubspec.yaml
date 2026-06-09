@@ -122,12 +122,18 @@ flutter:
     - assets/app.png
     - assets/images/bg.png
     - assets/images/bg/
-    - assets/images/bg/onbording.png
+    - assets/images/bg/onboarding_bg.png
     - assets/images/bg/ai-onbording.png
     - assets/images/bg/home.png
     - assets/images/bg/auth.png
     - assets/images/bg/floatbtn.png
     - assets/images/
+    - assets/images/onboarding/
+    - assets/images/onboarding/sc1.png
+    - assets/images/onboarding/sc2.png
+    - assets/images/onboarding/sc3.png
+    - assets/images/onboarding/sc4.1.png
+    - assets/images/onboarding/sc4.2.png
     - assets/images/noun-shoes-cleaning-7675732 1.svg
     - assets/images/calendar.svg
     - assets/images/allicons/
