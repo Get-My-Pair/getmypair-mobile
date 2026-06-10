@@ -438,22 +438,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/payment.svg',
-                                                title: 'Payment',
+                                                title: 'Payment History',
                                                 scale: layoutScale,
-                                                onTap: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          BlocProvider(
-                                                        create: (_) => di
-                                                            .sl<PaymentBloc>(),
-                                                        child:
-                                                            const PaymentHistoryPage(),
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
+                                                onTap: () =>
+                                                    _openPaymentHistory(context),
                                               ),
                                               _GradientMenuTile(
                                                 icon: Icons
@@ -608,6 +596,18 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ServiceRequestListPage()),
+    );
+  }
+
+  void _openPaymentHistory(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => di.sl<PaymentBloc>(),
+          child: const PaymentHistoryPage(),
+        ),
+      ),
     );
   }
 

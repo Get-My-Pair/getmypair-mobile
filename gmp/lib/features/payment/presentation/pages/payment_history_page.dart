@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/payment.dart';
@@ -94,6 +95,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
         }
       },
       child: Scaffold(
+        extendBody: true,
         backgroundColor: AppColors.background,
         appBar: AppBar(
           backgroundColor: AppColors.surface,
@@ -115,71 +117,81 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
             ),
           ],
         ),
-        body: _initialLoading
-            ? const PaymentLoader(message: 'Loading transactions…')
-            : _items.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.receipt_long_outlined,
-                            size: 56,
-                            color: AppColors.textTertiary.withValues(alpha: 0.6),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No payments yet',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Completed service payments will appear here.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: () => _loadTokenAndHistory(refresh: true),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _items.length + (_hasMore ? 1 : 0),
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        if (index >= _items.length) {
-                          return TextButton(
-                            onPressed: _loadMore,
-                            child: const Text('Load more'),
-                          );
-                        }
-                        final payment = _items[index];
-                        return _PaymentHistoryTile(
-                          payment: payment,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BlocProvider.value(
-                                  value: context.read<PaymentBloc>(),
-                                  child: TransactionDetailsPage(
-                                    paymentId: payment.id,
+        body: Column(
+          children: [
+            Expanded(
+              child: _initialLoading
+                  ? const PaymentLoader(message: 'Loading transactions…')
+                  : _items.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.receipt_long_outlined,
+                                  size: 56,
+                                  color: AppColors.textTertiary
+                                      .withValues(alpha: 0.6),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'No payments yet',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Completed service payments will appear here.',
+                                  textAlign: TextAlign.center,
+                                  style:
+                                      TextStyle(color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () => _loadTokenAndHistory(refresh: true),
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _items.length + (_hasMore ? 1 : 0),
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              if (index >= _items.length) {
+                                return TextButton(
+                                  onPressed: _loadMore,
+                                  child: const Text('Load more'),
+                                );
+                              }
+                              final payment = _items[index];
+                              return _PaymentHistoryTile(
+                                payment: payment,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => BlocProvider.value(
+                                        value: context.read<PaymentBloc>(),
+                                        child: TransactionDetailsPage(
+                                          paymentId: payment.id,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+            ),
+            const DashboardLinkedBottomNav(selectedTabIndex: 2),
+          ],
+        ),
       ),
     );
   }
