@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,7 +22,7 @@ import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
-import '../../../profile/presentation/utils/profile_notifications.dart';
+import '../../../profile/presentation/utils/user_notifications.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -1156,6 +1158,135 @@ double _homeHeaderChromeScale(BuildContext context) {
   return _homeWidthScale(context);
 }
 
+/// Loads profile + API notification counts for the home header bell.
+class _HomeNotificationBellSection extends StatefulWidget {
+  const _HomeNotificationBellSection();
+
+  @override
+  State<_HomeNotificationBellSection> createState() =>
+      _HomeNotificationBellSectionState();
+}
+
+class _HomeNotificationBellSectionState
+    extends State<_HomeNotificationBellSection> with WidgetsBindingObserver {
+  UserNotificationsResult _apiResult = const UserNotificationsResult(items: []);
+  Timer? _pollTimer;
+  int _lastUnreadCount = 0;
+  DateTime? _lastSeenCostUpdateAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadApiNotifications(showNewAlert: false);
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _loadApiNotifications(showNewAlert: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadApiNotifications(showNewAlert: true);
+    }
+  }
+
+  Future<void> _loadApiNotifications({required bool showNewAlert}) async {
+    final result = await fetchUserNotifications();
+    if (!mounted) return;
+
+    final hadUnreadIncrease =
+        showNewAlert && result.unreadCount > _lastUnreadCount;
+
+    final latestCostUpdate = result.items
+        .where((n) => n.isCostApproval && !n.isRead)
+        .map((n) => n.updatedAt ?? n.createdAt)
+        .whereType<DateTime>()
+        .fold<DateTime?>(null, (prev, dt) {
+      if (prev == null || dt.isAfter(prev)) return dt;
+      return prev;
+    });
+
+    final costUpdatedAgain = showNewAlert &&
+        latestCostUpdate != null &&
+        _lastSeenCostUpdateAt != null &&
+        latestCostUpdate.isAfter(_lastSeenCostUpdateAt!);
+
+    setState(() {
+      _apiResult = result;
+      _lastUnreadCount = result.unreadCount;
+      _lastSeenCostUpdateAt = latestCostUpdate ?? _lastSeenCostUpdateAt;
+    });
+
+    if ((hadUnreadIncrease || costUpdatedAgain) && mounted) {
+      final hasCostAlert =
+          result.items.any((n) => n.isCostApproval && !n.isRead);
+      if (hasCostAlert) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Darkworkstore updated your service cost. Tap the bell to review.',
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.primaryDark,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } else if (_lastSeenCostUpdateAt == null && latestCostUpdate != null) {
+      _lastSeenCostUpdateAt = latestCostUpdate;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProfileBloc, ProfileState>(
+      buildWhen: (prev, curr) =>
+          curr is ProfileLoaded ||
+          curr is ProfileUpdating ||
+          curr is ProfileImageUploading ||
+          curr is AddressActionLoading,
+      builder: (context, profileState) {
+        final profile = profileState is ProfileLoaded
+            ? profileState.profile
+            : profileState is ProfileUpdating
+                ? profileState.profile
+                : profileState is ProfileImageUploading
+                    ? profileState.profile
+                    : profileState is AddressActionLoading
+                        ? profileState.profile
+                        : null;
+        final notificationCount = countAllNotifications(
+          profile: profile,
+          apiResult: _apiResult,
+        );
+        return _HomeHeaderBell(
+          notificationCount: notificationCount,
+          onTap: () async {
+            final profileBloc = context.read<ProfileBloc>();
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: profileBloc,
+                  child: const NotificationsPage(),
+                ),
+              ),
+            );
+            if (mounted) await _loadApiNotifications(showNewAlert: false);
+          },
+        );
+      },
+    );
+  }
+}
+
 /// Notification bell — top row with greeting (Figma row 1).
 class _HomeHeaderBell extends StatelessWidget {
   final VoidCallback onTap;
@@ -1544,40 +1675,7 @@ class _HomeTopCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        BlocBuilder<ProfileBloc, ProfileState>(
-                          buildWhen: (prev, curr) =>
-                              curr is ProfileLoaded ||
-                              curr is ProfileUpdating ||
-                              curr is ProfileImageUploading ||
-                              curr is AddressActionLoading,
-                          builder: (context, profileState) {
-                            final profile = profileState is ProfileLoaded
-                                ? profileState.profile
-                                : profileState is ProfileUpdating
-                                    ? profileState.profile
-                                    : profileState is ProfileImageUploading
-                                        ? profileState.profile
-                                        : profileState is AddressActionLoading
-                                            ? profileState.profile
-                                            : null;
-                            final notificationCount =
-                                buildProfileNotifications(profile).length;
-                            return _HomeHeaderBell(
-                              notificationCount: notificationCount,
-                              onTap: () {
-                                final profileBloc = context.read<ProfileBloc>();
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => BlocProvider.value(
-                                      value: profileBloc,
-                                      child: const NotificationsPage(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
+                        const _HomeNotificationBellSection(),
                       ],
                     ),
                     SizedBox(height: (8 * s).clamp(4.0, 14.0)),

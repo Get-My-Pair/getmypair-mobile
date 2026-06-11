@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
@@ -12,6 +12,7 @@ import '../bloc/payment_event.dart';
 import '../bloc/payment_state.dart';
 import '../utils/payment_amount_formatter.dart';
 import '../widgets/payment_loader.dart';
+import '../widgets/payment_page_shell.dart';
 import '../widgets/payment_status_chip.dart';
 import 'transaction_details_page.dart';
 
@@ -94,104 +95,89 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
           );
         }
       },
-      child: Scaffold(
-        extendBody: true,
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.surface,
-          elevation: 0,
-          leading: const ChevronScreenBackButton(
-            iconColor: AppColors.textPrimary,
-          ),
-          title: Text(
-            'Payment history',
-            style: GoogleFonts.montserrat(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+      child: PaymentPageShell(
+        title: 'Payment history',
+        subtitle: 'Your completed and pending service payments.',
+        actions: [
+          IconButton(
+            onPressed: () => _loadTokenAndHistory(refresh: true),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: PaymentPageTheme.titleColor,
             ),
           ),
-          actions: [
-            IconButton(
-              onPressed: () => _loadTokenAndHistory(refresh: true),
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: _initialLoading
-                  ? const PaymentLoader(message: 'Loading transactions…')
-                  : _items.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.receipt_long_outlined,
-                                  size: 56,
-                                  color: AppColors.textTertiary
-                                      .withValues(alpha: 0.6),
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'No payments yet',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Completed service payments will appear here.',
-                                  textAlign: TextAlign.center,
-                                  style:
-                                      TextStyle(color: AppColors.textSecondary),
-                                ),
-                              ],
+        ],
+        bottomBar: const DashboardLinkedBottomNav(selectedTabIndex: 2),
+        body: _initialLoading
+            ? const PaymentLoader(message: 'Loading transactions…')
+            : _items.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 56,
+                            color:
+                                AppColors.textTertiary.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No payments yet',
+                            style: GoogleFonts.boldonse(
+                              fontSize: 18,
+                              color: PaymentPageTheme.titleColor,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () => _loadTokenAndHistory(refresh: true),
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _items.length + (_hasMore ? 1 : 0),
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) {
-                              if (index >= _items.length) {
-                                return TextButton(
-                                  onPressed: _loadMore,
-                                  child: const Text('Load more'),
-                                );
-                              }
-                              final payment = _items[index];
-                              return _PaymentHistoryTile(
-                                payment: payment,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => BlocProvider.value(
-                                        value: context.read<PaymentBloc>(),
-                                        child: TransactionDetailsPage(
-                                          paymentId: payment.id,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                          const SizedBox(height: 8),
+                          Text(
+                            'Completed service payments will appear here.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.montserrat(
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        ),
-            ),
-            const DashboardLinkedBottomNav(selectedTabIndex: 2),
-          ],
-        ),
+                        ],
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: () => _loadTokenAndHistory(refresh: true),
+                    color: PaymentPageTheme.loaderColor,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      itemCount: _items.length + (_hasMore ? 1 : 0),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        if (index >= _items.length) {
+                          return TextButton(
+                            onPressed: _loadMore,
+                            child: const Text('Load more'),
+                          );
+                        }
+                        final payment = _items[index];
+                        return _PaymentHistoryTile(
+                          payment: payment,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider.value(
+                                  value: context.read<PaymentBloc>(),
+                                  child: TransactionDetailsPage(
+                                    paymentId: payment.id,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
       ),
     );
   }
@@ -209,13 +195,13 @@ class _PaymentHistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: Padding(
+        child: Container(
           padding: const EdgeInsets.all(16),
+          decoration: PaymentPageTheme.surfaceCardDecoration(),
           child: Row(
             children: [
               Expanded(
@@ -224,16 +210,16 @@ class _PaymentHistoryTile extends StatelessWidget {
                   children: [
                     Text(
                       PaymentAmountFormatter.format(payment.amount),
-                      style: const TextStyle(
+                      style: GoogleFonts.boldonse(
                         fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w400,
+                        color: PaymentPageTheme.titleColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       payment.orderId,
-                      style: const TextStyle(
+                      style: GoogleFonts.montserrat(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
@@ -241,7 +227,7 @@ class _PaymentHistoryTile extends StatelessWidget {
                     if (payment.createdAt != null)
                       Text(
                         PaymentAmountFormatter.formatDate(payment.createdAt),
-                        style: const TextStyle(
+                        style: GoogleFonts.montserrat(
                           fontSize: 11,
                           color: AppColors.textTertiary,
                         ),

@@ -347,11 +347,15 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
           await _load();
           if (!mounted) return;
           if (decision == 'accept') {
-            await showAppFeedbackAlert(
-              context,
-              message: 'You accepted the final service cost',
-              type: AppFeedbackType.success,
-            );
+            if (_request != null && _needsPayment(_request!)) {
+              _openPaymentFlow(_request!);
+            } else {
+              await showAppFeedbackAlert(
+                context,
+                message: 'You accepted the final service cost',
+                type: AppFeedbackType.success,
+              );
+            }
           } else {
             await showAppFeedbackAlert(
               context,

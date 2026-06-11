@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'payment_page_shell.dart';
 
 class PaymentLoader extends StatelessWidget {
   final String? message;
@@ -13,7 +14,7 @@ class PaymentLoader extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SpinKitPulse(color: AppColors.primary, size: 48),
+          const SpinKitPulse(color: PaymentPageTheme.loaderColor, size: 48),
           if (message != null) ...[
             const SizedBox(height: 16),
             Padding(

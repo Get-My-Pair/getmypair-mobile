@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../bloc/payment_bloc.dart';
 import '../services/payment_analytics.dart';
 import '../utils/payment_amount_formatter.dart';
 import '../widgets/pay_now_button.dart';
+import '../widgets/payment_page_shell.dart';
 import 'payment_summary_page.dart';
 
 /// Entry screen when user initiates payment for a service request.
@@ -28,105 +29,74 @@ class PaymentRequestPage extends StatelessWidget {
   Widget build(BuildContext context) {
     PaymentAnalytics.paymentRequestViewed(serviceRequestId);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        leading: const ChevronScreenBackButton(
-          iconColor: AppColors.textPrimary,
-        ),
-        title: Text(
-          'Payment request',
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-      ),
+    return PaymentPageShell(
+      title: 'Payment',
+      subtitle: 'Review the approved service cost before checkout.',
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+            PaymentAmountHero(
+              label: 'Amount due',
+              amountText: PaymentAmountFormatter.format(amount),
+              caption:
+                  'Final approved service cost. You will complete checkout via Zoho secure payments.',
+            ),
+            const SizedBox(height: 16),
+            PaymentSurfaceCard(
+              title: 'Service details',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Service payment',
-                    style: GoogleFonts.boldonse(
-                      fontSize: 14,
-                      color: const Color(0xFF12899B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   if (serviceType != null)
                     Text(
                       serviceType!,
-                      style: GoogleFonts.montserrat(
+                      style: GoogleFonts.boldonse(
                         fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: PaymentPageTheme.titleColor,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   if (requestLabel != null) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       requestLabel!,
-                      style: const TextStyle(
+                      style: GoogleFonts.montserrat(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  Text(
-                    PaymentAmountFormatter.format(amount),
-                    style: GoogleFonts.montserrat(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
-                  ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Final approved service cost. You will be redirected to Zoho secure checkout.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                      height: 1.4,
-                    ),
+                  PaymentDetailRow(
+                    label: 'Request',
+                    value: serviceRequestId.length > 18
+                        ? '…${serviceRequestId.substring(serviceRequestId.length - 10)}'
+                        : serviceRequestId,
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'What happens next',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
+              style: GoogleFonts.boldonse(
                 fontSize: 15,
-                color: AppColors.textPrimary,
+                color: PaymentPageTheme.titleColor,
+                fontWeight: FontWeight.w400,
               ),
             ),
             const SizedBox(height: 10),
-            _step('1', 'Review payment summary'),
-            _step('2', 'Complete checkout via Zoho Payments'),
-            _step('3', 'Pickup scheduled after successful payment'),
+            const PaymentStepRow(step: '1', text: 'Review payment summary'),
+            const PaymentStepRow(
+              step: '2',
+              text: 'Complete checkout via Zoho Payments',
+            ),
+            const PaymentStepRow(
+              step: '3',
+              text: 'Pickup scheduled after successful payment',
+            ),
             const SizedBox(height: 28),
             PayNowButton(
               label: 'Continue to summary',
@@ -149,40 +119,6 @@ class PaymentRequestPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _step(String num, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-            child: Text(
-              num,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/chevron_screen_back_button.dart';
+
 import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 import '../../domain/entities/payment.dart';
@@ -13,6 +11,7 @@ import '../services/payment_error_handler.dart';
 import '../utils/payment_amount_formatter.dart';
 import '../widgets/pay_now_button.dart';
 import '../widgets/payment_loader.dart';
+import '../widgets/payment_page_shell.dart';
 import '../widgets/payment_status_chip.dart';
 import 'payment_summary_page.dart';
 
@@ -103,28 +102,18 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
           });
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.surface,
-          elevation: 0,
-          leading: const ChevronScreenBackButton(
-            iconColor: AppColors.textPrimary,
-          ),
-          title: Text(
-            'Transaction details',
-            style: GoogleFonts.montserrat(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+      child: PaymentPageShell(
+        title: 'Transaction',
+        subtitle: 'Payment details for this service request.',
+        actions: [
+          IconButton(
+            onPressed: _load,
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: PaymentPageTheme.titleColor,
             ),
           ),
-          actions: [
-            IconButton(
-              onPressed: _load,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ],
-        ),
+        ],
         body: _loading
             ? const PaymentLoader(message: 'Loading transaction…')
             : _error != null
@@ -136,10 +125,7 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                         children: [
                           Text(PaymentErrorHandler.messageFrom(_error!)),
                           const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _load,
-                            child: const Text('Retry'),
-                          ),
+                          PayNowButton(label: 'Retry', onPressed: _load),
                         ],
                       ),
                     ),
@@ -153,24 +139,51 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
 
   Widget _buildBody(Payment payment) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(child: PaymentStatusChip.fromPayment(payment)),
           const SizedBox(height: 16),
-          Center(
-            child: Text(
-              PaymentAmountFormatter.format(payment.amount),
-              style: GoogleFonts.montserrat(
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
-              ),
+          PaymentAmountHero(
+            label: 'Transaction amount',
+            amountText: PaymentAmountFormatter.format(payment.amount),
+          ),
+          const SizedBox(height: 16),
+          PaymentSurfaceCard(
+            title: 'Details',
+            child: Column(
+              children: [
+                PaymentDetailRow(label: 'Order ID', value: payment.orderId),
+                PaymentDetailRow(label: 'Payment ID', value: payment.id),
+                PaymentDetailRow(
+                  label: 'Service request',
+                  value: payment.serviceRequestId,
+                ),
+                PaymentDetailRow(label: 'Status', value: payment.status),
+                if (payment.paidAt != null)
+                  PaymentDetailRow(
+                    label: 'Paid at',
+                    value: PaymentAmountFormatter.formatDate(payment.paidAt),
+                  ),
+                if (payment.failedAt != null)
+                  PaymentDetailRow(
+                    label: 'Failed at',
+                    value: PaymentAmountFormatter.formatDate(payment.failedAt),
+                  ),
+                if (payment.failureReason != null)
+                  PaymentDetailRow(
+                    label: 'Reason',
+                    value: payment.failureReason!,
+                  ),
+                if (payment.createdAt != null)
+                  PaymentDetailRow(
+                    label: 'Created',
+                    value: PaymentAmountFormatter.formatDate(payment.createdAt),
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          _detailCard(payment),
           if (payment.isFailed || payment.isPending) ...[
             const SizedBox(height: 20),
             if (payment.isFailed)
@@ -192,74 +205,11 @@ class _TransactionDetailsPageState extends State<TransactionDetailsPage> {
                 },
               )
             else
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton(
-                  onPressed: () => _refreshStatus(payment),
-                  child: const Text('Refresh payment status'),
-                ),
+              PaymentSecondaryButton(
+                label: 'Refresh payment status',
+                onPressed: () => _refreshStatus(payment),
               ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _detailCard(Payment payment) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          _row('Order ID', payment.orderId),
-          _row('Payment ID', payment.id),
-          _row('Service request', payment.serviceRequestId),
-          _row('Status', payment.status),
-          if (payment.paidAt != null)
-            _row('Paid at', PaymentAmountFormatter.formatDate(payment.paidAt)),
-          if (payment.failedAt != null)
-            _row(
-              'Failed at',
-              PaymentAmountFormatter.formatDate(payment.failedAt),
-            ),
-          if (payment.failureReason != null)
-            _row('Reason', payment.failureReason!),
-          if (payment.createdAt != null)
-            _row(
-              'Created',
-              PaymentAmountFormatter.formatDate(payment.createdAt),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _row(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
         ],
       ),
     );

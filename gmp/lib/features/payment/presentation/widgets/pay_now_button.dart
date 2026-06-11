@@ -1,45 +1,85 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../../../core/theme/app_colors.dart';
+import 'payment_page_shell.dart';
 
 class PayNowButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool loading;
   final String label;
+  final bool showIcon;
 
   const PayNowButton({
     super.key,
     required this.onPressed,
     this.loading = false,
     this.label = 'Pay now',
+    this.showIcon = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 48,
-      child: ElevatedButton.icon(
-        onPressed: loading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.textOnPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+      height: 50,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: onPressed == null && !loading
+              ? null
+              : PaymentPageTheme.buttonGradient,
+          color: onPressed == null && !loading
+              ? AppColors.disabled
+              : null,
+          borderRadius: BorderRadius.circular(100),
+          boxShadow: onPressed == null && !loading
+              ? null
+              : const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
         ),
-        icon: loading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.textOnPrimary,
-                ),
-              )
-            : const Icon(Icons.payment_rounded, size: 20),
-        label: Text(
-          loading ? 'Preparing…' : label,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: loading ? null : onPressed,
+            borderRadius: BorderRadius.circular(100),
+            child: Center(
+              child: loading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showIcon) ...[
+                          const Icon(
+                            Icons.payment_rounded,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          label,
+                          style: GoogleFonts.montserrat(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
         ),
       ),
     );
@@ -85,7 +125,7 @@ class PaymentErrorBanner extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             message,
-            style: const TextStyle(
+            style: GoogleFonts.montserrat(
               fontSize: 13,
               color: AppColors.textPrimary,
               height: 1.35,

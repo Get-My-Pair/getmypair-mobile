@@ -1,19 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
+import '../../domain/usecases/payment_usecases.dart';
 import '../bloc/payment_bloc.dart';
 import '../bloc/payment_event.dart';
 import '../bloc/payment_state.dart';
-import '../../domain/usecases/payment_usecases.dart';
 import '../services/payment_analytics.dart';
 import '../services/payment_status_poller.dart';
 import '../widgets/payment_loader.dart';
+import '../widgets/payment_page_shell.dart';
 import 'payment_failed_page.dart';
 import 'payment_pending_page.dart';
 import 'payment_success_page.dart';
@@ -81,10 +83,10 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
   }
 
   bool _isReturnUrl(String url) {
-    return url.contains('mock-checkout') ||
+    return url.contains('payment/callback') ||
         url.contains('payment-success') ||
-        url.contains('payment/callback') ||
-        url.contains('orderId=${Uri.encodeComponent(widget.orderId)}');
+        url.contains('payment_link_reference=') ||
+        url.contains('payment_link_id=');
   }
 
   Future<void> _openExternal() async {
@@ -195,85 +197,70 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
           );
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.surface,
-          elevation: 0,
-          leading: const ChevronScreenBackButton(
-            iconColor: AppColors.textPrimary,
-          ),
-          title: const Text(
-            'Secure checkout',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          actions: [
-            if (_verifying)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+      child: PaymentPageShell(
+        title: 'Secure checkout',
+        subtitle: 'Complete payment in the window below.',
+        actions: [
+          if (_verifying)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: PaymentPageTheme.loaderColor,
                 ),
               ),
-          ],
+            ),
+        ],
+        bottomBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: PaymentSecondaryButton(
+              label: 'I completed payment — verify',
+              onPressed: _verifying ? null : _onCheckoutReturn,
+            ),
+          ),
         ),
-        body: Column(
-          children: [
-            if (kIsWeb)
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Checkout opened in your browser. '
-                          'Return here after completing payment.',
-                          textAlign: TextAlign.center,
+        body: kIsWeb
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Checkout opened in your browser. '
+                        'Return here after completing payment.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.montserrat(
+                          color: AppColors.textSecondary,
+                          height: 1.4,
                         ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _verifying ? null : _onCheckoutReturn,
-                          child: const Text('I completed payment'),
-                        ),
-                        TextButton(
-                          onPressed: _verifying ? null : () => _openExternal(),
-                          child: const Text('Re-open checkout'),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 20),
+                      PaymentSecondaryButton(
+                        label: 'I completed payment',
+                        onPressed: _verifying ? null : _onCheckoutReturn,
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _verifying ? null : _openExternal,
+                        child: const Text('Re-open checkout'),
+                      ),
+                    ],
                   ),
                 ),
               )
-            else
-              Expanded(
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(14),
                 child: _webController == null || !_pageLoaded
                     ? const PaymentLoader(
                         message: 'Loading Zoho secure checkout…',
                       )
                     : WebViewWidget(controller: _webController!),
               ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: _verifying ? null : _onCheckoutReturn,
-                    child: const Text('I completed payment — verify'),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

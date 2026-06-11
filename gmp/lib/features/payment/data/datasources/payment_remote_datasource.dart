@@ -162,12 +162,19 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
     String accessToken,
     String serviceRequestId,
   ) async {
-    final res = await client.get(
-      ApiEndpoints.paymentByServiceRequest(serviceRequestId),
-      accessToken: accessToken,
-    );
-    final paymentJson = _data(res)['payment'];
-    if (paymentJson == null) return null;
-    return PaymentModel.fromJson(Map<String, dynamic>.from(paymentJson as Map));
+    try {
+      final res = await client.get(
+        ApiEndpoints.paymentByServiceRequest(serviceRequestId),
+        accessToken: accessToken,
+      );
+      final data = _data(res);
+      if (data['serviceRequestFound'] == false) return null;
+      final paymentJson = data['payment'];
+      if (paymentJson == null) return null;
+      return PaymentModel.fromJson(Map<String, dynamic>.from(paymentJson as Map));
+    } on ServerException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
   }
 }

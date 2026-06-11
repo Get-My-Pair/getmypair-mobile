@@ -11,4 +11,7 @@ class AppAssets {
 
   /// White mark for splash (Figma: GMP APP LOGO WHITE 1). Web-safe name — no spaces.
   static const String appLogoWhite1 = 'assets/images/logo/gmp_app_logo_white_1.png';
+
+  /// Credit/debit card preview on the payment screen.
+  static const String paymentAtmCard = 'assets/images/payment/atm.png';
 }

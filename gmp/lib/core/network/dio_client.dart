@@ -138,6 +138,51 @@ class DioClient {
     }
   }
 
+  Future<Map<String, dynamic>> patch(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    String? accessToken,
+    Map<String, String>? extraHeaders,
+  }) async {
+    try {
+      final headers = ApiEndpoints.getHeaders(accessToken: accessToken);
+      if (extraHeaders != null) headers.addAll(extraHeaders);
+
+      final response = await http.patch(
+        Uri.parse(endpoint),
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ).timeout(_timeoutDuration, onTimeout: () {
+        throw NetworkException(
+          'Connection timeout. Please check your internet connection and try again.'
+        );
+      });
+
+      return _handleResponse(response);
+    } on SocketException catch (e) {
+      throw NetworkException(
+        'No internet connection. Please check:\n'
+        '1. Your device is connected to Wi-Fi or mobile data\n'
+        '2. Backend server is accessible\n'
+        '3. Firewall/VPN is not blocking the connection\n\n'
+        'Error: ${e.message}'
+      );
+    } on HttpException catch (e) {
+      throw NetworkException('HTTP error: ${e.message}');
+    } catch (e) {
+      if (e is NetworkException) rethrow;
+      if (e is ServerException) rethrow;
+      final msg = e.toString();
+      if (msg.contains('XMLHttpRequest')) {
+        throw NetworkException(
+          'Request blocked (often in browser: CORS or mixed content). '
+          'Try running on a device/emulator or ensure the backend allows your origin.'
+        );
+      }
+      throw NetworkException('Network error: $msg');
+    }
+  }
+
   Future<Map<String, dynamic>> delete(
     String endpoint, {
     String? accessToken,

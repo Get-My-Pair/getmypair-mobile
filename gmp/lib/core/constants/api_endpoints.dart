@@ -21,9 +21,9 @@ class ApiEndpoints {
   /// Get base URL based on environment
   static String get baseUrl {
     if (kDebugMode && _kUseLocalApi) {
-      return 'http://localhost:3000';
+      return 'https://getmypair-api.onrender.com';
     }
-    return 'https://getmypair-api.onrender.com';
+    return AppConstants.defaultApiBaseUrl;
   }
 
   static const String apiPrefix = '/api/auth';
@@ -63,6 +63,12 @@ class ApiEndpoints {
       '$baseUrl$userProfilePrefix/family-members/update';
   static String userProfileDeleteFamilyMember(String memberId) =>
       '$baseUrl$userProfilePrefix/family-members/delete/$memberId';
+
+  // User in-app notifications (cost approval, payments, etc.)
+  static const String userNotificationsPrefix = '/api/user/notifications';
+  static String get userNotifications => '$baseUrl$userNotificationsPrefix';
+  static String userNotificationRead(String notificationId) =>
+      '$baseUrl$userNotificationsPrefix/$notificationId/read';
 
   // Articles (Module 3 – Digital Shoe Passport)
   static const String articlesPrefix = '/api/articles';
