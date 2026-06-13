@@ -1,4 +1,5 @@
 import '../entities/payment.dart';
+import '../entities/zoho_payment_mode.dart';
 
 abstract class PaymentRepository {
   Future<PaymentHistoryResult> getPaymentHistory({
@@ -16,6 +17,7 @@ abstract class PaymentRepository {
     required String accessToken,
     required String serviceRequestId,
     String? redirectUrl,
+    ZohoPaymentMode paymentMode = ZohoPaymentMode.live,
   });
 
   Future<PaymentVerifyResult> verifyPayment({

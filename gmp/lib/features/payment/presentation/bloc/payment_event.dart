@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/zoho_payment_mode.dart';
+
 abstract class PaymentEvent extends Equatable {
   const PaymentEvent();
   @override
@@ -38,15 +40,17 @@ class PaymentLinkCreateRequested extends PaymentEvent {
   final String accessToken;
   final String serviceRequestId;
   final String? redirectUrl;
+  final ZohoPaymentMode paymentMode;
 
   const PaymentLinkCreateRequested({
     required this.accessToken,
     required this.serviceRequestId,
     this.redirectUrl,
+    this.paymentMode = ZohoPaymentMode.live,
   });
 
   @override
-  List<Object?> get props => [accessToken, serviceRequestId, redirectUrl];
+  List<Object?> get props => [accessToken, serviceRequestId, redirectUrl, paymentMode];
 }
 
 class PaymentVerifyRequested extends PaymentEvent {

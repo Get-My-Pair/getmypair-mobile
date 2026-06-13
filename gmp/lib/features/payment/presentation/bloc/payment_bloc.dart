@@ -77,6 +77,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         accessToken: event.accessToken,
         serviceRequestId: event.serviceRequestId,
         redirectUrl: event.redirectUrl,
+        paymentMode: event.paymentMode,
       );
       PaymentAnalytics.checkoutOpened(link.payment.orderId);
       emit(PaymentLinkReady(link));

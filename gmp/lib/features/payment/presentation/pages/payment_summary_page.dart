@@ -13,6 +13,7 @@ import '../services/payment_error_handler.dart';
 import '../utils/payment_amount_formatter.dart';
 import '../widgets/pay_now_button.dart';
 import '../widgets/payment_loader.dart';
+import '../widgets/payment_mode_sheet.dart';
 import 'payment_checkout_page.dart';
 
 class PaymentSummaryPage extends StatefulWidget {
@@ -62,13 +63,18 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
     );
   }
 
-  void _proceedToCheckout() {
+  Future<void> _proceedToCheckout() async {
     final token = _accessToken;
     if (token == null) return;
+
+    final mode = await showPaymentModeSheet(context);
+    if (!mounted || mode == null) return;
+
     context.read<PaymentBloc>().add(
           PaymentLinkCreateRequested(
             accessToken: token,
             serviceRequestId: widget.serviceRequestId,
+            paymentMode: mode,
           ),
         );
   }

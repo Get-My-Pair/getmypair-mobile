@@ -1,4 +1,5 @@
 import '../entities/payment.dart';
+import '../entities/zoho_payment_mode.dart';
 import '../repositories/payment_repository.dart';
 
 class GetPaymentHistory {
@@ -39,11 +40,13 @@ class CreatePaymentLink {
     required String accessToken,
     required String serviceRequestId,
     String? redirectUrl,
+    ZohoPaymentMode paymentMode = ZohoPaymentMode.live,
   }) =>
       repository.createPaymentLink(
         accessToken: accessToken,
         serviceRequestId: serviceRequestId,
         redirectUrl: redirectUrl,
+        paymentMode: paymentMode,
       );
 }
 

@@ -2,6 +2,7 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/payment.dart';
+import '../../domain/entities/zoho_payment_mode.dart';
 import '../models/payment_model.dart';
 
 abstract class PaymentRemoteDataSource {
@@ -20,6 +21,7 @@ abstract class PaymentRemoteDataSource {
     String accessToken, {
     required String serviceRequestId,
     String? redirectUrl,
+    ZohoPaymentMode paymentMode = ZohoPaymentMode.live,
   });
 
   Future<PaymentVerifyResult> verifyPayment(
@@ -89,8 +91,12 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
     String accessToken, {
     required String serviceRequestId,
     String? redirectUrl,
+    ZohoPaymentMode paymentMode = ZohoPaymentMode.live,
   }) async {
-    final body = <String, dynamic>{'serviceRequestId': serviceRequestId};
+    final body = <String, dynamic>{
+      'serviceRequestId': serviceRequestId,
+      'paymentMode': paymentMode.apiValue,
+    };
     if (redirectUrl != null && redirectUrl.isNotEmpty) {
       body['redirectUrl'] = redirectUrl;
     }

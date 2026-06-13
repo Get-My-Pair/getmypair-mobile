@@ -1,6 +1,7 @@
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/payment.dart';
+import '../../domain/entities/zoho_payment_mode.dart';
 import '../../domain/repositories/payment_repository.dart';
 import '../datasources/payment_remote_datasource.dart';
 
@@ -49,12 +50,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String accessToken,
     required String serviceRequestId,
     String? redirectUrl,
+    ZohoPaymentMode paymentMode = ZohoPaymentMode.live,
   }) async {
     try {
       return await remoteDataSource.createPaymentLink(
         accessToken,
         serviceRequestId: serviceRequestId,
         redirectUrl: redirectUrl,
+        paymentMode: paymentMode,
       );
     } catch (e) {
       throw _mapError(e);
