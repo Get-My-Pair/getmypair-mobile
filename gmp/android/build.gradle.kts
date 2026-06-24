@@ -1,3 +1,11 @@
+buildscript {
+    dependencies {
+        classpath(libs.kotlin.gradle.plugin)
+    }
+}
+plugins {
+    alias(libs.plugins.kotlin.compose) apply false
+}
 allprojects {
     repositories {
         google()
