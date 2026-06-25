@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,6 +29,7 @@ class PaymentCheckoutPage extends StatefulWidget {
   final String paymentId;
   final String serviceRequestId;
   final double amount;
+  final VoidCallback? onZohoUnavailable;
 
   const PaymentCheckoutPage({
     super.key,
@@ -35,6 +38,7 @@ class PaymentCheckoutPage extends StatefulWidget {
     required this.paymentId,
     required this.serviceRequestId,
     required this.amount,
+    this.onZohoUnavailable,
   });
 
   @override
@@ -45,7 +49,9 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
   WebViewController? _webController;
   bool _verifying = false;
   bool _pageLoaded = false;
+  bool _zohoFallbackTriggered = false;
   late final PaymentStatusPoller _poller;
+  Timer? _loadTimeout;
 
   @override
   void initState() {
@@ -59,7 +65,33 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
       _openExternal();
     } else {
       _initWebView();
+      _startLoadTimeout();
     }
+  }
+
+  void _startLoadTimeout() {
+    _loadTimeout = Timer(const Duration(seconds: 12), () {
+      if (!mounted || _pageLoaded || _zohoFallbackTriggered) return;
+      _triggerZohoFallback();
+    });
+  }
+
+  void _triggerZohoFallback() {
+    if (_zohoFallbackTriggered) return;
+    _zohoFallbackTriggered = true;
+    _loadTimeout?.cancel();
+    PaymentAnalytics.zohoConnectionFallback(widget.orderId);
+    final fallback = widget.onZohoUnavailable;
+    if (fallback != null) {
+      fallback();
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Zoho checkout could not load. Please try again.'),
+      ),
+    );
   }
 
   void _initWebView() {
@@ -68,8 +100,11 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) {
+            _loadTimeout?.cancel();
             if (mounted) setState(() => _pageLoaded = true);
           },
+          onWebResourceError: (_) => _triggerZohoFallback(),
+          onHttpError: (_) => _triggerZohoFallback(),
           onNavigationRequest: (request) {
             if (_isReturnUrl(request.url)) {
               _onCheckoutReturn();
@@ -176,6 +211,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
 
   @override
   void dispose() {
+    _loadTimeout?.cancel();
     _poller.dispose();
     super.dispose();
   }

@@ -91,7 +91,7 @@ class PaymentRequestPage extends StatelessWidget {
             const PaymentStepRow(step: '1', text: 'Review payment summary'),
             const PaymentStepRow(
               step: '2',
-              text: 'Complete checkout via Zoho Payments',
+              text: 'Choose checkout: Live, Sandbox, or Simulate',
             ),
             const PaymentStepRow(
               step: '3',

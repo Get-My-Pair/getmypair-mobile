@@ -45,4 +45,18 @@ class PaymentAnalytics {
 
   static void transactionDetailsViewed(String paymentId) =>
       log('transaction_details_viewed', {'paymentId': paymentId});
+
+  static void simulateFlowStarted(
+    String orderId, {
+    required bool autoPlay,
+    required bool zohoFallback,
+  }) =>
+      log('payment_simulate_started', {
+        'orderId': orderId,
+        'autoPlay': autoPlay,
+        'zohoFallback': zohoFallback,
+      });
+
+  static void zohoConnectionFallback(String orderId) =>
+      log('payment_zoho_fallback', {'orderId': orderId});
 }

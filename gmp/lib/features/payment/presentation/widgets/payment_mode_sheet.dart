@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/zoho_payment_mode.dart';
 
-/// Bottom sheet for choosing sandbox vs live Zoho checkout.
+/// Bottom sheet for choosing sandbox, live, or simulated Zoho checkout.
 Future<ZohoPaymentMode?> showPaymentModeSheet(BuildContext context) {
   return showModalBottomSheet<ZohoPaymentMode>(
     context: context,
@@ -40,7 +40,7 @@ Future<ZohoPaymentMode?> showPaymentModeSheet(BuildContext context) {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Select how you want to complete Zoho checkout.',
+              'Pick one of 3 checkout methods below.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -48,17 +48,22 @@ Future<ZohoPaymentMode?> showPaymentModeSheet(BuildContext context) {
               ),
             ),
             const SizedBox(height: 16),
-            _PaymentModeTile(
-              mode: ZohoPaymentMode.sandbox,
-              icon: Icons.science_outlined,
-              onTap: () => Navigator.of(ctx).pop(ZohoPaymentMode.sandbox),
-            ),
-            const SizedBox(height: 10),
-            _PaymentModeTile(
-              mode: ZohoPaymentMode.live,
-              icon: Icons.payments_outlined,
-              onTap: () => Navigator.of(ctx).pop(ZohoPaymentMode.live),
-            ),
+            ...ZohoPaymentMode.orderedMethods.map((mode) {
+              final isLast = mode == ZohoPaymentMode.simulate;
+              return Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+                child: _PaymentModeTile(
+                  mode: mode,
+                  icon: switch (mode) {
+                    ZohoPaymentMode.live => Icons.payments_outlined,
+                    ZohoPaymentMode.sandbox => Icons.science_outlined,
+                    ZohoPaymentMode.simulate =>
+                      Icons.play_circle_outline_rounded,
+                  },
+                  onTap: () => Navigator.of(ctx).pop(mode),
+                ),
+              );
+            }),
           ],
         ),
       ),
@@ -104,7 +109,7 @@ class _PaymentModeTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      mode.title,
+                      'Method ${mode.methodNumber} · ${mode.title}',
                       style: GoogleFonts.montserrat(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,

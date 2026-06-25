@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/payment.dart';
+import '../../domain/entities/zoho_payment_mode.dart';
 
 abstract class PaymentState extends Equatable {
   const PaymentState();
@@ -34,9 +35,20 @@ class PaymentDetailsLoaded extends PaymentState {
 
 class PaymentLinkReady extends PaymentState {
   final PaymentLinkResult linkResult;
-  const PaymentLinkReady(this.linkResult);
+  final ZohoPaymentMode paymentMode;
+  final bool zohoFallback;
+
+  const PaymentLinkReady(
+    this.linkResult, {
+    required this.paymentMode,
+    this.zohoFallback = false,
+  });
+
+  bool get useSimulatedCheckout =>
+      paymentMode == ZohoPaymentMode.simulate || zohoFallback;
+
   @override
-  List<Object?> get props => [linkResult];
+  List<Object?> get props => [linkResult, paymentMode, zohoFallback];
 }
 
 class PaymentVerified extends PaymentState {

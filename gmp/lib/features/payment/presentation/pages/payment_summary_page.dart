@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
+import '../../domain/entities/payment.dart';
+import '../../domain/entities/zoho_payment_mode.dart';
 import '../bloc/payment_bloc.dart';
 import '../bloc/payment_event.dart';
 import '../bloc/payment_state.dart';
@@ -14,7 +16,8 @@ import '../utils/payment_amount_formatter.dart';
 import '../widgets/pay_now_button.dart';
 import '../widgets/payment_loader.dart';
 import '../widgets/payment_mode_sheet.dart';
-import 'payment_checkout_page.dart';
+import '../pages/payment_checkout_page.dart';
+import '../pages/payment_simulate_checkout_page.dart';
 
 class PaymentSummaryPage extends StatefulWidget {
   final String serviceRequestId;
@@ -74,9 +77,60 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
           PaymentLinkCreateRequested(
             accessToken: token,
             serviceRequestId: widget.serviceRequestId,
+            amount: widget.amount,
             paymentMode: mode,
           ),
         );
+  }
+
+  void _openCheckout(PaymentLinkReady state) {
+    final link = state.linkResult;
+    final child = state.useSimulatedCheckout
+        ? PaymentSimulateCheckoutPage(
+            orderId: link.payment.orderId,
+            paymentId: link.payment.id,
+            serviceRequestId: widget.serviceRequestId,
+            amount: link.payment.amount,
+            autoPlay: true,
+            zohoFallback: state.zohoFallback,
+          )
+        : PaymentCheckoutPage(
+            checkoutUrl: link.checkoutUrl,
+            orderId: link.payment.orderId,
+            paymentId: link.payment.id,
+            serviceRequestId: widget.serviceRequestId,
+            amount: link.payment.amount,
+            onZohoUnavailable: () => _openSimulateFallback(link),
+          );
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<PaymentBloc>(),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  void _openSimulateFallback(PaymentLinkResult link) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<PaymentBloc>(),
+          child: PaymentSimulateCheckoutPage(
+            orderId: link.payment.orderId,
+            paymentId: link.payment.id,
+            serviceRequestId: widget.serviceRequestId,
+            amount: link.payment.amount,
+            autoPlay: true,
+            zohoFallback: true,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -84,21 +138,16 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
     return BlocListener<PaymentBloc, PaymentState>(
       listener: (context, state) {
         if (state is PaymentLinkReady) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BlocProvider.value(
-                value: context.read<PaymentBloc>(),
-                child: PaymentCheckoutPage(
-                  checkoutUrl: state.linkResult.checkoutUrl,
-                  orderId: state.linkResult.payment.orderId,
-                  paymentId: state.linkResult.payment.id,
-                  serviceRequestId: widget.serviceRequestId,
-                  amount: state.linkResult.payment.amount,
+          if (state.zohoFallback) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Zoho checkout unavailable — running simulated payment flow.',
                 ),
               ),
-            ),
-          );
+            );
+          }
+          _openCheckout(state);
         } else if (state is PaymentError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message)),
@@ -153,8 +202,9 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
                               bold: true,
                             ),
                             const SizedBox(height: 12),
+                            _checkoutMethodsCard(),
+                            const SizedBox(height: 12),
                             const Text(
-                              'Payments are processed securely via Zoho Checkout. '
                               'GetMyPair does not store your card details.',
                               style: TextStyle(
                                 fontSize: 12,
@@ -180,6 +230,45 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
                       );
                     },
                   ),
+      ),
+    );
+  }
+
+  Widget _checkoutMethodsCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '3 checkout methods',
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...ZohoPaymentMode.orderedMethods.map(
+            (mode) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                '${mode.methodNumber}. ${mode.title} — ${mode.subtitle}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

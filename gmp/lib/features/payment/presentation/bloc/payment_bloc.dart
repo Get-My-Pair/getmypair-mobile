@@ -1,8 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/payment.dart';
+import '../../domain/entities/zoho_payment_mode.dart';
 import '../../domain/usecases/payment_usecases.dart';
 import '../services/payment_analytics.dart';
 import '../services/payment_error_handler.dart';
+import '../services/payment_simulate_helper.dart';
+import '../../domain/utils/payment_simulate_utils.dart';
 import 'payment_event.dart';
 import 'payment_state.dart';
 
@@ -80,10 +83,59 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         paymentMode: event.paymentMode,
       );
       PaymentAnalytics.checkoutOpened(link.payment.orderId);
-      emit(PaymentLinkReady(link));
+      final useSimulate = event.paymentMode == ZohoPaymentMode.simulate ||
+          PaymentSimulateUtils.isSimulatedCheckoutUrl(link.checkoutUrl) ||
+          PaymentSimulateUtils.isSimulatedPayment(link.payment);
+      emit(
+        PaymentLinkReady(
+          link,
+          paymentMode: useSimulate ? ZohoPaymentMode.simulate : event.paymentMode,
+        ),
+      );
     } catch (e) {
+      if (_shouldFallbackToSimulate(event.paymentMode, e)) {
+        final link = PaymentSimulateHelper.buildLocalLink(
+          serviceRequestId: event.serviceRequestId,
+          amount: event.amount,
+        );
+        PaymentAnalytics.zohoConnectionFallback(link.payment.orderId);
+        emit(
+          PaymentLinkReady(
+            link,
+            paymentMode: ZohoPaymentMode.simulate,
+            zohoFallback: event.paymentMode.requiresZohoCheckout,
+          ),
+        );
+        return;
+      }
+      if (event.paymentMode == ZohoPaymentMode.simulate) {
+        final link = PaymentSimulateHelper.buildLocalLink(
+          serviceRequestId: event.serviceRequestId,
+          amount: event.amount,
+        );
+        emit(
+          PaymentLinkReady(
+            link,
+            paymentMode: ZohoPaymentMode.simulate,
+          ),
+        );
+        return;
+      }
       emit(PaymentError(PaymentErrorHandler.messageFrom(e)));
     }
+  }
+
+  bool _shouldFallbackToSimulate(ZohoPaymentMode mode, Object error) {
+    if (mode == ZohoPaymentMode.simulate) return false;
+    final msg = PaymentErrorHandler.messageFrom(error).toLowerCase();
+    return msg.contains('zoho') ||
+        msg.contains('payment link') ||
+        msg.contains('checkout') ||
+        msg.contains('gateway') ||
+        msg.contains('connection') ||
+        msg.contains('timeout') ||
+        msg.contains('network') ||
+        msg.contains('missing from server');
   }
 
   Future<void> _onVerify(

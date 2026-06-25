@@ -3,6 +3,7 @@ import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/payment.dart';
 import '../../domain/entities/zoho_payment_mode.dart';
+import '../../domain/utils/payment_simulate_utils.dart';
 import '../models/payment_model.dart';
 
 abstract class PaymentRemoteDataSource {
@@ -113,12 +114,15 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
     final url = linkJson['url']?.toString() ??
         paymentJson['paymentLinkUrl']?.toString() ??
         '';
-    if (url.isEmpty) {
+    if (url.isEmpty && paymentMode != ZohoPaymentMode.simulate) {
       throw ServerException('Payment link URL missing from server response');
     }
+    final checkoutUrl = url.isNotEmpty
+        ? url
+        : PaymentSimulateUtils.simulatedCheckoutScheme;
     return PaymentLinkResult(
       payment: PaymentModel.fromJson(Map<String, dynamic>.from(paymentJson)),
-      checkoutUrl: url,
+      checkoutUrl: checkoutUrl,
     );
   }
 
