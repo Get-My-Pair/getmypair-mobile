@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.gmp"
+    namespace = "com.getmypair.userapp"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.gmp"
+        applicationId = "com.getmypair.userapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -31,13 +31,21 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+    signingConfigs {
+        create("release") {
+            storeFile = file(project.findProperty("MYAPP_UPLOAD_STORE_FILE") as String)
+            storePassword = project.findProperty("MYAPP_UPLOAD_STORE_PASSWORD") as String
+            keyAlias = project.findProperty("MYAPP_UPLOAD_KEY_ALIAS") as String
+            keyPassword = project.findProperty("MYAPP_UPLOAD_KEY_PASSWORD") as String
         }
     }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
     buildFeatures {
         compose = true
     }
