@@ -15,15 +15,22 @@ class OnboardingSlideThree extends StatelessWidget {
   static const double _figmaW = 430;
   static const double _figmaH = 932;
 
-  // Hero — Figma: left 0, top 135, 430×292.
-  static const double _heroTop = 135;
-  static const double _heroH = 292;
+  // Hero — Figma: left 0, top 135, 430×292 (nudged up to tighten gap below Skip).
+  static const double _heroTop = 78;
+  static const double _heroH = 350;
 
-  // Copy — Figma: left 36, top 466, width 353.
+  // Copy — Figma: left 36, top 466, width 353 (top shifted for taller hero).
   static const double _copyLeft = 36;
-  static const double _copyTop = 466;
+  static const double _copyTop = 465;
   static const double _copyWidth = 353;
   static const double _copyGap = 20;
+  static const double _bodyLineGap = 8;
+  static const List<String> _bodyLines = [
+    'From deep cleaning to',
+    'expert restoration, book',
+    'premium cobbler services',
+    'right to your doorstep.',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -40,20 +47,25 @@ class OnboardingSlideThree extends StatelessWidget {
         final copyTop = _copyTop / _figmaH * h;
         final copyWidth = _copyWidth / _figmaW * w;
         final copyGap = _copyGap / _figmaH * h;
+        final bodyLineGap = _bodyLineGap / _figmaH * h;
 
         final titleStyle = GoogleFonts.boldonse(
-          fontSize: (48 * scale).clamp(32.0, 52.0),
+          fontSize: (52 * scale).clamp(34.0, 54.0),
           fontWeight: FontWeight.w400,
           color: Colors.white,
           height: 1.33,
           letterSpacing: 0,
         );
         final bodyStyle = GoogleFonts.montserrat(
-          fontSize: (24 * scale).clamp(15.0, 22.0),
+          fontSize: (26 * scale).clamp(16.0, 24.0),
           fontWeight: FontWeight.w400,
           color: Colors.white.withValues(alpha: 0.92),
-          height: 1.45,
+          height: 1.55,
           letterSpacing: 0,
+        );
+        const bodyHeightBehavior = TextHeightBehavior(
+          applyHeightToFirstAscent: false,
+          applyHeightToLastDescent: false,
         );
 
         return ClipRect(
@@ -84,7 +96,7 @@ class OnboardingSlideThree extends StatelessWidget {
                     SizedBox(
                       width: copyWidth,
                       child: Text(
-                        'Give your pairs a second life!',
+                        'Give your\npairs a\nsecond life!',
                         style: titleStyle,
                         textAlign: TextAlign.left,
                       ),
@@ -92,11 +104,20 @@ class OnboardingSlideThree extends StatelessWidget {
                     SizedBox(height: copyGap),
                     SizedBox(
                       width: copyWidth,
-                      child: Text(
-                        'From deep cleaning to expert restoration, book premium '
-                        'cobbler services right to your doorstep.',
-                        style: bodyStyle,
-                        textAlign: TextAlign.left,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (var i = 0; i < _bodyLines.length; i++) ...[
+                            if (i > 0) SizedBox(height: bodyLineGap),
+                            Text(
+                              _bodyLines[i],
+                              style: bodyStyle,
+                              textAlign: TextAlign.left,
+                              textHeightBehavior: bodyHeightBehavior,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],

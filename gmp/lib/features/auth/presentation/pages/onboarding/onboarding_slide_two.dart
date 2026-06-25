@@ -20,12 +20,12 @@ class OnboardingSlideTwo extends StatelessWidget {
   static const double _copyTop = 157;
   static const double _copyWidth = 368;
   static const double _bodyWidth = 318;
-  static const double _copyGap = 20;
+  static const double _copyGap = 5;
 
-  // AI KIX circle — Figma: left -9; nudged further left so edge clips off-screen.
-  static const double _graphicLeft = -38;
-  static const double _graphicTop = 510;
-  static const double _graphicSize = 282;
+  // AI KIX circle — Figma: left -9; slight left clip, nudged left vs prior build.
+  static const double _graphicLeft = -25;
+  static const double _graphicTop = 545;
+  static const double _graphicSize = 268;
 
   @override
   Widget build(BuildContext context) {
@@ -46,14 +46,14 @@ class OnboardingSlideTwo extends StatelessWidget {
         final graphicSize = _graphicSize / _figmaW * w;
 
         final titleStyle = GoogleFonts.boldonse(
-          fontSize: (48 * scale).clamp(32.0, 52.0),
+          fontSize: (52 * scale).clamp(34.0, 56.0),
           fontWeight: FontWeight.w400,
           color: Colors.white,
           height: 1.40,
           letterSpacing: 0,
         );
         final bodyStyle = GoogleFonts.montserrat(
-          fontSize: (24 * scale).clamp(15.0, 22.0),
+          fontSize: (28 * scale).clamp(17.0, 25.0),
           fontWeight: FontWeight.w400,
           color: Colors.white.withValues(alpha: 0.92),
           height: 1.45,
@@ -75,7 +75,7 @@ class OnboardingSlideTwo extends StatelessWidget {
                   SizedBox(
                     width: copyWidth,
                     child: Text(
-                      'Never Guess Your Size Again',
+                      'Never\nGuess Your\nSize Again',
                       textAlign: TextAlign.right,
                       style: titleStyle,
                     ),
@@ -84,8 +84,10 @@ class OnboardingSlideTwo extends StatelessWidget {
                   SizedBox(
                     width: bodyWidth,
                     child: Text(
-                      'Let AI KIX map your feet with absolute precision '
-                      'to find your perfect fit across global brands.',
+                      'Let AI KIX map your feet\n'
+                      'with absolute precision to\n'
+                      'find your perfect fit across\n'
+                      'global brands.',
                       textAlign: TextAlign.right,
                       style: bodyStyle,
                     ),

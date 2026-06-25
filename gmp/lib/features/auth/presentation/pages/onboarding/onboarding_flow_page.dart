@@ -224,9 +224,13 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
             Positioned(
               left: OnboardingContent.figmaLeftInset,
               right: OnboardingContent.figmaRightInset,
-              bottom: 26 + bottomInset,
-
-              child: Row(
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                minimum: const EdgeInsets.only(bottom: 12),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Row(
 
                 crossAxisAlignment: CrossAxisAlignment.center,
 
@@ -260,6 +264,8 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
 
                 ],
 
+                  ),
+                ),
               ),
 
             ),

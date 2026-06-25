@@ -26,20 +26,27 @@ class OnboardingSlideFour extends StatelessWidget {
 
   // Figma component boxes (vector layers before raster export).
   static const double _rehomeBoxLeft = 100.60;
-  static const double _rehomeBoxTop = 163;
+  static const double _rehomeBoxTop = 145;
   static const double _rehomeBoxW = 230;
-  static const double _rehomeBoxH = 110;
+  static const double _rehomeBoxH = 132;
 
   static const double _creditsBoxLeft = 45;
-  static const double _creditsBoxTop = 341.14;
+  static const double _creditsBoxTop = 278;
   static const double _creditsBoxW = 334;
-  static const double _creditsBoxH = 49;
+  static const double _creditsBoxH = 70;
 
-  // Copy — Figma: left 36, top 423, width 353, gap 20.
+  // Copy — Figma: left 36, top 423, width 353, gap 20 (nudged up for bottom bar).
   static const double _copyLeft = 36;
-  static const double _copyTop = 423;
+  static const double _copyTop = 385;
   static const double _copyWidth = 353;
-  static const double _copyGap = 20;
+  static const double _copyGap = 18;
+  static const List<String> _bodyLines = [
+    'Your ultimate footwear',
+    'ecosystem. Do good for the',
+    'planet, do wonders for your',
+    'wallet.',
+  ];
+  static const double _bodyLineGap = 6;
 
   /// Centers a raster asset on a Figma component rect.
   static double _assetLeft(double boxLeft, double boxW, double assetW) =>
@@ -94,22 +101,27 @@ class OnboardingSlideFour extends StatelessWidget {
         final copyTop = _copyTop / _figmaH * h;
         final copyWidth = _copyWidth / _figmaW * w;
         final copyGap = _copyGap / _figmaH * h;
+        final bodyLineGap = _bodyLineGap / _figmaH * h;
 
         final titleStyle = GoogleFonts.boldonse(
-          fontSize: (48 * scale).clamp(32.0, 52.0),
+          fontSize: (50 * scale).clamp(34.0, 52.0),
           fontWeight: FontWeight.w400,
           color: Colors.white,
-          height: 1.33,
+          height: 1.38,
           letterSpacing: 0,
         );
         final bodyStyle = GoogleFonts.montserrat(
-          fontSize: (24 * scale).clamp(15.0, 22.0),
+          fontSize: (26 * scale).clamp(16.0, 24.0),
           fontWeight: FontWeight.w400,
           color: Colors.white.withValues(alpha: 0.92),
-          height: 1.45,
+          height: 1.5,
           letterSpacing: 0,
         );
         const titleHeightBehavior = TextHeightBehavior(
+          applyHeightToFirstAscent: false,
+          applyHeightToLastDescent: false,
+        );
+        const bodyHeightBehavior = TextHeightBehavior(
           applyHeightToFirstAscent: false,
           applyHeightToLastDescent: false,
         );
@@ -119,24 +131,24 @@ class OnboardingSlideFour extends StatelessWidget {
             clipBehavior: Clip.hardEdge,
             children: [
               Positioned(
-                left: rehomeLeft,
-                top: rehomeTop,
-                width: rehomeW,
-                height: rehomeH,
-                child: Image.asset(
-                  _rehomeAsset,
-                  fit: BoxFit.fill,
-                  filterQuality: FilterQuality.high,
-                  gaplessPlayback: true,
-                ),
-              ),
-              Positioned(
                 left: creditsLeft,
                 top: creditsTop,
                 width: creditsW,
                 height: creditsH,
                 child: Image.asset(
                   _creditsAsset,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.high,
+                  gaplessPlayback: true,
+                ),
+              ),
+              Positioned(
+                left: rehomeLeft,
+                top: rehomeTop,
+                width: rehomeW,
+                height: rehomeH,
+                child: Image.asset(
+                  _rehomeAsset,
                   fit: BoxFit.fill,
                   filterQuality: FilterQuality.high,
                   gaplessPlayback: true,
@@ -162,11 +174,20 @@ class OnboardingSlideFour extends StatelessWidget {
                     SizedBox(height: copyGap),
                     SizedBox(
                       width: copyWidth,
-                      child: Text(
-                        'Your ultimate footwear ecosystem. Do good for the '
-                        'planet, do wonders for your wallet.',
-                        style: bodyStyle,
-                        textAlign: TextAlign.left,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (var i = 0; i < _bodyLines.length; i++) ...[
+                            if (i > 0) SizedBox(height: bodyLineGap),
+                            Text(
+                              _bodyLines[i],
+                              style: bodyStyle,
+                              textAlign: TextAlign.left,
+                              textHeightBehavior: bodyHeightBehavior,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
