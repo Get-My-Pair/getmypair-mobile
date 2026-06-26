@@ -1,4 +1,4 @@
-package com.example.getmypair
+package com.getmypair.userapp
 
 import io.flutter.embedding.android.FlutterActivity
 
