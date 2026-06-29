@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
@@ -9,9 +10,11 @@ import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/features/articles/data/footwear_background_remover.dart';
 import 'package:gmp/features/articles/data/footwear_image_validator.dart';
+import 'package:gmp/features/articles/data/footwear_live_scanner.dart';
 import 'package:gmp/features/articles/data/footwear_orientation_detector.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -44,7 +47,9 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   bool _capturing = false;
   bool _validatingImage = false;
   String _processingLabel = 'Checking footwear…';
+  FootwearScanStatus _scanStatus = FootwearScanStatus.idle;
 
+  final FootwearLiveScanner _liveScanner = FootwearLiveScanner();
   late List<File> _images;
 
   @override
@@ -58,13 +63,44 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _liveScanner.stop();
     _disposeCamera();
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final landscape = MediaQuery.orientationOf(context) == Orientation.landscape;
+    _liveScanner.updateDeviceOrientation(
+      landscape
+          ? DeviceOrientation.landscapeLeft
+          : DeviceOrientation.portraitUp,
+    );
+  }
+
   void _disposeCamera() {
+    _liveScanner.stop();
     _cameraController?.dispose();
     _cameraController = null;
+  }
+
+  bool get _captureReady =>
+      _scanStatus == FootwearScanStatus.footwearDetected;
+
+  void _onScanStatusChanged(FootwearScanStatus status) {
+    if (!mounted || _validatingImage || _capturing) return;
+    setState(() => _scanStatus = status);
+  }
+
+  Future<void> _startLiveScan(CameraController controller) async {
+    if (_validatingImage || _capturing || _remaining <= 0) return;
+    await _liveScanner.start(
+      controller: controller,
+      onStatusChanged: _onScanStatusChanged,
+    );
+    if (!mounted) return;
+    setState(() => _scanStatus = _liveScanner.status);
   }
 
   @override
@@ -121,7 +157,9 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         back,
         ResolutionPreset.high,
         enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
+        imageFormatGroup: Platform.isAndroid
+            ? ImageFormatGroup.nv21
+            : ImageFormatGroup.bgra8888,
       );
       await controller.initialize();
       try {
@@ -133,6 +171,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         _cameraInitializing = false;
         _cameraError = null;
       });
+      await _startLiveScan(controller);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -150,18 +189,16 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   }
 
   Future<bool> _ensureGalleryPermission() async {
-    if (!Platform.isAndroid && !Platform.isIOS) return true;
+    // Android uses the system photo picker — no READ_MEDIA_* permissions required.
+    if (Platform.isAndroid) return true;
+
+    if (!Platform.isIOS) return true;
 
     var status = await Permission.photos.status;
     if (status.isGranted || status.isLimited) return true;
 
     status = await Permission.photos.request();
     if (status.isGranted || status.isLimited) return true;
-
-    if (Platform.isAndroid) {
-      final storage = await Permission.storage.request();
-      if (storage.isGranted) return true;
-    }
 
     if (!mounted) return false;
     await _showMessageDialog(
@@ -209,6 +246,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     }
 
     setState(() => _capturing = true);
+    await _liveScanner.stop();
     try {
       final xFile = await controller.takePicture();
       final file = await _persistCapture(xFile);
@@ -222,7 +260,13 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         );
       }
     } finally {
-      if (mounted) setState(() => _capturing = false);
+      if (mounted) {
+        setState(() => _capturing = false);
+        final active = _cameraController;
+        if (active != null && active.value.isInitialized) {
+          await _startLiveScan(active);
+        }
+      }
     }
   }
 
@@ -296,9 +340,11 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   Future<void> _processNewImage(File file) async {
     if (!mounted) return;
 
+    await _liveScanner.stop();
     setState(() {
       _validatingImage = true;
       _processingLabel = 'Checking footwear…';
+      _scanStatus = FootwearScanStatus.idle;
     });
 
     try {
@@ -359,19 +405,21 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         return;
       }
 
-      await _reviewCapture(
-        previewFile: file,
-        saveFile: imageToSave,
-      );
+      await _reviewCapture(saveFile: imageToSave);
     } finally {
-      if (mounted) setState(() => _validatingImage = false);
+      if (mounted) {
+        setState(() => _validatingImage = false);
+        final active = _cameraController;
+        if (active != null &&
+            active.value.isInitialized &&
+            _remaining > 0) {
+          await _startLiveScan(active);
+        }
+      }
     }
   }
 
-  Future<void> _reviewCapture({
-    required File previewFile,
-    required File saveFile,
-  }) async {
+  Future<void> _reviewCapture({required File saveFile}) async {
     final action = await showModalBottomSheet<_CaptureReviewAction>(
       context: context,
       backgroundColor: const Color(0xFF0D5B68),
@@ -395,7 +443,13 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
                   ),
                 ),
                 const SizedBox(height: 12),
-                FootwearCutoutPreview(file: previewFile, height: 220),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: FootwearCutoutPreview(
+                    file: saveFile,
+                    height: 220,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Does this show a clear side profile?',
@@ -695,12 +749,72 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
       padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Align(
         alignment: Alignment.center,
-        child: SizedBox(
-          width: frameW,
-          height: frameH,
-          child: _cameraPreviewStack(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: frameW,
+              height: frameH,
+              child: _cameraPreviewStack(),
+            ),
+            if (!_validatingImage && _cameraError == null) ...[
+              const SizedBox(height: 10),
+              _scanStatusBanner(),
+            ],
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _scanStatusBanner() {
+    final (label, color, icon) = switch (_scanStatus) {
+      FootwearScanStatus.footwearDetected => (
+          'Footwear detected — ready to capture',
+          const Color(0xFF4CAF50),
+          Icons.check_circle_outline,
+        ),
+      FootwearScanStatus.notFootwear => (
+          'No footwear detected — align shoe in frame',
+          AppColors.error,
+          Icons.warning_amber_rounded,
+        ),
+      FootwearScanStatus.scanning => (
+          'Scanning for footwear…',
+          const Color(0xFF09DFFF),
+          Icons.document_scanner_outlined,
+        ),
+      FootwearScanStatus.unavailable => (
+          'Live scan unavailable — you can still capture',
+          Colors.white70,
+          Icons.info_outline,
+        ),
+      FootwearScanStatus.idle => (
+          'Align side profile in frame',
+          Colors.white70,
+          Icons.checkroom_outlined,
+        ),
+    };
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.montserrat(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.25,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -820,28 +934,11 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   }
 
   /// Figma dashed shoe outline — camera preview center only.
-  Widget _cameraShoeGuideOverlay() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
-        return Center(
-          child: Opacity(
-            opacity: 0.9,
-            child: Image.asset(
-              _cameraShoeGuideAsset,
-              width: w * 0.78,
-              height: h * 0.68,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => Icon(
-                Icons.checkroom_outlined,
-                size: (w * 0.35).clamp(48.0, 72.0),
-                color: Colors.white.withValues(alpha: 0.45),
-              ),
-            ),
-          ),
-        );
-      },
+  Widget _cameraScannerOverlay() {
+    return FootwearScannerOverlay(
+      captureReady: _captureReady,
+      showScanLine: !_captureReady && !_validatingImage,
+      shoeGuideOpacity: 0.9,
     );
   }
 
@@ -860,7 +957,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           child: IgnorePointer(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: _cameraShoeGuideOverlay(),
+              child: _cameraScannerOverlay(),
             ),
           ),
         ),

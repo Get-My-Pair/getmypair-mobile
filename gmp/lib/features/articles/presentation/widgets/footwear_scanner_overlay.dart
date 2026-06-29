@@ -8,11 +8,13 @@ class FootwearScannerOverlay extends StatefulWidget {
     this.shoeGuideOpacity = 0.72,
     this.showScanLine = true,
     this.borderColor = const Color(0xFF09DFFF),
+    this.captureReady = false,
   });
 
   final double shoeGuideOpacity;
   final bool showScanLine;
   final Color borderColor;
+  final bool captureReady;
 
   @override
   State<FootwearScannerOverlay> createState() => _FootwearScannerOverlayState();
@@ -39,6 +41,9 @@ class _FootwearScannerOverlayState extends State<FootwearScannerOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final activeBorderColor =
+        widget.captureReady ? const Color(0xFF4CAF50) : widget.borderColor;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
@@ -55,10 +60,13 @@ class _FootwearScannerOverlayState extends State<FootwearScannerOverlay>
                 return CustomPaint(
                   size: Size(w, h),
                   painter: _FootwearScannerPainter(
-                    scanProgress:
-                        widget.showScanLine ? _scanController.value : 0,
-                    borderColor: widget.borderColor,
-                    cornerColor: Colors.white,
+                    scanProgress: widget.showScanLine && !widget.captureReady
+                        ? _scanController.value
+                        : 0,
+                    borderColor: activeBorderColor,
+                    cornerColor:
+                        widget.captureReady ? const Color(0xFF4CAF50) : Colors.white,
+                    captureReady: widget.captureReady,
                   ),
                 );
               },
@@ -69,7 +77,7 @@ class _FootwearScannerOverlayState extends State<FootwearScannerOverlay>
                 height: guideH,
                 opacity: widget.shoeGuideOpacity,
                 outlineOnly: true,
-                guideColor: widget.borderColor,
+                guideColor: activeBorderColor,
               ),
             ),
           ],
@@ -84,11 +92,13 @@ class _FootwearScannerPainter extends CustomPainter {
     required this.scanProgress,
     required this.borderColor,
     required this.cornerColor,
+    this.captureReady = false,
   });
 
   final double scanProgress;
   final Color borderColor;
   final Color cornerColor;
+  final bool captureReady;
 
   static const double _radius = 12;
   static const double _cornerLen = 22;
@@ -142,11 +152,15 @@ class _FootwearScannerPainter extends CustomPainter {
 
   void _paintDashedBorder(Canvas canvas, RRect rrect) {
     final paint = Paint()
-      ..color = borderColor.withValues(alpha: 0.92)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..color = borderColor.withValues(alpha: captureReady ? 1.0 : 0.92)
+      ..style = captureReady ? PaintingStyle.stroke : PaintingStyle.stroke
+      ..strokeWidth = captureReady ? 2.5 : 1.5;
     final path = Path()..addRRect(rrect);
-    _drawDashedPath(canvas, path, paint, 8, 6);
+    if (captureReady) {
+      canvas.drawPath(path, paint);
+    } else {
+      _drawDashedPath(canvas, path, paint, 8, 6);
+    }
   }
 
   void _paintCornerBrackets(Canvas canvas, Size size) {
@@ -228,5 +242,6 @@ class _FootwearScannerPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _FootwearScannerPainter oldDelegate) =>
       oldDelegate.scanProgress != scanProgress ||
-      oldDelegate.borderColor != borderColor;
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.captureReady != captureReady;
 }

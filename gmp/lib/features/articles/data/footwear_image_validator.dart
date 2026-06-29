@@ -48,6 +48,9 @@ class FootwearImageValidator {
   static const double _minShoeConfidence = 0.42;
   static const double _labelThreshold = 0.35;
 
+  /// Exposed for live camera scanning (same threshold as file validation).
+  static double get labelThreshold => _labelThreshold;
+
   static const List<String> _shoeTerms = [
     'shoe',
     'shoes',
@@ -165,6 +168,59 @@ class FootwearImageValidator {
     return 'Image not accepted';
   }
 
+  /// Shared footwear accept/reject logic for file and live camera scans.
+  static FootwearImageValidationResult classifyLabels(List<ImageLabel> labels) {
+    if (labels.isEmpty) {
+      return FootwearImageValidationResult.rejected(
+        message: buildRejectedMessage(detectedItem: null),
+      );
+    }
+
+    ImageLabel? bestShoe;
+    ImageLabel? bestNonShoe;
+
+    for (final label in labels) {
+      if (_isShoeLabel(label.label)) {
+        if (bestShoe == null || label.confidence > bestShoe.confidence) {
+          bestShoe = label;
+        }
+      } else {
+        if (bestNonShoe == null || label.confidence > bestNonShoe.confidence) {
+          bestNonShoe = label;
+        }
+      }
+    }
+
+    final shoeScore = bestShoe?.confidence ?? 0.0;
+    final nonShoeScore = bestNonShoe?.confidence ?? 0.0;
+    final detectedRaw = bestNonShoe?.label;
+    final detectedItem =
+        detectedRaw != null ? friendlyItemName(detectedRaw) : null;
+
+    if (shoeScore >= _minShoeConfidence && shoeScore >= nonShoeScore) {
+      return FootwearImageValidationResult.accepted();
+    }
+
+    if (shoeScore > 0 && shoeScore < _minShoeConfidence) {
+      return FootwearImageValidationResult.rejected(
+        detectedItem: detectedItem,
+        message: buildRejectedMessage(weakShoe: true),
+      );
+    }
+
+    final sorted = List<ImageLabel>.from(labels)
+      ..sort((a, b) => b.confidence.compareTo(a.confidence));
+    final topOverall = sorted.first;
+    final dynamicItem = _isShoeLabel(topOverall.label)
+        ? detectedItem
+        : friendlyItemName(topOverall.label);
+
+    return FootwearImageValidationResult.rejected(
+      detectedItem: dynamicItem,
+      message: buildRejectedMessage(detectedItem: dynamicItem),
+    );
+  }
+
   static Future<FootwearImageValidationResult> validate(File file) async {
     if (!file.existsSync()) {
       return FootwearImageValidationResult.rejected(
@@ -184,58 +240,7 @@ class FootwearImageValidator {
       final labels = await labeler.processImage(
         InputImage.fromFilePath(file.path),
       );
-
-      if (labels.isEmpty) {
-        return FootwearImageValidationResult.rejected(
-          message: buildRejectedMessage(detectedItem: null),
-        );
-      }
-
-      ImageLabel? bestShoe;
-      ImageLabel? bestNonShoe;
-
-      for (final label in labels) {
-        if (_isShoeLabel(label.label)) {
-          if (bestShoe == null || label.confidence > bestShoe.confidence) {
-            bestShoe = label;
-          }
-        } else {
-          if (bestNonShoe == null || label.confidence > bestNonShoe.confidence) {
-            bestNonShoe = label;
-          }
-        }
-      }
-
-      final shoeScore = bestShoe?.confidence ?? 0.0;
-      final nonShoeScore = bestNonShoe?.confidence ?? 0.0;
-      final detectedRaw = bestNonShoe?.label;
-      final detectedItem = detectedRaw != null
-          ? friendlyItemName(detectedRaw)
-          : null;
-
-      if (shoeScore >= _minShoeConfidence && shoeScore >= nonShoeScore) {
-        return FootwearImageValidationResult.accepted();
-      }
-
-      if (shoeScore > 0 && shoeScore < _minShoeConfidence) {
-        return FootwearImageValidationResult.rejected(
-          detectedItem: detectedItem,
-          message: buildRejectedMessage(weakShoe: true),
-        );
-      }
-
-      // Prefer top overall label if no strong non-shoe bucket (e.g. "Tea", "Drinkware").
-      final sorted = List<ImageLabel>.from(labels)
-        ..sort((a, b) => b.confidence.compareTo(a.confidence));
-      final topOverall = sorted.first;
-      final dynamicItem = _isShoeLabel(topOverall.label)
-          ? detectedItem
-          : friendlyItemName(topOverall.label);
-
-      return FootwearImageValidationResult.rejected(
-        detectedItem: dynamicItem,
-        message: buildRejectedMessage(detectedItem: dynamicItem),
-      );
+      return classifyLabels(labels);
     } catch (e, st) {
       debugPrint('FootwearImageValidator: $e\n$st');
       return FootwearImageValidationResult.unavailable();
