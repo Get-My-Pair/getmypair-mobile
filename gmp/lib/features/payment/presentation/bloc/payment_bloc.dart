@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../config/payment_config.dart';
 import '../../domain/entities/payment.dart';
 import '../../domain/entities/zoho_payment_mode.dart';
 import '../../domain/usecases/payment_usecases.dart';
@@ -93,7 +94,8 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         ),
       );
     } catch (e) {
-      if (_shouldFallbackToSimulate(event.paymentMode, e)) {
+      if (PaymentConfig.enableSimulateFallback &&
+          _shouldFallbackToSimulate(event.paymentMode, e)) {
         final link = PaymentSimulateHelper.buildLocalLink(
           serviceRequestId: event.serviceRequestId,
           amount: event.amount,
@@ -108,7 +110,8 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
         );
         return;
       }
-      if (event.paymentMode == ZohoPaymentMode.simulate) {
+      if (PaymentConfig.enableSimulateFallback &&
+          event.paymentMode == ZohoPaymentMode.simulate) {
         final link = PaymentSimulateHelper.buildLocalLink(
           serviceRequestId: event.serviceRequestId,
           amount: event.amount,

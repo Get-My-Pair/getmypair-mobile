@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../config/payment_config.dart';
 import '../bloc/payment_bloc.dart';
 import '../services/payment_analytics.dart';
 import '../utils/payment_amount_formatter.dart';
@@ -89,9 +90,11 @@ class PaymentRequestPage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const PaymentStepRow(step: '1', text: 'Review payment summary'),
-            const PaymentStepRow(
+            PaymentStepRow(
               step: '2',
-              text: 'Choose checkout: Live, Sandbox, or Simulate',
+              text: PaymentConfig.isProductionFlow
+                  ? 'Complete secure checkout (UPI, card, or wallet)'
+                  : 'Choose checkout: Live, Sandbox, or Simulate',
             ),
             const PaymentStepRow(
               step: '3',

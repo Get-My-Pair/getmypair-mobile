@@ -193,21 +193,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     // Matches [_buildLabel] (Montserrat) — use >1.2 so estimate ≥ rendered line height on web.
     double labelLineHeight() => sx(16, 12, 16) * 1.34;
 
-    // Matches [_profileField] padding + line + InputDecoration / M3 slop.
-    double fieldBlockHeight(int index) {
-      final isPassword = index == 4;
-      final v = isPassword
-          ? (11 * scale * 0.52).clamp(4.0, 11.0)
-          : (11 * scale).clamp(4.0, 11.0);
-      final t = sx(16, 12, 16);
-      final textLine = t * 1.34;
-      var block = 2 * v + textLine;
-      if (isPassword) {
-        final iconMinH = sx(34, 24, 34);
-        block = block > iconMinH ? block : iconMinH;
-      }
-      return block + 10;
-    }
+    // Matches [_profileField] fixed glass shell height.
+    double fieldBlockHeight(int index) => sx(48, 40, 48);
 
     var h = 0.0;
     h += sx(100, 72, 100);
@@ -513,7 +500,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   enableInteractiveSelection: false,
                                   inputFormatters: [_lockTextFieldValueFormatter],
                                   scale: contentScale,
-                                  verticalPaddingScaleFactor: 0.52,
                                   suffix: IconButton(
                                     onPressed: () => setState(
                                       () => _showPassword = !_showPassword,
@@ -712,6 +698,86 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  Widget _glassFieldShell({
+    required double scale,
+    required bool readOnly,
+    required Widget child,
+  }) {
+    final radius = BorderRadius.circular(100);
+    final fieldHeight = (48 * scale).clamp(40.0, 48.0);
+    final glassTint = readOnly
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.white.withValues(alpha: 0.08);
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: fieldHeight,
+          decoration: BoxDecoration(
+            color: glassTint,
+            borderRadius: radius,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.22),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.10),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _glassInputDecoration({
+    required double scale,
+    Widget? suffixIcon,
+  }) {
+    final radius = BorderRadius.circular(100);
+    final hPad = (16 * scale).clamp(12.0, 16.0);
+    final fieldHeight = (48 * scale).clamp(40.0, 48.0);
+    final fontSize = (16 * scale).clamp(12.0, 16.0);
+    final vPad = ((fieldHeight - fontSize) / 2).clamp(10.0, 14.0);
+
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.transparent,
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+      suffixIcon: suffixIcon,
+      suffixIconConstraints: BoxConstraints(
+        minHeight: fieldHeight,
+        minWidth: (44 * scale).clamp(36.0, 44.0),
+      ),
+      border: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(
+          color: Colors.white.withValues(alpha: 0.42),
+          width: 1,
+        ),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
   Widget _profileField({
     Key? formFieldKey,
     required TextEditingController controller,
@@ -723,72 +789,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
     List<TextInputFormatter>? inputFormatters,
     bool enableInteractiveSelection = true,
     double scale = 1.0,
-    double verticalPaddingScaleFactor = 1.0,
   }) {
-    final radius = BorderRadius.circular(100);
-    final glassTint = readOnly
-        ? Colors.white.withValues(alpha: 0.07)
-        : Colors.white.withValues(alpha: 0.11);
+    final fontSize = (16 * scale).clamp(12.0, 16.0);
 
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: glassTint,
-            borderRadius: radius,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: TextFormField(
-            key: formFieldKey,
-            controller: controller,
-            readOnly: readOnly,
-            obscureText: obscureText,
-            obscuringCharacter: obscuringCharacter,
-            keyboardType: keyboardType,
-            inputFormatters: inputFormatters,
-            enableInteractiveSelection: enableInteractiveSelection,
-            style: GoogleFonts.montserrat(
-              fontSize: (16 * scale).clamp(12.0, 16.0),
-              fontWeight: FontWeight.w400,
-              color: const Color(0xF2FFFFFF),
-            ),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.transparent,
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: (16 * scale).clamp(12.0, 16.0),
-                vertical: (11 * scale * verticalPaddingScaleFactor)
-                    .clamp(4.0, 11.0),
-              ),
-              suffixIcon: suffix,
-              suffixIconConstraints: BoxConstraints(
-                minHeight: (34 * scale).clamp(24.0, 34.0),
-                minWidth: (40 * scale).clamp(28.0, 40.0),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: radius,
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: radius,
-                borderSide: BorderSide.none,
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: radius,
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
+    return _glassFieldShell(
+      scale: scale,
+      readOnly: readOnly,
+      child: TextFormField(
+        key: formFieldKey,
+        controller: controller,
+        readOnly: readOnly,
+        obscureText: obscureText,
+        obscuringCharacter: obscuringCharacter,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        enableInteractiveSelection: enableInteractiveSelection,
+        maxLines: 1,
+        textAlignVertical: TextAlignVertical.center,
+        style: GoogleFonts.montserrat(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w400,
+          color: const Color(0xF2FFFFFF),
         ),
+        decoration: _glassInputDecoration(scale: scale, suffixIcon: suffix),
       ),
     );
   }

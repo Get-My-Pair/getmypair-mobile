@@ -1,6 +1,11 @@
 enum ZohoPaymentMode {
-  sandbox('sandbox'),
+  /// Production — real charges via Zoho Checkout.
   live('live'),
+
+  /// Dev/QA only — enable with --dart-define=PAYMENT_DEV_MODES=true
+  sandbox('sandbox'),
+
+  /// Dev/QA only — local simulated flow when Zoho is offline.
   simulate('simulate');
 
   const ZohoPaymentMode(this.apiValue);

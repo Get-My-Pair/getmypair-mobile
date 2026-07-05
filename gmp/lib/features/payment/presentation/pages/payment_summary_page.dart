@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
+import '../../config/payment_config.dart';
 import '../../domain/entities/payment.dart';
 import '../../domain/entities/zoho_payment_mode.dart';
 import '../bloc/payment_bloc.dart';
@@ -70,8 +71,12 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
     final token = _accessToken;
     if (token == null) return;
 
-    final mode = await showPaymentModeSheet(context);
-    if (!mounted || mode == null) return;
+    var mode = PaymentConfig.defaultMode;
+    if (PaymentConfig.allowDevModes) {
+      final picked = await showPaymentModeSheet(context);
+      if (!mounted || picked == null) return;
+      mode = picked;
+    }
 
     context.read<PaymentBloc>().add(
           PaymentLinkCreateRequested(
@@ -79,6 +84,7 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
             serviceRequestId: widget.serviceRequestId,
             amount: widget.amount,
             paymentMode: mode,
+            redirectUrl: PaymentConfig.zohoRedirectUrl,
           ),
         );
   }
@@ -100,7 +106,9 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
             paymentId: link.payment.id,
             serviceRequestId: widget.serviceRequestId,
             amount: link.payment.amount,
-            onZohoUnavailable: () => _openSimulateFallback(link),
+            onZohoUnavailable: PaymentConfig.enableSimulateFallback
+                ? () => _openSimulateFallback(link)
+                : null,
           );
 
     Navigator.pushReplacement(
@@ -201,8 +209,10 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
                               PaymentAmountFormatter.format(widget.amount),
                               bold: true,
                             ),
-                            const SizedBox(height: 12),
-                            _checkoutMethodsCard(),
+                            if (PaymentConfig.allowDevModes) ...[
+                              const SizedBox(height: 12),
+                              _checkoutMethodsCard(),
+                            ],
                             const SizedBox(height: 12),
                             const Text(
                               'GetMyPair does not store your card details.',
@@ -215,7 +225,9 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
                             const SizedBox(height: 28),
                             PayNowButton(
                               loading: loading,
-                              label: 'Proceed to Zoho checkout',
+                              label: PaymentConfig.isProductionFlow
+                                  ? 'Proceed to secure checkout'
+                                  : 'Proceed to Zoho checkout',
                               onPressed: loading ? null : _proceedToCheckout,
                             ),
                             if (state is PaymentError) ...[
@@ -255,7 +267,7 @@ class _PaymentSummaryPageState extends State<PaymentSummaryPage> {
             ),
           ),
           const SizedBox(height: 8),
-          ...ZohoPaymentMode.orderedMethods.map(
+          ...PaymentConfig.selectableModes.map(
             (mode) => Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(

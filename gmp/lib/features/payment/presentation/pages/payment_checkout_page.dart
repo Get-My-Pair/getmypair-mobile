@@ -15,6 +15,7 @@ import '../bloc/payment_bloc.dart';
 import '../bloc/payment_event.dart';
 import '../bloc/payment_state.dart';
 import '../services/payment_analytics.dart';
+import '../services/payment_external_launcher.dart';
 import '../services/payment_status_poller.dart';
 import '../widgets/payment_loader.dart';
 import '../widgets/payment_page_shell.dart';
@@ -89,7 +90,9 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Zoho checkout could not load. Please try again.'),
+        content: Text(
+          'Secure checkout could not load. Check your connection and try again.',
+        ),
       ),
     );
   }
@@ -106,8 +109,13 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
           onWebResourceError: (_) => _triggerZohoFallback(),
           onHttpError: (_) => _triggerZohoFallback(),
           onNavigationRequest: (request) {
-            if (_isReturnUrl(request.url)) {
+            final url = request.url;
+            if (_isReturnUrl(url)) {
               _onCheckoutReturn();
+              return NavigationDecision.prevent;
+            }
+            if (PaymentExternalLauncher.shouldLaunchExternally(url)) {
+              PaymentExternalLauncher.launch(url);
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
@@ -118,10 +126,12 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
   }
 
   bool _isReturnUrl(String url) {
-    return url.contains('payment/callback') ||
-        url.contains('payment-success') ||
-        url.contains('payment_link_reference=') ||
-        url.contains('payment_link_id=');
+    final lower = url.toLowerCase();
+    return lower.startsWith('gmp://payment/') ||
+        lower.contains('payment/callback') ||
+        lower.contains('payment-success') ||
+        lower.contains('payment_link_reference=') ||
+        lower.contains('payment_link_id=');
   }
 
   Future<void> _openExternal() async {

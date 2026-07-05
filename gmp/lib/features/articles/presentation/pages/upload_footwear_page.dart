@@ -14,7 +14,6 @@ import 'package:gmp/features/articles/data/footwear_live_scanner.dart';
 import 'package:gmp/features/articles/data/footwear_orientation_detector.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
-import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -84,9 +83,6 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     _cameraController?.dispose();
     _cameraController = null;
   }
-
-  bool get _captureReady =>
-      _scanStatus == FootwearScanStatus.footwearDetected;
 
   void _onScanStatusChanged(FootwearScanStatus status) {
     if (!mounted || _validatingImage || _capturing) return;
@@ -749,72 +745,12 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
       padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Align(
         alignment: Alignment.center,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: frameW,
-              height: frameH,
-              child: _cameraPreviewStack(),
-            ),
-            if (!_validatingImage && _cameraError == null) ...[
-              const SizedBox(height: 10),
-              _scanStatusBanner(),
-            ],
-          ],
+        child: SizedBox(
+          width: frameW,
+          height: frameH,
+          child: _cameraPreviewStack(),
         ),
       ),
-    );
-  }
-
-  Widget _scanStatusBanner() {
-    final (label, color, icon) = switch (_scanStatus) {
-      FootwearScanStatus.footwearDetected => (
-          'Footwear detected — ready to capture',
-          const Color(0xFF4CAF50),
-          Icons.check_circle_outline,
-        ),
-      FootwearScanStatus.notFootwear => (
-          'No footwear detected — align shoe in frame',
-          AppColors.error,
-          Icons.warning_amber_rounded,
-        ),
-      FootwearScanStatus.scanning => (
-          'Scanning for footwear…',
-          const Color(0xFF09DFFF),
-          Icons.document_scanner_outlined,
-        ),
-      FootwearScanStatus.unavailable => (
-          'Live scan unavailable — you can still capture',
-          Colors.white70,
-          Icons.info_outline,
-        ),
-      FootwearScanStatus.idle => (
-          'Align side profile in frame',
-          Colors.white70,
-          Icons.checkroom_outlined,
-        ),
-    };
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              height: 1.25,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -933,12 +869,29 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     );
   }
 
-  /// Figma dashed shoe outline — camera preview center only.
-  Widget _cameraScannerOverlay() {
-    return FootwearScannerOverlay(
-      captureReady: _captureReady,
-      showScanLine: !_captureReady && !_validatingImage,
-      shoeGuideOpacity: 0.9,
+  /// Figma shoe guide — camera preview center only.
+  Widget _cameraShoeGuideOverlay() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        return Center(
+          child: Opacity(
+            opacity: 0.9,
+            child: Image.asset(
+              _cameraShoeGuideAsset,
+              width: w * 0.78,
+              height: h * 0.68,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.checkroom_outlined,
+                size: (w * 0.35).clamp(48.0, 72.0),
+                color: Colors.white.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -957,7 +910,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           child: IgnorePointer(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: _cameraScannerOverlay(),
+              child: _cameraShoeGuideOverlay(),
             ),
           ),
         ),

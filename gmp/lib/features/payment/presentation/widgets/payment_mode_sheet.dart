@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../config/payment_config.dart';
 import '../../domain/entities/zoho_payment_mode.dart';
 
 /// Bottom sheet for choosing sandbox, live, or simulated Zoho checkout.
@@ -31,7 +32,9 @@ Future<ZohoPaymentMode?> showPaymentModeSheet(BuildContext context) {
               ),
             ),
             Text(
-              'Choose payment mode',
+              PaymentConfig.isProductionFlow
+                  ? 'Choose payment mode'
+                  : 'Choose payment mode (dev)',
               style: GoogleFonts.montserrat(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -39,17 +42,19 @@ Future<ZohoPaymentMode?> showPaymentModeSheet(BuildContext context) {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Pick one of 3 checkout methods below.',
-              style: TextStyle(
+            Text(
+              PaymentConfig.isProductionFlow
+                  ? 'Live Zoho checkout only.'
+                  : 'Pick one of the checkout methods below.',
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
                 height: 1.4,
               ),
             ),
             const SizedBox(height: 16),
-            ...ZohoPaymentMode.orderedMethods.map((mode) {
-              final isLast = mode == ZohoPaymentMode.simulate;
+            ...PaymentConfig.selectableModes.map((mode) {
+              final isLast = mode == PaymentConfig.selectableModes.last;
               return Padding(
                 padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
                 child: _PaymentModeTile(

@@ -46,5 +46,27 @@
 	<string>Allow the camera to take photos for service requests and profile pictures.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow microphone access when recording videos for service requests.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.getmypair.payment</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gmp</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tez</string>
+		<string>gpay</string>
+		<string>googlepay</string>
+		<string>upi</string>
+		<string>paytmmp</string>
+		<string>phonepe</string>
+		<string>bhim</string>
+		<string>credpay</string>
+	</array>
 </dict>
 </plist>

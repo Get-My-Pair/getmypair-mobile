@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,7 +15,9 @@ import 'routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  _configureAndroidPhotoPicker();
+  if (!kIsWeb) {
+    _configureAndroidPhotoPicker();
+  }
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await di.init();
   runApp(const MyApp());
