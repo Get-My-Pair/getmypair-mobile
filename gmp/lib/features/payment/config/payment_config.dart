@@ -1,3 +1,4 @@
+import '../../../core/constants/api_endpoints.dart';
 import '../domain/entities/zoho_payment_mode.dart';
 
 /// Payment environment flags. Sandbox/simulate code remains in the repo but is
@@ -20,7 +21,9 @@ class PaymentConfig {
   static bool get enableSimulateFallback => allowDevModes;
 
   /// Passed to POST /api/payment/link for Zoho post-payment redirect.
-  static const zohoRedirectUrl = 'gmp://payment/callback';
+  /// Must be a valid HTTPS URL (API validates with isURL); the checkout WebView
+  /// intercepts this path when Zoho redirects after payment.
+  static String get zohoRedirectUrl => ApiEndpoints.paymentCallback;
 
   /// Modes shown in the bottom-sheet picker (live only in production).
   static List<ZohoPaymentMode> get selectableModes => allowDevModes

@@ -114,6 +114,7 @@ class ApiEndpoints {
       '$baseUrl$paymentPrefix/by-service-request/$serviceRequestId';
   static String paymentStatus(String orderId, {bool refresh = false}) =>
       '$baseUrl$paymentPrefix/status/$orderId${refresh ? '?refresh=true' : ''}';
+  static String get paymentCallback => '$baseUrl$paymentPrefix/callback';
 
   // Cobblers for customer nearby discovery
   /// Query must match backend `GET /api/cobbler/profile/nearby` (auth + role checks on server).
