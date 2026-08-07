@@ -636,6 +636,9 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       initialDate: _birthDate ?? DateTime(now.year - 25, 1, 1),
       firstDate: DateTime(1900),
       lastDate: now,
+      helpText: 'Select date of birth (DD/MM/YYYY)',
+      fieldHintText: 'DD/MM/YYYY',
+      fieldLabelText: 'DD/MM/YYYY',
     );
     if (picked != null && mounted) {
       setState(() => _birthDate = picked);
@@ -1198,7 +1201,7 @@ class _BirthdayPill extends StatelessWidget {
                   child: Text(
                     date == null
                         ? 'Your Birthday'
-                        : DateFormat.yMMMd().format(date!),
+                        : DateFormat('dd/MM/yyyy').format(date!),
                     style: GoogleFonts.montserrat(
                       color: const Color(0xFFDFE7E9),
                       fontSize: 18,

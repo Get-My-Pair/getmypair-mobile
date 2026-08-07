@@ -6,11 +6,11 @@ import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/utils/responsive.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/gradient_page_shell.dart';
+import '../../../../core/utils/validators.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -51,16 +51,17 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
 
   Future<void> _selectDate() async {
     final DateTime now = DateTime.now();
-    // Users must be at least 18 years old
     final DateTime firstDate = DateTime(1900);
-    final DateTime lastDate = DateTime(now.year - 18);
+    final DateTime lastDate = DateTime(now.year - 18, now.month, now.day);
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: lastDate,
+      initialDate: _selectedDate ?? lastDate,
       firstDate: firstDate,
       lastDate: lastDate,
-      helpText: 'Select Date of Birth',
+      helpText: 'Select date of birth (DD/MM/YYYY)',
+      fieldHintText: 'DD/MM/YYYY',
+      fieldLabelText: 'DD/MM/YYYY',
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -326,7 +327,7 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                             ),
                             const SizedBox(height: 24),
                             
-                            // Date of Birth
+                            // Date of Birth — date picker, displayed as DD/MM/YYYY
                             const Text(
                               'Date of Birth',
                               style: TextStyle(
@@ -361,11 +362,13 @@ class _ProfileCompletionPageState extends State<ProfileCompletionPage> {
                                     Expanded(
                                       child: Text(
                                         _selectedDate == null
-                                            ? 'Select your date of birth'
-                                            : DateFormat('dd MMMM yyyy').format(_selectedDate!),
+                                            ? 'Select your date of birth (DD/MM/YYYY)'
+                                            : Validators.formatDateOfBirth(_selectedDate!),
                                         style: TextStyle(
                                           fontSize: 16,
-                                          fontWeight: _selectedDate != null ? FontWeight.w500 : FontWeight.w400,
+                                          fontWeight: _selectedDate != null
+                                              ? FontWeight.w500
+                                              : FontWeight.w400,
                                           color: _selectedDate == null
                                               ? AppColors.textTertiary
                                               : AppColors.textPrimary,
