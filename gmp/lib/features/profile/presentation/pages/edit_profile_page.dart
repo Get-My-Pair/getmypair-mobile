@@ -7,21 +7,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/bgtheme.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
+import '../../../../injection_container.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
-
-/// Blocks IME edits while keeping the field non-readOnly so [obscureText] still masks.
-final TextInputFormatter _lockTextFieldValueFormatter =
-    TextInputFormatter.withFunction((oldValue, newValue) => oldValue);
 
 class EditProfilePage extends StatefulWidget {
   final UserProfile profile;
@@ -43,8 +42,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _usSizeController;
+  late final TextEditingController _ukSizeController;
+  late final TextEditingController _euroSizeController;
+  late final TextEditingController _abnormalityController;
   bool _isPickingImage = false;
   bool _showPassword = false;
+
+  static String _prefsKey(String userId, String field) =>
+      'profile_extra_${userId}_$field';
 
   @override
   void initState() {
@@ -55,7 +61,60 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
     _phoneController = TextEditingController(text: widget.profile.phone);
     _emailController = TextEditingController(text: widget.profile.email ?? '');
-    _passwordController = TextEditingController(text: '........');
+    _passwordController = TextEditingController();
+    _usSizeController = TextEditingController(text: '10');
+    _ukSizeController = TextEditingController(text: '09');
+    _euroSizeController = TextEditingController(text: '41');
+    _abnormalityController = TextEditingController(text: 'Wide Foot');
+    _loadLocalExtras();
+  }
+
+  Future<void> _loadLocalExtras() async {
+    final prefs = sl.isRegistered<SharedPreferences>()
+        ? sl<SharedPreferences>()
+        : await SharedPreferences.getInstance();
+    final id = widget.profile.id;
+    if (!mounted) return;
+    setState(() {
+      _nickNameController.text =
+          prefs.getString(_prefsKey(id, 'nickname')) ??
+              _nickNameController.text;
+      _usSizeController.text =
+          prefs.getString(_prefsKey(id, 'us')) ?? _usSizeController.text;
+      _ukSizeController.text =
+          prefs.getString(_prefsKey(id, 'uk')) ?? _ukSizeController.text;
+      _euroSizeController.text =
+          prefs.getString(_prefsKey(id, 'euro')) ?? _euroSizeController.text;
+      _abnormalityController.text =
+          prefs.getString(_prefsKey(id, 'abnormality')) ??
+              _abnormalityController.text;
+    });
+  }
+
+  Future<void> _persistLocalExtras() async {
+    final prefs = sl.isRegistered<SharedPreferences>()
+        ? sl<SharedPreferences>()
+        : await SharedPreferences.getInstance();
+    final id = widget.profile.id;
+    await prefs.setString(
+      _prefsKey(id, 'nickname'),
+      _nickNameController.text.trim(),
+    );
+    await prefs.setString(_prefsKey(id, 'us'), _usSizeController.text.trim());
+    await prefs.setString(_prefsKey(id, 'uk'), _ukSizeController.text.trim());
+    await prefs.setString(
+      _prefsKey(id, 'euro'),
+      _euroSizeController.text.trim(),
+    );
+    await prefs.setString(
+      _prefsKey(id, 'abnormality'),
+      _abnormalityController.text.trim(),
+    );
+    final pwd = _passwordController.text.trim();
+    if (pwd.isNotEmpty && pwd != '........') {
+      // Password change is not supported via API yet — store only a flag for UX.
+      await prefs.setBool(_prefsKey(id, 'password_updated_local'), true);
+    }
   }
 
   @override
@@ -65,6 +124,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _usSizeController.dispose();
+    _ukSizeController.dispose();
+    _euroSizeController.dispose();
+    _abnormalityController.dispose();
     super.dispose();
   }
 
@@ -226,6 +289,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _saveChanges() async {
     FocusScope.of(context).unfocus();
     final name = _nameController.text.trim();
+    final nick = _nickNameController.text.trim();
+    final phone = _phoneController.text.trim();
     final trimmedEmail = _emailController.text.trim();
     if (name.isEmpty) {
       await showAppFeedbackAlert(
@@ -239,6 +304,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
       await showAppFeedbackAlert(
         context,
         message: 'Name can contain only letters and spaces.',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
+    if (nick.isNotEmpty && !RegExp(r'^[a-zA-Z\s]+$').hasMatch(nick)) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Nick name can contain only letters and spaces.',
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
+    if (phone.isNotEmpty && phone.replaceAll(RegExp(r'[^0-9]'), '').length < 10) {
+      await showAppFeedbackAlert(
+        context,
+        message: 'Please enter a valid phone number.',
         type: AppFeedbackType.warning,
       );
       return;
@@ -261,16 +342,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
       emailChanged = false;
     }
 
+    await _persistLocalExtras();
+    if (!mounted) return;
+
     if (!nameChanged && !emailChanged) {
       await showAppFeedbackAlert(
         context,
-        message: 'No changes to save.',
-        type: AppFeedbackType.warning,
+        message: 'Profile details saved.',
+        type: AppFeedbackType.success,
       );
       return;
     }
 
-    if (!mounted) return;
     context.read<ProfileBloc>().add(
           ProfileUpdateRequested(
             accessToken: widget.accessToken,
@@ -456,7 +539,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                                 _profileField(
                                   controller: _nickNameController,
-                                  readOnly: true,
                                   scale: contentScale,
                                 ),
                                 SizedBox(
@@ -468,7 +550,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                                 _profileField(
                                   controller: _phoneController,
-                                  readOnly: true,
+                                  keyboardType: TextInputType.phone,
                                   scale: contentScale,
                                 ),
                                 SizedBox(
@@ -493,69 +575,79 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 _profileField(
                                   formFieldKey: ValueKey(_showPassword),
                                   controller: _passwordController,
-                                  readOnly: false,
                                   obscureText: !_showPassword,
                                   obscuringCharacter: '*',
-                                  keyboardType: TextInputType.none,
-                                  enableInteractiveSelection: false,
-                                  inputFormatters: [_lockTextFieldValueFormatter],
+                                  keyboardType: TextInputType.visiblePassword,
                                   scale: contentScale,
                                   suffix: IconButton(
                                     onPressed: () => setState(
                                       () => _showPassword = !_showPassword,
                                     ),
                                     splashRadius:
-                                        (22 * contentScale).clamp(14.0, 22.0),
+                                        (22 * contentScale).clamp(18.0, 22.0),
                                     icon: Icon(
-                                      // Icons reflect current state: off when masked, on when plain.
                                       _showPassword
                                           ? Icons.visibility_outlined
                                           : Icons.visibility_off_outlined,
                                       color: const Color(0xCCFFFFFF),
                                       size: (24 * contentScale)
-                                          .clamp(18.0, 24.0),
+                                          .clamp(20.0, 24.0),
                                     ),
                                   ),
                                 ),
                                 SizedBox(
                                   height:
-                                      (18 * contentScale).clamp(10.0, 20.0),
+                                      (18 * contentScale).clamp(12.0, 20.0),
                                 ),
                                 _buildLabel('Foot Size Chart', contentScale),
                                 SizedBox(
-                                  height: (8 * contentScale).clamp(4.0, 8.0),
+                                  height: (8 * contentScale).clamp(6.0, 8.0),
                                 ),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    _footMetricChip('US: 10', contentScale),
-                                    SizedBox(
-                                      width: (20 * contentScale)
-                                          .clamp(16.0, 24.0),
+                                    Expanded(
+                                      child: _profileField(
+                                        controller: _usSizeController,
+                                        keyboardType: TextInputType.text,
+                                        scale: contentScale,
+                                        hint: 'US',
+                                      ),
                                     ),
-                                    _footMetricChip('UK: 09', contentScale),
                                     SizedBox(
-                                      width: (20 * contentScale)
-                                          .clamp(16.0, 24.0),
+                                      width: (10 * contentScale).clamp(8.0, 12.0),
                                     ),
-                                    _footMetricChip('EURO: 41', contentScale),
+                                    Expanded(
+                                      child: _profileField(
+                                        controller: _ukSizeController,
+                                        keyboardType: TextInputType.text,
+                                        scale: contentScale,
+                                        hint: 'UK',
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: (10 * contentScale).clamp(8.0, 12.0),
+                                    ),
+                                    Expanded(
+                                      child: _profileField(
+                                        controller: _euroSizeController,
+                                        keyboardType: TextInputType.text,
+                                        scale: contentScale,
+                                        hint: 'EURO',
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 SizedBox(
-                                  height: (20 * contentScale).clamp(8.0, 16.0),
+                                  height: (20 * contentScale).clamp(12.0, 16.0),
                                 ),
                                 _buildLabel('Foot Abnormality', contentScale),
                                 SizedBox(
-                                  height: (6 * contentScale).clamp(3.0, 6.0),
+                                  height: (6 * contentScale).clamp(4.0, 6.0),
                                 ),
-                                Text(
-                                  'Wide Foot',
-                                  style: GoogleFonts.boldonse(
-                                    fontSize: (14 * contentScale)
-                                        .clamp(11.0, 14.0),
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.white,
-                                  ),
+                                _profileField(
+                                  controller: _abnormalityController,
+                                  scale: contentScale,
+                                  hint: 'e.g. Wide Foot',
                                 ),
                                 Align(
                                   alignment: Alignment.centerRight,
@@ -691,7 +783,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Text(
       text,
       style: GoogleFonts.montserrat(
-        fontSize: (16 * scale).clamp(12.0, 16.0),
+        fontSize: (16 * scale).clamp(14.0, 16.0),
         fontWeight: FontWeight.w400,
         color: Colors.white,
       ),
@@ -704,7 +796,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     required Widget child,
   }) {
     final radius = BorderRadius.circular(100);
-    final fieldHeight = (48 * scale).clamp(40.0, 48.0);
+    final fieldHeight = (48 * scale).clamp(44.0, 48.0);
     final glassTint = readOnly
         ? Colors.white.withValues(alpha: 0.07)
         : Colors.white.withValues(alpha: 0.08);
@@ -742,7 +834,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }) {
     final radius = BorderRadius.circular(100);
     final hPad = (16 * scale).clamp(12.0, 16.0);
-    final fieldHeight = (48 * scale).clamp(40.0, 48.0);
+    final fieldHeight = (48 * scale).clamp(44.0, 48.0);
     final fontSize = (16 * scale).clamp(12.0, 16.0);
     final vPad = ((fieldHeight - fontSize) / 2).clamp(10.0, 14.0);
 
@@ -789,8 +881,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     List<TextInputFormatter>? inputFormatters,
     bool enableInteractiveSelection = true,
     double scale = 1.0,
+    String? hint,
   }) {
-    final fontSize = (16 * scale).clamp(12.0, 16.0);
+    final fontSize = (16 * scale).clamp(14.0, 16.0);
 
     return _glassFieldShell(
       scale: scale,
@@ -811,18 +904,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
           fontWeight: FontWeight.w400,
           color: const Color(0xF2FFFFFF),
         ),
-        decoration: _glassInputDecoration(scale: scale, suffixIcon: suffix),
-      ),
-    );
-  }
-
-  Widget _footMetricChip(String value, double scale) {
-    return Text(
-      value,
-      style: GoogleFonts.boldonse(
-        fontSize: (12 * scale).clamp(10.0, 12.0),
-        fontWeight: FontWeight.w400,
-        color: Colors.white,
+        decoration: _glassInputDecoration(scale: scale, suffixIcon: suffix)
+            .copyWith(
+          hintText: hint,
+          hintStyle: GoogleFonts.montserrat(
+            fontSize: fontSize,
+            color: Colors.white.withValues(alpha: 0.45),
+          ),
+        ),
       ),
     );
   }
@@ -834,8 +923,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }) {
     const teal = Color(0xFF12899B);
     const cyanBorder = Color(0xFF09DFFF);
-    final fontSize = (14 * scale).clamp(12.0, 14.0);
-    final btnHeight = (50 * scale).clamp(44.0, 52.0);
+    final fontSize = (14 * scale).clamp(13.0, 14.0);
+    final btnHeight = (AppSpacing.buttonHeight * scale).clamp(48.0, 52.0);
     final indicator = (22 * scale).clamp(18.0, 22.0);
     final minWidth = (210 * scale).clamp(170.0, 240.0);
 
@@ -852,7 +941,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           horizontal: (24 * scale).clamp(18.0, 28.0),
         ),
         minimumSize: Size(minWidth, btnHeight),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        tapTargetSize: MaterialTapTargetSize.padded,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(100),
           side: const BorderSide(color: cyanBorder, width: 1),
