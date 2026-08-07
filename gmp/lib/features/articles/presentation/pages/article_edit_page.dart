@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/widgets/app_dropdown.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/greyed_button_shell.dart';
@@ -149,7 +150,6 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
       _brandController.text.trim().isNotEmpty &&
       _resolvedColor != null &&
       _selectedSizeNumber != null &&
-      _purchaseYear != null &&
       _hasPhotos;
 
   int get _photoCount =>
@@ -313,10 +313,6 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _article == null) return;
-    if (_purchaseYear == null) {
-      setState(() => _error = 'Please select a purchase year.');
-      return;
-    }
     if (!_hasPhotos) {
       setState(() {
         _error =
@@ -629,7 +625,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
         Padding(
           padding: const EdgeInsets.only(left: 2, bottom: 6),
           child: Text(
-            'Purchased On (required)',
+            'Purchased On (optional)',
             style: const TextStyle(
               fontSize: 16,
               color: Colors.white,
@@ -663,8 +659,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
                           : () => setState(() => _purchaseYear = null),
                       style: IconButton.styleFrom(
                         padding: EdgeInsets.zero,
-                        minimumSize: const Size(24, 24),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        minimumSize: const Size(44, 44),
+                        tapTargetSize: MaterialTapTargetSize.padded,
                       ),
                     )
                   else
@@ -688,43 +684,19 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     List<Map<String, String>> items,
     ValueChanged<String?> onChanged,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-              fontFamily: _contentFontFamily,
+    return AppDropdown<String>(
+      label: label,
+      value: value,
+      enabled: !_submitting,
+      items: items
+          .map(
+            (e) => DropdownMenuItem(
+              value: e['value'],
+              child: Text(e['label']!),
             ),
-          ),
-        ),
-        _glassInputShell(
-          child: DropdownButtonFormField<String>(
-            value: value,
-            decoration: _glassInputDecoration(),
-            dropdownColor: const Color(0xFF0D5B68),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontFamily: _contentFontFamily,
-            ),
-            iconEnabledColor: Colors.white,
-            items: items
-                .map(
-                  (e) => DropdownMenuItem(
-                    value: e['value'],
-                    child: Text(e['label']!),
-                  ),
-                )
-                .toList(),
-            onChanged: _submitting ? null : onChanged,
-          ),
-        ),
-      ],
+          )
+          .toList(),
+      onChanged: onChanged,
     );
   }
 
