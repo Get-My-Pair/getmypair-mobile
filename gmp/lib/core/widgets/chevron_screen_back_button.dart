@@ -62,31 +62,39 @@ class ArticleStyleHeaderInsets {
   }
 }
 
-/// Chevron back control — same geometry as [ArticleListPage] rack header
-/// (`IconButton` constraints, `chevron-left.svg` 26×26).
+/// Chevron back control — 44×44 min tap target with a 26×26 chevron glyph.
 class ChevronScreenBackButton extends StatelessWidget {
   const ChevronScreenBackButton({
     super.key,
     required this.iconColor,
     this.onPressed,
     this.iconAssetPath = 'assets/images/chevron-left.svg',
+    this.tooltip = 'Back',
   });
 
   final Color iconColor;
   final VoidCallback? onPressed;
   final String iconAssetPath;
+  final String tooltip;
+
+  static const double iconSize = 26;
+  static const double tapTarget = 44;
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
+      tooltip: tooltip,
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+      constraints: const BoxConstraints.tightFor(
+        width: tapTarget,
+        height: tapTarget,
+      ),
+      visualDensity: VisualDensity.standard,
       onPressed: onPressed ?? () => popOrGoToDashboardHome(context),
       icon: SvgPicture.asset(
         iconAssetPath,
-        width: 26,
-        height: 26,
+        width: iconSize,
+        height: iconSize,
         colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
       ),
     );

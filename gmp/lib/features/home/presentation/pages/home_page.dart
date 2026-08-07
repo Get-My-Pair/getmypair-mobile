@@ -1599,8 +1599,12 @@ class _HomeTopCard extends StatelessWidget {
     final horizontal = Responsive.horizontalPaddingOf(context);
     final headerHorizontal = (horizontal - 2).clamp(14.0, horizontal);
     final addressLine = _addressLineForHome(currentAddress);
-    final imageBleed = (4.0 * s).clamp(2.0, 6.0);
-    final topPad = (66 * layoutScale).clamp(40.0, 76.0);
+    // home.png is a rounded card with drop-shadow on black. Bleed past that
+    // inset so teal fills the header edge-to-edge (no dark top/corner gaps).
+    final imageBleed = (width * 0.055).clamp(18.0, 36.0);
+    final statusTop = MediaQuery.paddingOf(context).top;
+    // Keep content clear of the status bar; on web (padding ≈ 0) use a tight inset.
+    final topPad = statusTop + (20 * layoutScale).clamp(14.0, 24.0);
     final bottomPad = (26 * layoutScale).clamp(16.0, 32.0);
     final searchBarH = _homeSearchBarHeight(context, s);
     const headerRadius = BorderRadius.only(
@@ -1611,7 +1615,7 @@ class _HomeTopCard extends StatelessWidget {
       borderRadius: headerRadius,
       clipBehavior: Clip.antiAlias,
       child: Stack(
-        clipBehavior: Clip.none,
+        clipBehavior: Clip.hardEdge,
         children: [
           Positioned.fill(
             child: DecoratedBox(
@@ -1630,22 +1634,23 @@ class _HomeTopCard extends StatelessWidget {
           ),
           Positioned(
             top: -imageBleed,
-            left: 0,
-            right: 0,
-            bottom: -imageBleed,
+            left: -imageBleed * 0.65,
+            right: -imageBleed * 0.65,
+            bottom: -imageBleed * 0.4,
             child: Transform.scale(
-              // Crop transparent side pixels from the header asset.
+              // Crop transparent side pixels / card corners from the header asset.
               scaleX: headerScaleX,
-              scaleY: 1.02,
-              alignment: Alignment.topCenter,
+              scaleY: 1.12,
+              alignment: Alignment.center,
               child: Image.asset(
                 _kHomeHeaderBgAsset,
                 fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
+                alignment: Alignment.center,
+                filterQuality: FilterQuality.high,
                 errorBuilder: (_, _, _) => Image.asset(
                   'assets/images/bg.png',
                   fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
+                  alignment: Alignment.center,
                 ),
               ),
             ),

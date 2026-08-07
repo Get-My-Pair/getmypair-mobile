@@ -205,6 +205,7 @@ class AppTheme {
       disabledForegroundColor: AppColors.surface,
       elevation: 0,
       padding: padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      minimumSize: const Size(48, 52),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
       ),
@@ -276,6 +277,8 @@ class AppTheme {
     return IconButtonThemeData(
       style: IconButton.styleFrom(
         foregroundColor: AppColors.primaryDark,
+        minimumSize: const Size(44, 44),
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
     );
   }
