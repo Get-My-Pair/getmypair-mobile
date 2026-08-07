@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/chevron_screen_back_button.dart';
+import 'package:gmp/features/articles/data/footwear_orientation_detector.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_angle_overlay.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -139,6 +141,18 @@ class _FootwearCameraCapturePageState extends State<FootwearCameraCapturePage> {
       final xFile = await controller.takePicture();
       final file = await _persistCapture(xFile);
       if (file == null || !mounted) return;
+
+      final orientation = await FootwearOrientationDetector.detect(file);
+      if (!mounted) return;
+      if (!orientation.isRightFacing) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(FootwearOrientationDetector.wrongSideMessage),
+          ),
+        );
+        return;
+      }
+
       await _reviewCapture(file);
     } catch (e) {
       if (mounted) {
@@ -261,7 +275,23 @@ class _FootwearCameraCapturePageState extends State<FootwearCameraCapturePage> {
       );
       return;
     }
-    Navigator.pop(context, files.take(_maxCaptures).toList());
+
+    final accepted = <File>[];
+    for (final file in files.take(_maxCaptures)) {
+      final orientation = await FootwearOrientationDetector.detect(file);
+      if (!orientation.isRightFacing) continue;
+      accepted.add(file);
+    }
+    if (!mounted) return;
+    if (accepted.length < _minCaptures) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(FootwearOrientationDetector.wrongSideMessage),
+        ),
+      );
+      return;
+    }
+    Navigator.pop(context, accepted);
   }
 
   @override
@@ -291,6 +321,7 @@ class _FootwearCameraCapturePageState extends State<FootwearCameraCapturePage> {
               ),
             ),
           if (!_initializing && _error == null) ...[
+            // Keep original side-profile guide UI
             FootwearAngleOverlay(
               angleLabel: _acceptedCount >= _maxCaptures
                   ? 'Maximum photos captured'
@@ -299,6 +330,22 @@ class _FootwearCameraCapturePageState extends State<FootwearCameraCapturePage> {
               shoeGuideOpacity: 0.9,
               showShoeGuide: true,
             ),
+            // Red/green rails + R watermark layered on top of existing UI
+            Positioned.fill(
+              child: IgnorePointer(
+                child: FootwearScannerOverlay(
+                  showShoeGuide: false,
+                  showScanLine: false,
+                  showDashedFrame: false,
+                  showCorners: false,
+                  showVignette: false,
+                  showAlignmentRails: true,
+                  showRightWatermark: true,
+                  captureReady: false,
+                  misaligned: false,
+                ),
+              ),
+            ),
             SafeArea(
               child: Column(
                 children: [
@@ -306,17 +353,9 @@ class _FootwearCameraCapturePageState extends State<FootwearCameraCapturePage> {
                     padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 0),
                     child: Row(
                       children: [
-                        IconButton(
+                        ChevronScreenBackButton(
+                          iconColor: Colors.white,
                           onPressed: () => Navigator.pop(context),
-                          icon: SvgPicture.asset(
-                            'assets/images/chevron-left.svg',
-                            width: 26,
-                            height: 26,
-                            colorFilter: const ColorFilter.mode(
-                              Colors.white,
-                              BlendMode.srcIn,
-                            ),
-                          ),
                         ),
                         Expanded(
                           child: Text(

@@ -3,16 +3,17 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/chevron_screen_back_button.dart';
 import 'package:gmp/features/articles/data/footwear_background_remover.dart';
 import 'package:gmp/features/articles/data/footwear_image_validator.dart';
 import 'package:gmp/features/articles/data/footwear_live_scanner.dart';
 import 'package:gmp/features/articles/data/footwear_orientation_detector.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -672,6 +673,37 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     );
   }
 
+  Future<void> _onBackPressed() async {
+    if (_validatingImage || _capturing) return;
+    if (_images.isEmpty) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Discard captures?'),
+        content: const Text(
+          'Going back will keep your current photos only if you confirm. '
+          'You can also remove individual shots with × before leaving.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    if (leave == true && mounted) {
+      Navigator.pop(context, List<File>.from(_images));
+    }
+  }
+
   /// Figma header: back + title row, then 2-line subtitle (wraps, no clip).
   Widget _headerSection() {
     final subtitleSize = Responsive.fontSize(context, 14).clamp(12.0, 14.0);
@@ -685,21 +717,9 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints.tightFor(width: 26, height: 26),
-                visualDensity: VisualDensity.compact,
-                onPressed: () => Navigator.pop(context),
-                icon: SvgPicture.asset(
-                  'assets/images/chevron-left.svg',
-                  width: 26,
-                  height: 26,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
+              ChevronScreenBackButton(
+                iconColor: Colors.white,
+                onPressed: _onBackPressed,
               ),
               const SizedBox(width: 7),
               Expanded(
@@ -715,6 +735,20 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
                   ),
                 ),
               ),
+              if (_images.isNotEmpty)
+                TextButton(
+                  onPressed: _validatingImage
+                      ? null
+                      : () => _removeImage(_images.length - 1),
+                  child: Text(
+                    'Undo last',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -896,6 +930,9 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
   }
 
   Widget _cameraPreviewStack() {
+    final captureReady = _scanStatus == FootwearScanStatus.footwearDetected;
+    final misaligned = _scanStatus == FootwearScanStatus.notFootwear;
+
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.hardEdge,
@@ -906,11 +943,29 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
             child: _liveCameraPreview(),
           ),
         ),
+        // Original Figma shoe guide UI
         Positioned.fill(
           child: IgnorePointer(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: _cameraShoeGuideOverlay(),
+            ),
+          ),
+        ),
+        // Red / green alignment rails + R watermark (layered on existing UI)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: FootwearScannerOverlay(
+                captureReady: captureReady,
+                misaligned: misaligned,
+                showRightWatermark: true,
+                showShoeGuide: false,
+                showScanLine: false,
+                showDashedFrame: false,
+                showCorners: false,
+              ),
             ),
           ),
         ),
