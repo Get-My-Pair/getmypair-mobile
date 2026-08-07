@@ -38,10 +38,11 @@ class FootwearOrientationDetector {
   static const double _margin = 0.06;
 
   static Future<FootwearOrientationResult> detect(File file) async {
+    // Only clear right-facing profiles are accepted — unknowns are rejected.
     if (!file.existsSync()) {
       return const FootwearOrientationResult(
         facing: FootwearFacing.unknown,
-        isRightFacing: true,
+        isRightFacing: false,
       );
     }
     try {
@@ -51,7 +52,7 @@ class FootwearOrientationDetector {
       debugPrint('FootwearOrientationDetector: $e');
       return const FootwearOrientationResult(
         facing: FootwearFacing.unknown,
-        isRightFacing: true,
+        isRightFacing: false,
       );
     }
   }
@@ -59,7 +60,7 @@ class FootwearOrientationDetector {
   static FootwearOrientationResult _analyze(Uint8List bytes) {
     const unknown = FootwearOrientationResult(
       facing: FootwearFacing.unknown,
-      isRightFacing: true,
+      isRightFacing: false,
     );
 
     final image = img.decodeImage(bytes);
