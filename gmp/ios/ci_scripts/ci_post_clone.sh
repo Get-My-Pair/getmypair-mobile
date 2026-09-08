@@ -10,10 +10,17 @@ export PATH="$PATH:$FLUTTER_ROOT/bin"
 flutter doctor
 
 cd "$PROJECT_ROOT"
+
+# Force a fully clean state — remove anything that could be stale
+# from a previous Xcode Cloud build cache
+rm -rf ios/Pods
+rm -rf ios/.symlinks
+rm -rf ios/Podfile.lock
+rm -rf .dart_tool
+rm -rf build
+
+flutter clean
 flutter precache --ios
 flutter pub get
-
-# Do NOT run pod install manually — flutter build handles CocoaPods internally,
-# exactly like it does on a local machine.
 
 flutter build ios --release --no-codesign
