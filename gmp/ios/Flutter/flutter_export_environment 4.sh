@@ -1,0 +1,15 @@
+#!/bin/sh
+# This is a generated file; do not edit or check into version control.
+export "FLUTTER_ROOT=/Users/pranjalprasun/flutter"
+export "FLUTTER_APPLICATION_PATH=/Users/pranjalprasun/Documents/Development/getmypair-mobile-dev/gmp"
+export "FLUTTER_FRAMEWORK_SWIFT_PACKAGE_PATH=/Users/pranjalprasun/Documents/Development/getmypair-mobile-dev/gmp/ios/Flutter/ephemeral/Packages/.packages/FlutterFramework"
+export "COCOAPODS_PARALLEL_CODE_SIGN=true"
+export "FLUTTER_TARGET=lib/main.dart"
+export "FLUTTER_BUILD_DIR=build"
+export "FLUTTER_BUILD_NAME=2.1.0"
+export "FLUTTER_BUILD_NUMBER=6"
+export "DART_DEFINES=RkxVVFRFUl9WRVJTSU9OPTMuNDQuOQ==,RkxVVFRFUl9DSEFOTkVMPXN0YWJsZQ==,RkxVVFRFUl9HSVRfVVJMPWh0dHBzOi8vZ2l0aHViLmNvbS9mbHV0dGVyL2ZsdXR0ZXIuZ2l0,RkxVVFRFUl9GUkFNRVdPUktfUkVWSVNJT049NmIxODJkMmM3NQ==,RkxVVFRFUl9FTkdJTkVfUkVWSVNJT049NWEyYTZhNDJjYw==,RkxVVFRFUl9EQVJUX1ZFUlNJT049My4xMi4y"
+export "DART_OBFUSCATION=false"
+export "TRACK_WIDGET_CREATION=false"
+export "TREE_SHAKE_ICONS=true"
+export "PACKAGE_CONFIG=/Users/pranjalprasun/Documents/Development/getmypair-mobile-dev/gmp/.dart_tool/package_config.json"
