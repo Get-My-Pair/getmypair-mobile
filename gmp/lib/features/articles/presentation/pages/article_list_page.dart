@@ -217,22 +217,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: _rackTealPrimary),
-          const SizedBox(height: 16),
-          Text(
-            'Loading your rack...',
-            style: GoogleFonts.montserrat(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const _RackGridSkeleton();
   }
 
   Widget _buildError() {
@@ -839,6 +824,91 @@ class _FilterChipPill extends StatelessWidget {
   }
 }
 
+/// Soft rack grid placeholder while articles API loads (no circular spinner).
+class _RackGridSkeleton extends StatefulWidget {
+  const _RackGridSkeleton();
+
+  @override
+  State<_RackGridSkeleton> createState() => _RackGridSkeletonState();
+}
+
+class _RackGridSkeletonState extends State<_RackGridSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final hPad = (12.0 * uiScale).clamp(10.0, 20.0);
+    final gap = (10.0 * uiScale).clamp(8.0, 14.0);
+
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.4, end: 0.85).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 16),
+        child: Column(
+          children: [
+            for (var row = 0; row < 2; row++) ...[
+              if (row > 0) SizedBox(height: gap),
+              Expanded(
+                child: Row(
+                  children: [
+                    for (var col = 0; col < 3; col++) ...[
+                      if (col > 0) SizedBox(width: gap),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFB7C9CE),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              height: 10,
+                              width: double.infinity,
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFB7C9CE),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /*
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1166,22 +1236,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildLoading(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: _rackTealPrimary),
-          const SizedBox(height: 16),
-          Text(
-            'Loading your rack…',
-            style: GoogleFonts.montserrat(
-              fontSize: Responsive.fontSize(context, 14),
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const _RackGridSkeleton();
   }
 
   Widget _buildError(BuildContext context) {

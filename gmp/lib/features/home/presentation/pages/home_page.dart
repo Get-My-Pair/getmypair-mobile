@@ -24,15 +24,17 @@ import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../profile/presentation/utils/user_notifications.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
+import '../../../profile/presentation/pages/saved_addresses_page.dart';
+import '../../../profile/domain/entities/address.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'select_location_page.dart';
 import '../../../articles/domain/entities/article.dart';
 import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
 
 /// Header copy on teal gradient — white for legibility (avoid washed-out light gray).
@@ -327,6 +329,12 @@ class _HomePageState extends State<HomePage> {
   AddressParts? _detectedLocationParts;
   bool _locationSavePromptHandled = false;
 
+  /// Home header stats — filled only from API (articles + service requests).
+  bool _statsLoading = true;
+  int _pairsDonated = 0;
+  int _pairsSold = 0;
+  int _pairsInCare = 0;
+
   static String _formatPlacemarkForHomeHeader(Placemark p) {
     final subLocality = p.subLocality?.trim();
     final locality = p.locality?.trim();
@@ -357,6 +365,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadRackPreview();
+    _loadHomeStats();
     _getCurrentLocation();
     // If we ever show coords (e.g. from map), convert to address on load
     if (_looksLikeLatLong(_currentAddress)) {
@@ -457,6 +466,13 @@ class _HomePageState extends State<HomePage> {
         userProfileFromProfileState(context.read<ProfileBloc>().state);
     if (profile == null) return;
 
+    // Already have saved location data — use it and never prompt again on open.
+    if (profile.addresses.isNotEmpty) {
+      _locationSavePromptHandled = true;
+      _applySavedAddressToHeader();
+      return;
+    }
+
     _locationSavePromptHandled = true;
 
     final tokenResult = await sl<GetValidAccessToken>().call();
@@ -469,6 +485,7 @@ class _HomePageState extends State<HomePage> {
         accessToken: token,
         parts: _detectedLocationParts!,
         addresses: profile.addresses,
+        promptOnlyWhenEmpty: true,
       ),
     );
   }
@@ -550,9 +567,150 @@ class _HomePageState extends State<HomePage> {
   }
 
   String get _pairsInRackDisplay {
-    if (_rackLoading && _rackArticles == null) return '—';
     final n = _rackArticles?.length ?? 0;
     return n.toString().padLeft(2, '0');
+  }
+
+  bool get _pairsInRackLoading => _rackLoading && _rackArticles == null;
+
+  String get _pairsDonatedDisplay {
+    return _pairsDonated.toString().padLeft(2, '0');
+  }
+
+  String get _pairsSoldDisplay {
+    return _pairsSold.toString().padLeft(2, '0');
+  }
+
+  String get _pairsInCareDisplay {
+    return _pairsInCare.toString().padLeft(2, '0');
+  }
+
+  static String _formatAddressForHeader(Address address) {
+    final parts = [
+      address.addressLine1.trim(),
+      address.city.trim(),
+      address.state.trim(),
+      address.pincode.trim(),
+    ].where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '';
+    return '📍 ${parts.join(', ')}';
+  }
+
+  void _applySavedAddressToHeader() {
+    final profile =
+        userProfileFromProfileState(context.read<ProfileBloc>().state);
+    final addresses = profile?.addresses ?? const <Address>[];
+    if (addresses.isEmpty) return;
+    final text = _formatAddressForHeader(addresses.first);
+    if (text.isEmpty) return;
+    setState(() => _currentAddress = text);
+  }
+
+  Future<void> _openSavedLocationPage() async {
+    final profile =
+        userProfileFromProfileState(context.read<ProfileBloc>().state);
+    if (profile == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading profile… try again in a moment.')),
+      );
+      return;
+    }
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in again to edit location.')),
+        );
+      },
+      (token) async {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider.value(
+              value: context.read<ProfileBloc>(),
+              child: SavedAddressesPage(
+                profile: profile,
+                accessToken: token,
+              ),
+            ),
+          ),
+        );
+        if (!mounted) return;
+        _applySavedAddressToHeader();
+      },
+    );
+  }
+
+  Future<void> _loadHomeStats() async {
+    setState(() => _statsLoading = true);
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        setState(() {
+          _pairsDonated = 0;
+          _pairsSold = 0;
+          _pairsInCare = 0;
+          _statsLoading = false;
+        });
+      },
+      (token) async {
+        try {
+          final res = await sl<DioClient>().get(
+            ApiEndpoints.serviceMy,
+            accessToken: token,
+          );
+          final list =
+              ((res['data'] as Map<String, dynamic>?)?['requests'] as List?) ??
+                  const [];
+          var donated = 0;
+          var sold = 0;
+          var inCare = 0;
+          for (final raw in list) {
+            if (raw is! Map) continue;
+            final type =
+                (raw['serviceType'] ?? '').toString().trim().toLowerCase();
+            final status =
+                (raw['status'] ?? '').toString().trim().toLowerCase();
+            final cancelled = status == 'cancelled' || status == 'canceled';
+            if (cancelled) continue;
+
+            if (type == 'donate') {
+              donated++;
+            } else if (type == 'sell' ||
+                type == 'sold' ||
+                type == 'rehome' ||
+                type == 'dispose') {
+              // Dispose / sell / rehome requests count toward "Pairs Sold".
+              sold++;
+            } else if (type == 'repair' ||
+                type == 'wash' ||
+                type == 'maintenance' ||
+                type == 'maintain') {
+              if (status != 'completed') {
+                inCare++;
+              }
+            }
+          }
+          if (!mounted) return;
+          setState(() {
+            _pairsDonated = donated;
+            _pairsSold = sold;
+            _pairsInCare = inCare;
+            _statsLoading = false;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _pairsDonated = 0;
+            _pairsSold = 0;
+            _pairsInCare = 0;
+            _statsLoading = false;
+          });
+        }
+      },
+    );
   }
 
   void _openArticleList() {
@@ -561,7 +719,10 @@ class _HomePageState extends State<HomePage> {
           MaterialPageRoute<void>(builder: (_) => const ArticleListPage()),
         )
         .then((_) {
-          if (mounted) _loadRackPreview();
+          if (mounted) {
+            _loadRackPreview();
+            _loadHomeStats();
+          }
         });
   }
 
@@ -576,7 +737,10 @@ class _HomePageState extends State<HomePage> {
           ),
         )
         .then((_) {
-          if (mounted) _loadRackPreview();
+          if (mounted) {
+            _loadRackPreview();
+            _loadHomeStats();
+          }
         });
   }
 
@@ -630,45 +794,13 @@ class _HomePageState extends State<HomePage> {
                                   userName: userName,
                                   currentAddress: _currentAddress,
                                   pairsInRackDisplay: _pairsInRackDisplay,
+                                  pairsDonatedDisplay: _pairsDonatedDisplay,
+                                  pairsSoldDisplay: _pairsSoldDisplay,
+                                  pairsInCareDisplay: _pairsInCareDisplay,
+                                  statsLoading: _statsLoading,
+                                  pairsInRackLoading: _pairsInRackLoading,
                                   layoutScale: layoutScale,
-                                  onLocationTap: () async {
-                                    final profile = userProfileFromProfileState(
-                                      context.read<ProfileBloc>().state,
-                                    );
-                                    final authState = context
-                                        .read<AuthBloc>()
-                                        .state;
-                                    final selected = await Navigator.of(context)
-                                        .push<String>(
-                                          MaterialPageRoute(
-                                            builder: (_) => SelectLocationPage(
-                                              profileBloc: context
-                                                  .read<ProfileBloc>(),
-                                              initialAddress: _currentAddress,
-                                              mapPinDisplayName:
-                                                  mapPinDisplayNameFrom(
-                                                    profile,
-                                                    authState,
-                                                  ),
-                                              mapPinProfileImageRef:
-                                                  profile?.profileImage,
-                                            ),
-                                          ),
-                                        );
-                                    if (selected != null && mounted) {
-                                      final addressText =
-                                          _looksLikeLatLong(selected)
-                                          ? await _latLongToAddress(selected)
-                                          : selected.startsWith('📍')
-                                          ? selected
-                                          : '📍 $selected';
-                                      if (mounted) {
-                                        setState(
-                                          () => _currentAddress = addressText,
-                                        );
-                                      }
-                                    }
-                                  },
+                                  onLocationTap: _openSavedLocationPage,
                               ),
                               Expanded(
                                 child: Padding(
@@ -860,21 +992,7 @@ class _HomePageState extends State<HomePage> {
                                                             child: _rackLoading &&
                                                                   _rackArticles ==
                                                                       null
-                                                              ? Center(
-                                                                  child: SizedBox(
-                                                                    width: 24 *
-                                                                        rackContentScale,
-                                                                    height: 24 *
-                                                                        rackContentScale,
-                                                                    child:
-                                                                        CircularProgressIndicator(
-                                                                      strokeWidth:
-                                                                          2,
-                                                                      color: AppColors
-                                                                          .primary,
-                                                                    ),
-                                                                  ),
-                                                                )
+                                                              ? const _RackThumbSkeleton()
                                                               : _rackError !=
                                                                       null
                                                                   ? Center(
@@ -966,12 +1084,16 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                               cellHeight: equalBlockH,
                                               onTap: () =>
-                                                  Navigator.of(context).push(
+                                                  Navigator.of(context)
+                                                      .push(
                                                 MaterialPageRoute(
                                                   builder: (_) =>
                                                       const CareMyPairPage(),
                                                 ),
-                                              ),
+                                              )
+                                                      .then((_) {
+                                                if (mounted) _loadHomeStats();
+                                              }),
                                             ),
                                           ),
                                           SizedBox(height: careSectionGap),
@@ -1069,12 +1191,18 @@ class _HomePageState extends State<HomePage> {
                                                         labelFontSize:
                                                             pairLabelSize,
                                                         onTap: () =>
-                                                            Navigator.of(context).push(
+                                                            Navigator.of(context)
+                                                                .push(
                                                           MaterialPageRoute<void>(
                                                             builder: (_) =>
                                                                 const RehomeMyPairPage(),
                                                           ),
-                                                        ),
+                                                        )
+                                                                .then((_) {
+                                                          if (mounted) {
+                                                            _loadHomeStats();
+                                                          }
+                                                        }),
                                                       ),
                                                     ),
                                                   ],
@@ -1560,6 +1688,11 @@ class _HomeTopCard extends StatelessWidget {
   final String userName;
   final String currentAddress;
   final String pairsInRackDisplay;
+  final String pairsDonatedDisplay;
+  final String pairsSoldDisplay;
+  final String pairsInCareDisplay;
+  final bool statsLoading;
+  final bool pairsInRackLoading;
   final Future<void> Function() onLocationTap;
   final double layoutScale;
 
@@ -1567,6 +1700,11 @@ class _HomeTopCard extends StatelessWidget {
     required this.userName,
     required this.currentAddress,
     required this.pairsInRackDisplay,
+    required this.pairsDonatedDisplay,
+    required this.pairsSoldDisplay,
+    required this.pairsInCareDisplay,
+    required this.statsLoading,
+    required this.pairsInRackLoading,
     required this.onLocationTap,
     this.layoutScale = 1.0,
   });
@@ -1866,6 +2004,7 @@ class _HomeTopCard extends StatelessWidget {
                               value: pairsInRackDisplay,
                               labelLine1: 'Pairs in',
                               labelLine2: 'your rack',
+                              loading: pairsInRackLoading,
                             ),
                           ),
                         ),
@@ -1874,10 +2013,11 @@ class _HomeTopCard extends StatelessWidget {
                             padding: EdgeInsets.symmetric(
                               horizontal: (5 * s).clamp(3.0, 8.0),
                             ),
-                            child: const _StatItem(
-                              value: '05',
+                            child: _StatItem(
+                              value: pairsDonatedDisplay,
                               labelLine1: 'Pairs',
                               labelLine2: 'Donated',
+                              loading: statsLoading,
                             ),
                           ),
                         ),
@@ -1886,10 +2026,11 @@ class _HomeTopCard extends StatelessWidget {
                             padding: EdgeInsets.symmetric(
                               horizontal: (5 * s).clamp(3.0, 8.0),
                             ),
-                            child: const _StatItem(
-                              value: '00',
+                            child: _StatItem(
+                              value: pairsSoldDisplay,
                               labelLine1: 'Pairs',
                               labelLine2: 'Sold',
+                              loading: statsLoading,
                             ),
                           ),
                         ),
@@ -1898,10 +2039,11 @@ class _HomeTopCard extends StatelessWidget {
                             padding: EdgeInsets.only(
                               left: (5 * s).clamp(3.0, 8.0),
                             ),
-                            child: const _StatItem(
-                              value: '02',
+                            child: _StatItem(
+                              value: pairsInCareDisplay,
                               labelLine1: 'Pairs in',
                               labelLine2: 'Care',
+                              loading: statsLoading,
                             ),
                           ),
                         ),
@@ -1922,11 +2064,13 @@ class _StatItem extends StatelessWidget {
   final String value;
   final String labelLine1;
   final String labelLine2;
+  final bool loading;
 
   const _StatItem({
     required this.value,
     required this.labelLine1,
     required this.labelLine2,
+    this.loading = false,
   });
 
   @override
@@ -1952,16 +2096,24 @@ class _StatItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  value,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.boldonse(
-                    fontSize: valueSize,
-                    fontWeight: FontWeight.w400,
-                    color: _kOnHeaderText,
-                    height: 1,
+                if (loading)
+                  _HomeSkeletonBone(
+                    width: (valueSize * 1.35).clamp(28.0, 40.0),
+                    height: valueSize * 0.85,
+                    radius: 6,
+                    color: Colors.white.withValues(alpha: 0.28),
+                  )
+                else
+                  Text(
+                    value,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.boldonse(
+                      fontSize: valueSize,
+                      fontWeight: FontWeight.w400,
+                      color: _kOnHeaderText,
+                      height: 1,
+                    ),
                   ),
-                ),
                 SizedBox(height: (7 * s).clamp(4.0, 10.0)),
                 Text(
                   labelLine1,
@@ -1979,6 +2131,94 @@ class _StatItem extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Soft pulsing placeholder used instead of circular loaders while API data loads.
+class _HomeSkeletonBone extends StatefulWidget {
+  final double width;
+  final double height;
+  final double radius;
+  final Color color;
+
+  const _HomeSkeletonBone({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+    this.color = const Color(0xFFB7C9CE),
+  });
+
+  @override
+  State<_HomeSkeletonBone> createState() => _HomeSkeletonBoneState();
+}
+
+class _HomeSkeletonBoneState extends State<_HomeSkeletonBone>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.35, end: 0.85).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      ),
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: widget.color,
+          borderRadius: BorderRadius.circular(widget.radius),
+        ),
+      ),
+    );
+  }
+}
+
+/// My Rack preview skeleton — matches thumb strip layout (no spinner).
+class _RackThumbSkeleton extends StatelessWidget {
+  const _RackThumbSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final gap = (constraints.maxWidth * 0.04).clamp(8.0, 14.0);
+        final thumbW =
+            ((constraints.maxWidth - (gap * 2)) / 3).clamp(48.0, 120.0);
+        final thumbH = constraints.maxHeight.clamp(40.0, 96.0);
+        return Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < 3; i++) ...[
+                if (i > 0) SizedBox(width: gap),
+                _HomeSkeletonBone(
+                  width: thumbW,
+                  height: thumbH,
+                  radius: 10,
+                  color: const Color(0xFFB7C9CE),
+                ),
+              ],
+            ],
           ),
         );
       },

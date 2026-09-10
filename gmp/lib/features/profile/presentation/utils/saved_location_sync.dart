@@ -176,12 +176,16 @@ abstract final class SavedLocationSync {
   }
 
   /// Returns `true` if the user chose to save or update (or data was already up to date).
+  ///
+  /// When [promptOnlyWhenEmpty] is true (home open), only asks if there are no
+  /// saved addresses — never prompts again once location data exists.
   static Future<bool> maybePersist({
     required BuildContext context,
     required ProfileBloc profileBloc,
     required String accessToken,
     required AddressParts parts,
     List<Address>? addresses,
+    bool promptOnlyWhenEmpty = false,
   }) async {
     if (accessToken.isEmpty) return false;
     if (parts.addressLine1.trim().isEmpty && parts.city.trim().isEmpty) {
@@ -190,6 +194,12 @@ abstract final class SavedLocationSync {
 
     final resolvedAddresses =
         addresses ?? userProfileFromProfileState(profileBloc.state)?.addresses ?? [];
+
+    // Home open / auto-detect: skip entirely if user already has location data.
+    if (promptOnlyWhenEmpty && resolvedAddresses.isNotEmpty) {
+      return false;
+    }
+
     final existing = findMatchingAddress(resolvedAddresses, parts);
 
     if (existing != null && _keyFromAddress(existing) == _keyFromParts(parts)) {
@@ -201,6 +211,9 @@ abstract final class SavedLocationSync {
     final preview = parts.preview;
     final bool? confirmed;
     if (existing != null) {
+      // Auto-open flow should not nag to replace existing addresses.
+      if (promptOnlyWhenEmpty) return false;
+
       confirmed = await _showDialog(
         context: context,
         title: 'Update saved location?',

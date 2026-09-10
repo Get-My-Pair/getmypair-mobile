@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
@@ -32,16 +33,139 @@ class SavedAddressesPage extends StatefulWidget {
   State<SavedAddressesPage> createState() => _SavedAddressesPageState();
 }
 
-class _SavedAddressesPageState extends State<SavedAddressesPage> {
+class _SavedAddressesPageState extends State<SavedAddressesPage>
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _showAllAddresses = false;
 
+  /// Real phone GPS + app permission status (not a dummy toggle).
+  bool _deviceLocationOn = false;
+  bool _checkingDeviceLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshDeviceLocationStatus();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshDeviceLocationStatus();
+    }
+  }
+
+  Future<void> _refreshDeviceLocationStatus() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final permission = await Geolocator.checkPermission();
+      final granted = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+      if (!mounted) return;
+      setState(() {
+        _deviceLocationOn = serviceEnabled && granted;
+        _checkingDeviceLocation = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _deviceLocationOn = false;
+        _checkingDeviceLocation = false;
+      });
+    }
+  }
+
+  Future<void> _onDeviceLocationTap() async {
+    if (_checkingDeviceLocation) return;
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      var permission = await Geolocator.checkPermission();
+      final granted = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+
+      // Already on — open phone location settings so user can turn GPS off.
+      if (serviceEnabled && granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Location is on. Use phone settings to turn it off.',
+            ),
+          ),
+        );
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      // Device GPS / location services off → open system settings.
+      if (!serviceEnabled) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Turn on Location in your phone settings.'),
+          ),
+        );
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      // Services on but app permission missing.
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location permission is required to continue.'),
+          ),
+        );
+        await _refreshDeviceLocationStatus();
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Allow location for GetMyPair in app settings.',
+            ),
+          ),
+        );
+        await Geolocator.openAppSettings();
+        return;
+      }
+
+      await _refreshDeviceLocationStatus();
+      if (!mounted) return;
+      if (_deviceLocationOn) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location is on.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -70,6 +194,12 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
         final visibleAddresses = _showAllAddresses
             ? allAddresses
             : allAddresses.take(2).toList(growable: false);
+
+        final locationLabel = _checkingDeviceLocation
+            ? 'Checking…'
+            : _deviceLocationOn
+                ? 'Location On'
+                : 'Turn on Location';
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: kProfileGradientHeaderSystemUi,
@@ -138,13 +268,14 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                               children: [
                                 Expanded(
                                   child: _ActionCard(
-                                    iconAsset:
-                                        'assets/images/icons/profile/toggle-left.svg',
-                                    label: 'Turn on Location',
-                                    onTap: () => showComingSoon(
-                                      context,
-                                      feature: 'Turn on location',
-                                    ),
+                                    icon: _deviceLocationOn
+                                        ? Icons.location_on_rounded
+                                        : Icons.location_off_rounded,
+                                    label: locationLabel,
+                                    highlighted: _deviceLocationOn,
+                                    onTap: _checkingDeviceLocation
+                                        ? null
+                                        : _onDeviceLocationTap,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -364,15 +495,19 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
 }
 
 class _ActionCard extends StatelessWidget {
-  final String iconAsset;
+  final String? iconAsset;
+  final IconData? icon;
   final String label;
   final VoidCallback? onTap;
+  final bool highlighted;
 
   const _ActionCard({
-    required this.iconAsset,
+    this.iconAsset,
+    this.icon,
     required this.label,
     required this.onTap,
-  });
+    this.highlighted = false,
+  }) : assert(iconAsset != null || icon != null);
 
   @override
   Widget build(BuildContext context) {
@@ -382,24 +517,33 @@ class _ActionCard extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 74),
         decoration: BoxDecoration(
-          color: const Color(0x33D9D9D9),
+          color: highlighted
+              ? const Color(0x550F6876)
+              : const Color(0x33D9D9D9),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+          border: Border.all(
+            color: highlighted
+                ? const Color(0xFF7FD4E0)
+                : Colors.white.withValues(alpha: 0.28),
+          ),
         ),
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SvgPicture.asset(
-              iconAsset,
-              width: 20,
-              height: 20,
-              colorFilter: const ColorFilter.mode(
-                Colors.white,
-                BlendMode.srcIn,
+            if (icon != null)
+              Icon(icon, size: 20, color: Colors.white)
+            else
+              SvgPicture.asset(
+                iconAsset!,
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
               ),
-            ),
             const SizedBox(height: 6),
             Text(
               label,
