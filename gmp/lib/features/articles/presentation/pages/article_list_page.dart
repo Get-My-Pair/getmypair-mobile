@@ -12,6 +12,7 @@ import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
+import '../../../home/presentation/pages/chatbot_page.dart';
 import '../../../service/presentation/pages/service_selection_page.dart';
 import 'article_create_page.dart';
 import 'article_details_page.dart';
@@ -423,7 +424,58 @@ class _ArticleListPageState extends State<ArticleListPage> {
               ),
             ),
           ),
-        SizedBox(height: (28.0 * uiScale).clamp(20.0, 36.0)),
+        SizedBox(height: (14.0 * uiScale).clamp(12.0, 18.0)),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: headerHInset),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ChatbotPage(),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              decoration: ShapeDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment(1.00, 0.50),
+                  end: Alignment(0.00, 0.50),
+                  colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/Group.svg',
+                    width: 22,
+                    height: 24,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Style Me',
+                    style: GoogleFonts.boldonse(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: (14.0 * uiScale).clamp(12.0, 18.0)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: headerHInset),
           child: Container(
@@ -1437,28 +1489,37 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 },
                 borderRadius: BorderRadius.circular(100),
                 child: Ink(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: ShapeDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [Color(0xFF063239), Color(0xFF0CADC5)],
+                  width: double.infinity,
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  decoration: const ShapeDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment(1.00, 0.50),
+                      end: Alignment(0.00, 0.50),
+                      colors: [Color(0xFF0CADC5), Color(0xFF063239)],
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
+                      borderRadius: BorderRadius.all(Radius.circular(100)),
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.star_outline_rounded, color: Colors.white, size: 24),
+                      SvgPicture.asset(
+                        'assets/images/Group.svg',
+                        width: 22,
+                        height: 24,
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
+                        ),
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         'Style Me',
                         style: GoogleFonts.boldonse(
                           color: Colors.white,
-                          fontSize: Responsive.fontSize(context, 16),
+                          fontSize: 16,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
