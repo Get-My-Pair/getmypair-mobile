@@ -802,7 +802,7 @@ class _RackRow extends StatelessWidget {
         decoration: const BoxDecoration(
           color: _kRackCardBgHome,
           border: Border(
-            bottom: BorderSide(color: _kRackCardBorderHome, width: 3),
+            bottom: BorderSide(color: _kRackCardBorderHome, width: 1),
           ),
           borderRadius: _kRackShelfBorderRadius,
         ),

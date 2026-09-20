@@ -974,7 +974,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       child: _gradientPillButton(
                         label: 'Rehome',
                         height: hButtons,
-                        fontSize: (14 * scale).clamp(12.0, 15.0),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => const RehomeMyPairPage(),
@@ -987,7 +986,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       child: _outlinedPillButton(
                         label: 'Rent',
                         height: hButtons,
-                        fontSize: (14 * scale).clamp(12.0, 15.0),
                         onTap: () => showComingSoon(
                           context,
                           feature: 'Rent',
@@ -1072,26 +1070,24 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     required String label,
     required VoidCallback onTap,
     required double height,
-    required double fontSize,
   }) {
-    final radius = height / 2;
+    const radius = BorderRadius.all(Radius.circular(10));
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: radius,
         child: Ink(
           height: height,
-          decoration: ShapeDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment(1, 0.5),
-              end: Alignment(0, 0.5),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          decoration: const ShapeDecoration(
+            gradient: LinearGradient(
+              begin: Alignment(1.00, 0.50),
+              end: Alignment(0.00, 0.50),
               colors: [Color(0xFF0CADC5), Color(0xFF063239)],
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(radius),
-            ),
-            shadows: const [
+            shape: RoundedRectangleBorder(borderRadius: radius),
+            shadows: [
               BoxShadow(
                 color: Color(0x19000000),
                 blurRadius: 4,
@@ -1104,7 +1100,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
               label,
               style: GoogleFonts.boldonse(
                 color: Colors.white,
-                fontSize: fontSize,
+                fontSize: 16,
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -1118,22 +1114,23 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     required String label,
     required VoidCallback onTap,
     required double height,
-    required double fontSize,
   }) {
-    final radius = height / 2;
+    const radius = BorderRadius.all(Radius.circular(10));
     return Material(
-      color: const Color(0xFFDFE7E9),
-      borderRadius: BorderRadius.circular(radius),
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: Container(
+        borderRadius: radius,
+        child: Ink(
           height: height,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(color: const Color(0xFF0F6876)),
-            boxShadow: const [
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          decoration: const ShapeDecoration(
+            color: Color(0xFFDFE7E9),
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(color: Color(0xFF0F6876)),
+            ),
+            shadows: [
               BoxShadow(
                 color: Color(0x19000000),
                 blurRadius: 4,
@@ -1141,12 +1138,14 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
               ),
             ],
           ),
-          child: Text(
-            label,
-            style: GoogleFonts.boldonse(
-              color: const Color(0xFF062F35),
-              fontSize: fontSize,
-              fontWeight: FontWeight.w400,
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.boldonse(
+                color: Color(0xFF062F35),
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ),
         ),
