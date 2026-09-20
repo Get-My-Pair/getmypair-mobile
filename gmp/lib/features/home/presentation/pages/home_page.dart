@@ -36,6 +36,7 @@ import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
+import 'chatbot_page.dart';
 
 /// Header copy on teal gradient — white for legibility (avoid washed-out light gray).
 const Color _kOnHeaderText = Color(0xFFFFFFFF);
@@ -85,6 +86,8 @@ const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
 const String _kRehomeMyPairIconAsset =
     'assets/images/icons/home/rehomemypair.svg';
+const String _kStyleMeIconAsset = 'assets/images/Group.svg';
+const String _kCarbonCreditsLeafAsset = 'assets/images/Vector.svg';
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
 
@@ -162,12 +165,12 @@ double _homeHeaderScaleXForWidth(double width) {
   return 1.06;
 }
 
-/// Space above the floating bottom nav so Rent / Rehome are not covered.
+/// Space above the floating bottom nav so action cards are not covered.
 double _homeViewportBottomReserve(BuildContext context) {
   return dashboardLinkedBottomNavStackHeight(context);
 }
 
-/// Vertical gap between My Rack and Rent/Rehome row.
+/// Vertical gap between My Rack and the 2×2 action grid.
 double _homeSectionGap(double layoutScale) =>
     (10 * layoutScale).clamp(8.0, 12.0);
 
@@ -180,68 +183,7 @@ double _homeActionContentScale(double actionBlockH, double layoutScale) =>
     (actionBlockH / (_kQuickActionCellHeight * layoutScale))
         .clamp(0.72, 1.38);
 
-const _kRentRehomeActionLabels = ['Rent\nMyPair', 'Rehome\nMyPair'];
 const _kPairActionLineHeight = 1.35;
-
-/// One font size for Rent + Rehome: each line must fit width; both lines fit height.
-double _homeTwoLineActionLabelSize({
-  required BuildContext context,
-  required double contentScale,
-  required double layoutScale,
-  required double textMaxWidth,
-  required double textMaxHeight,
-}) {
-  final base = ((MediaQuery.sizeOf(context).width < _kHomeDesignWidth * 0.88
-              ? 14.0
-              : 16.0) *
-          contentScale)
-      .clamp(
-    _homeScaled(10, layoutScale),
-    _homeScaled(20, layoutScale),
-  );
-  if (textMaxWidth <= 0 || textMaxHeight <= 0) return base;
-
-  var size = base;
-  final minSize = _homeScaled(12, layoutScale).clamp(10.0, 12.0);
-  final textDirection = Directionality.of(context);
-  while (size >= minSize) {
-    final style = GoogleFonts.boldonse(
-      fontSize: size,
-      fontWeight: FontWeight.w400,
-      height: _kPairActionLineHeight,
-    );
-    var fits = true;
-    for (final label in _kRentRehomeActionLabels) {
-      final lines = label.split('\n');
-      if (lines.length < 2) {
-        fits = false;
-        break;
-      }
-      var blockHeight = 0.0;
-      for (final line in lines) {
-        final painter = TextPainter(
-          text: TextSpan(text: line, style: style),
-          maxLines: 1,
-          textDirection: textDirection,
-        )..layout(maxWidth: textMaxWidth);
-        if (painter.didExceedMaxLines ||
-            painter.size.width > textMaxWidth + 0.5) {
-          fits = false;
-          break;
-        }
-        blockHeight += painter.height;
-      }
-      if (!fits) break;
-      if (blockHeight > textMaxHeight + 0.5) {
-        fits = false;
-        break;
-      }
-    }
-    if (fits) return size;
-    size -= 0.5;
-  }
-  return minSize;
-}
 
 /// Scales My Rack inner content (title, thumbs, icons) vs Edge reference.
 double _homeRackContentScale(double rackHeight, double layoutScale) =>
@@ -253,7 +195,7 @@ double _clampSafe(double value, double lower, double upper) {
   return value.clamp(lo, hi);
 }
 
-/// My Rack taller; CareMyPair and Rent/Rehome share equal [actionBlockH].
+/// My Rack taller; Care / Rehome and Rent / Style Me share equal [actionBlockH].
 ({double rackHeight, double actionBlockH}) _homeFigmaBodyHeights({
   required double bodyHeight,
   required double headerToRackGap,
@@ -284,7 +226,7 @@ double _clampSafe(double value, double lower, double upper) {
 
   final cappedRackMin = math.min(rackMinHeight * 1.07, slack * 0.45);
 
-  // Care + Rent/Rehome: equal height, scaled from Edge reference.
+  // Two action rows (Care/Rehome + Rent/Style Me): equal height.
   var actionBlockH = _clampSafe(slack * 0.315, minActionH, maxActionH);
   final rackCap = math.max(cappedRackMin, actionBlockH * 1.38);
   var rackHeight = _clampSafe(
@@ -853,12 +795,22 @@ class _HomePageState extends State<HomePage> {
                                         layoutScale: layoutScale,
                                       );
                                       final rackHeight = figmaHeights.rackHeight;
-                                      // CareMyPair + Rent/Rehome: same height, scaled together.
+                                      // Care/Rehome + Rent/Style Me: same height, scaled together.
                                       final equalBlockH = figmaHeights.actionBlockH;
                                       final actionContentScale =
                                           _homeActionContentScale(
                                         equalBlockH,
                                         layoutScale,
+                                      );
+                                      final actionIconW =
+                                          (44 * actionContentScale).clamp(
+                                        _homeScaled(28, layoutScale),
+                                        _homeScaled(50, layoutScale),
+                                      );
+                                      final actionIconH =
+                                          (42 * actionContentScale).clamp(
+                                        _homeScaled(26, layoutScale),
+                                        _homeScaled(48, layoutScale),
                                       );
                                       final rackContentScale =
                                           _homeRackContentScale(
@@ -1066,148 +1018,88 @@ class _HomePageState extends State<HomePage> {
                                           SizedBox(
                                             height: equalBlockH,
                                             width: double.infinity,
-                                            child: _QuickActionCard(
-                                              label: 'CareMyPair',
-                                              highlight: true,
-                                              fullWidth: true,
-                                              iconAssetUrl: _kCareMyPairIconAsset,
-                                              layoutScale: layoutScale,
-                                              iconWidth: (48 * actionContentScale)
-                                                  .clamp(
-                                                _homeScaled(34, layoutScale),
-                                                _homeScaled(58, layoutScale),
+                                            child: _HomeActionPairRow(
+                                              gap: sectionGap,
+                                              left: _QuickActionCard(
+                                                label: 'Care',
+                                                highlight: true,
+                                                iconAssetUrl:
+                                                    _kCareMyPairIconAsset,
+                                                layoutScale: layoutScale,
+                                                iconWidth: actionIconW,
+                                                iconHeight: actionIconH,
+                                                cellHeight: equalBlockH,
+                                                onTap: () =>
+                                                    Navigator.of(context)
+                                                        .push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const CareMyPairPage(),
+                                                  ),
+                                                )
+                                                        .then((_) {
+                                                  if (mounted) _loadHomeStats();
+                                                }),
                                               ),
-                                              iconHeight: (48 * actionContentScale)
-                                                  .clamp(
-                                                _homeScaled(34, layoutScale),
-                                                _homeScaled(58, layoutScale),
+                                              right: _QuickActionCard(
+                                                label: 'Rehome',
+                                                iconAssetUrl:
+                                                    _kRehomeMyPairIconAsset,
+                                                iconWidth: actionIconW,
+                                                iconHeight: actionIconH,
+                                                cellHeight: equalBlockH,
+                                                layoutScale: layoutScale,
+                                                onTap: () =>
+                                                    Navigator.of(context)
+                                                        .push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) =>
+                                                        const RehomeMyPairPage(),
+                                                  ),
+                                                )
+                                                        .then((_) {
+                                                  if (mounted) {
+                                                    _loadHomeStats();
+                                                  }
+                                                }),
                                               ),
-                                              cellHeight: equalBlockH,
-                                              onTap: () =>
-                                                  Navigator.of(context)
-                                                      .push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const CareMyPairPage(),
-                                                ),
-                                              )
-                                                      .then((_) {
-                                                if (mounted) _loadHomeStats();
-                                              }),
                                             ),
                                           ),
                                           SizedBox(height: careSectionGap),
                                           SizedBox(
                                             height: equalBlockH,
                                             width: double.infinity,
-                                            child: LayoutBuilder(
-                                              builder: (context, constraints) {
-                                                // Shared icon box so both cards leave equal room for text.
-                                                final pairIconW =
-                                                    (44 * actionContentScale)
-                                                        .clamp(
-                                                  _homeScaled(28, layoutScale),
-                                                  _homeScaled(50, layoutScale),
-                                                );
-                                                final pairIconH =
-                                                    (42 * actionContentScale)
-                                                        .clamp(
-                                                  _homeScaled(26, layoutScale),
-                                                  _homeScaled(48, layoutScale),
-                                                );
-                                                final rentIconW = pairIconW;
-                                                final rentIconH = pairIconH;
-                                                final rehomeIconW = pairIconW;
-                                                final rehomeIconH = pairIconH;
-                                                final halfCardW =
-                                                    (constraints.maxWidth -
-                                                            sectionGap) /
-                                                        2;
-                                                final horizontalPad =
-                                                    _homeScaled(10, layoutScale);
-                                                final iconGap =
-                                                    _homeScaled(12, layoutScale);
-                                                final maxIconW = pairIconW;
-                                                final maxIconH = pairIconH;
-                                                final verticalPad =
-                                                    ((equalBlockH - maxIconH) *
-                                                            0.2)
-                                                        .clamp(
-                                                  _homeScaled(8, layoutScale),
-                                                  _homeScaled(20, layoutScale),
-                                                );
-                                                final textMaxW = halfCardW -
-                                                    horizontalPad * 2 -
-                                                    maxIconW -
-                                                    iconGap;
-                                                final textMaxH =
-                                                    equalBlockH -
-                                                        verticalPad * 2;
-                                                final pairLabelSize =
-                                                    _homeTwoLineActionLabelSize(
-                                                  context: context,
-                                                  contentScale: actionContentScale,
-                                                  layoutScale: layoutScale,
-                                                  textMaxWidth: textMaxW,
-                                                  textMaxHeight: textMaxH,
-                                                );
-
-                                                return Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .stretch,
-                                                  children: [
-                                                    Expanded(
-                                                      child: _QuickActionCard(
-                                                        label: 'Rent\nMyPair',
-                                                        grayed: true,
-                                                        iconAssetUrl:
-                                                            _kRentMyPairIconAsset,
-                                                        iconWidth: rentIconW,
-                                                        iconHeight: rentIconH,
-                                                        cellHeight: equalBlockH,
-                                                        layoutScale: layoutScale,
-                                                        labelFontSize:
-                                                            pairLabelSize,
-                                                        onTap: () =>
-                                                            showComingSoon(
-                                                          context,
-                                                          feature: 'Rent MyPair',
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    SizedBox(
-                                                      width: sectionGap,
-                                                    ),
-                                                    Expanded(
-                                                      child: _QuickActionCard(
-                                                        label: 'Rehome\nMyPair',
-                                                        iconAssetUrl:
-                                                            _kRehomeMyPairIconAsset,
-                                                        iconWidth: rehomeIconW,
-                                                        iconHeight: rehomeIconH,
-                                                        cellHeight: equalBlockH,
-                                                        layoutScale: layoutScale,
-                                                        labelFontSize:
-                                                            pairLabelSize,
-                                                        onTap: () =>
-                                                            Navigator.of(context)
-                                                                .push(
-                                                          MaterialPageRoute<void>(
-                                                            builder: (_) =>
-                                                                const RehomeMyPairPage(),
-                                                          ),
-                                                        )
-                                                                .then((_) {
-                                                          if (mounted) {
-                                                            _loadHomeStats();
-                                                          }
-                                                        }),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                              },
+                                            child: _HomeActionPairRow(
+                                              gap: sectionGap,
+                                              left: _QuickActionCard(
+                                                label: 'Rent',
+                                                iconAssetUrl:
+                                                    _kRentMyPairIconAsset,
+                                                iconWidth: actionIconW,
+                                                iconHeight: actionIconH,
+                                                cellHeight: equalBlockH,
+                                                layoutScale: layoutScale,
+                                                onTap: () => showComingSoon(
+                                                  context,
+                                                  feature: 'Rent',
+                                                ),
+                                              ),
+                                              right: _QuickActionCard(
+                                                label: 'Style Me',
+                                                iconAssetUrl:
+                                                    _kStyleMeIconAsset,
+                                                iconWidth: actionIconW,
+                                                iconHeight: actionIconH,
+                                                cellHeight: equalBlockH,
+                                                layoutScale: layoutScale,
+                                                onTap: () =>
+                                                    Navigator.of(context).push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) =>
+                                                        const ChatbotPage(),
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -2049,7 +1941,10 @@ class _HomeTopCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    
+                    SizedBox(
+                      height: (_kHomeHeaderStatsToBottom * s).clamp(10.0, 18.0),
+                    ),
+                    const Center(child: _CarbonCreditsChip()),
                   ],
                 ),
               ),
@@ -2338,18 +2233,106 @@ class _PairActionLabel extends StatelessWidget {
   }
 }
 
+class _HomeActionPairRow extends StatelessWidget {
+  const _HomeActionPairRow({
+    required this.gap,
+    required this.left,
+    required this.right,
+  });
+
+  final double gap;
+  final Widget left;
+  final Widget right;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: left),
+        SizedBox(width: gap),
+        Expanded(child: right),
+      ],
+    );
+  }
+}
+
+class _CarbonCreditsChip extends StatelessWidget {
+  const _CarbonCreditsChip();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _homeLayoutScale(context);
+    final numberSize = (14 * s).clamp(12.0, 16.0);
+    final labelSize = (14 * s).clamp(11.0, 15.0);
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        (12 * s).clamp(10.0, 16.0),
+        (4 * s).clamp(3.0, 6.0),
+        (16 * s).clamp(12.0, 20.0),
+        (4 * s).clamp(3.0, 6.0),
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(100),
+        gradient: const LinearGradient(
+          begin: Alignment(0.85, 0.41),
+          end: Alignment(-0.30, 1.29),
+          colors: [Color(0xFFAFEDD6), Color(0xFF09DFFF)],
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: (16 * s).clamp(14.0, 20.0),
+            height: (20 * s).clamp(16.0, 24.0),
+            child: SvgPicture.asset(
+              _kCarbonCreditsLeafAsset,
+              fit: BoxFit.contain,
+              colorFilter: const ColorFilter.mode(
+                Colors.black,
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+          SizedBox(width: (8 * s).clamp(6.0, 10.0)),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '50',
+                  style: GoogleFonts.boldonse(
+                    color: Colors.black,
+                    fontSize: numberSize,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                TextSpan(
+                  text: '  Carbon Credits',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.black,
+                    fontSize: labelSize,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _QuickActionCard extends StatelessWidget {
   final String label;
   final String? iconAssetUrl;
   final double iconWidth;
   final double iconHeight;
   final double? cellHeight;
-  final double? labelFontSize;
   final double layoutScale;
   final bool highlight;
-  final bool grayed;
   final VoidCallback? onTap;
-  final bool fullWidth;
 
   const _QuickActionCard({
     required this.label,
@@ -2357,12 +2340,9 @@ class _QuickActionCard extends StatelessWidget {
     this.iconWidth = 24,
     this.iconHeight = 24,
     this.cellHeight,
-    this.labelFontSize,
     this.layoutScale = 1.0,
     this.highlight = false,
-    this.grayed = false,
     this.onTap,
-    this.fullWidth = false,
   });
 
   @override
@@ -2374,39 +2354,23 @@ class _QuickActionCard extends StatelessWidget {
         : 1.0;
     final contentScale = widthScale * heightScale;
     final isTwoLine = label.contains('\n');
-    final textColor = highlight
-        ? Colors.white
-        : grayed
-            ? AppColors.greyedButtonLabel
-            : _kQuickActionMutedText;
-    final iconColor = grayed ? AppColors.greyedButtonLabel : textColor;
+    final textColor = highlight ? Colors.white : _kQuickActionMutedText;
     final resolvedHeight =
         cellHeight ??
         (isTwoLine
             ? (_kQuickActionCellHeight + 28) * contentScale
             : _kQuickActionCellHeight * contentScale);
-    // Same vertical inset for CareMyPair and Rent/Rehome when heights are paired.
     final verticalPad = cellHeight != null
         ? ((cellHeight! - iconHeight) * 0.2).clamp(
             _homeScaled(8, layoutScale),
             _homeScaled(20, layoutScale),
           )
         : (isTwoLine ? 18 : 8) * contentScale;
-    final padding = highlight
-        ? EdgeInsets.fromLTRB(
-            _homeScaled(18, layoutScale),
-            verticalPad,
-            _homeScaled(18, layoutScale),
-            verticalPad,
-          )
-        : EdgeInsets.symmetric(
-            horizontal: _homeScaled(
-              labelFontSize != null ? 10 : 12,
-              layoutScale,
-            ),
-            vertical: verticalPad,
-          );
-    final cardRadius = _homeScaled(12, layoutScale);
+    final padding = EdgeInsets.symmetric(
+      horizontal: _homeScaled(highlight ? 18 : 12, layoutScale),
+      vertical: verticalPad,
+    );
+    final cardRadius = _homeScaled(10, layoutScale);
     final labelSize = ((MediaQuery.sizeOf(context).width <
                 _kHomeDesignWidth * 0.88
             ? 14.0
@@ -2416,7 +2380,6 @@ class _QuickActionCard extends StatelessWidget {
       _homeScaled(10, layoutScale),
       _homeScaled(20, layoutScale),
     );
-    final resolvedLabelSize = labelFontSize ?? labelSize;
 
     final cardBody = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -2425,16 +2388,14 @@ class _QuickActionCard extends StatelessWidget {
         SizedBox(
           width: iconWidth,
           height: iconHeight,
-          child: _buildActionIcon(iconColor),
+          child: _buildActionIcon(textColor),
         ),
-        SizedBox(
-          width: _homeScaled(fullWidth ? 20 : 14, layoutScale),
-        ),
+        SizedBox(width: _homeScaled(14, layoutScale)),
         if (isTwoLine)
           Expanded(
             child: _PairActionLabel(
               label: label,
-              fontSize: resolvedLabelSize,
+              fontSize: labelSize,
               color: textColor,
             ),
           )
@@ -2445,7 +2406,7 @@ class _QuickActionCard extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 label,
-                maxLines: 2,
+                maxLines: 1,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.boldonse(
                   fontSize: labelSize,
@@ -2464,49 +2425,27 @@ class _QuickActionCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(cardRadius),
-        child: grayed && !highlight
-            ? Container(
-                height: cellHeight ?? resolvedHeight,
-                width: double.infinity,
-                padding: padding,
-                decoration: BoxDecoration(
-                  color: AppColors.greyedButtonFill,
-                  borderRadius: BorderRadius.circular(cardRadius),
-                  border: Border.all(
-                    color: AppColors.greyedButtonLabel,
-                    width: 1,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: cardBody,
-              )
-            : Container(
-                height: cellHeight ?? resolvedHeight,
-                width: double.infinity,
-                padding: padding,
-                decoration: BoxDecoration(
-                  color: _kQuickActionMutedBg,
-                  gradient: highlight
-                      ? const LinearGradient(
-                          begin: Alignment(1, 0.5),
-                          end: Alignment(0, 0.5),
-                          colors: [
-                            AppColors.primaryLight,
-                            AppColors.footwearHeroStart,
-                          ],
-                        )
-                      : null,
-                  borderRadius: BorderRadius.circular(cardRadius),
-                  border: highlight
-                      ? null
-                      : Border.all(
-                          color: const Color(0xFF062F35).withValues(alpha: 0.22),
-                          width: 1,
-                        ),
-                ),
-                alignment: Alignment.center,
-                child: cardBody,
-              ),
+        child: Container(
+          height: cellHeight ?? resolvedHeight,
+          width: double.infinity,
+          padding: padding,
+          decoration: BoxDecoration(
+            color: _kQuickActionMutedBg,
+            gradient: highlight
+                ? const LinearGradient(
+                    begin: Alignment(1, 0.5),
+                    end: Alignment(0, 0.5),
+                    colors: [
+                      Color(0xFF0CADC5),
+                      Color(0xFF063239),
+                    ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(cardRadius),
+          ),
+          alignment: Alignment.center,
+          child: cardBody,
+        ),
       ),
     );
   }
@@ -2514,7 +2453,11 @@ class _QuickActionCard extends StatelessWidget {
   Widget _buildActionIcon(Color textColor) {
     final source = iconAssetUrl;
     if (source == null || source.isEmpty) {
-      return Icon(Icons.widgets_outlined, size: 24, color: textColor);
+      return Icon(
+        Icons.widgets_outlined,
+        size: (iconWidth * 0.78).clamp(16.0, 28.0),
+        color: textColor,
+      );
     }
 
     if (source.startsWith('http://') || source.startsWith('https://')) {
