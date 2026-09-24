@@ -85,7 +85,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: 10,
+            horizontal: 16,
             vertical: (barHeight - hitSize) / 2,
           ),
           child: LayoutBuilder(
@@ -195,12 +195,12 @@ class _NavTab {
 /// and on pushed stack pages that use [DashboardLinkedBottomNav].
 ///
 /// Horizontal insets scale down on narrow devices so the pill does not overflow,
-/// while keeping the bar visibly wider on most phones.
+/// while keeping the bar a bit wider on most phones.
 EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
   final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
-  const minBarBody = 240.0;
-  final side = ((w - minBarBody) * 0.5).clamp(20.0, 72.0);
+  const minBarBody = 300.0;
+  final side = ((w - minBarBody) * 0.5).clamp(12.0, 28.0);
   // Scale bottom inset with width + safe-area so spacing feels consistent
   // across compact phones and larger screens.
   final widthFactor = ((w - 320.0) / 160.0).clamp(0.0, 1.0);
