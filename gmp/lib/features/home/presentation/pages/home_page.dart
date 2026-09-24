@@ -183,7 +183,7 @@ double _homeActionContentScale(double actionBlockH, double layoutScale) =>
     (actionBlockH / (_kQuickActionCellHeight * layoutScale))
         .clamp(0.72, 1.38);
 
-const _kPairActionLineHeight = 1.35;
+const _kPairActionLineHeight = 1.15;
 
 /// Scales My Rack inner content (title, thumbs, icons) vs Edge reference.
 double _homeRackContentScale(double rackHeight, double layoutScale) =>
@@ -1021,7 +1021,7 @@ class _HomePageState extends State<HomePage> {
                                             child: _HomeActionPairRow(
                                               gap: sectionGap,
                                               left: _QuickActionCard(
-                                                label: 'Care',
+                                                label: 'Care\nMyPair',
                                                 highlight: true,
                                                 iconAssetUrl:
                                                     _kCareMyPairIconAsset,
@@ -1042,7 +1042,7 @@ class _HomePageState extends State<HomePage> {
                                                 }),
                                               ),
                                               right: _QuickActionCard(
-                                                label: 'Rehome',
+                                                label: 'Rehome\nMyPair',
                                                 iconAssetUrl:
                                                     _kRehomeMyPairIconAsset,
                                                 iconWidth: actionIconW,
@@ -1072,7 +1072,7 @@ class _HomePageState extends State<HomePage> {
                                             child: _HomeActionPairRow(
                                               gap: sectionGap,
                                               left: _QuickActionCard(
-                                                label: 'Rent',
+                                                label: 'Rent\nMyPair',
                                                 iconAssetUrl:
                                                     _kRentMyPairIconAsset,
                                                 iconWidth: actionIconW,
@@ -1085,7 +1085,7 @@ class _HomePageState extends State<HomePage> {
                                                 ),
                                               ),
                                               right: _QuickActionCard(
-                                                label: 'Style Me',
+                                                label: 'Style Me\nMyPair',
                                                 iconAssetUrl:
                                                     _kStyleMeIconAsset,
                                                 iconWidth: actionIconW,
@@ -2220,7 +2220,8 @@ class _PairActionLabel extends StatelessWidget {
           overflow: TextOverflow.visible,
           style: style,
         ),
-        if (line2.isNotEmpty)
+        if (line2.isNotEmpty) ...[
+          const SizedBox(height: 12),
           Text(
             line2,
             maxLines: 1,
@@ -2228,6 +2229,7 @@ class _PairActionLabel extends StatelessWidget {
             overflow: TextOverflow.visible,
             style: style,
           ),
+        ],
       ],
     );
   }
