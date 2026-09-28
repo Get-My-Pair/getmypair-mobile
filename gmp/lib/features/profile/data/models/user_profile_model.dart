@@ -19,9 +19,10 @@ class UserProfileModel extends UserProfile {
 
   static String _stringId(dynamic v) {
     if (v == null) return '';
-    if (v is String) return v;
+    if (v is String) return v.trim();
     if (v is Map) {
-      final o = v[r'$oid'] ?? v['oid'];
+      final o = v[r'$oid'] ?? v['oid'] ?? v['_id'] ?? v['id'];
+      if (o != null && !identical(o, v)) return _stringId(o);
       if (o != null) return o.toString();
     }
     return v.toString();
@@ -33,13 +34,19 @@ class UserProfileModel extends UserProfile {
   }
 
   static FamilyMember familyMemberFromJson(Map<String, dynamic> map) {
+    final image = map['profileImage'] ?? map['profile_image'] ?? map['image'];
+    final imageStr = image?.toString().trim();
     return FamilyMember(
       id: _stringId(map['_id'] ?? map['id']),
       name: map['name']?.toString() ?? '',
       relation: map['relation']?.toString() ?? '',
       gender: map['gender']?.toString(),
       dateOfBirth: _parseDate(map['dateOfBirth']),
-      profileImage: map['profileImage']?.toString(),
+      profileImage: (imageStr == null ||
+              imageStr.isEmpty ||
+              imageStr == 'null')
+          ? null
+          : imageStr,
     );
   }
 

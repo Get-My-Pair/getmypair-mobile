@@ -6,6 +6,7 @@ import '../../domain/usecases/get_user_profile.dart';
 import '../../domain/usecases/update_user_profile.dart';
 import '../../domain/usecases/upload_profile_image.dart';
 import '../../domain/usecases/address_usecases.dart';
+import '../utils/active_profile_store.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
 
@@ -20,6 +21,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final UpdateFamilyMember updateFamilyMember;
   final SwitchActiveProfile switchActiveProfile;
   final UploadFamilyMemberImage uploadFamilyMemberImage;
+  final DeleteFamilyMember deleteFamilyMember;
 
   ProfileBloc({
     required this.getUserProfile,
@@ -32,6 +34,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     required this.updateFamilyMember,
     required this.switchActiveProfile,
     required this.uploadFamilyMemberImage,
+    required this.deleteFamilyMember,
   }) : super(ProfileInitial()) {
     on<ProfileLoadRequested>(_onLoad);
     on<ProfileUpdateRequested>(_onUpdate);
@@ -42,6 +45,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<FamilyMemberAddRequested>(_onAddFamilyMember);
     on<FamilyMemberUpdateRequested>(_onUpdateFamilyMember);
     on<ActiveProfileSwitchRequested>(_onSwitchActiveProfile);
+    on<FamilyMemberDeleteRequested>(_onDeleteFamilyMember);
   }
 
   UserProfile? _currentProfile() {
@@ -54,11 +58,27 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     return null;
   }
 
+  UserProfile _withStoredActive(UserProfile profile) =>
+      ActiveProfileStore.apply(profile);
+
+  Future<UserProfile> _reloadProfile(String accessToken) async {
+    await ActiveProfileStore.ensureReady();
+    return _withStoredActive(await getUserProfile(accessToken));
+  }
+
+  Future<void> _rememberActive(UserProfile profile) {
+    return ActiveProfileStore.save(
+      profile.userId,
+      profile.isSelfActive ? kSelfProfileId : profile.activeProfileId,
+      profileDocId: profile.id,
+    );
+  }
+
   Future<void> _onLoad(
       ProfileLoadRequested event, Emitter<ProfileState> emit) async {
     emit(ProfileLoading());
     try {
-      final profile = await getUserProfile(event.accessToken);
+      final profile = await _reloadProfile(event.accessToken);
       emit(ProfileLoaded(profile));
     } on ServerException catch (e) {
       emit(ProfileError(e.message, statusCode: e.statusCode));
@@ -78,7 +98,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         email: event.email,
         householdType: event.householdType,
       );
-      emit(ProfileLoaded(profile));
+      final next = _withStoredActive(profile);
+      await _rememberActive(next);
+      emit(ProfileLoaded(next));
     } on ServerException catch (e) {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
@@ -91,6 +113,39 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final current = _currentProfile();
     if (current != null) emit(ProfileImageUploading(current));
     try {
+      if (current != null && !current.isSelfActive) {
+        final memberId = current.activeProfileId;
+        final imageUrl = await uploadFamilyMemberImage(
+          accessToken: event.accessToken,
+          memberId: memberId,
+          imageBytes: event.imageBytes,
+          fileName: event.fileName,
+        );
+        var members = current.familyMembers
+            .map((m) => m.id == memberId
+                ? m.copyWith(profileImage: imageUrl)
+                : m)
+            .toList();
+        var updated = current.copyWith(familyMembers: members);
+        await _rememberActive(updated);
+        try {
+          updated = ActiveProfileStore.forceActive(
+            await _reloadProfile(event.accessToken),
+            memberId,
+          );
+          members = updated.familyMembers
+              .map((m) => m.id == memberId &&
+                      (m.profileImage == null || m.profileImage!.isEmpty)
+                  ? m.copyWith(profileImage: imageUrl)
+                  : m)
+              .toList();
+          updated = updated.copyWith(familyMembers: members);
+        } catch (_) {}
+        await _rememberActive(updated);
+        emit(ProfileLoaded(updated));
+        return;
+      }
+
       final imageUrl = await uploadProfileImage(
         accessToken: event.accessToken,
         imageBytes: event.imageBytes,
@@ -98,11 +153,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       );
       final updated = current?.copyWith(profileImage: imageUrl);
       if (updated != null) {
+        await _rememberActive(updated);
         emit(ProfileLoaded(updated));
       } else {
-        // Reload profile from server
-        final profile = await getUserProfile(event.accessToken);
-        emit(ProfileLoaded(profile));
+        emit(ProfileLoaded(await _reloadProfile(event.accessToken)));
       }
     } on ServerException catch (e) {
       emit(ProfileError(e.message, profile: current));
@@ -126,7 +180,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       final updatedAddresses = List<Address>.from(current?.addresses ?? [])
         ..add(address);
       final updated = current?.copyWith(addresses: updatedAddresses);
-      emit(ProfileLoaded(updated ?? (await getUserProfile(event.accessToken))));
+      emit(ProfileLoaded(
+          updated ?? (await _reloadProfile(event.accessToken))));
     } on ServerException catch (e) {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
@@ -151,7 +206,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           .map((a) => a.id == event.addressId ? updatedAddr : a)
           .toList();
       final updated = current?.copyWith(addresses: updatedAddresses);
-      emit(ProfileLoaded(updated ?? (await getUserProfile(event.accessToken))));
+      emit(ProfileLoaded(
+          updated ?? (await _reloadProfile(event.accessToken))));
     } on ServerException catch (e) {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
@@ -172,7 +228,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           .where((a) => a.id != event.addressId)
           .toList();
       final updated = current?.copyWith(addresses: updatedAddresses);
-      emit(ProfileLoaded(updated ?? (await getUserProfile(event.accessToken))));
+      emit(ProfileLoaded(
+          updated ?? (await _reloadProfile(event.accessToken))));
     } on ServerException catch (e) {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
@@ -198,17 +255,24 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           imageBytes.isNotEmpty &&
           imageFileName != null &&
           imageFileName.isNotEmpty) {
-        await uploadFamilyMemberImage(
-          accessToken: event.accessToken,
-          memberId: member.id,
-          imageBytes: imageBytes,
-          fileName: imageFileName,
-        );
+        try {
+          await uploadFamilyMemberImage(
+            accessToken: event.accessToken,
+            memberId: member.id,
+            imageBytes: imageBytes,
+            fileName: imageFileName,
+          );
+        } on ServerException catch (e) {
+          // Live API still serves add/update/delete, but not
+          // POST /family-members/upload-image yet.
+          if (!isUnregisteredRouteMessage(e.message)) rethrow;
+        }
       }
-      final profile = await getUserProfile(event.accessToken);
+      final profile = await _reloadProfile(event.accessToken);
       emit(ProfileLoaded(profile));
     } on ServerException catch (e) {
-      emit(ProfileError(e.message, profile: current));
+      emit(ProfileError(userFacingFamilyProfileError(e.message),
+          profile: current));
     } catch (e) {
       emit(ProfileError('Failed to add family member: $e', profile: current));
     }
@@ -217,7 +281,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   Future<void> _onUpdateFamilyMember(
       FamilyMemberUpdateRequested event, Emitter<ProfileState> emit) async {
     final current = _currentProfile();
-    if (current != null) emit(AddressActionLoading(current));
+    if (current != null) emit(ProfileUpdating(current));
     try {
       final updatedMember = await updateFamilyMember(
         accessToken: event.accessToken,
@@ -226,12 +290,24 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         relation: event.relation,
       );
       final updatedMembers = (current?.familyMembers ?? [])
-          .map((m) => m.id == event.memberId ? updatedMember : m)
+          .map((m) {
+            if (m.id != event.memberId) return m;
+            final image = (updatedMember.profileImage != null &&
+                    updatedMember.profileImage!.isNotEmpty)
+                ? updatedMember.profileImage
+                : m.profileImage;
+            return updatedMember.copyWith(profileImage: image);
+          })
           .toList();
-      final updated = current?.copyWith(familyMembers: updatedMembers);
-      emit(ProfileLoaded(updated ?? (await getUserProfile(event.accessToken))));
+      var updated = current?.copyWith(familyMembers: updatedMembers);
+      if (updated != null) {
+        await _rememberActive(updated);
+      }
+      emit(ProfileLoaded(
+          updated ?? (await _reloadProfile(event.accessToken))));
     } on ServerException catch (e) {
-      emit(ProfileError(e.message, profile: current));
+      emit(ProfileError(userFacingFamilyProfileError(e.message),
+          profile: current));
     } catch (e) {
       emit(ProfileError('Failed to update family member: $e', profile: current));
     }
@@ -240,17 +316,59 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   Future<void> _onSwitchActiveProfile(
       ActiveProfileSwitchRequested event, Emitter<ProfileState> emit) async {
     final current = _currentProfile();
-    if (current != null) emit(AddressActionLoading(current));
+    if (current == null) {
+      emit(const ProfileError('Profile not loaded'));
+      return;
+    }
+    final optimistic = ActiveProfileStore.forceActive(current, event.profileId);
+    emit(AddressActionLoading(optimistic));
+    await _rememberActive(optimistic);
     try {
-      final profile = await switchActiveProfile(
+      await switchActiveProfile(
         accessToken: event.accessToken,
         profileId: event.profileId,
       );
-      emit(ProfileLoaded(profile));
     } on ServerException catch (e) {
-      emit(ProfileError(e.message, profile: current));
+      if (!isUnregisteredRouteMessage(e.message) &&
+          (e.statusCode == 401 || e.statusCode == 403)) {
+        await _rememberActive(current);
+        emit(ProfileError(userFacingFamilyProfileError(e.message),
+            profile: current));
+        return;
+      }
+    } catch (_) {}
+    try {
+      final reloaded = ActiveProfileStore.forceActive(
+        await _reloadProfile(event.accessToken),
+        event.profileId,
+      );
+      await _rememberActive(reloaded);
+      emit(ProfileLoaded(reloaded));
+    } catch (_) {
+      emit(ProfileLoaded(optimistic));
+    }
+  }
+
+  Future<void> _onDeleteFamilyMember(
+      FamilyMemberDeleteRequested event, Emitter<ProfileState> emit) async {
+    final current = _currentProfile();
+    if (current != null) emit(AddressActionLoading(current));
+    try {
+      await deleteFamilyMember(
+        accessToken: event.accessToken,
+        memberId: event.memberId,
+      );
+      if (current != null && current.activeProfileId == event.memberId) {
+        await _rememberActive(
+          current.copyWith(activeProfileId: kSelfProfileId),
+        );
+      }
+      emit(ProfileLoaded(await _reloadProfile(event.accessToken)));
+    } on ServerException catch (e) {
+      emit(ProfileError(userFacingFamilyProfileError(e.message),
+          profile: current));
     } catch (e) {
-      emit(ProfileError('Failed to switch profile: $e', profile: current));
+      emit(ProfileError('Failed to delete family member: $e', profile: current));
     }
   }
 }

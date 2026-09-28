@@ -1919,11 +1919,12 @@ class _HomeTopCard extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: (4 * s).clamp(3.0, 8.0)),
-                        BlocBuilder<ProfileBloc, ProfileState>(
-                          buildWhen: (prev, curr) =>
-                              curr is ProfileLoaded ||
-                              curr is ProfileUpdating ||
-                              curr is ProfileImageUploading,
+                            BlocBuilder<ProfileBloc, ProfileState>(
+                              buildWhen: (prev, curr) =>
+                                  curr is ProfileLoaded ||
+                                  curr is ProfileUpdating ||
+                                  curr is ProfileImageUploading ||
+                                  curr is AddressActionLoading,
                           builder: (context, profileState) {
                             final profile = profileState is ProfileLoaded
                                 ? profileState.profile

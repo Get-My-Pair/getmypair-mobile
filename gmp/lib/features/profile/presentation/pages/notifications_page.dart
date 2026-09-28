@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../injection_container.dart' as di;
+import '../../../../routes.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
@@ -14,7 +15,6 @@ import '../bloc/profile_state.dart';
 import '../utils/profile_notifications.dart';
 import '../utils/notification_navigation_helper.dart';
 import '../utils/user_notifications.dart';
-import 'family_profile_page.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -97,14 +97,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
       (_) async {},
       (token) async {
         if (!mounted) return;
-        await Navigator.push<void>(
+        await Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<ProfileBloc>(),
-              child: FamilyProfilePage(profile: profile, accessToken: token),
-            ),
-          ),
+          AppRoutes.familyProfile,
+          arguments: <String, dynamic>{
+            'profile': profile,
+            'accessToken': token,
+            'bloc': context.read<ProfileBloc>(),
+          },
         );
       },
     );

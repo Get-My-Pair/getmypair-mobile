@@ -9,6 +9,19 @@ class ServerException implements Exception {
   String toString() => message;
 }
 
+/// Express catch-all 404 (`Route not found`) or Flutter unknown named route.
+bool isUnregisteredRouteMessage(String message) {
+  final m = message.trim().toLowerCase();
+  return m == 'route not found' || m.contains('no route defined for');
+}
+
+String userFacingFamilyProfileError(String message) {
+  if (isUnregisteredRouteMessage(message)) {
+    return 'Could not complete this family profile action. Please try again.';
+  }
+  return message;
+}
+
 class NetworkException implements Exception {
   final String message;
   

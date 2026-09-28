@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
+import '../../../../routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
@@ -23,7 +24,6 @@ import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
 import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
-import 'family_profile_page.dart';
 import 'notifications_page.dart';
 import 'manage_devices_page.dart';
 import 'faq_page.dart';
@@ -71,7 +71,15 @@ class _ProfilePageState extends State<ProfilePage> {
       (token) async {
         if (!mounted) return;
         setState(() => _accessToken = token);
-        context.read<ProfileBloc>().add(ProfileLoadRequested(token));
+        final current = context.read<ProfileBloc>().state;
+        final alreadyLoaded = current is ProfileLoaded ||
+            current is ProfileUpdating ||
+            current is ProfileImageUploading ||
+            current is AddressActionLoading ||
+            (current is ProfileError && current.profile != null);
+        if (!alreadyLoaded) {
+          context.read<ProfileBloc>().add(ProfileLoadRequested(token));
+        }
       },
     );
   }
@@ -113,11 +121,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  String _subtitleLine(UserProfile profile) {
-    final e = profile.email?.trim();
-    if (e != null && e.isNotEmpty) return e;
-    return profile.phone;
-  }
+  String _subtitleLine(UserProfile profile) => profile.activeSubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -552,14 +556,14 @@ class _ProfilePageState extends State<ProfilePage> {
     UserProfile profile,
     String token,
   ) {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<ProfileBloc>(),
-          child: FamilyProfilePage(profile: profile, accessToken: token),
-        ),
-      ),
+      AppRoutes.familyProfile,
+      arguments: <String, dynamic>{
+        'profile': profile,
+        'accessToken': token,
+        'bloc': context.read<ProfileBloc>(),
+      },
     );
   }
 

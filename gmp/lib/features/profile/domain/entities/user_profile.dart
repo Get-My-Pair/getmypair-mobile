@@ -128,20 +128,34 @@ class UserProfile extends Equatable {
   bool get isSelfActive =>
       activeProfileId.isEmpty || activeProfileId == kSelfProfileId;
 
-  String get activeDisplayName {
-    if (isSelfActive) return name;
+  FamilyMember? get activeFamilyMember {
+    if (isSelfActive) return null;
     for (final member in familyMembers) {
-      if (member.id == activeProfileId) return member.name;
+      if (member.id == activeProfileId) return member;
     }
-    return name;
+    return null;
+  }
+
+  String get activeDisplayName {
+    return activeFamilyMember?.name ?? name;
   }
 
   String? get activeProfileImage {
-    if (isSelfActive) return profileImage;
-    for (final member in familyMembers) {
-      if (member.id == activeProfileId) return member.profileImage;
+    final member = activeFamilyMember;
+    if (member != null) {
+      final url = member.profileImage?.trim();
+      if (url != null && url.isNotEmpty) return url;
+      return null;
     }
     return profileImage;
+  }
+
+  String get activeSubtitle {
+    final member = activeFamilyMember;
+    if (member != null) return familyRelationLabel(member.relation);
+    final e = email?.trim();
+    if (e != null && e.isNotEmpty) return e;
+    return phone;
   }
 
   @override

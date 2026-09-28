@@ -136,3 +136,14 @@ class ActiveProfileSwitchRequested extends ProfileEvent {
   @override
   List<Object?> get props => [accessToken, profileId];
 }
+
+class FamilyMemberDeleteRequested extends ProfileEvent {
+  final String accessToken;
+  final String memberId;
+  const FamilyMemberDeleteRequested({
+    required this.accessToken,
+    required this.memberId,
+  });
+  @override
+  List<Object?> get props => [accessToken, memberId];
+}

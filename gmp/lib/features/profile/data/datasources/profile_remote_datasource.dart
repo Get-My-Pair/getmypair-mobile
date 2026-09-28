@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/active_profile_header.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../domain/entities/user_profile.dart';
 import '../models/address_model.dart';
@@ -75,13 +76,16 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   static const Duration _timeout = Duration(seconds: 30);
 
   /// Headers for profile API. Include X-App-Source so backend assigns USER role when missing.
-  Map<String, String> _headers(String accessToken) => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-App-Source': AppConstants.appSourceForApi,
-        'X-App-Version': AppConstants.appVersion,
-      };
+  Map<String, String> _headers(String accessToken) =>
+      ApiEndpoints.getHeaders(accessToken: accessToken);
+
+  void _applyMultipartHeaders(http.MultipartRequest request, String accessToken) {
+    request.headers['Authorization'] = 'Bearer $accessToken';
+    request.headers['X-App-Source'] = AppConstants.appSourceForApi;
+    request.headers['X-App-Version'] = AppConstants.appVersion;
+    request.headers['Accept'] = 'application/json';
+    ActiveProfileHeader.applyTo(request.headers);
+  }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
     if (response.body.isEmpty) {
@@ -167,6 +171,7 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       request.headers['X-App-Source'] = AppConstants.appSourceForApi;
       request.headers['X-App-Version'] = AppConstants.appVersion;
       request.headers['Accept'] = 'application/json';
+      _applyMultipartHeaders(request, accessToken);
       request.files.add(http.MultipartFile.fromBytes(
         'file',
         imageBytes,
@@ -374,7 +379,9 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       request.headers['X-App-Source'] = AppConstants.appSourceForApi;
       request.headers['X-App-Version'] = AppConstants.appVersion;
       request.headers['Accept'] = 'application/json';
+      _applyMultipartHeaders(request, accessToken);
       request.fields['memberId'] = memberId;
+      request.fields['profileId'] = memberId;
       request.files.add(http.MultipartFile.fromBytes(
         'file',
         imageBytes,
@@ -383,7 +390,17 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       final streamedResponse = await request.send().timeout(_timeout);
       final response = await http.Response.fromStream(streamedResponse);
       final json = _handleResponse(response);
-      return json['data']['profileImage'] as String;
+      final data = json['data'];
+      if (data is Map) {
+        final direct = data['profileImage']?.toString();
+        if (direct != null && direct.isNotEmpty) return direct;
+        final member = data['member'];
+        if (member is Map) {
+          final fromMember = member['profileImage']?.toString();
+          if (fromMember != null && fromMember.isNotEmpty) return fromMember;
+        }
+      }
+      throw const ServerException('Family member image was uploaded but no URL was returned');
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException('Failed to upload family member image: $e');

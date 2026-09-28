@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/bgtheme.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
@@ -293,7 +294,7 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
           setState(() => _submitted = false);
           await showAppFeedbackAlert(
             context,
-            message: state.message,
+            message: userFacingFamilyProfileError(state.message),
             type: AppFeedbackType.failure,
           );
         }

@@ -6,15 +6,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
+import '../../../../routes.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
-import 'add_family_profile_page.dart';
 
 class FamilyProfilePage extends StatefulWidget {
   final UserProfile profile;
@@ -64,16 +65,13 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
       },
     );
     if (relation == null || !mounted) return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<ProfileBloc>(),
-          child: AddFamilyProfilePage(
-            accessToken: widget.accessToken,
-            relation: relation,
-          ),
-        ),
-      ),
+    await Navigator.of(context).pushNamed(
+      AppRoutes.addFamilyProfile,
+      arguments: <String, dynamic>{
+        'accessToken': widget.accessToken,
+        'relation': relation,
+        'bloc': context.read<ProfileBloc>(),
+      },
     );
   }
 
@@ -106,14 +104,72 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
         );
   }
 
+  Future<void> _confirmDelete(SwitchableAppProfile item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0B3A4A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete profile',
+          style: GoogleFonts.boldonse(
+            color: Colors.white,
+            fontSize: 18,
+          ),
+        ),
+        content: Text(
+          'Remove ${item.name} from your family profiles?',
+          style: GoogleFonts.montserrat(
+            color: Colors.white70,
+            fontSize: 15,
+            height: 1.35,
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.montserrat(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    context.read<ProfileBloc>().add(
+          FamilyMemberDeleteRequested(
+            accessToken: widget.accessToken,
+            memberId: item.id,
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ProfileBloc, ProfileState>(
       listener: (context, state) async {
         if (state is ProfileError) {
+          if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
           await showAppFeedbackAlert(
             context,
-            message: state.message,
+            message: userFacingFamilyProfileError(state.message),
             type: AppFeedbackType.failure,
           );
         }
@@ -260,9 +316,14 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                                         subtitle: item.label,
                                         imageUrl: item.imageUrl,
                                         selected: selected,
+                                        canDelete: !item.isSelf,
                                         onTap: switching
                                             ? null
-                                            : () => _switchTo(item.id, activeId),
+                                            : () =>
+                                                _switchTo(item.id, activeId),
+                                        onDelete: switching
+                                            ? null
+                                            : () => _confirmDelete(item),
                                       );
                                     },
                                   ),
@@ -291,14 +352,18 @@ class _ProfileSwitchRow extends StatelessWidget {
   final String subtitle;
   final String? imageUrl;
   final bool selected;
+  final bool canDelete;
   final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
   const _ProfileSwitchRow({
     required this.title,
     required this.subtitle,
     required this.imageUrl,
     required this.selected,
+    required this.canDelete,
     required this.onTap,
+    this.onDelete,
   });
 
   @override
@@ -356,6 +421,16 @@ class _ProfileSwitchRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (canDelete)
+                IconButton(
+                  onPressed: onDelete,
+                  tooltip: 'Delete profile',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
               if (selected)
                 const Icon(Icons.check_circle, color: Colors.white)
               else

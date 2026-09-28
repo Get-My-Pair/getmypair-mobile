@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'app_constants.dart';
+import 'active_profile_header.dart';
 
 /// API endpoints for getmypair-mobile.
 /// Aligned with getmypair-api backend: /api/auth/*, /api/version.
@@ -155,6 +156,7 @@ class ApiEndpoints {
     if (accessToken != null) {
       headers['Authorization'] = 'Bearer $accessToken';
     }
+    ActiveProfileHeader.applyTo(headers);
 
     return headers;
   }
