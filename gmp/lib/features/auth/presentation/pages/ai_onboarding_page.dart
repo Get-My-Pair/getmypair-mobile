@@ -27,19 +27,9 @@ String _normalizeSpeech(String raw) {
 /// Global app-session guard: show voice-audibility hint only once.
 bool _hasShownVoicePlaybackHintGlobally = false;
 
-/// MVP: 3 active screens (nickname → DOB/gender → fit dealbreakers → home).
-/// Shoe rack (index 2) and later steps are commented out, not removed.
-///
-/// | Index | Screen              | Status    |
-/// |-------|---------------------|-----------|
-/// | 0     | Nickname            | Active    |
-/// | 1     | DOB + gender        | Active    |
-/// | 2     | Fit dealbreakers    | Active    |
-/// | 3     | Shoe rack           | Commented |
-/// | 4     | Family reassurance  | Commented |
-/// | 5–6   | Footwear scan       | Commented |
-const int _kOnboardingPageCount = 3;
-// const int _kOnboardingPageCountFull = 4; // + optional step 4 (family) & footwear (5–6)
+/// Screens: nickname → DOB/gender → shoe rack → fit dealbreakers
+/// → optional family reassurance (when the rack includes partner, kids, or elders).
+/// Footwear scan steps remain commented out.
 
 // Footwear / foot-scan steps hidden in flow — keep for re-enable:
 // /// Foot blueprint size rows (table UI + TTS).
@@ -57,117 +47,90 @@ const int _kOnboardingPageCount = 3;
 //       .join('\n');
 // }
 
-// /// Body on the step after rack selection (index 3), driven by step-2 choices.
-// String _bodyAfterRackSelection(Set<String> rack) {
-//   // MVP: single profile — restore family rack branches when multi-profile ships.
-//   // if (rack.contains('My Partner')) {
-//   //   return 'Crafting a curated masterpiece for two? Let\u2019s design this rack '
-//   //       'to perfectly balance your personal rotation with your partner\u2019s '
-//   //       'favourites.\n\nBut first, let\u2019s set you up together...';
-//   // }
-//   // if (rack.contains('My Kids')) {
-//   //   return 'Building a fun and family-ready shoe collection? Let\u2019s create a rack '
-//   //       'that keeps up with your style while making space for your kids\u2019 everyday '
-//   //       'adventures, school days, and tiny trendsetters.\n\nBut first, let\u2019s set you up...';
-//   // }
-//   // if (rack.contains('Elderly')) {
-//   //   return 'Creating a thoughtful shared collection for you and your elders? Let\u2019s design '
-//   //       'a comfortable and organized rack that blends your personal style with everyday comfort, '
-//   //       'accessibility, and timeless favourites for the family.\n\nBut first, let\u2019s set you up...';
-//   // }
-//   return 'Going for a solo masterpiece, I see! Keeping this entire rack strictly '
-//       'for your own personal rotation?';
-// }
+/// Body on the step after rack selection (index 3), driven by step-2 choices.
+String _bodyAfterRackSelection(Set<String> rack) {
+  if (rack.contains('My Partner')) {
+    return 'Crafting a curated masterpiece for two? Let\u2019s design this rack '
+        'to perfectly balance your personal rotation with your partner\u2019s '
+        'favourites.\n\nBut first, let\u2019s set you up together...';
+  }
+  if (rack.contains('My Kids')) {
+    return 'Building a fun and family-ready shoe collection? Let\u2019s create a rack '
+        'that keeps up with your style while making space for your kids\u2019 everyday '
+        'adventures, school days, and tiny trendsetters.\n\nBut first, let\u2019s set you up...';
+  }
+  if (rack.contains('Elderly')) {
+    return 'Creating a thoughtful shared collection for you and your elders? Let\u2019s design '
+        'a comfortable and organized rack that blends your personal style with everyday comfort, '
+        'accessibility, and timeless favourites for the family.\n\nBut first, let\u2019s set you up...';
+  }
+  return 'Going for a solo masterpiece, I see! Keeping this entire rack strictly '
+      'for your own personal rotation?';
+}
 
-// /// Reassurance copy on the final step (index 4) when the rack includes partner, kids, or elders.
-// String _rackReassuranceClosingStep(Set<String> rack) {
-//   // MVP: single profile — restore when family rack options return.
-//   // if (rack.contains('My Partner')) {
-//   //   return 'Don\u2019t worry, we haven\u2019t forgotten about your partner! '
-//   //       'We\u2019ll get their side of the rack styled and ready to go as soon as '
-//   //       'we\u2019ve finished perfecting your fit.';
-//   // }
-//   // if (rack.contains('My Kids')) {
-//   //   return 'Don\u2019t worry, the little ones aren\u2019t left out! We\u2019ll set up '
-//   //       'their side of the rack with styles ready for school days, playtime, and '
-//   //       'every family adventure once your fit is complete.';
-//   // }
-//   // if (rack.contains('Elderly')) {
-//   //   return 'Don\u2019t worry, we haven\u2019t forgotten about your elders! We\u2019ll '
-//   //       'thoughtfully arrange their side of the rack with comfort-first styles and '
-//   //       'everyday essentials right after we perfect your setup.';
-//   // }
-//   return '';
-// }
+/// Reassurance copy on the final step (index 4) when the rack includes partner, kids, or elders.
+String _rackReassuranceClosingStep(Set<String> rack) {
+  if (rack.contains('My Partner')) {
+    return 'Don\u2019t worry, we haven\u2019t forgotten about your partner! '
+        'We\u2019ll get their side of the rack styled and ready to go as soon as '
+        'we\u2019ve finished perfecting your fit.';
+  }
+  if (rack.contains('My Kids')) {
+    return 'Don\u2019t worry, the little ones aren\u2019t left out! We\u2019ll set up '
+        'their side of the rack with styles ready for school days, playtime, and '
+        'every family adventure once your fit is complete.';
+  }
+  if (rack.contains('Elderly')) {
+    return 'Don\u2019t worry, we haven\u2019t forgotten about your elders! We\u2019ll '
+        'thoughtfully arrange their side of the rack with comfort-first styles and '
+        'everyday essentials right after we perfect your setup.';
+  }
+  return '';
+}
 
-// /// Extra closing step only when the rack includes partner, kids, or elders.
-// bool _rackNeedsClosingReassurance(Set<String> rack) {
-//   // MVP: single profile only — no extra closing step.
-//   return false;
-//   // return rack.contains('My Partner') ||
-//   //     rack.contains('My Kids') ||
-//   //     rack.contains('Elderly');
-// }
+/// Extra closing step only when the rack includes partner, kids, or elders.
+bool _rackNeedsClosingReassurance(Set<String> rack) {
+  return rack.contains('My Partner') ||
+      rack.contains('My Kids') ||
+      rack.contains('Elderly');
+}
 
-// String _householdTypeFromRack(Set<String> rack) {
-//   if (rack.contains('My Partner')) return 'with_partner';
-//   if (rack.contains('My Kids')) return 'with_children';
-//   if (rack.contains('Elderly')) return 'with_elder';
-//   return 'just_me';
-// }
+String _householdTypeFromRack(Set<String> rack) {
+  if (rack.contains('My Partner')) return 'with_partner';
+  if (rack.contains('My Kids')) return 'with_children';
+  if (rack.contains('Elderly')) return 'with_elder';
+  return 'just_me';
+}
 
-String _aiOnboardingBody(int index, String nickname) {
+String _aiOnboardingBody(int index, String nickname, {required Set<String> rack}) {
   switch (index) {
     case 0:
       return 'Welcome, Collector!\n\nI\u2019m your AI friend KIX!\n\nI\u2019m here to help you nail the perfect fit, discover brands that work for you, and vibe with your style.\n\nBut first let\u2019s get to know you better!';
     case 1:
       return '$nickname! That\u2019s a great name!!';
     case 2:
-      return 'Going for a solo masterpiece, I see! Keeping this entire rack strictly '
-          'for your own personal rotation?';
-    // --- Hidden shoe rack screen — uncomment when re-enabling ---
-    // case 2:
-    //   return 'That\u2019s the spirit! Let\u2019s get your personalized rack ready!';
-    // case 3:
-    //   return _bodyAfterRackSelection(rack);
-    // case 4:
-    //   return '';
-    // Footwear steps (old index 4–5) — hidden:
-    // case 4:
-    //   return 'That sounds like a total nightmare, but don\'t worry! We\'ve got your back (and your feet) covered.';
-    // case 5:
-    //   return '';
-    // case 6:
-    //   return '';
+      return 'That\u2019s the spirit! Let\u2019s get your personalized rack ready!';
+    case 3:
+      return _bodyAfterRackSelection(rack);
+    case 4:
+      return '';
     default:
       return '';
   }
 }
 
-String _aiOnboardingTitle(int index) {
+String _aiOnboardingTitle(int index, {required Set<String> rack}) {
   switch (index) {
     case 0:
       return 'What should we call you?\nDo you go by a nickname?';
     case 1:
       return 'Since I\'m all about getting to know the real you, tell me: when were you born, and what are your preferred pronouns?';
     case 2:
+      return 'Will this be a solo collection, or are we making room for the whole crew?';
+    case 3:
       return 'Time for some shoe therapy: what\u2019s the ultimate dealbreaker that usually stands between you and the perfect fit?';
-    // --- Hidden shoe rack screen — uncomment when re-enabling ---
-    // case 2:
-    //   // MVP: solo rack only.
-    //   return 'Let\u2019s set up your personal shoe rack!';
-    //   // return 'Will this be a solo collection, or are we making room for the whole crew?';
-    // case 3:
-    //   return 'Time for some shoe therapy: what\u2019s the ultimate dealbreaker that usually stands between you and the perfect fit?';
-    // case 4:
-    //   return _rackReassuranceClosingStep(rack);
-    // Footwear steps (old index 4–5) — hidden:
-    // case 4:
-    //   return 'Let\u2019s dive in and find your perfect match by getting the lowdown on your unique foot shape and size!';
-    // case 5:
-    //   return 'Here it is: the blueprint of your feet! Check out your custom foot type and size breakdown right here.';
-    // case 6:
-    //   return _rackReassuranceClosingStep(rack);
+    case 4:
+      return _rackReassuranceClosingStep(rack);
     default:
       return '';
   }
@@ -206,9 +169,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   int _index = 0;
   DateTime? _birthDate;
   String? _gender;
-  // --- Hidden screens — uncomment when re-enabling shoe rack / footwear ---
-  // bool _cameraAllowed = false;
-  // final Set<String> _rack = <String>{};
+  final Set<String> _rack = <String>{};
   final Set<String> _troubles = <String>{};
   bool _ttsReady = false;
   String? _ttsError;
@@ -226,19 +187,18 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   /// True while [AuthCompleteProfile] is in flight after the last onboarding step.
   bool _isSubmittingProfile = false;
 
-  // With footwear steps: ? 7 : 6
-  // int get _pageCount => _rackNeedsClosingReassurance(_rack) ? 5 : 4;
-  //
-  // void _clampPageIndexIfNeeded() {
-  //   final last = _pageCount - 1;
-  //   if (_index <= last) return;
-  //   if (!_controller.hasClients) {
-  //     setState(() => _index = last);
-  //     return;
-  //   }
-  //   _controller.jumpToPage(last);
-  //   unawaited(_onPageChanged(last));
-  // }
+  int get _pageCount => _rackNeedsClosingReassurance(_rack) ? 5 : 4;
+
+  void _clampPageIndexIfNeeded() {
+    final last = _pageCount - 1;
+    if (_index <= last) return;
+    if (!_controller.hasClients) {
+      setState(() => _index = last);
+      return;
+    }
+    _controller.jumpToPage(last);
+    unawaited(_onPageChanged(last));
+  }
 
   @override
   void initState() {
@@ -396,8 +356,8 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   String _speakableContentFor(int index) {
     final nickname = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
-    final body = _aiOnboardingBody(index, nickname);
-    final title = _aiOnboardingTitle(index);
+    final body = _aiOnboardingBody(index, nickname, rack: _rack);
+    final title = _aiOnboardingTitle(index, rack: _rack);
     return _normalizeSpeech('$body $title');
   }
 
@@ -551,20 +511,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
       case 1:
         return _birthDate != null && _gender != null;
       case 2:
+        return _rack.isNotEmpty;
+      case 3:
         return _troubles.isNotEmpty;
-      // --- Hidden shoe rack screen — uncomment when re-enabling ---
-      // case 2:
-      //   return _rack.isNotEmpty;
-      // case 3:
-      //   return _troubles.isNotEmpty;
-      // case 4:
-      //   return true;
-      // Footwear steps — hidden:
-      // case 4:
-      //   return _cameraAllowed;
-      // case 5:
-      // case 6:
-      //   return true;
+      case 4:
+        return true;
       default:
         return false;
     }
@@ -580,7 +531,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
 
   void _next() {
     if (!_canNext || _isSubmittingProfile) return;
-    if (_index == _kOnboardingPageCount - 1) {
+    if (_index == _pageCount - 1) {
       unawaited(_finish());
       return;
     }
@@ -611,7 +562,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
               name: name,
               dateOfBirth: _birthDate!,
               gender: _gender!.toLowerCase(),
-              householdType: 'just_me',
+              householdType: _householdTypeFromRack(_rack),
               location: null,
             ),
           );
@@ -652,8 +603,8 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
     final nick = _name.text.trim().isEmpty ? 'Aashi' : _name.text.trim();
     final steps = <Widget>[
       _Step(
-        text: _aiOnboardingBody(0, nick),
-        title: _aiOnboardingTitle(0),
+        text: _aiOnboardingBody(0, nick, rack: _rack),
+        title: _aiOnboardingTitle(0, rack: _rack),
         child: _Input(
           controller: _name,
           hint: 'Enter nickname',
@@ -661,8 +612,8 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         ),
       ),
       _Step(
-        text: _aiOnboardingBody(1, nick),
-        title: _aiOnboardingTitle(1),
+        text: _aiOnboardingBody(1, nick, rack: _rack),
+        title: _aiOnboardingTitle(1, rack: _rack),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -679,8 +630,20 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
         ),
       ),
       _Step(
-        text: _aiOnboardingBody(2, nick),
-        title: _aiOnboardingTitle(2),
+        text: _aiOnboardingBody(2, nick, rack: _rack),
+        title: _aiOnboardingTitle(2, rack: _rack),
+        child: _Checks(
+          options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
+          selected: _rack,
+          onChanged: () {
+            setState(() {});
+            _clampPageIndexIfNeeded();
+          },
+        ),
+      ),
+      _Step(
+        text: _aiOnboardingBody(3, nick, rack: _rack),
+        title: _aiOnboardingTitle(3, rack: _rack),
         child: _Checks(
           options: const [
             'Hard to find the right fit!',
@@ -692,80 +655,11 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
           onChanged: () => setState(() {}),
         ),
       ),
-      // --- Hidden shoe rack screen — uncomment when re-enabling ---
-      // _Step(
-      //   text: _aiOnboardingBody(2, nick),
-      //   title: _aiOnboardingTitle(2),
-      //   child: _Checks(
-      //     // MVP: single profile — restore family rack options later.
-      //     options: const ['Just Me'],
-      //     // options: const ['Just Me', 'My Partner', 'My Kids', 'Elderly'],
-      //     selected: _rack,
-      //     onChanged: () => setState(() {}),
-      //   ),
-      // ),
-      // --- Future screens 4–6: Footwear + family reassurance — uncomment when re-enabling ---
-      // _Step(
-      //   text: _aiOnboardingBody(4, nick),
-      //   title: _aiOnboardingTitle(4),
-      //   child: Column(
-      //     crossAxisAlignment: CrossAxisAlignment.stretch,
-      //     children: [
-      //       ElevatedButton(
-      //         onPressed: _cameraAllowed ? null : _onCameraTap,
-      //         style: ElevatedButton.styleFrom(
-      //           backgroundColor: _cameraAllowed
-      //               ? const Color(0xFFABABAB)
-      //               : Colors.white,
-      //           foregroundColor: _cameraAllowed
-      //               ? const Color(0xFF5A5A5A)
-      //               : const Color(0xFF12899B),
-      //           elevation: 2,
-      //           padding: const EdgeInsets.symmetric(
-      //             horizontal: 24,
-      //             vertical: 14,
-      //           ),
-      //           shape: RoundedRectangleBorder(
-      //             borderRadius: BorderRadius.circular(100),
-      //           ),
-      //           side: const BorderSide(
-      //             color: Color(0xFF09DFFF),
-      //             width: 1,
-      //           ),
-      //         ),
-      //         child: Text(
-      //           _cameraAllowed ? 'Camera Allowed' : 'Allow Camera Access',
-      //           textAlign: TextAlign.center,
-      //           textHeightBehavior: _kOnboardingButtonTextHeight,
-      //           style: GoogleFonts.boldonse(
-      //             fontSize: 14,
-      //             fontWeight: FontWeight.w400,
-      //             height: 1.2,
-      //           ),
-      //         ),
-      //       ),
-      //     ],
-      //   ),
-      // ),
-      // _Step(
-      //   text: _aiOnboardingBody(5, nick),
-      //   title: _aiOnboardingTitle(5),
-      //   trailingTitle: _aiOnboardingTrailingTitle(5),
-      //   leadingTitleFirst: true,
-      //   child: const _FootSizeTable(),
-      // ),
-      // MVP: family closing reassurance step disabled (single profile).
-      // if (_rackNeedsClosingReassurance(_rack))
-      //   _Step(
-      //     text: _aiOnboardingBody(4, nick, rack: _rack),
-      //     title: _aiOnboardingTitle(4, rack: _rack),
-      //   ),
-      // Closing reassurance (old index 6) when footwear steps enabled:
-      // if (_rackNeedsClosingReassurance(_rack))
-      //   _Step(
-      //     text: _aiOnboardingBody(6, nick, rack: _rack),
-      //     title: _aiOnboardingTitle(6, rack: _rack),
-      //   ),
+      if (_rackNeedsClosingReassurance(_rack))
+        _Step(
+          text: _aiOnboardingBody(4, nick, rack: _rack),
+          title: _aiOnboardingTitle(4, rack: _rack),
+        ),
     ];
 
     return BlocListener<AuthBloc, AuthState>(
@@ -960,7 +854,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: OnboardingBottomProgress(
                               currentIndex: _index,
-                              totalSteps: _kOnboardingPageCount,
+                              totalSteps: _pageCount,
                             ),
                           ),
                         ),

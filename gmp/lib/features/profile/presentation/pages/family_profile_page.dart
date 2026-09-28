@@ -1,9 +1,3 @@
-// Family profile UI — disabled for MVP (single profile only).
-// Uncomment this file and re-enable imports/navigation in profile_page.dart
-// when multi-profile / family members ship.
-
-/*
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -528,4 +522,3 @@ class _RingAvatar extends StatelessWidget {
   }
 }
 
-*/

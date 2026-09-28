@@ -23,8 +23,7 @@ import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
 import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
-// MVP: single profile only — restore for family / multi-profile.
-// import 'family_profile_page.dart';
+import 'family_profile_page.dart';
 import 'notifications_page.dart';
 import 'manage_devices_page.dart';
 import 'faq_page.dart';
@@ -209,8 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           final token = _accessToken ?? '';
-          // MVP: single profile only — restore householdType branching later.
-          // final isJustMe = profile.householdType == 'just_me';
+          final isJustMe = profile.householdType == 'just_me';
 
           final statusTop = MediaQuery.paddingOf(context).top;
           final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -395,20 +393,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                                   token,
                                                 ),
                                               ),
-                                              // MVP: family profile — restore when multi-profile ships.
-                                              // _GradientMenuTile(
-                                              //   iconAssetPath:
-                                              //       'assets/images/icons/profile/familyprofile.svg',
-                                              //   title: isJustMe ? 'Profile' : 'Family Profile',
-                                              //   scale: layoutScale,
-                                              //   onTap: () {
-                                              //     if (isJustMe) {
-                                              //       _openEditProfile(context, profile, token);
-                                              //       return;
-                                              //     }
-                                              //     _openFamilyProfile(context, profile, token);
-                                              //   },
-                                              // ),
+                                              if (!isJustMe)
+                                                _GradientMenuTile(
+                                                  iconAssetPath:
+                                                      'assets/images/icons/profile/familyprofile.svg',
+                                                  title: 'Family Profile',
+                                                  scale: layoutScale,
+                                                  onTap: () =>
+                                                      _openFamilyProfile(
+                                                    context,
+                                                    profile,
+                                                    token,
+                                                  ),
+                                                ),
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/bell.svg',
@@ -552,22 +549,21 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // MVP: single profile only — restore for family / multi-profile.
-  // void _openFamilyProfile(
-  //   BuildContext context,
-  //   UserProfile profile,
-  //   String token,
-  // ) {
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder: (_) => BlocProvider.value(
-  //         value: context.read<ProfileBloc>(),
-  //         child: FamilyProfilePage(profile: profile, accessToken: token),
-  //       ),
-  //     ),
-  //   );
-  // }
+  void _openFamilyProfile(
+    BuildContext context,
+    UserProfile profile,
+    String token,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<ProfileBloc>(),
+          child: FamilyProfilePage(profile: profile, accessToken: token),
+        ),
+      ),
+    );
+  }
 
   void _openSavedAddresses(
     BuildContext context,
@@ -642,85 +638,62 @@ class _OverlappingAvatarCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Single profile avatar — family ring icons hidden (see family profile module).
+    final clusterW = (156 * scale).clamp(112.0, 156.0);
+    final clusterH = (92 * scale).clamp(68.0, 92.0);
     final mainRadius = (39.5 * scale).clamp(28.0, 39.5);
-    const border = BorderSide.none;
+    final smallRadius = (22 * scale).clamp(16.0, 22.0);
+    const border = BorderSide(color: Colors.white, width: 2);
 
     final cluster = SizedBox(
-      width: mainRadius * 2,
-      height: mainRadius * 2,
-      child: _RingAvatar(
-        radius: mainRadius,
-        border: border,
-        child: profile.profileImage != null
-            ? ClipOval(
-                child: Image.network(
-                  profile.profileImage!,
-                  width: mainRadius * 2,
-                  height: mainRadius * 2,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _initialsAvatar(profile, mainRadius),
-                ),
-              )
-            : _initialsAvatar(profile, mainRadius),
+      width: clusterW,
+      height: clusterH,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: 0,
+            top: 0,
+            child: _RingAvatar(
+              radius: smallRadius,
+              border: border,
+              child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
+            ),
+          ),
+          Positioned(
+            right: (31 * scale).clamp(20.0, 31.0),
+            top: (6 * scale).clamp(3.0, 6.0),
+            child: _RingAvatar(
+              radius: mainRadius,
+              border: BorderSide.none,
+              child: profile.profileImage != null
+                  ? ClipOval(
+                      child: Image.network(
+                        profile.profileImage!,
+                        width: mainRadius * 2,
+                        height: mainRadius * 2,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _initialsAvatar(profile, mainRadius),
+                      ),
+                    )
+                  : _initialsAvatar(profile, mainRadius),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: _RingAvatar(
+              radius: smallRadius,
+              border: border,
+              child: _smallFill(
+                Icons.child_care_outlined,
+                (18 * scale).clamp(12.0, 18.0),
+              ),
+            ),
+          ),
+        ],
       ),
     );
-
-    // Family emoji cluster — commented out; one profile only.
-    // final clusterW = (156 * scale).clamp(112.0, 156.0);
-    // final clusterH = (92 * scale).clamp(68.0, 92.0);
-    // final smallRadius = (22 * scale).clamp(16.0, 22.0);
-    // final cluster = SizedBox(
-    //   width: clusterW,
-    //   height: clusterH,
-    //   child: Stack(
-    //     clipBehavior: Clip.none,
-    //     children: [
-    //       Positioned(
-    //         right: 0,
-    //         top: 0,
-    //         child: _RingAvatar(
-    //           radius: smallRadius,
-    //           border: border,
-    //           child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
-    //         ),
-    //       ),
-    //       Positioned(
-    //         right: (31 * scale).clamp(20.0, 31.0),
-    //         top: (6 * scale).clamp(3.0, 6.0),
-    //         child: _RingAvatar(
-    //           radius: mainRadius,
-    //           border: BorderSide.none,
-    //           child: profile.profileImage != null
-    //               ? ClipOval(
-    //                   child: Image.network(
-    //                     profile.profileImage!,
-    //                     width: mainRadius * 2,
-    //                     height: mainRadius * 2,
-    //                     fit: BoxFit.cover,
-    //                     errorBuilder: (context, error, stackTrace) =>
-    //                         _initialsAvatar(profile, mainRadius),
-    //                   ),
-    //                 )
-    //               : _initialsAvatar(profile, mainRadius),
-    //         ),
-    //       ),
-    //       Positioned(
-    //         right: 0,
-    //         bottom: 0,
-    //         child: _RingAvatar(
-    //           radius: smallRadius,
-    //           border: border,
-    //           child: _smallFill(
-    //             Icons.child_care_outlined,
-    //             (18 * scale).clamp(12.0, 18.0),
-    //           ),
-    //         ),
-    //       ),
-    //     ],
-    //   ),
-    // );
 
     if (onTap == null) return cluster;
 
@@ -754,13 +727,13 @@ class _OverlappingAvatarCluster extends StatelessWidget {
     );
   }
 
-  // Widget _smallFill(IconData icon, double size) {
-  //   return Container(
-  //     color: Colors.white.withValues(alpha: 0.22),
-  //     alignment: Alignment.center,
-  //     child: Icon(icon, color: Colors.white, size: size),
-  //   );
-  // }
+  Widget _smallFill(IconData icon, double size) {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.22),
+      alignment: Alignment.center,
+      child: Icon(icon, color: Colors.white, size: size),
+    );
+  }
 }
 
 class _RingAvatar extends StatelessWidget {

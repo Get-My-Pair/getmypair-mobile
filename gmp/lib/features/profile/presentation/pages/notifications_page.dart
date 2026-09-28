@@ -6,12 +6,15 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
+import '../../../../injection_container.dart' as di;
+import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../domain/entities/user_profile.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_state.dart';
 import '../utils/profile_notifications.dart';
 import '../utils/notification_navigation_helper.dart';
 import '../utils/user_notifications.dart';
+import 'family_profile_page.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -81,6 +84,30 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (!mounted) return;
     await navigateFromUserNotification(context, item);
     if (mounted) await _load();
+  }
+
+  Future<void> _onProfileNotificationTap(
+    ProfileNotificationItem item,
+    UserProfile profile,
+  ) async {
+    if (item.id != 'create_family_profile') return;
+    final result = await di.sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await result.fold(
+      (_) async {},
+      (token) async {
+        if (!mounted) return;
+        await Navigator.push<void>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BlocProvider.value(
+              value: context.read<ProfileBloc>(),
+              child: FamilyProfilePage(profile: profile, accessToken: token),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String? _formatTime(DateTime? dt) {
@@ -166,6 +193,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       child: _NotificationCard(
                         title: item.title,
                         message: item.message,
+                        onTap: profile == null
+                            ? null
+                            : () => _onProfileNotificationTap(item, profile),
                       ),
                     );
                   }),
