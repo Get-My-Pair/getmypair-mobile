@@ -76,6 +76,7 @@ class _ProfilePageState extends State<ProfilePage> {
             current is ProfileUpdating ||
             current is ProfileImageUploading ||
             current is AddressActionLoading ||
+            current is ProfileSwitching ||
             (current is ProfileError && current.profile != null);
         if (!alreadyLoaded) {
           context.read<ProfileBloc>().add(ProfileLoadRequested(token));
@@ -163,6 +164,8 @@ class _ProfilePageState extends State<ProfilePage> {
               : state is ProfileImageUploading
               ? state.profile
               : state is AddressActionLoading
+              ? state.profile
+              : state is ProfileSwitching
               ? state.profile
               : state is ProfileError && state.profile != null
               ? state.profile!

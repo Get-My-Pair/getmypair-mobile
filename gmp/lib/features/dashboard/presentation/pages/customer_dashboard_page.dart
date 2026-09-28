@@ -11,7 +11,9 @@ import 'package:gmp/features/articles/presentation/pages/article_list_page.dart'
 import 'package:gmp/features/home/presentation/pages/home_page.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_event.dart';
+import 'package:gmp/features/profile/presentation/bloc/profile_state.dart';
 import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
+import 'package:gmp/features/profile/presentation/utils/profile_switch_loading.dart';
 import 'package:gmp/injection_container.dart';
 
 class CustomerDashboardPage extends StatefulWidget {
@@ -84,14 +86,20 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                 _loadProfile(innerContext);
               });
             }
-            return Scaffold(
-              backgroundColor: AppColors.background,
-              extendBody: true,
-              body: IndexedStack(
-                index: _currentIndex.clamp(0, _pages.length - 1),
-                children: _pages,
+            return BlocListener<ProfileBloc, ProfileState>(
+              listenWhen: (previous, current) =>
+                  previous is ProfileSwitching || current is ProfileSwitching,
+              listener: (context, state) =>
+                  ProfileSwitchLoading.sync(context, state),
+              child: Scaffold(
+                backgroundColor: AppColors.background,
+                extendBody: true,
+                body: IndexedStack(
+                  index: _currentIndex.clamp(0, _pages.length - 1),
+                  children: _pages,
+                ),
+                bottomNavigationBar: _buildBottomNav(innerContext),
               ),
-              bottomNavigationBar: _buildBottomNav(innerContext),
             );
           },
         ),

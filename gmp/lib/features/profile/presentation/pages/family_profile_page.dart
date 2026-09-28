@@ -16,6 +16,7 @@ import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
+import '../utils/profile_switch_loading.dart';
 
 class FamilyProfilePage extends StatefulWidget {
   final UserProfile profile;
@@ -165,6 +166,7 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
   Widget build(BuildContext context) {
     return BlocConsumer<ProfileBloc, ProfileState>(
       listener: (context, state) async {
+        ProfileSwitchLoading.sync(context, state);
         if (state is ProfileError) {
           if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
           await showAppFeedbackAlert(
@@ -183,14 +185,17 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                     ? state.profile
                     : state is AddressActionLoading
                         ? state.profile
-                        : state is ProfileError && state.profile != null
+                        : state is ProfileSwitching
+                            ? state.profile
+                            : state is ProfileError && state.profile != null
                             ? state.profile!
                             : widget.profile;
         final profiles = switchableProfilesOf(currentProfile);
         final activeId = currentProfile.isSelfActive
             ? kSelfProfileId
             : currentProfile.activeProfileId;
-        final switching = state is AddressActionLoading;
+        final switching =
+            state is AddressActionLoading || state is ProfileSwitching;
 
         final statusTop = MediaQuery.paddingOf(context).top;
         final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -297,7 +302,7 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                if (switching)
+                                if (state is AddressActionLoading)
                                   const Padding(
                                     padding: EdgeInsets.only(bottom: 12),
                                     child: LinearProgressIndicator(

@@ -54,6 +54,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     if (s is ProfileUpdating) return s.profile;
     if (s is ProfileImageUploading) return s.profile;
     if (s is AddressActionLoading) return s.profile;
+    if (s is ProfileSwitching) return s.profile;
     if (s is ProfileError) return s.profile;
     return null;
   }
@@ -320,9 +321,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(const ProfileError('Profile not loaded'));
       return;
     }
-    final optimistic = ActiveProfileStore.forceActive(current, event.profileId);
-    emit(AddressActionLoading(optimistic));
-    await _rememberActive(optimistic);
+    final targetName = _displayNameFor(current, event.profileId);
+    emit(ProfileSwitching(
+      profile: current,
+      targetProfileId: event.profileId,
+      targetName: targetName,
+    ));
+    final pending = ActiveProfileStore.forceActive(current, event.profileId);
+    await _rememberActive(pending);
     try {
       await switchActiveProfile(
         accessToken: event.accessToken,
@@ -345,8 +351,18 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       await _rememberActive(reloaded);
       emit(ProfileLoaded(reloaded));
     } catch (_) {
-      emit(ProfileLoaded(optimistic));
+      emit(ProfileLoaded(pending));
     }
+  }
+
+  String _displayNameFor(UserProfile profile, String profileId) {
+    if (profileId == kSelfProfileId || profileId.isEmpty) {
+      return profile.name;
+    }
+    for (final member in profile.familyMembers) {
+      if (member.id == profileId) return member.name;
+    }
+    return 'profile';
   }
 
   Future<void> _onDeleteFamilyMember(

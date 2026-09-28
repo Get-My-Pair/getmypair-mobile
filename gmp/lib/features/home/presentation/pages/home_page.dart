@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'dart:async';
 
@@ -24,6 +23,7 @@ import '../../../profile/presentation/bloc/profile_event.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../profile/presentation/utils/profile_switch_loading.dart';
 import '../../../profile/presentation/utils/user_notifications.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
 import '../../../profile/presentation/pages/saved_addresses_page.dart';
@@ -99,7 +99,7 @@ const double _kHomeHeaderStatsToBottom = 14;
 /// Bottom corner radius on the hero card.
 const double _kHomeHeaderBottomRadius = 20;
 /// Visible gap between the hero bottom curve and the My Rack card.
-const double _kHomeHeaderToRackGap = 14;
+const double _kHomeHeaderToRackGap = 8;
 
 /// Tile height for quick actions (tuned on Edge 60 Pro @ 412×915).
 const double _kQuickActionCellHeight = 78;
@@ -129,13 +129,7 @@ double _homeLayoutScale(BuildContext context) {
 double _homeScaled(double designPx, double layoutScale) =>
     designPx * layoutScale;
 
-/// Edge reference heights for dashboard body (logical px @ scale 1.0).
-const double _kHomeDesignMinActionH = 84.0;
-const double _kHomeDesignMaxActionH = 116.0;
-const double _kHomeDesignMinActionHCramped = 68.0;
-const double _kHomeDesignMinRackH = 80.0;
 const double _kHomeDesignRackContentH = 128.0;
-const double _kHomeDesignRackHeaderH = 24.0;
 
 /// Vertical gap between the location row and the search field: design scale plus a
 /// fraction of screen height so tall/narrow devices keep similar visual balance.
@@ -169,92 +163,25 @@ double _homeHeaderScaleXForWidth(double width) {
 
 /// Space above the floating bottom nav so action cards are not covered.
 double _homeViewportBottomReserve(BuildContext context) {
-  return dashboardLinkedBottomNavStackHeight(context);
+  final full = dashboardLinkedBottomNavStackHeight(context);
+  return math.max(
+    FloatingGradientBottomNav.barHeight + 10,
+    full - 10,
+  );
 }
 
 /// Vertical gap between My Rack and the 2×2 action grid.
 double _homeSectionGap(double layoutScale) =>
     (10 * layoutScale).clamp(8.0, 12.0);
 
-/// Slightly larger gap above and below CareMyPair (Figma breathing room).
-double _homeCareSectionGap(double layoutScale) =>
-    (14 * layoutScale).clamp(12.0, 18.0);
-
 /// Scales icons/text inside action cards vs Edge reference cell height.
 double _homeActionContentScale(double actionBlockH, double layoutScale) =>
     (actionBlockH / (_kQuickActionCellHeight * layoutScale))
         .clamp(0.72, 1.38);
 
-const _kPairActionLineHeight = 1.15;
-
 /// Scales My Rack inner content (title, thumbs, icons) vs Edge reference.
 double _homeRackContentScale(double rackHeight, double layoutScale) =>
     (rackHeight / (_kHomeDesignRackContentH * layoutScale)).clamp(0.72, 1.38);
-
-double _clampSafe(double value, double lower, double upper) {
-  final lo = math.min(lower, upper);
-  final hi = math.max(lower, upper);
-  return value.clamp(lo, hi);
-}
-
-/// My Rack taller; Care / Rehome and Rent / Style Me share equal [actionBlockH].
-({double rackHeight, double actionBlockH}) _homeFigmaBodyHeights({
-  required double bodyHeight,
-  required double headerToRackGap,
-  required double sectionGap,
-  required double rackMinHeight,
-  required double layoutScale,
-}) {
-  const rackOverAction = 1.26;
-  final minActionH = _homeScaled(_kHomeDesignMinActionH, layoutScale);
-  final maxActionH = _homeScaled(_kHomeDesignMaxActionH, layoutScale);
-  final minActionCramped = _homeScaled(_kHomeDesignMinActionHCramped, layoutScale);
-  final minRackCramped = _homeScaled(_kHomeDesignMinRackH, layoutScale);
-  final slack = math.max(
-    0.0,
-    bodyHeight - headerToRackGap - (sectionGap * 2),
-  );
-
-  if (slack < minActionH * 2 + _homeScaled(80, layoutScale)) {
-    final actionBlockH =
-        _clampSafe(slack * 0.34, minActionCramped, maxActionH);
-    final rackHeight = _clampSafe(
-      slack - actionBlockH * 2,
-      minRackCramped,
-      slack - actionBlockH * 2,
-    );
-    return (rackHeight: rackHeight, actionBlockH: actionBlockH);
-  }
-
-  final cappedRackMin = math.min(rackMinHeight * 1.07, slack * 0.45);
-
-  // Two action rows (Care/Rehome + Rent/Style Me): equal height.
-  var actionBlockH = _clampSafe(slack * 0.315, minActionH, maxActionH);
-  final rackCap = math.max(cappedRackMin, actionBlockH * 1.38);
-  var rackHeight = _clampSafe(
-    actionBlockH * rackOverAction,
-    cappedRackMin,
-    rackCap,
-  );
-
-  var remaining = slack - rackHeight - (actionBlockH * 2);
-  if (remaining > 0) {
-    actionBlockH = _clampSafe(actionBlockH + remaining / 2, minActionH, maxActionH);
-    remaining = slack - rackHeight - (actionBlockH * 2);
-    if (remaining > 0) {
-      rackHeight = _clampSafe(
-        rackHeight + math.min(remaining, _homeScaled(14, layoutScale)),
-        cappedRackMin,
-        rackCap,
-      );
-    }
-  } else if (remaining < 0) {
-    rackHeight = _clampSafe(rackHeight + remaining, cappedRackMin, rackCap);
-    actionBlockH = _clampSafe((slack - rackHeight) / 2, minActionH, maxActionH);
-  }
-
-  return (rackHeight: rackHeight, actionBlockH: actionBlockH);
-}
 
 /// Home Page — Figma `335:1687`; icons from [FigmaHomeAssets].
 /// This is the landing tab shown to authenticated users on the main dashboard.
@@ -279,6 +206,7 @@ class _HomePageState extends State<HomePage> {
   int _pairsSold = 0;
   int _pairsInCare = 0;
   String? _lastActiveProfileId;
+  int _switchLoadGen = 0;
 
   static String _formatPlacemarkForHomeHeader(Placemark p) {
     final subLocality = p.subLocality?.trim();
@@ -452,8 +380,8 @@ class _HomePageState extends State<HomePage> {
 
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
-    tokenResult.fold(
-      (_) {
+    await tokenResult.fold<Future<void>>(
+      (_) async {
         if (!mounted) return;
         setState(() {
           _rackError = 'Sign in to see your rack';
@@ -711,8 +639,25 @@ class _HomePageState extends State<HomePage> {
                 : state.profile.activeProfileId;
             if (_lastActiveProfileId != activeId) {
               _lastActiveProfileId = activeId;
-              _loadRackPreview();
-              _loadHomeStats();
+              final gen = ++_switchLoadGen;
+              () async {
+                try {
+                  await Future.wait<void>([
+                    _loadRackPreview(),
+                    _loadHomeStats(),
+                  ]);
+                } finally {
+                  if (!mounted || gen != _switchLoadGen) return;
+                  await WidgetsBinding.instance.endOfFrame;
+                  if (!mounted || gen != _switchLoadGen) return;
+                  await WidgetsBinding.instance.endOfFrame;
+                  if (!mounted || gen != _switchLoadGen) return;
+                  ProfileSwitchLoading.onDetailsReady(
+                    context,
+                    profileId: activeId,
+                  );
+                }
+              }();
             }
           }
         },
@@ -785,46 +730,79 @@ class _HomePageState extends State<HomePage> {
                                       final bodyH = bodyConstraints.maxHeight;
                                       final headerToRackGap =
                                           (_kHomeHeaderToRackGap * layoutScale)
-                                              .clamp(10.0, 18.0);
-                                      final rackCardTopPaddingLoose =
-                                          (64 * layoutScale).clamp(16.0, 26.0);
+                                              .clamp(6.0, 10.0);
+                                      final rackCardTopPadding =
+                                          (10 * layoutScale).clamp(8.0, 12.0);
                                       final rackCardBottomPadding =
-                                          (7 * layoutScale).clamp(5.0, 7.0);
+                                          (8 * layoutScale).clamp(6.0, 10.0);
                                       final showRackThumbs = !_rackLoading &&
                                           _rackError == null &&
                                           _rackArticles != null &&
                                           _rackArticles!.isNotEmpty;
-                                      final rackCardTopPadding = showRackThumbs
-                                          ? ((20 * layoutScale).clamp(14.0, 23.0))
-                                          : rackCardTopPaddingLoose;
                                       final sectionGap =
                                           _homeSectionGap(layoutScale);
-                                      final careSectionGap =
-                                          _homeCareSectionGap(layoutScale);
-                                      final rackThumbGap = showRackThumbs
-                                          ? (10 * layoutScale).clamp(8.0, 14.0)
-                                          : (8 * layoutScale).clamp(6.0, 10.0);
-                                      final rackThumbRowMin =
-                                          (62 * layoutScale).clamp(54.0, 70.0);
-                                      final rackMinHeight = rackCardTopPadding +
-                                          _homeScaled(
-                                            _kHomeDesignRackHeaderH,
-                                            layoutScale,
-                                          ) +
-                                          rackThumbGap +
-                                          rackThumbRowMin +
-                                          rackCardBottomPadding +
-                                          _homeScaled(4, layoutScale);
-                                      final figmaHeights = _homeFigmaBodyHeights(
-                                        bodyHeight: bodyH,
-                                        headerToRackGap: headerToRackGap,
-                                        sectionGap: careSectionGap,
-                                        rackMinHeight: rackMinHeight,
-                                        layoutScale: layoutScale,
+                                      final gridGap = (8 * layoutScale).clamp(
+                                        6.0,
+                                        10.0,
                                       );
-                                      final rackHeight = figmaHeights.rackHeight;
-                                      // Care/Rehome + Rent/Style Me: same height, scaled together.
-                                      final equalBlockH = figmaHeights.actionBlockH;
+                                      final rackThumbGap = showRackThumbs
+                                          ? (6 * layoutScale).clamp(4.0, 8.0)
+                                          : (6 * layoutScale).clamp(4.0, 8.0);
+                                      final availableBody = math.max(
+                                        0.0,
+                                        bodyH - headerToRackGap - gridGap * 2 - 1,
+                                      );
+                                      final cardWidth =
+                                          (bodyConstraints.maxWidth -
+                                              sectionGap) /
+                                          2;
+                                      // Wide rectangle: about 2.25× as wide as tall.
+                                      final rectangleH =
+                                          (cardWidth / 2.25).clamp(
+                                        _homeScaled(68, layoutScale),
+                                        _homeScaled(84, layoutScale),
+                                      );
+                                      var equalBlockH = math.min(
+                                        rectangleH,
+                                        availableBody * 0.275,
+                                      );
+                                      final rackHeaderH =
+                                          _homeScaled(22, layoutScale).clamp(
+                                        20.0,
+                                        24.0,
+                                      );
+                                      final rackThumbRowH =
+                                          _homeScaled(76, layoutScale).clamp(
+                                        66.0,
+                                        82.0,
+                                      );
+                                      final rackContentH = rackCardTopPadding +
+                                          rackHeaderH +
+                                          rackThumbGap +
+                                          rackThumbRowH +
+                                          rackCardBottomPadding;
+                                      final rackMaxFit = math.max(
+                                        0.0,
+                                        availableBody - equalBlockH * 2,
+                                      );
+                                      var rackHeight = math.min(
+                                        rackContentH,
+                                        rackMaxFit,
+                                      );
+                                      final packedH = headerToRackGap +
+                                          rackHeight +
+                                          gridGap * 2 +
+                                          equalBlockH * 2;
+                                      final leftover = math.max(
+                                        0.0,
+                                        bodyH - packedH,
+                                      );
+                                      // Only a little leftover on My Rack so it
+                                      // stays compact.
+                                      final grow = math.max(0.0, leftover - 12);
+                                      if (grow > 0) {
+                                        rackHeight += grow * 0.28;
+                                      }
                                       final actionContentScale =
                                           _homeActionContentScale(
                                         equalBlockH,
@@ -860,10 +838,6 @@ class _HomePageState extends State<HomePage> {
                                         _homeScaled(9, layoutScale),
                                         _homeScaled(15, layoutScale),
                                       );
-                                      final rackHeaderH = rackMaximizeSize.clamp(
-                                        _homeScaled(20, layoutScale),
-                                        _homeScaled(30, layoutScale),
-                                      );
                                       final rackHorizontalPad =
                                           _homeScaled(14, layoutScale);
                                       final rackThumbStripGap =
@@ -877,6 +851,7 @@ class _HomePageState extends State<HomePage> {
                                           SizedBox(height: headerToRackGap),
                                           SizedBox(
                                             height: rackHeight,
+                                            width: double.infinity,
                                             child: ClipRRect(
                                               borderRadius: rackClipRadius,
                                               clipBehavior: Clip.hardEdge,
@@ -1042,7 +1017,7 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ),
-                                          SizedBox(height: careSectionGap),
+                                          SizedBox(height: gridGap),
                                           SizedBox(
                                             height: equalBlockH,
                                             width: double.infinity,
@@ -1093,7 +1068,7 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ),
-                                          SizedBox(height: careSectionGap),
+                                          SizedBox(height: gridGap),
                                           SizedBox(
                                             height: equalBlockH,
                                             width: double.infinity,
@@ -1354,13 +1329,8 @@ class _HomeHeaderBell extends StatelessWidget {
     final bellIconW = (18.0 * s).clamp(16.0, 22.0);
     final bellIconH = bellIconW * (16 / 14);
 
-    // Glass chrome — scaled from header scale [s] so blur, rim, and lift stay proportional.
-    final blurSigma = (14.0 * s).clamp(11.0, 18.0);
     final rimW = (1.0 * s).clamp(0.85, 1.25);
-    final liftBlur = (9.0 * s).clamp(7.0, 12.0);
     final liftY = (3.0 * s).clamp(2.5, 4.5);
-    final haloBlur = (6.0 * s).clamp(4.5, 9.0);
-    final rimHighlightBlur = (2.0 * s).clamp(1.0, 3.0);
 
     return GestureDetector(
       onTap: onTap,
@@ -1369,157 +1339,49 @@ class _HomeHeaderBell extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Container(
-          width: bellSize,
-          height: bellSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              // Primary float — cool-tinted shadow reads on gradients and light UI.
-              BoxShadow(
-                color: const Color(0xFF0A2540).withValues(alpha: 0.20),
-                blurRadius: liftBlur,
-                offset: Offset(0, liftY),
-              ),
-              // Soft ambient pool — separates control from background.
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: haloBlur,
-                offset: Offset(0, liftY * 0.45),
-              ),
-              // Tight top catch-light — glass edge lift (inset feel from spread).
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.32),
-                blurRadius: rimHighlightBlur,
-                spreadRadius: -(1.1 * s).clamp(0.75, 1.45),
-                offset: Offset(0, -(0.9 * s).clamp(0.45, 1.15)),
-              ),
-            ],
-          ),
-          child: ClipOval(
-            clipBehavior: Clip.antiAlias,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 1) Base body tint — radial bias keeps icon legible on dark + light headers.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.22, -0.32),
-                        radius: 1.05,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.26),
-                          Colors.white.withValues(alpha: 0.11),
-                          Colors.white.withValues(alpha: 0.07),
-                        ],
-                        stops: const [0.0, 0.52, 1.0],
-                      ),
-                    ),
-                  ),
-                  // 2) Diagonal frosted film — main glass read; restrained alphas.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.34),
-                          Colors.white.withValues(alpha: 0.07),
-                          Colors.white.withValues(alpha: 0.16),
-                        ],
-                        stops: const [0.0, 0.48, 1.0],
-                      ),
-                    ),
-                  ),
-                  // 3) Top specular band — iOS-style polished highlight.
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: FractionallySizedBox(
-                      heightFactor: 0.40,
-                      widthFactor: 1,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.white.withValues(alpha: 0.20),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 4) Bottom depth wash — anchors hierarchy without muddying blur.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          const Color(0xFF0A1628).withValues(alpha: 0.07),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // 5) Inner rim glow — subtle inner edge light.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        radius: 1.0,
-                        colors: [
-                          Colors.transparent,
-                          Colors.white.withValues(alpha: 0.0),
-                          Colors.white.withValues(alpha: 0.09),
-                        ],
-                        stops: const [0.0, 0.78, 1.0],
-                      ),
-                    ),
-                  ),
-                  // 6) Glass rim stroke — full-bleed ring; does not consume bell padding.
-                  IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          width: rimW,
-                          color: Colors.white.withValues(alpha: 0.40),
-                        ),
-                      ),
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
-                  // 7) Bell icon.
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: bellPadH,
-                      vertical: bellPadV,
-                    ),
-                    child: Center(
-                      child: SvgPicture.asset(
-                        _kNotificationBellSvgAsset,
-                        width: bellIconW,
-                        height: bellIconH,
-                        fit: BoxFit.contain,
-                        colorFilter: const ColorFilter.mode(
-                          _kHeaderIconTint,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ),
+              width: bellSize,
+              height: bellSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.34),
+                    Colors.white.withValues(alpha: 0.12),
+                  ],
+                ),
+                border: Border.all(
+                  width: rimW,
+                  color: Colors.white.withValues(alpha: 0.40),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0A2540).withValues(alpha: 0.18),
+                    blurRadius: 8,
+                    offset: Offset(0, liftY),
                   ),
                 ],
               ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: bellPadH,
+                  vertical: bellPadV,
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    _kNotificationBellSvgAsset,
+                    width: bellIconW,
+                    height: bellIconH,
+                    fit: BoxFit.contain,
+                    colorFilter: const ColorFilter.mode(
+                      _kHeaderIconTint,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
             if (notificationCount > 0)
               Positioned(
                 right: -2,
@@ -2319,17 +2181,19 @@ class _RackThumbStrip extends StatelessWidget {
   }
 }
 
-/// Rent / Rehome labels: fixed two lines, no soft-wrap or ellipsis.
+/// Rent / Rehome labels: two lines that scale down instead of overflowing.
 class _PairActionLabel extends StatelessWidget {
   const _PairActionLabel({
     required this.label,
     required this.fontSize,
     required this.color,
+    this.lineGap = 2,
   });
 
   final String label;
   final double fontSize;
   final Color color;
+  final double lineGap;
 
   @override
   Widget build(BuildContext context) {
@@ -2340,7 +2204,7 @@ class _PairActionLabel extends StatelessWidget {
       fontSize: fontSize,
       fontWeight: FontWeight.w400,
       color: color,
-      height: _kPairActionLineHeight,
+      height: 1.12,
     );
 
     return Column(
@@ -2351,16 +2215,16 @@ class _PairActionLabel extends StatelessWidget {
           line1,
           maxLines: 1,
           softWrap: false,
-          overflow: TextOverflow.visible,
+          overflow: TextOverflow.ellipsis,
           style: style,
         ),
         if (line2.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: lineGap),
           Text(
             line2,
             maxLines: 1,
             softWrap: false,
-            overflow: TextOverflow.visible,
+            overflow: TextOverflow.ellipsis,
             style: style,
           ),
         ],
@@ -2386,7 +2250,7 @@ class _HomeActionPairRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(child: left),
-        SizedBox(width: gap),
+        SizedBox(width: gap.clamp(6.0, 12.0)),
         Expanded(child: right),
       ],
     );
@@ -2483,88 +2347,20 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final widthScale = _homeWidthScale(context);
-    final heightScale = cellHeight != null
-        ? (cellHeight! / (_kQuickActionCellHeight * layoutScale))
-            .clamp(0.72, 1.38)
-        : 1.0;
-    final contentScale = widthScale * heightScale;
     final isTwoLine = label.contains('\n');
     final textColor = highlight ? Colors.white : _kQuickActionMutedText;
-    final resolvedHeight =
-        cellHeight ??
-        (isTwoLine
-            ? (_kQuickActionCellHeight + 28) * contentScale
-            : _kQuickActionCellHeight * contentScale);
-    final verticalPad = cellHeight != null
-        ? ((cellHeight! - iconHeight) * 0.2).clamp(
-            _homeScaled(8, layoutScale),
-            _homeScaled(20, layoutScale),
-          )
-        : (isTwoLine ? 18 : 8) * contentScale;
-    final padding = EdgeInsets.symmetric(
-      horizontal: _homeScaled(highlight ? 18 : 12, layoutScale),
-      vertical: verticalPad,
-    );
-    final cardRadius = _homeScaled(10, layoutScale);
-    final labelSize = ((MediaQuery.sizeOf(context).width <
-                _kHomeDesignWidth * 0.88
-            ? 14.0
-            : 16.0) *
-        contentScale)
-        .clamp(
-      _homeScaled(10, layoutScale),
-      _homeScaled(20, layoutScale),
-    );
-
-    final cardBody = Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: iconWidth,
-          height: iconHeight,
-          child: _buildActionIcon(textColor),
-        ),
-        SizedBox(width: _homeScaled(14, layoutScale)),
-        if (isTwoLine)
-          Expanded(
-            child: _PairActionLabel(
-              label: label,
-              fontSize: labelSize,
-              color: textColor,
-            ),
-          )
-        else
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.center,
-              child: Text(
-                label,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.boldonse(
-                  fontSize: labelSize,
-                  fontWeight: FontWeight.w400,
-                  color: textColor,
-                  height: 1.08,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+    final cardRadius = _homeScaled(12, layoutScale);
 
     return Material(
       color: Colors.transparent,
+      clipBehavior: Clip.antiAlias,
+      borderRadius: BorderRadius.circular(cardRadius),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(cardRadius),
-        child: Container(
-          height: cellHeight ?? resolvedHeight,
+        child: Ink(
           width: double.infinity,
-          padding: padding,
+          height: double.infinity,
           decoration: BoxDecoration(
             color: _kQuickActionMutedBg,
             gradient: highlight
@@ -2579,8 +2375,72 @@ class _QuickActionCard extends StatelessWidget {
                 : null,
             borderRadius: BorderRadius.circular(cardRadius),
           ),
-          alignment: Alignment.center,
-          child: cardBody,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final h = constraints.maxHeight > 0
+                  ? constraints.maxHeight
+                  : (cellHeight ?? 0);
+              final w = constraints.maxWidth;
+              if (h <= 0 || w <= 0) return const SizedBox.shrink();
+
+              final padH = (w * 0.08).clamp(10.0, 14.0);
+              final padV = (h * 0.14).clamp(8.0, 12.0);
+              final innerH = math.max(18.0, h - padV * 2);
+              final innerW = math.max(18.0, w - padH * 2);
+              final iconH = (innerH * 0.62).clamp(22.0, 32.0);
+              final iconRatio =
+                  iconHeight <= 0 ? 1.0 : (iconWidth / iconHeight);
+              final iconW = (iconH * iconRatio).clamp(22.0, 34.0);
+              final gap = (innerW * 0.06).clamp(8.0, 12.0);
+              final fontSize = (innerH * 0.28).clamp(12.0, 15.0);
+              final lineGap = (innerH * 0.08).clamp(3.0, 6.0);
+
+              return Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: padH,
+                  vertical: padV,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: iconW,
+                      height: iconH,
+                      child: _buildActionIcon(textColor),
+                    ),
+                    SizedBox(width: gap),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: isTwoLine
+                              ? _PairActionLabel(
+                                  label: label,
+                                  fontSize: fontSize,
+                                  color: textColor,
+                                  lineGap: lineGap,
+                                )
+                              : Text(
+                                  label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.boldonse(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.w400,
+                                    color: textColor,
+                                    height: 1.08,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

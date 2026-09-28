@@ -52,6 +52,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (state is ProfileUpdating) return state.profile;
     if (state is ProfileImageUploading) return state.profile;
     if (state is AddressActionLoading) return state.profile;
+    if (state is ProfileSwitching) return state.profile;
     if (state is ProfileError) return state.profile;
     return null;
   }

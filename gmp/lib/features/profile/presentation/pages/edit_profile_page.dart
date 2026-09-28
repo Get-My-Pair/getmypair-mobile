@@ -268,6 +268,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (state is ProfileUpdating) return state.profile;
     if (state is ProfileImageUploading) return state.profile;
     if (state is AddressActionLoading) return state.profile;
+    if (state is ProfileSwitching) return state.profile;
     if (state is ProfileError && state.profile != null) return state.profile!;
     return widget.profile;
   }
@@ -313,6 +314,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     h += labelLineHeight();
     h += sx(6, 3, 6);
     h += sx(14, 11, 14) * 1.34;
+    h += sx(12, 8, 16);
     h += sx(50, 44, 52);
 
     return h;
@@ -713,6 +715,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   controller: _abnormalityController,
                                   scale: contentScale,
                                   hint: 'e.g. Wide Foot',
+                                ),
+                                SizedBox(
+                                  height: (12 * contentScale).clamp(8.0, 16.0),
                                 ),
                                 Align(
                                   alignment: Alignment.centerRight,

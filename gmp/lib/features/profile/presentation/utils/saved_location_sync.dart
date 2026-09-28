@@ -124,6 +124,7 @@ UserProfile? userProfileFromProfileState(ProfileState state) {
   if (state is ProfileImageUploading) return state.profile;
   if (state is ProfileError) return state.profile;
   if (state is AddressActionLoading) return state.profile;
+  if (state is ProfileSwitching) return state.profile;
   return null;
 }
 
