@@ -63,6 +63,9 @@ class ApiEndpoints {
       '$baseUrl$userProfilePrefix/family-members/update';
   static String userProfileDeleteFamilyMember(String memberId) =>
       '$baseUrl$userProfilePrefix/family-members/delete/$memberId';
+  static String get userProfileUploadFamilyMemberImage =>
+      '$baseUrl$userProfilePrefix/family-members/upload-image';
+  static String get userProfileSwitch => '$baseUrl$userProfilePrefix/switch';
 
   // User in-app notifications (cost approval, payments, etc.)
   static const String userNotificationsPrefix = '/api/user/notifications';

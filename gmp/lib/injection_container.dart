@@ -167,6 +167,12 @@ Future<void> init() async {
   if (!sl.isRegistered<UpdateFamilyMember>()) {
     sl.registerLazySingleton(() => UpdateFamilyMember(sl()));
   }
+  if (!sl.isRegistered<SwitchActiveProfile>()) {
+    sl.registerLazySingleton(() => SwitchActiveProfile(sl()));
+  }
+  if (!sl.isRegistered<UploadFamilyMemberImage>()) {
+    sl.registerLazySingleton(() => UploadFamilyMemberImage(sl()));
+  }
   if (!sl.isRegistered<ProfileBloc>()) {
     sl.registerFactory(
       () => ProfileBloc(
@@ -178,6 +184,8 @@ Future<void> init() async {
         deleteAddress: sl(),
         addFamilyMember: sl(),
         updateFamilyMember: sl(),
+        switchActiveProfile: sl(),
+        uploadFamilyMemberImage: sl(),
       ),
     );
   }

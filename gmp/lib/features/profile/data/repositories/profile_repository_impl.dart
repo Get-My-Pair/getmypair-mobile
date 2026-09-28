@@ -119,12 +119,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
     required String accessToken,
     required String name,
     required String relation,
+    required String gender,
+    required DateTime dateOfBirth,
   }) async {
     try {
       return await remoteDataSource.addFamilyMember(
         accessToken: accessToken,
         name: name,
         relation: relation,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
       );
     } on ServerException catch (e) {
       throw ServerException(e.message);
@@ -137,6 +141,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
     required String memberId,
     String? name,
     String? relation,
+    String? gender,
+    DateTime? dateOfBirth,
   }) async {
     try {
       return await remoteDataSource.updateFamilyMember(
@@ -144,6 +150,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
         memberId: memberId,
         name: name,
         relation: relation,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
       );
     } on ServerException catch (e) {
       throw ServerException(e.message);
@@ -159,6 +167,40 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await remoteDataSource.deleteFamilyMember(
         accessToken: accessToken,
         memberId: memberId,
+      );
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
+  @override
+  Future<UserProfile> switchActiveProfile({
+    required String accessToken,
+    required String profileId,
+  }) async {
+    try {
+      return await remoteDataSource.switchActiveProfile(
+        accessToken: accessToken,
+        profileId: profileId,
+      );
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    }
+  }
+
+  @override
+  Future<String> uploadFamilyMemberImage({
+    required String accessToken,
+    required String memberId,
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
+    try {
+      return await remoteDataSource.uploadFamilyMemberImage(
+        accessToken: accessToken,
+        memberId: memberId,
+        imageBytes: imageBytes,
+        fileName: fileName,
       );
     } on ServerException catch (e) {
       throw ServerException(e.message);

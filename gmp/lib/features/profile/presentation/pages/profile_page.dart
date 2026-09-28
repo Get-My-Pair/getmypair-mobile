@@ -208,7 +208,6 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           final token = _accessToken ?? '';
-          final isJustMe = profile.householdType == 'just_me';
 
           final statusTop = MediaQuery.paddingOf(context).top;
           final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -315,7 +314,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              profile.name,
+                                              profile.activeDisplayName,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: GoogleFonts.boldonse(
@@ -393,19 +392,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                                   token,
                                                 ),
                                               ),
-                                              if (!isJustMe)
-                                                _GradientMenuTile(
-                                                  iconAssetPath:
-                                                      'assets/images/icons/profile/familyprofile.svg',
-                                                  title: 'Family Profile',
-                                                  scale: layoutScale,
-                                                  onTap: () =>
-                                                      _openFamilyProfile(
-                                                    context,
-                                                    profile,
-                                                    token,
-                                                  ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/familyprofile.svg',
+                                                title: 'Family Profile',
+                                                scale: layoutScale,
+                                                onTap: () =>
+                                                    _openFamilyProfile(
+                                                  context,
+                                                  profile,
+                                                  token,
                                                 ),
+                                              ),
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/bell.svg',
@@ -638,7 +636,18 @@ class _OverlappingAvatarCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final clusterW = (156 * scale).clamp(112.0, 156.0);
+    final all = switchableProfilesOf(profile);
+    final activeId =
+        profile.isSelfActive ? kSelfProfileId : profile.activeProfileId;
+    final current = all.firstWhere(
+      (p) => p.id == activeId,
+      orElse: () => all.first,
+    );
+    final others = all.where((p) => p.id != current.id).take(2).toList();
+
+    final clusterW = others.isEmpty
+        ? (79 * scale).clamp(56.0, 79.0)
+        : (156 * scale).clamp(112.0, 156.0);
     final clusterH = (92 * scale).clamp(68.0, 92.0);
     final mainRadius = (39.5 * scale).clamp(28.0, 39.5);
     final smallRadius = (22 * scale).clamp(16.0, 22.0);
@@ -650,47 +659,35 @@ class _OverlappingAvatarCluster extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            right: 0,
-            top: 0,
-            child: _RingAvatar(
-              radius: smallRadius,
-              border: border,
-              child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
+          if (others.isNotEmpty)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: _RingAvatar(
+                radius: smallRadius,
+                border: border,
+                child: _profileFill(others[0], smallRadius),
+              ),
             ),
-          ),
           Positioned(
-            right: (31 * scale).clamp(20.0, 31.0),
+            right: others.isEmpty ? 0 : (31 * scale).clamp(20.0, 31.0),
             top: (6 * scale).clamp(3.0, 6.0),
             child: _RingAvatar(
               radius: mainRadius,
               border: BorderSide.none,
-              child: profile.profileImage != null
-                  ? ClipOval(
-                      child: Image.network(
-                        profile.profileImage!,
-                        width: mainRadius * 2,
-                        height: mainRadius * 2,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _initialsAvatar(profile, mainRadius),
-                      ),
-                    )
-                  : _initialsAvatar(profile, mainRadius),
+              child: _profileFill(current, mainRadius),
             ),
           ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: _RingAvatar(
-              radius: smallRadius,
-              border: border,
-              child: _smallFill(
-                Icons.child_care_outlined,
-                (18 * scale).clamp(12.0, 18.0),
+          if (others.length > 1)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: _RingAvatar(
+                radius: smallRadius,
+                border: border,
+                child: _profileFill(others[1], smallRadius),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -707,10 +704,25 @@ class _OverlappingAvatarCluster extends StatelessWidget {
     );
   }
 
-  Widget _initialsAvatar(UserProfile profile, double radius) {
-    final letter = profile.name.isNotEmpty
-        ? profile.name[0].toUpperCase()
-        : 'U';
+  Widget _profileFill(SwitchableAppProfile person, double radius) {
+    final url = person.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          url,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              _letterFill(person.name, radius),
+        ),
+      );
+    }
+    return _letterFill(person.name, radius);
+  }
+
+  Widget _letterFill(String name, double radius) {
+    final letter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
     return Container(
       width: radius * 2,
       height: radius * 2,
@@ -724,14 +736,6 @@ class _OverlappingAvatarCluster extends StatelessWidget {
           color: Colors.white,
         ),
       ),
-    );
-  }
-
-  Widget _smallFill(IconData icon, double size) {
-    return Container(
-      color: Colors.white.withValues(alpha: 0.22),
-      alignment: Alignment.center,
-      child: Icon(icon, color: Colors.white, size: size),
     );
   }
 }

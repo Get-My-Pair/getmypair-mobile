@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../domain/entities/user_profile.dart';
@@ -13,6 +14,7 @@ import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
+import 'add_family_profile_page.dart';
 
 class FamilyProfilePage extends StatefulWidget {
   final UserProfile profile;
@@ -29,162 +31,93 @@ class FamilyProfilePage extends StatefulWidget {
 }
 
 class _FamilyProfilePageState extends State<FamilyProfilePage> {
-  Future<void> _openAddFamilyMemberDialog() async {
-    final nameController = TextEditingController();
-    String relation = 'partner';
-    final formKey = GlobalKey<FormState>();
-
-    final submitted = await showDialog<bool>(
+  Future<void> _openAddRelationSheet() async {
+    final relation = await showModalBottomSheet<String>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Create Family Profile'),
-          content: Form(
-            key: formKey,
+      backgroundColor: const Color(0xFF0B3A4A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                  validator: (value) {
-                    if (value == null || value.trim().length < 2) {
-                      return 'Enter valid name';
-                    }
-                    return null;
-                  },
+                Text(
+                  'Add profile',
+                  style: GoogleFonts.boldonse(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: relation,
-                  decoration: const InputDecoration(labelText: 'Relation'),
-                  items: const [
-                    DropdownMenuItem(value: 'partner', child: Text('Partner')),
-                    DropdownMenuItem(value: 'child', child: Text('Child')),
-                    DropdownMenuItem(value: 'elder', child: Text('Elder')),
-                  ],
-                  onChanged: (value) {
-                    relation = value ?? 'partner';
-                  },
-                ),
+                const SizedBox(height: 16),
+                _relationTile(ctx, 'partner', 'My Partner'),
+                _relationTile(ctx, 'child', 'My Kids'),
+                _relationTile(ctx, 'elder', 'Elderly'),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() != true) return;
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Save'),
-            ),
-          ],
         );
       },
     );
-
-    if (submitted != true || !mounted) return;
-
-    context.read<ProfileBloc>().add(
-          FamilyMemberAddRequested(
+    if (relation == null || !mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<ProfileBloc>(),
+          child: AddFamilyProfilePage(
             accessToken: widget.accessToken,
-            name: nameController.text.trim(),
             relation: relation,
           ),
-        );
-  }
-
-  Future<void> _openEditFamilyMemberDialog(FamilyMember member) async {
-    final nameController = TextEditingController(text: member.name);
-    String relation = member.relation;
-    final formKey = GlobalKey<FormState>();
-
-    final submitted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Edit Family Profile'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                  validator: (value) {
-                    if (value == null || value.trim().length < 2) {
-                      return 'Enter valid name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: relation,
-                  decoration: const InputDecoration(labelText: 'Relation'),
-                  items: const [
-                    DropdownMenuItem(value: 'partner', child: Text('Partner')),
-                    DropdownMenuItem(value: 'child', child: Text('Child')),
-                    DropdownMenuItem(value: 'elder', child: Text('Elder')),
-                  ],
-                  onChanged: (value) {
-                    relation = value ?? relation;
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() != true) return;
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Update'),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
-
-    if (submitted != true || !mounted) return;
-
-    context.read<ProfileBloc>().add(
-          FamilyMemberUpdateRequested(
-            accessToken: widget.accessToken,
-            memberId: member.id,
-            name: nameController.text.trim(),
-            relation: relation,
-          ),
-        );
   }
 
-  String _relationLabel(String relation) {
-    switch (relation) {
-      case 'partner':
-        return 'Partner';
-      case 'child':
-        return 'Child';
-      case 'elder':
-        return 'Elder';
-      default:
-        return relation;
-    }
+  Widget _relationTile(BuildContext ctx, String value, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        onTap: () => Navigator.pop(ctx, value),
+        tileColor: Colors.white.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(
+          label,
+          style: GoogleFonts.montserrat(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white),
+      ),
+    );
+  }
+
+  void _switchTo(String profileId, String activeId) {
+    if (profileId == activeId) return;
+    context.read<ProfileBloc>().add(
+          ActiveProfileSwitchRequested(
+            accessToken: widget.accessToken,
+            profileId: profileId,
+          ),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ProfileBloc, ProfileState>(
-      listener: (context, state) {},
+      listener: (context, state) async {
+        if (state is ProfileError) {
+          await showAppFeedbackAlert(
+            context,
+            message: state.message,
+            type: AppFeedbackType.failure,
+          );
+        }
+      },
       builder: (context, state) {
         final currentProfile = state is ProfileLoaded
             ? state.profile
@@ -197,7 +130,11 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                         : state is ProfileError && state.profile != null
                             ? state.profile!
                             : widget.profile;
-        final members = currentProfile.familyMembers;
+        final profiles = switchableProfilesOf(currentProfile);
+        final activeId = currentProfile.isSelfActive
+            ? kSelfProfileId
+            : currentProfile.activeProfileId;
+        final switching = state is AddressActionLoading;
 
         final statusTop = MediaQuery.paddingOf(context).top;
         final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -213,131 +150,130 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                 children: [
                   Expanded(
                     child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(22),
-                    ),
-                    image: const DecorationImage(
-                      image: AssetImage(BgTheme.backgroundImageAsset),
-                      fit: BoxFit.cover,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.22),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final widthScale = (constraints.maxWidth / 390)
-                          .clamp(0.84, 1.06);
-                      final heightScale = (constraints.maxHeight / 760)
-                          .clamp(0.58, 1.0);
-                      final textScaleTightness = (1.08 / deviceTextScale)
-                          .clamp(0.82, 1.04);
-                      final layoutScale = (math.min(
-                            widthScale,
-                            heightScale,
-                          ) *
-                          textScaleTightness)
-                          .clamp(0.82, 1.0);
-
-                      final horizontalLeft =
-                          ArticleStyleHeaderInsets.titleLeftInsetOf(context);
-                      final horizontalRight =
-                          ArticleStyleHeaderInsets.headerRightInsetOf(context);
-                      final topPadding = statusTop +
-                          24 +
-                          ArticleStyleHeaderInsets.topTitleGapOf(context);
-                      final bottomPadding = (20 * layoutScale).clamp(4.0, 18.0);
-                      const titleSize = 20.0;
-
-                      return Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalLeft,
-                          topPadding,
-                          horizontalRight,
-                          bottomPadding,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(22),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                        image: const DecorationImage(
+                          image: AssetImage(BgTheme.backgroundImageAsset),
+                          fit: BoxFit.cover,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final widthScale =
+                              (constraints.maxWidth / 390).clamp(0.84, 1.06);
+                          final heightScale =
+                              (constraints.maxHeight / 760).clamp(0.58, 1.0);
+                          final textScaleTightness =
+                              (1.08 / deviceTextScale).clamp(0.82, 1.04);
+                          final layoutScale = (math.min(widthScale, heightScale) *
+                                  textScaleTightness)
+                              .clamp(0.82, 1.0);
+                          final horizontalLeft =
+                              ArticleStyleHeaderInsets.titleLeftInsetOf(context);
+                          final horizontalRight =
+                              ArticleStyleHeaderInsets.headerRightInsetOf(
+                            context,
+                          );
+                          final topPadding = statusTop +
+                              24 +
+                              ArticleStyleHeaderInsets.topTitleGapOf(context);
+
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalLeft,
+                              topPadding,
+                              horizontalRight,
+                              (20 * layoutScale).clamp(4.0, 18.0),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const ChevronScreenBackButton(
-                                  iconColor: Colors.white,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    'Family Profile',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.boldonse(
-                                      fontSize: titleSize,
-                                      fontWeight: FontWeight.w400,
-                                      color: const Color(0xFFDFE7E9),
-                                      height: 1,
+                                Row(
+                                  children: [
+                                    const ChevronScreenBackButton(
+                                      iconColor: Colors.white,
                                     ),
-                                  ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Family Profile',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.boldonse(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w400,
+                                          color: const Color(0xFFDFE7E9),
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: switching
+                                          ? null
+                                          : _openAddRelationSheet,
+                                      tooltip: 'Add profile',
+                                      icon: const Icon(
+                                        Icons.add,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 SizedBox(
-                                  width: (12 * layoutScale).clamp(6.0, 12.0),
+                                  height: (10 * layoutScale).clamp(3.0, 12.0),
                                 ),
-                                _AvatarCluster(
-                                  profile: currentProfile,
-                                  scale: (layoutScale * 0.9).clamp(0.68, 1.0),
+                                Text(
+                                  'Switch profile',
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (switching)
+                                  const Padding(
+                                    padding: EdgeInsets.only(bottom: 12),
+                                    child: LinearProgressIndicator(
+                                      minHeight: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: ListView.builder(
+                                    itemCount: profiles.length,
+                                    itemBuilder: (context, index) {
+                                      final item = profiles[index];
+                                      final selected = item.id == activeId;
+                                      return _ProfileSwitchRow(
+                                        title: item.name,
+                                        subtitle: item.label,
+                                        imageUrl: item.imageUrl,
+                                        selected: selected,
+                                        onTap: switching
+                                            ? null
+                                            : () => _switchTo(item.id, activeId),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
-                            SizedBox(
-                              height: (10 * layoutScale).clamp(3.0, 12.0),
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: ElevatedButton(
-                                onPressed: _openAddFamilyMemberDialog,
-                                child: const Text('Family'),
-                              ),
-                            ),
-                            SizedBox(
-                              height: (12 * layoutScale).clamp(3.0, 12.0),
-                            ),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                physics: const ClampingScrollPhysics(),
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: (16 * layoutScale)
-                                        .clamp(12.0, 20.0),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      for (final member in members)
-                                        _FamilyRow(
-                                        title:
-                                            '${member.name.trim()} (${_relationLabel(member.relation)})',
-                                        scale: layoutScale,
-                                        onTap: () =>
-                                            _openEditFamilyMemberDialog(member),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                ),
-              ),
                   const SizedBox(height: 14),
                   const DashboardLinkedBottomNav(selectedTabIndex: 2),
                 ],
@@ -350,50 +286,83 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
   }
 }
 
-class _FamilyRow extends StatelessWidget {
+class _ProfileSwitchRow extends StatelessWidget {
   final String title;
-  final VoidCallback onTap;
-  final double scale;
+  final String subtitle;
+  final String? imageUrl;
+  final bool selected;
+  final VoidCallback? onTap;
 
-  const _FamilyRow({
+  const _ProfileSwitchRow({
     required this.title,
+    required this.subtitle,
+    required this.imageUrl,
+    required this.selected,
     required this.onTap,
-    this.scale = 1.0,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-            decoration: BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
             ),
           ),
-          
-          padding: EdgeInsets.symmetric(vertical: (22 * scale).clamp(18.0, 24.0)),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(
             children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.white.withValues(alpha: 0.22),
+                backgroundImage: hasImage ? NetworkImage(imageUrl!) : null,
+                child: hasImage
+                    ? null
+                    : Text(
+                        title.isNotEmpty ? title[0].toUpperCase() : 'U',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 14),
               Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.montserrat(
-                    fontSize: (17 * scale).clamp(16.0, 18.0),
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
-                    height: 1,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.white.withValues(alpha: 0.96),
-                size: (30 * scale).clamp(24.0, 30.0),
-              ),
+              if (selected)
+                const Icon(Icons.check_circle, color: Colors.white)
+              else
+                Icon(
+                  Icons.radio_button_unchecked,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
             ],
           ),
         ),
@@ -401,124 +370,3 @@ class _FamilyRow extends StatelessWidget {
     );
   }
 }
-
-class _AvatarCluster extends StatelessWidget {
-  final UserProfile profile;
-  final double scale;
-
-  const _AvatarCluster({required this.profile, this.scale = 1.0});
-
-  @override
-  Widget build(BuildContext context) {
-    final clusterW = (156 * scale).clamp(112.0, 156.0);
-    final clusterH = (92 * scale).clamp(68.0, 92.0);
-    final mainRadius = (39.5 * scale).clamp(28.0, 39.5);
-    final smallRadius = (22 * scale).clamp(16.0, 22.0);
-    const border = BorderSide(color: Colors.white, width: 2);
-
-    return SizedBox(
-      width: clusterW,
-      height: clusterH,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: 0,
-            top: 0,
-            child: _RingAvatar(
-              radius: smallRadius,
-              border: border,
-              child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
-            ),
-          ),
-          Positioned(
-            right: (31 * scale).clamp(20.0, 31.0),
-            top: (6 * scale).clamp(3.0, 6.0),
-            child: _RingAvatar(
-              radius: mainRadius,
-              border: border,
-              child: profile.profileImage != null
-                  ? ClipOval(
-                      child: Image.network(
-                        profile.profileImage!,
-                        width: mainRadius * 2,
-                        height: mainRadius * 2,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _initialsAvatar(profile, mainRadius),
-                      ),
-                    )
-                  : _initialsAvatar(profile, mainRadius),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: _RingAvatar(
-              radius: smallRadius,
-              border: border,
-              child: _smallFill(
-                Icons.child_care_outlined,
-                (18 * scale).clamp(12.0, 18.0),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _initialsAvatar(UserProfile profile, double radius) {
-    final letter = profile.name.isNotEmpty
-        ? profile.name[0].toUpperCase()
-        : 'U';
-    return Container(
-      width: radius * 2,
-      height: radius * 2,
-      color: Colors.white.withValues(alpha: 0.25),
-      alignment: Alignment.center,
-      child: Text(
-        letter,
-        style: TextStyle(
-          fontSize: radius * 0.85,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget _smallFill(IconData icon, double size) {
-    return Container(
-      color: Colors.white.withValues(alpha: 0.22),
-      alignment: Alignment.center,
-      child: Icon(icon, color: Colors.white, size: size),
-    );
-  }
-}
-
-class _RingAvatar extends StatelessWidget {
-  const _RingAvatar({
-    required this.radius,
-    required this.border,
-    required this.child,
-  });
-
-  final double radius;
-  final BorderSide border;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: radius * 2,
-      height: radius * 2,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.fromBorderSide(border),
-      ),
-      child: ClipOval(child: child),
-    );
-  }
-}
-

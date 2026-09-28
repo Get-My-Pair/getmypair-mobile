@@ -18,6 +18,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final DeleteAddress deleteAddress;
   final AddFamilyMember addFamilyMember;
   final UpdateFamilyMember updateFamilyMember;
+  final SwitchActiveProfile switchActiveProfile;
+  final UploadFamilyMemberImage uploadFamilyMemberImage;
 
   ProfileBloc({
     required this.getUserProfile,
@@ -28,6 +30,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     required this.deleteAddress,
     required this.addFamilyMember,
     required this.updateFamilyMember,
+    required this.switchActiveProfile,
+    required this.uploadFamilyMemberImage,
   }) : super(ProfileInitial()) {
     on<ProfileLoadRequested>(_onLoad);
     on<ProfileUpdateRequested>(_onUpdate);
@@ -37,6 +41,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<AddressDeleteRequested>(_onDeleteAddress);
     on<FamilyMemberAddRequested>(_onAddFamilyMember);
     on<FamilyMemberUpdateRequested>(_onUpdateFamilyMember);
+    on<ActiveProfileSwitchRequested>(_onSwitchActiveProfile);
   }
 
   UserProfile? _currentProfile() {
@@ -184,11 +189,24 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         accessToken: event.accessToken,
         name: event.name,
         relation: event.relation,
+        gender: event.gender,
+        dateOfBirth: event.dateOfBirth,
       );
-      final updatedMembers = List<FamilyMember>.from(current?.familyMembers ?? [])
-        ..add(member);
-      final updated = current?.copyWith(familyMembers: updatedMembers);
-      emit(ProfileLoaded(updated ?? (await getUserProfile(event.accessToken))));
+      final imageBytes = event.imageBytes;
+      final imageFileName = event.imageFileName;
+      if (imageBytes != null &&
+          imageBytes.isNotEmpty &&
+          imageFileName != null &&
+          imageFileName.isNotEmpty) {
+        await uploadFamilyMemberImage(
+          accessToken: event.accessToken,
+          memberId: member.id,
+          imageBytes: imageBytes,
+          fileName: imageFileName,
+        );
+      }
+      final profile = await getUserProfile(event.accessToken);
+      emit(ProfileLoaded(profile));
     } on ServerException catch (e) {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
@@ -216,6 +234,23 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(ProfileError(e.message, profile: current));
     } catch (e) {
       emit(ProfileError('Failed to update family member: $e', profile: current));
+    }
+  }
+
+  Future<void> _onSwitchActiveProfile(
+      ActiveProfileSwitchRequested event, Emitter<ProfileState> emit) async {
+    final current = _currentProfile();
+    if (current != null) emit(AddressActionLoading(current));
+    try {
+      final profile = await switchActiveProfile(
+        accessToken: event.accessToken,
+        profileId: event.profileId,
+      );
+      emit(ProfileLoaded(profile));
+    } on ServerException catch (e) {
+      emit(ProfileError(e.message, profile: current));
+    } catch (e) {
+      emit(ProfileError('Failed to switch profile: $e', profile: current));
     }
   }
 }

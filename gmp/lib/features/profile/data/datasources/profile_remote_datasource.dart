@@ -44,16 +44,30 @@ abstract class ProfileRemoteDataSource {
     required String accessToken,
     required String name,
     required String relation,
+    required String gender,
+    required DateTime dateOfBirth,
   });
   Future<FamilyMember> updateFamilyMember({
     required String accessToken,
     required String memberId,
     String? name,
     String? relation,
+    String? gender,
+    DateTime? dateOfBirth,
   });
   Future<void> deleteFamilyMember({
     required String accessToken,
     required String memberId,
+  });
+  Future<UserProfileModel> switchActiveProfile({
+    required String accessToken,
+    required String profileId,
+  });
+  Future<String> uploadFamilyMemberImage({
+    required String accessToken,
+    required String memberId,
+    required Uint8List imageBytes,
+    required String fileName,
   });
 }
 
@@ -247,6 +261,8 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     required String accessToken,
     required String name,
     required String relation,
+    required String gender,
+    required DateTime dateOfBirth,
   }) async {
     try {
       final response = await http
@@ -255,16 +271,14 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
               body: jsonEncode({
                 'name': name.trim(),
                 'relation': relation.trim(),
+                'gender': gender.trim().toLowerCase(),
+                'dateOfBirth': dateOfBirth.toIso8601String(),
               }))
           .timeout(_timeout);
       final json = _handleResponse(response);
-      final member = (json['data'] as Map<String, dynamic>)['member'] as Map<String, dynamic>;
-      return FamilyMember(
-        id: member['_id']?.toString() ?? member['id']?.toString() ?? '',
-        name: member['name']?.toString() ?? '',
-        relation: member['relation']?.toString() ?? '',
-        profileImage: member['profileImage']?.toString(),
-      );
+      final member = (json['data'] as Map<String, dynamic>)['member']
+          as Map<String, dynamic>;
+      return UserProfileModel.familyMemberFromJson(member);
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException('Failed to add family member: $e');
@@ -277,24 +291,26 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
     required String memberId,
     String? name,
     String? relation,
+    String? gender,
+    DateTime? dateOfBirth,
   }) async {
     try {
       final body = <String, dynamic>{'memberId': memberId};
       if (name != null) body['name'] = name;
       if (relation != null) body['relation'] = relation;
+      if (gender != null) body['gender'] = gender;
+      if (dateOfBirth != null) {
+        body['dateOfBirth'] = dateOfBirth.toIso8601String();
+      }
       final response = await http
           .put(Uri.parse(ApiEndpoints.userProfileUpdateFamilyMember),
               headers: _headers(accessToken),
               body: jsonEncode(body))
           .timeout(_timeout);
       final json = _handleResponse(response);
-      final member = (json['data'] as Map<String, dynamic>)['member'] as Map<String, dynamic>;
-      return FamilyMember(
-        id: member['_id']?.toString() ?? member['id']?.toString() ?? '',
-        name: member['name']?.toString() ?? '',
-        relation: member['relation']?.toString() ?? '',
-        profileImage: member['profileImage']?.toString(),
-      );
+      final member = (json['data'] as Map<String, dynamic>)['member']
+          as Map<String, dynamic>;
+      return UserProfileModel.familyMemberFromJson(member);
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException('Failed to update family member: $e');
@@ -308,13 +324,69 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   }) async {
     try {
       final response = await http
-          .delete(Uri.parse(ApiEndpoints.userProfileDeleteFamilyMember(memberId)),
+          .delete(
+              Uri.parse(ApiEndpoints.userProfileDeleteFamilyMember(memberId)),
               headers: _headers(accessToken))
           .timeout(_timeout);
       _handleResponse(response);
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException('Failed to delete family member: $e');
+    }
+  }
+
+  @override
+  Future<UserProfileModel> switchActiveProfile({
+    required String accessToken,
+    required String profileId,
+  }) async {
+    try {
+      final response = await http
+          .put(
+            Uri.parse(ApiEndpoints.userProfileSwitch),
+            headers: _headers(accessToken),
+            body: jsonEncode({'profileId': profileId}),
+          )
+          .timeout(_timeout);
+      final json = _handleResponse(response);
+      return UserProfileModel.fromJson(
+        json['data']['profile'] as Map<String, dynamic>,
+      );
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Failed to switch profile: $e');
+    }
+  }
+
+  @override
+  Future<String> uploadFamilyMemberImage({
+    required String accessToken,
+    required String memberId,
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse(ApiEndpoints.userProfileUploadFamilyMemberImage),
+      );
+      request.headers['Authorization'] = 'Bearer $accessToken';
+      request.headers['X-App-Source'] = AppConstants.appSourceForApi;
+      request.headers['X-App-Version'] = AppConstants.appVersion;
+      request.headers['Accept'] = 'application/json';
+      request.fields['memberId'] = memberId;
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        imageBytes,
+        filename: fileName,
+      ));
+      final streamedResponse = await request.send().timeout(_timeout);
+      final response = await http.Response.fromStream(streamedResponse);
+      final json = _handleResponse(response);
+      return json['data']['profileImage'] as String;
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Failed to upload family member image: $e');
     }
   }
 }

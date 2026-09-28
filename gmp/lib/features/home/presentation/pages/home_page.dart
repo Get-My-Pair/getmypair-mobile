@@ -18,7 +18,9 @@ import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
+import '../../../profile/domain/entities/user_profile.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/presentation/bloc/profile_event.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
@@ -276,6 +278,7 @@ class _HomePageState extends State<HomePage> {
   int _pairsDonated = 0;
   int _pairsSold = 0;
   int _pairsInCare = 0;
+  String? _lastActiveProfileId;
 
   static String _formatPlacemarkForHomeHeader(Placemark p) {
     final subLocality = p.subLocality?.trim();
@@ -702,14 +705,27 @@ class _HomePageState extends State<HomePage> {
           if (state is ProfileLoaded || state is AddressActionLoading) {
             _maybePromptSaveDetectedLocation();
           }
+          if (state is ProfileLoaded) {
+            final activeId = state.profile.isSelfActive
+                ? kSelfProfileId
+                : state.profile.activeProfileId;
+            if (_lastActiveProfileId != activeId) {
+              _lastActiveProfileId = activeId;
+              _loadRackPreview();
+              _loadHomeStats();
+            }
+          }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
-          final userName = state is AuthAuthenticated
+          final authName = state is AuthAuthenticated
               ? state.user.name
               : state is AuthProfileCompleted
               ? state.user.name
               : '';
+          final profile =
+              userProfileFromProfileState(context.read<ProfileBloc>().state);
+          final userName = profile?.activeDisplayName ?? authName;
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle.light.copyWith(
               statusBarColor: Colors.transparent,
@@ -732,8 +748,18 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _HomeTopCard(
-                                  userName: userName,
+                            BlocBuilder<ProfileBloc, ProfileState>(
+                              buildWhen: (prev, curr) =>
+                                  curr is ProfileLoaded ||
+                                  curr is ProfileUpdating ||
+                                  curr is ProfileImageUploading ||
+                                  curr is AddressActionLoading,
+                              builder: (context, profileState) {
+                                final liveProfile =
+                                    userProfileFromProfileState(profileState);
+                                return _HomeTopCard(
+                                  userName:
+                                      liveProfile?.activeDisplayName ?? userName,
                                   currentAddress: _currentAddress,
                                   pairsInRackDisplay: _pairsInRackDisplay,
                                   pairsDonatedDisplay: _pairsDonatedDisplay,
@@ -743,7 +769,9 @@ class _HomePageState extends State<HomePage> {
                                   pairsInRackLoading: _pairsInRackLoading,
                                   layoutScale: layoutScale,
                                   onLocationTap: _openSavedLocationPage,
-                              ),
+                                );
+                              },
+                            ),
                               Expanded(
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(
@@ -1526,32 +1554,117 @@ class _HomeHeaderBell extends StatelessWidget {
   }
 }
 
-/// Profile avatar beside location — single ring; family members live in profile module.
+/// Profile avatar beside location — current profile large, up to 2 others small.
 class _HomeProfileAvatarStack extends StatelessWidget {
-  final String? imageUrl;
-  final VoidCallback onTap;
+  final UserProfile? profile;
+  final VoidCallback onTapCurrent;
+  final void Function(String profileId)? onTapOther;
 
-  const _HomeProfileAvatarStack({required this.imageUrl, required this.onTap});
+  const _HomeProfileAvatarStack({
+    required this.profile,
+    required this.onTapCurrent,
+    this.onTapOther,
+  });
 
   @override
   Widget build(BuildContext context) {
     final s = _homeHeaderChromeScale(context);
     final narrow = MediaQuery.sizeOf(context).width < 360;
     final rLarge = ((narrow ? 28.0 : 30.0) * s).clamp(26.0, 32.0);
+    final rSmall = ((narrow ? 16.0 : 18.0) * s).clamp(14.0, 20.0);
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
+    if (profile == null) {
+      return GestureDetector(
+        onTap: onTapCurrent,
+        behavior: HitTestBehavior.opaque,
+        child: _avatarRing(radius: rLarge, imageUrl: null, name: ''),
+      );
+    }
+
+    final all = switchableProfilesOf(profile!);
+    final activeId =
+        profile!.isSelfActive ? kSelfProfileId : profile!.activeProfileId;
+    final current = all.firstWhere(
+      (p) => p.id == activeId,
+      orElse: () => all.first,
+    );
+    final others = all.where((p) => p.id != current.id).take(2).toList();
+
+    if (others.isEmpty) {
+      return GestureDetector(
+        onTap: onTapCurrent,
+        behavior: HitTestBehavior.opaque,
+        child: _avatarRing(
+          radius: rLarge,
+          imageUrl: current.imageUrl,
+          name: current.name,
+        ),
+      );
+    }
+
+    final width = rLarge * 2 + rSmall * 1.15;
+    final height = rLarge * 2 + 6;
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onTap: onTapCurrent,
+              child: _avatarRing(
+                radius: rLarge,
+                imageUrl: current.imageUrl,
+                name: current.name,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: GestureDetector(
+              onTap: () => onTapOther?.call(others[0].id),
+              child: _avatarRing(
+                radius: rSmall,
+                imageUrl: others[0].imageUrl,
+                name: others[0].name,
+              ),
+            ),
+          ),
+          if (others.length > 1)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onTap: () => onTapOther?.call(others[1].id),
+                child: _avatarRing(
+                  radius: rSmall,
+                  imageUrl: others[1].imageUrl,
+                  name: others[1].name,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _avatarRing({required double radius, required String? imageUrl}) {
+  Widget _avatarRing({
+    required double radius,
+    required String? imageUrl,
+    required String name,
+  }) {
     final url = imageUrl;
     final hasImage = url != null && url.isNotEmpty;
+    final letter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
@@ -1566,10 +1679,13 @@ class _HomeProfileAvatarStack extends StatelessWidget {
         backgroundImage: hasImage ? NetworkImage(url) : null,
         child: hasImage
             ? null
-            : Icon(
-                Icons.person_rounded,
-                size: (radius * 1.25).clamp(32.0, 42.0),
-                color: Colors.white,
+            : Text(
+                letter,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: (radius * 0.85).clamp(10.0, 18.0),
+                ),
               ),
       ),
     );
@@ -1815,11 +1931,12 @@ class _HomeTopCard extends StatelessWidget {
                                 ? profileState.profile
                                 : profileState is ProfileImageUploading
                                 ? profileState.profile
+                                : profileState is AddressActionLoading
+                                ? profileState.profile
                                 : null;
-                            final imageUrl = profile?.profileImage;
                             return _HomeProfileAvatarStack(
-                              imageUrl: imageUrl,
-                              onTap: () {
+                              profile: profile,
+                              onTapCurrent: () {
                                 final profileBloc = context.read<ProfileBloc>();
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -1828,6 +1945,22 @@ class _HomeTopCard extends StatelessWidget {
                                       child: const ProfilePage(),
                                     ),
                                   ),
+                                );
+                              },
+                              onTapOther: (profileId) async {
+                                final tokenResult =
+                                    await sl<GetValidAccessToken>().call();
+                                if (!context.mounted) return;
+                                tokenResult.fold(
+                                  (_) {},
+                                  (token) {
+                                    context.read<ProfileBloc>().add(
+                                          ActiveProfileSwitchRequested(
+                                            accessToken: token,
+                                            profileId: profileId,
+                                          ),
+                                        );
+                                  },
                                 );
                               },
                             );

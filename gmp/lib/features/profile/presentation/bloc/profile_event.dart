@@ -93,13 +93,22 @@ class FamilyMemberAddRequested extends ProfileEvent {
   final String accessToken;
   final String name;
   final String relation;
+  final String gender;
+  final DateTime dateOfBirth;
+  final Uint8List? imageBytes;
+  final String? imageFileName;
   const FamilyMemberAddRequested({
     required this.accessToken,
     required this.name,
     required this.relation,
+    required this.gender,
+    required this.dateOfBirth,
+    this.imageBytes,
+    this.imageFileName,
   });
   @override
-  List<Object?> get props => [accessToken, name, relation];
+  List<Object?> get props =>
+      [accessToken, name, relation, gender, dateOfBirth, imageFileName];
 }
 
 class FamilyMemberUpdateRequested extends ProfileEvent {
@@ -115,4 +124,15 @@ class FamilyMemberUpdateRequested extends ProfileEvent {
   });
   @override
   List<Object?> get props => [accessToken, memberId, name, relation];
+}
+
+class ActiveProfileSwitchRequested extends ProfileEvent {
+  final String accessToken;
+  final String profileId;
+  const ActiveProfileSwitchRequested({
+    required this.accessToken,
+    required this.profileId,
+  });
+  @override
+  List<Object?> get props => [accessToken, profileId];
 }
