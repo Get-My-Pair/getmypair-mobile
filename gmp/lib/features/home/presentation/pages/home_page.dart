@@ -717,7 +717,7 @@ class _HomePageState extends State<HomePage> {
                                           (_kHomeHeaderToRackGap * layoutScale)
                                               .clamp(6.0, 10.0);
                                       final rackCardTopPadding =
-                                          (10 * layoutScale).clamp(8.0, 12.0);
+                                          (16 * layoutScale).clamp(12.0, 18.0);
                                       final rackCardBottomPadding =
                                           (8 * layoutScale).clamp(6.0, 10.0);
                                       final showRackThumbs = !_rackLoading &&
@@ -731,8 +731,8 @@ class _HomePageState extends State<HomePage> {
                                         10.0,
                                       );
                                       final rackThumbGap = showRackThumbs
-                                          ? (6 * layoutScale).clamp(4.0, 8.0)
-                                          : (6 * layoutScale).clamp(4.0, 8.0);
+                                          ? (10 * layoutScale).clamp(8.0, 12.0)
+                                          : (8 * layoutScale).clamp(6.0, 10.0);
                                       final availableBody = math.max(
                                         0.0,
                                         bodyH - headerToRackGap - gridGap * 2 - 1,
@@ -757,9 +757,9 @@ class _HomePageState extends State<HomePage> {
                                         24.0,
                                       );
                                       final rackThumbRowH =
-                                          _homeScaled(76, layoutScale).clamp(
-                                        66.0,
-                                        82.0,
+                                          _homeScaled(60, layoutScale).clamp(
+                                        52.0,
+                                        68.0,
                                       );
                                       final rackContentH = rackCardTopPadding +
                                           rackHeaderH +
@@ -1060,7 +1060,7 @@ class _HomePageState extends State<HomePage> {
                                             child: _HomeActionPairRow(
                                               gap: sectionGap,
                                               left: _QuickActionCard(
-                                                label: 'Rent\nMyPair',
+                                                label: 'Save\nMyPair',
                                                 iconAssetUrl:
                                                     _kRentMyPairIconAsset,
                                                 iconWidth: actionIconW,
@@ -1069,7 +1069,7 @@ class _HomePageState extends State<HomePage> {
                                                 layoutScale: layoutScale,
                                                 onTap: () => showComingSoon(
                                                   context,
-                                                  feature: 'Rent',
+                                                  feature: 'Save',
                                                 ),
                                               ),
                                               right: _QuickActionCard(
@@ -2382,32 +2382,41 @@ class _RackThumbStrip extends StatelessWidget {
         final cellW =
             (constraints.maxWidth - safeGap * (visible.length - 1)) /
             visible.length;
-        final cellH = constraints.maxHeight;
+        // Keep thumbs shorter than the strip so they don’t fill the card edge-to-edge.
+        final cellH = math
+            .min(constraints.maxHeight * 0.82, cellW * 0.78)
+            .clamp(40.0, constraints.maxHeight);
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            for (int i = 0; i < visible.length; i++) ...[
-              if (i > 0) SizedBox(width: safeGap),
-              SizedBox(
-                width: cellW,
-                height: cellH,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => onOpen(visible[i]),
-                    borderRadius: radius,
-                    child: ClipRRect(
-                      borderRadius: radius,
-                      child: articleThumb(
-                        articleImageUrl(visible[i].thumbnailImage),
+        return Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            height: cellH,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                for (int i = 0; i < visible.length; i++) ...[
+                  if (i > 0) SizedBox(width: safeGap),
+                  SizedBox(
+                    width: cellW,
+                    height: cellH,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => onOpen(visible[i]),
+                        borderRadius: radius,
+                        child: ClipRRect(
+                          borderRadius: radius,
+                          child: articleThumb(
+                            articleImageUrl(visible[i].thumbnailImage),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          ],
+                ],
+              ],
+            ),
+          ),
         );
       },
     );

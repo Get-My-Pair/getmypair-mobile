@@ -136,7 +136,7 @@ class RehomeMyPairPage extends StatelessWidget {
                             child: _SecondaryServiceCard(
                               label: 'Sell\nMyPair',
                               iconAsset:
-                                  'assets/images/noun-shoes-cleaning-7675732 1.svg',
+                                  'assets/images/icons/rehomemypair/sellmypair.png',
                               iconSize: 64,
                               labelFontSize: 15,
                               onTap: () => showComingSoon(
@@ -491,15 +491,24 @@ class _SecondaryServiceCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SvgPicture.asset(
-                      iconAsset,
-                      width: iconSize,
-                      height: iconSize,
-                      colorFilter: const ColorFilter.mode(
-                        AppColors.greyedButtonLabel,
-                        BlendMode.srcIn,
-                      ),
-                    ),
+                    iconAsset.endsWith('.png')
+                        ? Image.asset(
+                            iconAsset,
+                            width: iconSize,
+                            height: iconSize,
+                            fit: BoxFit.contain,
+                            color: AppColors.greyedButtonLabel,
+                            colorBlendMode: BlendMode.srcIn,
+                          )
+                        : SvgPicture.asset(
+                            iconAsset,
+                            width: iconSize,
+                            height: iconSize,
+                            colorFilter: const ColorFilter.mode(
+                              AppColors.greyedButtonLabel,
+                              BlendMode.srcIn,
+                            ),
+                          ),
                     const SizedBox(width: 12),
                     Flexible(
                       child: Text(

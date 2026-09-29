@@ -152,6 +152,9 @@ flutter:
     - assets/images/icons/caremypair/rmp.svg
     - assets/images/icons/caremypair/mmp.svg
     - assets/images/icons/caremypair/wmp.svg
+    - assets/images/icons/rehomemypair/
+    - assets/images/icons/rehomemypair/sellmypair.png
+    - assets/images/icons/rehomemypair/rentmypair.png
     - assets/images/icons/myrack/
     - assets/images/icons/myrack/filter.svg
     - assets/images/icons/myrack/shoe.png
