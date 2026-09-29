@@ -73,8 +73,12 @@ dependencies:
   geolocator: ^14.0.2
   geocoding: ^3.0.0
 
-  # Google Maps (set GOOGLE_MAPS_API_KEY in android/local.properties + ios Info.plist)
+  # Google Maps:
+  # - Android: GOOGLE_MAPS_API_KEY in android/local.properties
+  # - iOS: GMSApiKey in ios/Runner/Info.plist
+  # - Web: script tag in web/index.html (Maps JavaScript API must be enabled)
   google_maps_flutter: ^2.18.2
+  web: ^1.1.1
 
   # Image picker for profile photo
   image_picker: ^1.0.7

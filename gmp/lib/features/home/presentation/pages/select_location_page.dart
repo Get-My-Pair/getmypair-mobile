@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,7 +10,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/google_maps_config.dart';
 import '../../../../core/bgtheme.dart';
+import '../../../../core/maps/google_maps_js_loader.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -131,6 +134,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   bool _searchBarHasFocus = false;
   bool _isLoadingCobblers = false;
   String? _cobblerLoadError;
+  /// Web: wait for Maps JS (`google.maps`) before building [GoogleMap].
+  bool _mapsReady = !kIsWeb;
+  String? _mapsLoadError;
 
   List<_CobblerProfile> _allCobblers = const [];
 
@@ -139,8 +145,27 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     super.initState();
     _searchFocusNode.addListener(_syncSearchBarFocusFromNode);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureMapsReady();
       _initLocation();
     });
+  }
+
+  Future<void> _ensureMapsReady() async {
+    if (!kIsWeb || _mapsReady) return;
+    try {
+      await ensureGoogleMapsJsLoaded(apiKey: GoogleMapsConfig.apiKey);
+      if (!mounted) return;
+      setState(() {
+        _mapsReady = true;
+        _mapsLoadError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _mapsReady = false;
+        _mapsLoadError = e.toString();
+      });
+    }
   }
 
   void _syncSearchBarFocusFromNode() {
@@ -805,40 +830,67 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                     fit: StackFit.expand,
                                     children: [
                                       ColoredBox(color: _mapGrey),
-                                      GoogleMap(
-                                        initialCameraPosition: CameraPosition(
-                                          target: _markerPosition,
-                                          zoom: _initialZoom,
+                                      if (!_mapsReady)
+                                        Center(
+                                          child: _mapsLoadError == null
+                                              ? const CircularProgressIndicator(
+                                                  color: _tealButton,
+                                                )
+                                              : Padding(
+                                                  padding: const EdgeInsets.all(16),
+                                                  child: Text(
+                                                    'Map failed to load.\n'
+                                                    'Enable Maps JavaScript API for your key,\n'
+                                                    'then fully restart the app (not hot restart).\n\n'
+                                                    '$_mapsLoadError',
+                                                    textAlign: TextAlign.center,
+                                                    style: GoogleFonts.dmSans(
+                                                      fontSize: 13,
+                                                      color: Colors.black87,
+                                                    ),
+                                                  ),
+                                                ),
+                                        )
+                                      else
+                                        GoogleMap(
+                                          initialCameraPosition: CameraPosition(
+                                            target: _markerPosition,
+                                            zoom: _initialZoom,
+                                          ),
+                                          mapType: (_isSatelliteView == true)
+                                              ? MapType.hybrid
+                                              : MapType.normal,
+                                          minMaxZoomPreference:
+                                              const MinMaxZoomPreference(
+                                            _minZoom,
+                                            _maxZoom,
+                                          ),
+                                          // Geolocation + Maps WebGL together is flaky on Chrome.
+                                          myLocationEnabled: !kIsWeb,
+                                          myLocationButtonEnabled: false,
+                                          zoomControlsEnabled: false,
+                                          compassEnabled: false,
+                                          mapToolbarEnabled: false,
+                                          markers:
+                                              _buildMapMarkers(userDisplayName),
+                                          circles: _buildRangeCircles(),
+                                          onMapCreated: (controller) {
+                                            _map = controller;
+                                            if (!_mapController.isCompleted) {
+                                              _mapController.complete(controller);
+                                            }
+                                          },
+                                          onCameraMove: (position) {
+                                            _currentZoom = position.zoom;
+                                          },
+                                          onTap: (latLng) {
+                                            setState(
+                                              () => _markerPosition = latLng,
+                                            );
+                                            _updateAddressFromLatLng(latLng);
+                                            _fetchNearbyCobblers();
+                                          },
                                         ),
-                                        mapType: (_isSatelliteView == true)
-                                            ? MapType.hybrid
-                                            : MapType.normal,
-                                        minMaxZoomPreference: const MinMaxZoomPreference(
-                                          _minZoom,
-                                          _maxZoom,
-                                        ),
-                                        myLocationEnabled: true,
-                                        myLocationButtonEnabled: false,
-                                        zoomControlsEnabled: false,
-                                        compassEnabled: false,
-                                        mapToolbarEnabled: false,
-                                        markers: _buildMapMarkers(userDisplayName),
-                                        circles: _buildRangeCircles(),
-                                        onMapCreated: (controller) {
-                                          _map = controller;
-                                          if (!_mapController.isCompleted) {
-                                            _mapController.complete(controller);
-                                          }
-                                        },
-                                        onCameraMove: (position) {
-                                          _currentZoom = position.zoom;
-                                        },
-                                        onTap: (latLng) {
-                                          setState(() => _markerPosition = latLng);
-                                          _updateAddressFromLatLng(latLng);
-                                          _fetchNearbyCobblers();
-                                        },
-                                      ),
                                       Positioned(
                                         right: 10,
                                         bottom: 10,
