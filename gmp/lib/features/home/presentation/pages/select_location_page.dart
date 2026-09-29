@@ -1,13 +1,12 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/bgtheme.dart';
@@ -103,7 +102,9 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     transform: GradientRotation(-0.55),
   );
 
-  final MapController _mapController = MapController();
+  final Completer<GoogleMapController> _mapController =
+      Completer<GoogleMapController>();
+  GoogleMapController? _map;
   LatLng _markerPosition = _defaultCenter;
   String _address = 'Loading address...';
   Placemark? _lastPlacemark;
@@ -128,7 +129,6 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   final FocusNode _searchFocusNode = FocusNode();
   /// Synced from [_searchFocusNode] listener — never read [FocusNode.hasFocus] in [build] on web.
   bool _searchBarHasFocus = false;
-  final Distance _distance = const Distance();
   bool _isLoadingCobblers = false;
   String? _cobblerLoadError;
 
@@ -178,7 +178,12 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         .map(
           (c) => _NearbyCobbler(
             profile: c,
-            distanceMeters: _distance.as(LengthUnit.Meter, _markerPosition, c.point),
+            distanceMeters: Geolocator.distanceBetween(
+              _markerPosition.latitude,
+              _markerPosition.longitude,
+              c.point.latitude,
+              c.point.longitude,
+            ),
           ),
         )
         .where((c) => c.distanceMeters <= maxMeters)
@@ -246,7 +251,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       final latLng = LatLng(position.latitude, position.longitude);
       if (!mounted) return;
       setState(() => _markerPosition = latLng);
-      _mapController.move(latLng, _currentZoom);
+      await _moveCamera(latLng, _currentZoom);
       _updateAddressFromLatLng(latLng);
       _fetchNearbyCobblers();
     } catch (e) {
@@ -307,7 +312,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         ? AddressParts.fromPlacemark(_lastPlacemark!)
         : AddressParts.fromDisplayLine(
             _address,
-            coordinates: _markerPosition,
+            latitude: _markerPosition.latitude,
+            longitude: _markerPosition.longitude,
           );
 
     final tokenResult = await sl<GetValidAccessToken>().call();
@@ -479,16 +485,27 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     );
   }
 
+  Future<void> _moveCamera(LatLng target, double zoom) async {
+    final controller = _map ??
+        (_mapController.isCompleted ? await _mapController.future : null);
+    if (controller == null) return;
+    await controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: target, zoom: zoom),
+      ),
+    );
+  }
+
   void _zoomIn() {
     final nextZoom = (_currentZoom + 1).clamp(_minZoom, _maxZoom);
-    _mapController.move(_markerPosition, nextZoom);
     setState(() => _currentZoom = nextZoom);
+    _moveCamera(_markerPosition, nextZoom);
   }
 
   void _zoomOut() {
     final nextZoom = (_currentZoom - 1).clamp(_minZoom, _maxZoom);
-    _mapController.move(_markerPosition, nextZoom);
     setState(() => _currentZoom = nextZoom);
+    _moveCamera(_markerPosition, nextZoom);
   }
 
   Widget _sheetRow(String name, double rating, String distanceLabel) {
@@ -509,31 +526,50 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
     );
   }
 
-  List<Marker> _buildCobblerMarkers() {
-    return _nearbyCobblers
-        .map(
-          (s) => Marker(
-            point: s.profile.point,
-            width: 132,
-            height: 118,
-            alignment: Alignment.bottomCenter,
-            child: _CobblerMapPin(name: s.profile.name),
+  Set<Marker> _buildMapMarkers(String displayName) {
+    final markers = <Marker>{
+      Marker(
+        markerId: const MarkerId('user'),
+        position: _markerPosition,
+        infoWindow: InfoWindow(title: displayName),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        zIndexInt: 2,
+      ),
+    };
+    for (final s in _nearbyCobblers) {
+      markers.add(
+        Marker(
+          markerId: MarkerId('cobbler_${s.profile.id}'),
+          position: s.profile.point,
+          infoWindow: InfoWindow(
+            title: s.profile.name,
+            snippet: '${s.profile.rating.toStringAsFixed(1)} ★ · ${_formatDistance(s.distanceMeters)}',
           ),
-        )
-        .toList();
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          zIndexInt: 1,
+        ),
+      );
+    }
+    return markers;
   }
 
-  Marker _homeMarker(String displayName, String? profileImageUrl) {
-    return Marker(
-      point: _markerPosition,
-      width: 148,
-      height: 132,
-      alignment: Alignment.bottomCenter,
-      child: _UserMapPin(
-        displayName: displayName,
-        profileImageUrl: profileImageUrl,
-      ),
-    );
+  Set<Circle> _buildRangeCircles() {
+    final rings = <double>[
+      _selectedRangeKm * 1000,
+      _selectedRangeKm * 600,
+      _selectedRangeKm * 300,
+    ];
+    return {
+      for (var i = 0; i < rings.length; i++)
+        Circle(
+          circleId: CircleId('range_$i'),
+          center: _markerPosition,
+          radius: rings[i],
+          fillColor: Colors.transparent,
+          strokeColor: const Color(0xFF212121).withValues(alpha: 0.55),
+          strokeWidth: 1,
+        ),
+    };
   }
 
   @override
@@ -551,7 +587,6 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
             widget.mapPinDisplayName!.trim().isNotEmpty)
         ? widget.mapPinDisplayName!.trim()
         : mapPinDisplayNameFrom(null, authState);
-    final userImageUrl = mapPinAbsoluteProfileImageUrl(widget.mapPinProfileImageRef);
 
     return Scaffold(
       backgroundColor: const Color(0xFF062F35),
@@ -770,59 +805,39 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                     fit: StackFit.expand,
                                     children: [
                                       ColoredBox(color: _mapGrey),
-                                      FlutterMap(
-                                        mapController: _mapController,
-                                        options: MapOptions(
-                                          initialCenter: _markerPosition,
-                                          initialZoom: _initialZoom,
-                                          onPositionChanged: (position, hasGesture) {
-                                            final zoom = position.zoom;
-                                            if (zoom == null) return;
-                                            _currentZoom = zoom;
-                                          },
-                                          onTap: (_, latLng) {
-                                            setState(() => _markerPosition = latLng);
-                                            _updateAddressFromLatLng(latLng);
-                                            _fetchNearbyCobblers();
-                                          },
+                                      GoogleMap(
+                                        initialCameraPosition: CameraPosition(
+                                          target: _markerPosition,
+                                          zoom: _initialZoom,
                                         ),
-                                        children: [
-                                          TileLayer(
-                                            // Toggle between normal map and satellite map.
-                                            urlTemplate: (_isSatelliteView == true)
-                                                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                                                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                                            subdomains: (_isSatelliteView == true)
-                                                ? const <String>[]
-                                                : const ['a', 'b', 'c', 'd'],
-                                            maxZoom: 19,
-                                            userAgentPackageName: 'com.getmypair.app',
-                                          ),
-                                          CircleLayer(
-                                            optimizeRadiusInMeters: true,
-                                            circles: [
-                                              for (final r in [
-                                                _selectedRangeKm * 1000,
-                                                _selectedRangeKm * 600,
-                                                _selectedRangeKm * 300,
-                                              ])
-                                                CircleMarker(
-                                                  point: _markerPosition,
-                                                  radius: r,
-                                                  useRadiusInMeter: true,
-                                                  color: Colors.transparent,
-                                                  borderStrokeWidth: 1.2,
-                                                  borderColor: const Color(0xFF212121).withValues(alpha: 0.55),
-                                                ),
-                                            ],
-                                          ),
-                                          MarkerLayer(
-                                            markers: [
-                                              ..._buildCobblerMarkers(),
-                                              _homeMarker(userDisplayName, userImageUrl),
-                                            ],
-                                          ),
-                                        ],
+                                        mapType: (_isSatelliteView == true)
+                                            ? MapType.hybrid
+                                            : MapType.normal,
+                                        minMaxZoomPreference: const MinMaxZoomPreference(
+                                          _minZoom,
+                                          _maxZoom,
+                                        ),
+                                        myLocationEnabled: true,
+                                        myLocationButtonEnabled: false,
+                                        zoomControlsEnabled: false,
+                                        compassEnabled: false,
+                                        mapToolbarEnabled: false,
+                                        markers: _buildMapMarkers(userDisplayName),
+                                        circles: _buildRangeCircles(),
+                                        onMapCreated: (controller) {
+                                          _map = controller;
+                                          if (!_mapController.isCompleted) {
+                                            _mapController.complete(controller);
+                                          }
+                                        },
+                                        onCameraMove: (position) {
+                                          _currentZoom = position.zoom;
+                                        },
+                                        onTap: (latLng) {
+                                          setState(() => _markerPosition = latLng);
+                                          _updateAddressFromLatLng(latLng);
+                                          _fetchNearbyCobblers();
+                                        },
                                       ),
                                       Positioned(
                                         right: 10,
@@ -1494,173 +1509,6 @@ class _ZoomButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// User location: name tag + profile photo (aligned with home header avatar).
-class _UserMapPin extends StatelessWidget {
-  final String displayName;
-  final String? profileImageUrl;
-
-  const _UserMapPin({
-    required this.displayName,
-    this.profileImageUrl,
-  });
-
-  static const double _avatarD = 40;
-
-  @override
-  Widget build(BuildContext context) {
-    final trimmed = displayName.trim();
-    final initial = trimmed.isEmpty ? 'U' : trimmed[0].toUpperCase();
-    final hasUrl = profileImageUrl != null && profileImageUrl!.isNotEmpty;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          constraints: const BoxConstraints(maxWidth: 132),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0F6876),
-                Color(0xFF062F35),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2)),
-            ],
-          ),
-          child: Text(
-            displayName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Container(
-          width: _avatarD,
-          height: _avatarD,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Color(0x40000000), blurRadius: 6, offset: Offset(0, 2)),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: hasUrl
-              ? Image.network(
-                  profileImageUrl!,
-                  width: _avatarD,
-                  height: _avatarD,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  filterQuality: FilterQuality.medium,
-                  errorBuilder: (_, __, ___) => _pinInitials(initial),
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    );
-                  },
-                )
-              : _pinInitials(initial),
-        ),
-      ],
-    );
-  }
-
-  Widget _pinInitials(String letter) {
-    return ColoredBox(
-      color: const Color(0xFFE8E8E8),
-      child: Center(
-        child: Text(
-          letter,
-          style: GoogleFonts.montserrat(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF424242),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Gradient name tag + 5★ + person icon (map marker).
-class _CobblerMapPin extends StatelessWidget {
-  final String name;
-
-  const _CobblerMapPin({required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0F6876),
-                Color(0xFF062F35),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(color: Color(0x40000000), blurRadius: 4, offset: Offset(0, 2)),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                name,
-                style: GoogleFonts.montserrat(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  5,
-                  (_) => const Icon(Icons.star_rounded, size: 11, color: Color(0xFFFFD54F)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 2),
-        SvgPicture.asset(
-          'assets/images/map-pin.svg',
-          width: 36,
-          height: 36,
-          fit: BoxFit.contain,
-        ),
-      ],
     );
   }
 }

@@ -1,0 +1,4 @@
+sdk.dir=/path/to/Android/Sdk
+flutter.sdk=/path/to/flutter
+# Paste your Google Maps SDK for Android API key (same key can be used on iOS if unrestricted, or use platform-restricted keys).
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY

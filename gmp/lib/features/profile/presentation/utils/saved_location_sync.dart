@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../domain/entities/address.dart';
 import '../../domain/entities/user_profile.dart';
@@ -58,17 +57,18 @@ class AddressParts {
 
   factory AddressParts.fromDisplayLine(
     String display, {
-    LatLng? coordinates,
+    double? latitude,
+    double? longitude,
   }) {
     var cleaned = display.replaceFirst(RegExp(r'^📍\s*'), '').trim();
     if (cleaned.isEmpty ||
         cleaned == 'Selected location' ||
         cleaned == 'Loading address...' ||
         cleaned.startsWith('Location ')) {
-      if (coordinates != null) {
+      if (latitude != null && longitude != null) {
         return AddressParts(
           addressLine1:
-              '${coordinates.latitude.toStringAsFixed(5)}, ${coordinates.longitude.toStringAsFixed(5)}',
+              '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}',
           city: 'Current location',
           state: '',
           pincode: '',
