@@ -6,7 +6,7 @@
 	<true/>
 	<!-- Google Maps SDK — replace with your Maps SDK for iOS API key -->
 	<key>GMSApiKey</key>
-	<string>YOUR_GOOGLE_MAPS_API_KEY</string>
+	<string>AIzaSyDea05I6AVaExAvm2uSyuSRGqX7hq9i5Tw</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

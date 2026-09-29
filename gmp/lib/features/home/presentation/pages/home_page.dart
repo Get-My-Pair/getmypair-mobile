@@ -99,7 +99,7 @@ const double _kHomeHeaderStatsToBottom = 14;
 /// Bottom corner radius on the hero card.
 const double _kHomeHeaderBottomRadius = 20;
 /// Visible gap between the hero bottom curve and the My Rack card.
-const double _kHomeHeaderToRackGap = 8;
+const double _kHomeHeaderToRackGap = 14;
 
 /// Tile height for quick actions (tuned on Edge 60 Pro @ 412×915).
 const double _kQuickActionCellHeight = 78;
@@ -170,9 +170,9 @@ double _homeViewportBottomReserve(BuildContext context) {
   );
 }
 
-/// Vertical gap between My Rack and the 2×2 action grid.
+/// Horizontal gap between the two cards in each action row.
 double _homeSectionGap(double layoutScale) =>
-    (10 * layoutScale).clamp(8.0, 12.0);
+    (14 * layoutScale).clamp(10.0, 16.0);
 
 /// Scales icons/text inside action cards vs Edge reference cell height.
 double _homeActionContentScale(double actionBlockH, double layoutScale) =>
@@ -209,20 +209,10 @@ class _HomePageState extends State<HomePage> {
   int _switchLoadGen = 0;
 
   static String _formatPlacemarkForHomeHeader(Placemark p) {
-    final subLocality = p.subLocality?.trim();
     final locality = p.locality?.trim();
     final administrativeArea = p.administrativeArea?.trim();
 
-    // If we have a neighborhood (e.g. Mylapore), show only that.
-    if (subLocality != null && subLocality.isNotEmpty) {
-      final sLower = subLocality.toLowerCase();
-      if (sLower == 'mylapore' || sLower == 'mylapur') {
-        return '📍 Mylapur';
-      }
-      return '📍 $subLocality';
-    }
-
-    // Otherwise show only the main area name (e.g. Chennai).
+    // Home header shows city only.
     if (locality != null && locality.isNotEmpty) {
       return '📍 $locality';
     }
@@ -459,14 +449,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   static String _formatAddressForHeader(Address address) {
-    final parts = [
-      address.addressLine1.trim(),
-      address.city.trim(),
-      address.state.trim(),
-      address.pincode.trim(),
-    ].where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return '';
-    return '📍 ${parts.join(', ')}';
+    final city = address.city.trim();
+    if (city.isEmpty) return '';
+    return '📍 $city';
   }
 
   void _applySavedAddressToHeader() {
@@ -1017,7 +1002,7 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ),
-                                          SizedBox(height: gridGap),
+                                          SizedBox(height: gridGap + 6),
                                           SizedBox(
                                             height: equalBlockH,
                                             width: double.infinity,
@@ -1068,7 +1053,7 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ),
-                                          SizedBox(height: gridGap),
+                                          SizedBox(height: gridGap + 12),
                                           SizedBox(
                                             height: equalBlockH,
                                             width: double.infinity,
@@ -1432,8 +1417,8 @@ class _HomeProfileAvatarStack extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = _homeHeaderChromeScale(context);
     final narrow = MediaQuery.sizeOf(context).width < 360;
-    final rLarge = ((narrow ? 28.0 : 30.0) * s).clamp(26.0, 32.0);
-    final rSmall = ((narrow ? 16.0 : 18.0) * s).clamp(14.0, 20.0);
+    final rLarge = ((narrow ? 22.0 : 24.0) * s).clamp(20.0, 26.0);
+    final rSmall = ((narrow ? 10.0 : 11.0) * s).clamp(9.0, 13.0);
 
     if (profile == null) {
       return GestureDetector(
@@ -1467,50 +1452,55 @@ class _HomeProfileAvatarStack extends StatelessWidget {
     final width = rLarge * 2 + rSmall * 1.15;
     final height = rLarge * 2 + 6;
 
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: 0,
-            bottom: 0,
-            child: GestureDetector(
-              onTap: onTapCurrent,
-              child: _avatarRing(
-                radius: rLarge,
-                imageUrl: current.imageUrl,
-                name: current.name,
-              ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            child: GestureDetector(
-              onTap: () => onTapOther?.call(others[0].id),
-              child: _avatarRing(
-                radius: rSmall,
-                imageUrl: others[0].imageUrl,
-                name: others[0].name,
-              ),
-            ),
-          ),
-          if (others.length > 1)
+    return Transform.translate(
+      offset: const Offset(-8, 6),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Other profiles behind (drawn first).
             Positioned(
-              right: 0,
-              bottom: 0,
+              right: -10,
+              top: 2,
               child: GestureDetector(
-                onTap: () => onTapOther?.call(others[1].id),
+                onTap: () => onTapOther?.call(others[0].id),
                 child: _avatarRing(
                   radius: rSmall,
-                  imageUrl: others[1].imageUrl,
-                  name: others[1].name,
+                  imageUrl: others[0].imageUrl,
+                  name: others[0].name,
                 ),
               ),
             ),
-        ],
+            if (others.length > 1)
+              Positioned(
+                right: -12,
+                bottom: -2,
+                child: GestureDetector(
+                  onTap: () => onTapOther?.call(others[1].id),
+                  child: _avatarRing(
+                    radius: rSmall,
+                    imageUrl: others[1].imageUrl,
+                    name: others[1].name,
+                  ),
+                ),
+              ),
+            // Current profile in front (drawn last).
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onTap: onTapCurrent,
+                child: _avatarRing(
+                  radius: rLarge,
+                  imageUrl: current.imageUrl,
+                  name: current.name,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1586,11 +1576,21 @@ class _HomeTopCard extends StatelessWidget {
         .map((e) => e.trim())
         .where(
           (e) =>
-              e.isNotEmpty && e.toLowerCase() != 'null' && e.toLowerCase() != 'undefined',
+              e.isNotEmpty &&
+              e.toLowerCase() != 'null' &&
+              e.toLowerCase() != 'undefined',
         )
         .toList();
-    if (cleanedSegments.isEmpty) return 'HSR Layout, Bangalore';
-    return cleanedSegments.join(', ');
+    if (cleanedSegments.isEmpty) return 'Bangalore';
+    // Already city-only.
+    if (cleanedSegments.length == 1) return cleanedSegments.first;
+    // Older full addresses: "line1, city, state, pincode" → city only.
+    final withoutPin = cleanedSegments
+        .where((e) => !RegExp(r'^\d{4,}$').hasMatch(e))
+        .toList();
+    if (withoutPin.isEmpty) return cleanedSegments.first;
+    if (withoutPin.length >= 3) return withoutPin[1];
+    return withoutPin.last;
   }
 
   @override
@@ -1864,7 +1864,7 @@ class _HomeTopCard extends StatelessWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Search an area or address',
+                                'Search',
                                 style: GoogleFonts.montserrat(
                                   fontSize: (16 * s).clamp(10.0, 16.0),
                                   fontWeight: FontWeight.w400,
@@ -2250,7 +2250,7 @@ class _HomeActionPairRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(child: left),
-        SizedBox(width: gap.clamp(6.0, 12.0)),
+        SizedBox(width: gap.clamp(8.0, 16.0)),
         Expanded(child: right),
       ],
     );
@@ -2393,7 +2393,7 @@ class _QuickActionCard extends StatelessWidget {
               final iconW = (iconH * iconRatio).clamp(22.0, 34.0);
               final gap = (innerW * 0.06).clamp(8.0, 12.0);
               final fontSize = (innerH * 0.28).clamp(12.0, 15.0);
-              final lineGap = (innerH * 0.08).clamp(3.0, 6.0);
+              final lineGap = (innerH * 0.22).clamp(9.0, 14.0);
 
               return Padding(
                 padding: EdgeInsets.symmetric(
