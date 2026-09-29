@@ -22,9 +22,9 @@ typedef FootwearScanStatusCallback = void Function(FootwearScanStatus status);
 class FootwearLiveScanner {
   FootwearLiveScanner();
 
-  static const Duration _minFrameInterval = Duration(milliseconds: 800);
-  static const int _acceptStreak = 2;
-  static const int _rejectStreak = 2;
+  static const Duration _minFrameInterval = Duration(milliseconds: 650);
+  static const int _acceptStreak = 1;
+  static const int _rejectStreak = 3;
 
   CameraController? _controller;
   FootwearScanStatusCallback? _onStatusChanged;
@@ -45,7 +45,7 @@ class FootwearLiveScanner {
   }) async {
     await stop();
     if (kIsWeb) {
-      _emit(FootwearScanStatus.unavailable);
+      _emit(FootwearScanStatus.footwearDetected);
       return;
     }
 
