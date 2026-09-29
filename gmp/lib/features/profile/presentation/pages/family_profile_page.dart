@@ -18,6 +18,12 @@ import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
 import '../utils/profile_switch_loading.dart';
 
+const Color _kSheetTeal = Color(0xFF12899B);
+const Color _kSheetBg = Color(0xFFF5F5F5);
+const Color _kSheetDivider = Color(0xFFE0E0E0);
+const Color _kListDivider = Color(0x66FFFFFF);
+const Color _kSubtitle = Color(0xB3DFE7E9);
+
 class FamilyProfilePage extends StatefulWidget {
   final UserProfile profile;
   final String accessToken;
@@ -36,33 +42,10 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
   Future<void> _openAddRelationSheet() async {
     final relation = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: const Color(0xFF0B3A4A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Add profile',
-                  style: GoogleFonts.boldonse(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _relationTile(ctx, 'partner', 'My Partner'),
-                _relationTile(ctx, 'child', 'My Kids'),
-                _relationTile(ctx, 'elder', 'Elderly'),
-              ],
-            ),
-          ),
-        );
+        return const _AddRelationBottomSheet();
       },
     );
     if (relation == null || !mounted) return;
@@ -73,25 +56,6 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
         'relation': relation,
         'bloc': context.read<ProfileBloc>(),
       },
-    );
-  }
-
-  Widget _relationTile(BuildContext ctx, String value, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: () => Navigator.pop(ctx, value),
-        tileColor: Colors.white.withValues(alpha: 0.08),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          label,
-          style: GoogleFonts.montserrat(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.white),
-      ),
     );
   }
 
@@ -188,8 +152,8 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                         : state is ProfileSwitching
                             ? state.profile
                             : state is ProfileError && state.profile != null
-                            ? state.profile!
-                            : widget.profile;
+                                ? state.profile!
+                                : widget.profile;
         final profiles = switchableProfilesOf(currentProfile);
         final activeId = currentProfile.isSelfActive
             ? kSelfProfileId
@@ -235,11 +199,13 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                               (constraints.maxHeight / 760).clamp(0.58, 1.0);
                           final textScaleTightness =
                               (1.08 / deviceTextScale).clamp(0.82, 1.04);
-                          final layoutScale = (math.min(widthScale, heightScale) *
-                                  textScaleTightness)
-                              .clamp(0.82, 1.0);
+                          final layoutScale =
+                              (math.min(widthScale, heightScale) *
+                                      textScaleTightness)
+                                  .clamp(0.82, 1.0);
                           final horizontalLeft =
-                              ArticleStyleHeaderInsets.titleLeftInsetOf(context);
+                              ArticleStyleHeaderInsets.titleLeftInsetOf(
+                                  context);
                           final horizontalRight =
                               ArticleStyleHeaderInsets.headerRightInsetOf(
                             context,
@@ -263,10 +229,11 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                                     const ChevronScreenBackButton(
                                       iconColor: Colors.white,
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 2),
                                     Expanded(
                                       child: Text(
                                         'Family Profile',
+                                        textAlign: TextAlign.left,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.boldonse(
@@ -277,31 +244,29 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                                         ),
                                       ),
                                     ),
-                                    IconButton(
-                                      onPressed: switching
-                                          ? null
-                                          : _openAddRelationSheet,
-                                      tooltip: 'Add profile',
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                        size: 28,
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: switching
+                                            ? null
+                                            : _openAddRelationSheet,
+                                        customBorder: const CircleBorder(),
+                                        child: Opacity(
+                                          opacity: switching ? 0.45 : 1,
+                                          child: Image.asset(
+                                            'assets/images/icons/profile/add-profile.png',
+                                            width: 36,
+                                            height: 36,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                                 SizedBox(
-                                  height: (10 * layoutScale).clamp(3.0, 12.0),
+                                  height: (18 * layoutScale).clamp(10.0, 22.0),
                                 ),
-                                Text(
-                                  'Switch profile',
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
                                 if (state is AddressActionLoading)
                                   const Padding(
                                     padding: EdgeInsets.only(bottom: 12),
@@ -315,18 +280,18 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                                     itemCount: profiles.length,
                                     itemBuilder: (context, index) {
                                       final item = profiles[index];
-                                      final selected = item.id == activeId;
+                                      final subtitle = item.isSelf
+                                          ? 'Primary'
+                                          : item.label;
                                       return _ProfileSwitchRow(
                                         title: item.name,
-                                        subtitle: item.label,
+                                        subtitle: subtitle,
                                         imageUrl: item.imageUrl,
-                                        selected: selected,
-                                        canDelete: !item.isSelf,
                                         onTap: switching
                                             ? null
                                             : () =>
                                                 _switchTo(item.id, activeId),
-                                        onDelete: switching
+                                        onLongPress: item.isSelf || switching
                                             ? null
                                             : () => _confirmDelete(item),
                                       );
@@ -352,23 +317,121 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
   }
 }
 
+class _AddRelationBottomSheet extends StatelessWidget {
+  const _AddRelationBottomSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: _kSheetBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 24, 20, 16 + bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'For whom are we',
+                textAlign: TextAlign.left,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.boldonse(
+                  color: _kSheetTeal,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w400,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'creating this profile?',
+                textAlign: TextAlign.left,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.boldonse(
+                  color: _kSheetTeal,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w400,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+          _sheetOption(context, 'partner', 'My Partner', showDivider: true),
+          _sheetOption(context, 'child', 'My Kids', showDivider: true),
+          _sheetOption(context, 'elder', 'Elderly', showDivider: false),
+        ],
+      ),
+    );
+  }
+
+  Widget _sheetOption(
+    BuildContext context,
+    String value,
+    String label, {
+    required bool showDivider,
+  }) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => Navigator.pop(context, value),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.left,
+                    style: GoogleFonts.montserrat(
+                      color: _kSheetTeal,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: _kSheetTeal,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (showDivider)
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: _kSheetDivider,
+          ),
+      ],
+    );
+  }
+}
+
 class _ProfileSwitchRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final String? imageUrl;
-  final bool selected;
-  final bool canDelete;
   final VoidCallback? onTap;
-  final VoidCallback? onDelete;
+  final VoidCallback? onLongPress;
 
   const _ProfileSwitchRow({
     required this.title,
     required this.subtitle,
     required this.imageUrl,
-    required this.selected,
-    required this.canDelete,
     required this.onTap,
-    this.onDelete,
+    this.onLongPress,
   });
 
   @override
@@ -378,18 +441,18 @@ class _ProfileSwitchRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        onLongPress: onLongPress,
         child: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             border: Border(
-              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+              bottom: BorderSide(color: _kListDivider, width: 0.8),
             ),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 22,
+                radius: 26,
                 backgroundColor: Colors.white.withValues(alpha: 0.22),
                 backgroundImage: hasImage ? NetworkImage(imageUrl!) : null,
                 child: hasImage
@@ -402,7 +465,7 @@ class _ProfileSwitchRow extends StatelessWidget {
                         ),
                       ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,39 +473,29 @@ class _ProfileSwitchRow extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.montserrat(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w500,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       subtitle,
                       style: GoogleFonts.montserrat(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.75),
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w400,
+                        color: _kSubtitle,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (canDelete)
-                IconButton(
-                  onPressed: onDelete,
-                  tooltip: 'Delete profile',
-                  visualDensity: VisualDensity.compact,
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-              if (selected)
-                const Icon(Icons.check_circle, color: Colors.white)
-              else
-                Icon(
-                  Icons.radio_button_unchecked,
-                  color: Colors.white.withValues(alpha: 0.6),
-                ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: 0.55),
+                size: 26,
+              ),
             ],
           ),
         ),

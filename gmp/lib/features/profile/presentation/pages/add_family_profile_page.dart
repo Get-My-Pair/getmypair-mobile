@@ -7,10 +7,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/bgtheme.dart';
 import '../../../../core/errors/exceptions.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
-import '../../domain/entities/user_profile.dart';
+import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -31,22 +30,45 @@ class AddFamilyProfilePage extends StatefulWidget {
 }
 
 class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
-  final _name = TextEditingController();
-  final _nameFocus = FocusNode();
-  String? _gender;
+  final _fullName = TextEditingController();
+  final _nickName = TextEditingController();
+  final _size = TextEditingController();
+  final _fullNameFocus = FocusNode();
+  final _nickNameFocus = FocusNode();
+  final _sizeFocus = FocusNode();
+
   DateTime? _dob;
+  String _sizeUnit = 'US';
+  String? _abnormality;
   Uint8List? _imageBytes;
   String _imageFileName = 'family.jpg';
   bool _submitted = false;
 
-  static const _fieldFill = Color(0x2E000000);
+  static const _fieldFill = Color(0x33000000);
   static const _fieldText = Color(0xFFDFE7E9);
-  static const _radius = 16.0;
+  static const _fieldBorder = Color(0x66FFFFFF);
+  static const _radius = 100.0;
+  static const _saveBtnBg = Color(0xFFE8E8E8);
+  static const _saveBtnFg = Color(0xFF3A3A3A);
+  static const _sheetTeal = Color(0xFF0A4A52);
+
+  static const _sizeUnits = ['US', 'UK', 'EU'];
+  static const _abnormalities = [
+    'No Abnormality',
+    'Flat Foot',
+    'Wide Foot',
+    'Narrow Foot',
+    'High Arches',
+  ];
 
   @override
   void dispose() {
-    _name.dispose();
-    _nameFocus.dispose();
+    _fullName.dispose();
+    _nickName.dispose();
+    _size.dispose();
+    _fullNameFocus.dispose();
+    _nickNameFocus.dispose();
+    _sizeFocus.dispose();
     super.dispose();
   }
 
@@ -68,7 +90,7 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
   }
 
   Future<void> _pickDob() async {
-    _nameFocus.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -82,81 +104,126 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
     }
   }
 
-  Future<void> _pickGender() async {
-    _nameFocus.unfocus();
+  Future<void> _pickSizeUnit() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final selected = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: const Color(0xFF0B3A4A),
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Select gender',
-                  style: GoogleFonts.boldonse(
-                    color: Colors.white,
-                    fontSize: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < _sizeUnits.length; i++) ...[
+                ListTile(
+                  title: Text(
+                    _sizeUnits[i],
+                    style: GoogleFonts.montserrat(
+                      color: _sheetTeal,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                    ),
                   ),
+                  trailing: _sizeUnit == _sizeUnits[i]
+                      ? const Icon(Icons.check, color: _sheetTeal)
+                      : null,
+                  onTap: () => Navigator.pop(ctx, _sizeUnits[i]),
                 ),
-                const SizedBox(height: 16),
-                _genderOption(ctx, 'female', 'Female'),
-                _genderOption(ctx, 'male', 'Male'),
+                if (i < _sizeUnits.length - 1)
+                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
               ],
-            ),
+            ],
           ),
         );
       },
     );
     if (selected != null && mounted) {
-      setState(() => _gender = selected);
+      setState(() => _sizeUnit = selected);
     }
   }
 
-  Widget _genderOption(BuildContext ctx, String value, String label) {
-    final active = _gender == value;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: () => Navigator.pop(ctx, value),
-        tileColor: Colors.white.withValues(alpha: active ? 0.16 : 0.08),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          label,
-          style: GoogleFonts.montserrat(
+  Future<void> _pickAbnormality() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          decoration: BoxDecoration(
             color: Colors.white,
-            fontWeight: FontWeight.w600,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ),
-        trailing: Icon(
-          active ? Icons.check_circle : Icons.circle_outlined,
-          color: Colors.white,
-        ),
-      ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < _abnormalities.length; i++) ...[
+                InkWell(
+                  onTap: () => Navigator.pop(ctx, _abnormalities[i]),
+                  borderRadius: BorderRadius.vertical(
+                    top: i == 0 ? const Radius.circular(16) : Radius.zero,
+                    bottom: i == _abnormalities.length - 1
+                        ? const Radius.circular(16)
+                        : Radius.zero,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _abnormalities[i],
+                            style: GoogleFonts.montserrat(
+                              color: Colors.black87,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (_abnormalities[i] != 'No Abnormality')
+                          Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: Colors.black.withValues(alpha: 0.55),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (i < _abnormalities.length - 1)
+                  const Divider(height: 1, color: Color(0xFFE8E8E8)),
+              ],
+            ],
+          ),
+        );
+      },
     );
+    if (selected != null && mounted) {
+      setState(() => _abnormality = selected);
+    }
   }
 
   Future<void> _submit() async {
-    _nameFocus.unfocus();
-    final name = _name.text.trim();
+    FocusManager.instance.primaryFocus?.unfocus();
+    final name = _fullName.text.trim();
     if (name.length < 2) {
       await showAppFeedbackAlert(
         context,
-        message: 'Enter a valid name',
-        type: AppFeedbackType.warning,
-      );
-      return;
-    }
-    if (_gender == null) {
-      await showAppFeedbackAlert(
-        context,
-        message: 'Select gender',
+        message: 'Enter a valid full name',
         type: AppFeedbackType.warning,
       );
       return;
@@ -170,12 +237,13 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
       return;
     }
     setState(() => _submitted = true);
+    // API still requires gender; design omits it — default until API supports optional.
     context.read<ProfileBloc>().add(
           FamilyMemberAddRequested(
             accessToken: widget.accessToken,
             name: name,
             relation: widget.relation,
-            gender: _gender!,
+            gender: 'female',
             dateOfBirth: _dob!,
             imageBytes: _imageBytes,
             imageFileName: _imageBytes == null ? null : _imageFileName,
@@ -189,39 +257,39 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
   }) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(_radius),
-      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.28)),
+      borderSide: const BorderSide(color: _fieldBorder, width: 1),
     );
     return InputDecoration(
       hintText: hint,
       hintStyle: GoogleFonts.montserrat(
-        color: Colors.white.withValues(alpha: 0.55),
-        fontSize: 16,
+        color: Colors.white.withValues(alpha: 0.45),
+        fontSize: 15,
         fontWeight: FontWeight.w400,
       ),
       filled: true,
       fillColor: _fieldFill,
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
       suffixIcon: suffix,
       suffixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
       border: border,
       enabledBorder: border,
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(_radius),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.55)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
       ),
     );
   }
 
   Widget _fieldLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      padding: const EdgeInsets.only(left: 6, bottom: 8),
       child: Text(
         text,
         style: GoogleFonts.montserrat(
-          color: _fieldText.withValues(alpha: 0.85),
+          color: Colors.white,
           fontSize: 13,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w400,
         ),
       ),
     );
@@ -240,14 +308,14 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(_radius),
         child: Ink(
-          height: 54,
+          height: 52,
           decoration: BoxDecoration(
             color: _fieldFill,
             borderRadius: BorderRadius.circular(_radius),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+            border: Border.all(color: _fieldBorder),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 22),
             child: Row(
               children: [
                 Expanded(
@@ -258,8 +326,8 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                     style: GoogleFonts.montserrat(
                       color: hasValue
                           ? _fieldText
-                          : Colors.white.withValues(alpha: 0.55),
-                      fontSize: 16,
+                          : Colors.white.withValues(alpha: 0.45),
+                      fontSize: 15,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -273,14 +341,57 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
     );
   }
 
+  Widget _buildAvatar() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: SizedBox(
+        width: 72,
+        height: 72,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: CircleAvatar(
+                backgroundColor: Colors.white.withValues(alpha: 0.22),
+                backgroundImage:
+                    _imageBytes != null ? MemoryImage(_imageBytes!) : null,
+                child: _imageBytes == null
+                    ? Icon(
+                        Icons.person_outline,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        size: 34,
+                      )
+                    : null,
+              ),
+            ),
+            Positioned(
+              left: -2,
+              bottom: -2,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0CADC5),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final genderLabel = _gender == 'female'
-        ? 'Female'
-        : _gender == 'male'
-            ? 'Male'
-            : '';
+    final statusTop = MediaQuery.paddingOf(context).top;
     final dobLabel =
         _dob == null ? '' : DateFormat('dd/MM/yyyy').format(_dob!);
 
@@ -304,160 +415,230 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
         child: GestureDetector(
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           child: Scaffold(
+            extendBody: true,
             resizeToAvoidBottomInset: true,
-            body: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage(BgTheme.backgroundImageAsset),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        ArticleStyleHeaderInsets.titleLeftInsetOf(context),
-                        8,
-                        ArticleStyleHeaderInsets.headerRightInsetOf(context),
-                        0,
-                      ),
-                      child: Row(
-                        children: [
-                          const ChevronScreenBackButton(iconColor: Colors.white),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              familyRelationLabel(widget.relation),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.boldonse(
-                                color: const Color(0xFFDFE7E9),
-                                fontSize: 20,
-                                fontWeight: FontWeight.w400,
-                                height: 1,
-                              ),
-                            ),
+            body: SafeArea(
+              top: false,
+              bottom: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(22),
+                        ),
+                        image: const DecorationImage(
+                          image: AssetImage(BgTheme.backgroundImageAsset),
+                          fit: BoxFit.cover,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        keyboardDismissBehavior:
-                            ScrollViewKeyboardDismissBehavior.onDrag,
-                        padding: EdgeInsets.fromLTRB(
-                          24,
-                          20,
-                          24,
-                          24 + keyboardInset.clamp(0.0, 24.0),
-                        ),
+                      child: Column(
                         children: [
-                          Center(
-                            child: GestureDetector(
-                              onTap: _pickImage,
-                              child: CircleAvatar(
-                                radius: 48,
-                                backgroundColor:
-                                    Colors.white.withValues(alpha: 0.2),
-                                backgroundImage: _imageBytes != null
-                                    ? MemoryImage(_imageBytes!)
-                                    : null,
-                                child: _imageBytes == null
-                                    ? const Icon(
-                                        Icons.camera_alt_outlined,
-                                        color: Colors.white,
-                                        size: 28,
-                                      )
-                                    : null,
-                              ),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              ArticleStyleHeaderInsets.titleLeftInsetOf(
+                                  context),
+                              statusTop + 16,
+                              ArticleStyleHeaderInsets.headerRightInsetOf(
+                                  context),
+                              0,
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Center(
-                            child: Text(
-                              'Profile image',
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white70,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-                          _fieldLabel('Name'),
-                          TextField(
-                            controller: _name,
-                            focusNode: _nameFocus,
-                            textInputAction: TextInputAction.done,
-                            textCapitalization: TextCapitalization.words,
-                            onSubmitted: (_) => _nameFocus.unfocus(),
-                            style: GoogleFonts.montserrat(
-                              color: _fieldText,
-                              fontSize: 16,
-                            ),
-                            decoration: _fieldDecoration(hint: 'Enter name'),
-                          ),
-                          const SizedBox(height: 18),
-                          _fieldLabel('Gender'),
-                          _tapField(
-                            value: genderLabel,
-                            hint: 'Select gender',
-                            suffix: Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: _fieldText.withValues(alpha: 0.9),
-                            ),
-                            onTap: _pickGender,
-                          ),
-                          const SizedBox(height: 18),
-                          _fieldLabel('Date of birth'),
-                          _tapField(
-                            value: dobLabel,
-                            hint: 'DD/MM/YYYY',
-                            suffix: Icon(
-                              Icons.calendar_today_outlined,
-                              size: 20,
-                              color: _fieldText.withValues(alpha: 0.9),
-                            ),
-                            onTap: _pickDob,
-                          ),
-                          const SizedBox(height: 32),
-                          SizedBox(
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: _submitted ? null : _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor:
-                                    AppColors.primary.withValues(alpha: 0.6),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 18),
+                                  child: ChevronScreenBackButton(
+                                    iconColor: Colors.white,
+                                  ),
                                 ),
-                              ),
-                              child: _submitted
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Create profile',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 20),
+                                    child: Text(
+                                      'Add Profile',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.boldonse(
+                                        color: const Color(0xFFDFE7E9),
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w400,
+                                        height: 1,
                                       ),
                                     ),
+                                  ),
+                                ),
+                                _buildAvatar(),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView(
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
+                              padding: EdgeInsets.fromLTRB(
+                                24,
+                                28,
+                                24,
+                                24 + keyboardInset.clamp(0.0, 24.0),
+                              ),
+                              children: [
+                                _fieldLabel('Full Name'),
+                                TextField(
+                                  controller: _fullName,
+                                  focusNode: _fullNameFocus,
+                                  textInputAction: TextInputAction.next,
+                                  textCapitalization: TextCapitalization.words,
+                                  onSubmitted: (_) =>
+                                      _nickNameFocus.requestFocus(),
+                                  style: GoogleFonts.montserrat(
+                                    color: _fieldText,
+                                    fontSize: 15,
+                                  ),
+                                  decoration: _fieldDecoration(
+                                    hint: 'Jane Doe',
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                _fieldLabel('Nick Name'),
+                                TextField(
+                                  controller: _nickName,
+                                  focusNode: _nickNameFocus,
+                                  textInputAction: TextInputAction.next,
+                                  textCapitalization: TextCapitalization.words,
+                                  onSubmitted: (_) => _nickNameFocus.unfocus(),
+                                  style: GoogleFonts.montserrat(
+                                    color: _fieldText,
+                                    fontSize: 15,
+                                  ),
+                                  decoration: _fieldDecoration(hint: 'Jane'),
+                                ),
+                                const SizedBox(height: 20),
+                                _fieldLabel('DOB'),
+                                _tapField(
+                                  value: dobLabel,
+                                  hint: 'dd/mm/yyyy',
+                                  suffix: Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 20,
+                                    color: _fieldText.withValues(alpha: 0.9),
+                                  ),
+                                  onTap: _pickDob,
+                                ),
+                                const SizedBox(height: 20),
+                                _fieldLabel('Add Size'),
+                                TextField(
+                                  controller: _size,
+                                  focusNode: _sizeFocus,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                                  textInputAction: TextInputAction.done,
+                                  style: GoogleFonts.montserrat(
+                                    color: _fieldText,
+                                    fontSize: 15,
+                                  ),
+                                  decoration: _fieldDecoration(
+                                    hint: 'Example: 11',
+                                    suffix: GestureDetector(
+                                      onTap: _pickSizeUnit,
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 14,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              _sizeUnit,
+                                              style: GoogleFonts.montserrat(
+                                                color: _fieldText,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 2),
+                                            Icon(
+                                              Icons.keyboard_arrow_down_rounded,
+                                              color: _fieldText.withValues(
+                                                alpha: 0.9,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                _fieldLabel(
+                                  'Do they have any foot abnormality?',
+                                ),
+                                _tapField(
+                                  value: _abnormality ?? '',
+                                  hint: 'Example: Wide Foot',
+                                  suffix: Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    color: _fieldText.withValues(alpha: 0.9),
+                                  ),
+                                  onTap: _pickAbnormality,
+                                ),
+                                const SizedBox(height: 36),
+                                SizedBox(
+                                  height: 52,
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _submitted ? null : _submit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _saveBtnBg,
+                                      foregroundColor: _saveBtnFg,
+                                      disabledBackgroundColor: _saveBtnBg
+                                          .withValues(alpha: 0.7),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(100),
+                                      ),
+                                    ),
+                                    child: _submitted
+                                        ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: _saveBtnFg,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Save Profile',
+                                            style: GoogleFonts.montserrat(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 14),
+                  const DashboardLinkedBottomNav(selectedTabIndex: 2),
+                ],
               ),
             ),
           ),
