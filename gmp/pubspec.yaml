@@ -164,6 +164,7 @@ flutter:
     - assets/images/icons/home/rentmypair.svg
     - assets/images/icons/home/rehomemypair.svg
     - assets/images/icons/profile/
+    - assets/images/icons/profile/info.svg
     - assets/images/icons/profile/edit.svg
     - assets/images/icons/profile/home.svg
     - assets/images/icons/profile/monitor.svg

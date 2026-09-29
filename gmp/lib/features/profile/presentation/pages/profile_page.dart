@@ -666,6 +666,7 @@ class _OverlappingAvatarCluster extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // Small avatars behind (drawn first).
           if (others.isNotEmpty)
             Positioned(
               right: 0,
@@ -676,15 +677,6 @@ class _OverlappingAvatarCluster extends StatelessWidget {
                 child: _profileFill(others[0], smallRadius),
               ),
             ),
-          Positioned(
-            right: others.isEmpty ? 0 : (31 * scale).clamp(20.0, 31.0),
-            top: (6 * scale).clamp(3.0, 6.0),
-            child: _RingAvatar(
-              radius: mainRadius,
-              border: BorderSide.none,
-              child: _profileFill(current, mainRadius),
-            ),
-          ),
           if (others.length > 1)
             Positioned(
               right: 0,
@@ -695,6 +687,16 @@ class _OverlappingAvatarCluster extends StatelessWidget {
                 child: _profileFill(others[1], smallRadius),
               ),
             ),
+          // Large active avatar in front (drawn last).
+          Positioned(
+            right: others.isEmpty ? 0 : (31 * scale).clamp(20.0, 31.0),
+            top: (6 * scale).clamp(3.0, 6.0),
+            child: _RingAvatar(
+              radius: mainRadius,
+              border: BorderSide.none,
+              child: _profileFill(current, mainRadius),
+            ),
+          ),
         ],
       ),
     );

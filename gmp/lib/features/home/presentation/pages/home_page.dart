@@ -1401,8 +1401,137 @@ class _HomeHeaderBell extends StatelessWidget {
   }
 }
 
-/// Profile avatar beside location — current profile large, up to 2 others small.
-class _HomeProfileAvatarStack extends StatelessWidget {
+/// Figma Frame 241 (2559:289) — profile picker when 3+ switchable profiles.
+class _HomeProfileSelectMenu extends StatelessWidget {
+  static const double menuWidth = 108;
+  static const Color borderTeal = Color(0xFF0F6876);
+  static const Color divider = Color.fromRGBO(0, 0, 0, 0.5);
+
+  final List<SwitchableAppProfile> profiles;
+  final ValueChanged<String> onSelect;
+
+  const _HomeProfileSelectMenu({
+    required this.profiles,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      elevation: 8,
+      shadowColor: Colors.black26,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: menuWidth,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderTeal, width: 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < profiles.length; i++) ...[
+              _HomeProfileSelectRow(
+                profile: profiles[i],
+                showDivider: i < profiles.length - 1,
+                onTap: () => onSelect(profiles[i].id),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeProfileSelectRow extends StatelessWidget {
+  final SwitchableAppProfile profile;
+  final bool showDivider;
+  final VoidCallback onTap;
+
+  const _HomeProfileSelectRow({
+    required this.profile,
+    required this.showDivider,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage =
+        profile.imageUrl != null && profile.imageUrl!.isNotEmpty;
+    final letter =
+        profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U';
+    // Figma: 24px avatars on first rows, 26px on later — use 24 for consistency.
+    const avatarSize = 24.0;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: showDivider
+                ? const Border(
+                    bottom: BorderSide(
+                      color: _HomeProfileSelectMenu.divider,
+                      width: 1,
+                    ),
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: avatarSize,
+                height: avatarSize,
+                child: CircleAvatar(
+                  radius: avatarSize / 2,
+                  backgroundColor: const Color(0xFFE8F4F6),
+                  backgroundImage:
+                      hasImage ? NetworkImage(profile.imageUrl!) : null,
+                  child: hasImage
+                      ? null
+                      : Text(
+                          letter,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _HomeProfileSelectMenu.borderTeal,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  profile.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Profile avatar beside location — current large, up to 2 others small.
+/// With 3+ profiles, tapping the cluster opens Figma Frame 241 picker.
+class _HomeProfileAvatarStack extends StatefulWidget {
   final UserProfile? profile;
   final VoidCallback onTapCurrent;
   final void Function(String profileId)? onTapOther;
@@ -1414,95 +1543,85 @@ class _HomeProfileAvatarStack extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final s = _homeHeaderChromeScale(context);
-    final narrow = MediaQuery.sizeOf(context).width < 360;
-    final rLarge = ((narrow ? 22.0 : 24.0) * s).clamp(20.0, 26.0);
-    final rSmall = ((narrow ? 10.0 : 11.0) * s).clamp(9.0, 13.0);
+  State<_HomeProfileAvatarStack> createState() =>
+      _HomeProfileAvatarStackState();
+}
 
-    if (profile == null) {
-      return GestureDetector(
-        onTap: onTapCurrent,
-        behavior: HitTestBehavior.opaque,
-        child: _avatarRing(radius: rLarge, imageUrl: null, name: ''),
-      );
-    }
+class _HomeProfileAvatarStackState extends State<_HomeProfileAvatarStack> {
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _menuEntry;
 
-    final all = switchableProfilesOf(profile!);
-    final activeId =
-        profile!.isSelfActive ? kSelfProfileId : profile!.activeProfileId;
-    final current = all.firstWhere(
-      (p) => p.id == activeId,
-      orElse: () => all.first,
-    );
-    final others = all.where((p) => p.id != current.id).take(2).toList();
+  bool get _menuOpen => _menuEntry != null;
 
-    if (others.isEmpty) {
-      return GestureDetector(
-        onTap: onTapCurrent,
-        behavior: HitTestBehavior.opaque,
-        child: _avatarRing(
-          radius: rLarge,
-          imageUrl: current.imageUrl,
-          name: current.name,
-        ),
-      );
-    }
+  @override
+  void dispose() {
+    _removeMenu();
+    super.dispose();
+  }
 
-    final width = rLarge * 2 + rSmall * 1.15;
-    final height = rLarge * 2 + 6;
+  void _removeMenu() {
+    _menuEntry?.remove();
+    _menuEntry = null;
+  }
 
-    return Transform.translate(
-      offset: const Offset(-8, 6),
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: Stack(
-          clipBehavior: Clip.none,
+  void _closeMenu() {
+    if (!_menuOpen) return;
+    _removeMenu();
+    if (mounted) setState(() {});
+  }
+
+  void _openMenu({
+    required List<SwitchableAppProfile> profiles,
+    required String activeId,
+  }) {
+    _removeMenu();
+    final overlay = Overlay.of(context);
+    _menuEntry = OverlayEntry(
+      builder: (context) {
+        return Stack(
           children: [
-            // Other profiles behind (drawn first).
-            Positioned(
-              right: -10,
-              top: 2,
+            Positioned.fill(
               child: GestureDetector(
-                onTap: () => onTapOther?.call(others[0].id),
-                child: _avatarRing(
-                  radius: rSmall,
-                  imageUrl: others[0].imageUrl,
-                  name: others[0].name,
-                ),
+                behavior: HitTestBehavior.opaque,
+                onTap: _closeMenu,
+                child: const ColoredBox(color: Colors.transparent),
               ),
             ),
-            if (others.length > 1)
-              Positioned(
-                right: -12,
-                bottom: -2,
-                child: GestureDetector(
-                  onTap: () => onTapOther?.call(others[1].id),
-                  child: _avatarRing(
-                    radius: rSmall,
-                    imageUrl: others[1].imageUrl,
-                    name: others[1].name,
-                  ),
-                ),
-              ),
-            // Current profile in front (drawn last).
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: GestureDetector(
-                onTap: onTapCurrent,
-                child: _avatarRing(
-                  radius: rLarge,
-                  imageUrl: current.imageUrl,
-                  name: current.name,
-                ),
+            CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              targetAnchor: Alignment.bottomRight,
+              followerAnchor: Alignment.topRight,
+              offset: const Offset(4, 8),
+              child: _HomeProfileSelectMenu(
+                profiles: profiles,
+                onSelect: (profileId) {
+                  _closeMenu();
+                  if (profileId == activeId) {
+                    widget.onTapCurrent();
+                    return;
+                  }
+                  widget.onTapOther?.call(profileId);
+                },
               ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
+    overlay.insert(_menuEntry!);
+    setState(() {});
+  }
+
+  void _toggleMenu({
+    required List<SwitchableAppProfile> profiles,
+    required String activeId,
+  }) {
+    if (_menuOpen) {
+      _closeMenu();
+    } else {
+      _openMenu(profiles: profiles, activeId: activeId);
+    }
   }
 
   Widget _avatarRing({
@@ -1539,6 +1658,120 @@ class _HomeProfileAvatarStack extends StatelessWidget {
                   fontSize: (radius * 0.85).clamp(10.0, 18.0),
                 ),
               ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _homeHeaderChromeScale(context);
+    final narrow = MediaQuery.sizeOf(context).width < 360;
+    final rLarge = ((narrow ? 22.0 : 24.0) * s).clamp(20.0, 26.0);
+    final rSmall = ((narrow ? 10.0 : 11.0) * s).clamp(9.0, 13.0);
+
+    if (widget.profile == null) {
+      return GestureDetector(
+        onTap: widget.onTapCurrent,
+        behavior: HitTestBehavior.opaque,
+        child: _avatarRing(radius: rLarge, imageUrl: null, name: ''),
+      );
+    }
+
+    final all = switchableProfilesOf(widget.profile!);
+    final activeId = widget.profile!.isSelfActive
+        ? kSelfProfileId
+        : widget.profile!.activeProfileId;
+    final current = all.firstWhere(
+      (p) => p.id == activeId,
+      orElse: () => all.first,
+    );
+    final others = all.where((p) => p.id != current.id).take(2).toList();
+    final useSelectMenu = all.length >= 3;
+
+    void onClusterTap() {
+      if (useSelectMenu) {
+        _toggleMenu(profiles: all, activeId: current.id);
+      } else {
+        widget.onTapCurrent();
+      }
+    }
+
+    void onOtherTap(String id) {
+      if (useSelectMenu) {
+        _toggleMenu(profiles: all, activeId: current.id);
+      } else {
+        widget.onTapOther?.call(id);
+      }
+    }
+
+    if (others.isEmpty) {
+      return CompositedTransformTarget(
+        link: _layerLink,
+        child: GestureDetector(
+          onTap: onClusterTap,
+          behavior: HitTestBehavior.opaque,
+          child: _avatarRing(
+            radius: rLarge,
+            imageUrl: current.imageUrl,
+            name: current.name,
+          ),
+        ),
+      );
+    }
+
+    final width = rLarge * 2 + rSmall * 1.15;
+    final height = rLarge * 2 + 6;
+
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Transform.translate(
+        offset: const Offset(-8, 6),
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                right: -10,
+                top: 2,
+                child: GestureDetector(
+                  onTap: () => onOtherTap(others[0].id),
+                  child: _avatarRing(
+                    radius: rSmall,
+                    imageUrl: others[0].imageUrl,
+                    name: others[0].name,
+                  ),
+                ),
+              ),
+              if (others.length > 1)
+                Positioned(
+                  right: -12,
+                  bottom: -2,
+                  child: GestureDetector(
+                    onTap: () => onOtherTap(others[1].id),
+                    child: _avatarRing(
+                      radius: rSmall,
+                      imageUrl: others[1].imageUrl,
+                      name: others[1].name,
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: onClusterTap,
+                  child: _avatarRing(
+                    radius: rLarge,
+                    imageUrl: current.imageUrl,
+                    name: current.name,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

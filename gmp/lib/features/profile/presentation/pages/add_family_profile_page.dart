@@ -1,6 +1,9 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -36,6 +39,7 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
   final _fullNameFocus = FocusNode();
   final _nickNameFocus = FocusNode();
   final _sizeFocus = FocusNode();
+  final GlobalKey _sizeUnitKey = GlobalKey();
 
   DateTime? _dob;
   String _sizeUnit = 'US';
@@ -44,13 +48,10 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
   String _imageFileName = 'family.jpg';
   bool _submitted = false;
 
-  static const _fieldFill = Color(0x33000000);
-  static const _fieldText = Color(0xFFDFE7E9);
-  static const _fieldBorder = Color(0x66FFFFFF);
-  static const _radius = 100.0;
-  static const _saveBtnBg = Color(0xFFE8E8E8);
-  static const _saveBtnFg = Color(0xFF3A3A3A);
-  static const _sheetTeal = Color(0xFF0A4A52);
+  static const _fieldText = Color(0xF2FFFFFF);
+  static const _saveBtnTeal = Color(0xFF12899B);
+  static const _saveBtnBorder = Color(0xFF09E0FF);
+  static const _infoIconAsset = 'assets/images/icons/profile/info.svg';
 
   static const _sizeUnits = ['US', 'UK', 'EU'];
   static const _abnormalities = [
@@ -106,40 +107,77 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
 
   Future<void> _pickSizeUnit() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    final anchorContext = _sizeUnitKey.currentContext;
+    if (anchorContext == null) return;
+
+    final box = anchorContext.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlay == null) return;
+
+    final topLeft = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final bottomRight =
+        box.localToGlobal(box.size.bottomRight(Offset.zero), ancestor: overlay);
+    // White menu under the US / chevron control (Figma-style).
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        Offset(topLeft.dx - 8, bottomRight.dy + 4),
+        Offset(bottomRight.dx + 12, bottomRight.dy + 4),
       ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < _sizeUnits.length; i++) ...[
-                ListTile(
-                  title: Text(
-                    _sizeUnits[i],
-                    style: GoogleFonts.montserrat(
-                      color: _sheetTeal,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16,
-                    ),
-                  ),
-                  trailing: _sizeUnit == _sizeUnits[i]
-                      ? const Icon(Icons.check, color: _sheetTeal)
-                      : null,
-                  onTap: () => Navigator.pop(ctx, _sizeUnits[i]),
-                ),
-                if (i < _sizeUnits.length - 1)
-                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
-              ],
-            ],
-          ),
-        );
-      },
+      Offset.zero & overlay.size,
     );
+
+    final options =
+        _sizeUnits.where((unit) => unit != _sizeUnit).toList(growable: false);
+
+    final selected = await showMenu<String>(
+      context: context,
+      position: position,
+      color: Colors.white,
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.18),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      constraints: const BoxConstraints(minWidth: 72, maxWidth: 96),
+      items: [
+        for (var i = 0; i < options.length; i++)
+          PopupMenuItem<String>(
+            value: options[i],
+            height: 40,
+            padding: EdgeInsets.zero,
+            child: SizedBox(
+              width: 80,
+              child: Container(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+                decoration: BoxDecoration(
+                  border: i < options.length - 1
+                      ? const Border(
+                          bottom: BorderSide(
+                            color: Color(0xFFE0E0E0),
+                            width: 1,
+                          ),
+                        )
+                      : null,
+                ),
+                child: Text(
+                  options[i],
+                  textAlign: TextAlign.left,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF2C2C2C),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
     if (selected != null && mounted) {
       setState(() => _sizeUnit = selected);
     }
@@ -187,6 +225,7 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                         Expanded(
                           child: Text(
                             _abnormalities[i],
+                            textAlign: TextAlign.left,
                             style: GoogleFonts.montserrat(
                               color: Colors.black87,
                               fontSize: 15,
@@ -195,10 +234,14 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                           ),
                         ),
                         if (_abnormalities[i] != 'No Abnormality')
-                          Icon(
-                            Icons.info_outline,
-                            size: 18,
-                            color: Colors.black.withValues(alpha: 0.55),
+                          SvgPicture.asset(
+                            _infoIconAsset,
+                            width: 18,
+                            height: 18,
+                            colorFilter: ColorFilter.mode(
+                              Colors.black.withValues(alpha: 0.55),
+                              BlendMode.srcIn,
+                            ),
                           ),
                       ],
                     ),
@@ -251,45 +294,112 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
         );
   }
 
-  InputDecoration _fieldDecoration({
-    required String hint,
-    Widget? suffix,
-  }) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(_radius),
-      borderSide: const BorderSide(color: _fieldBorder, width: 1),
-    );
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: GoogleFonts.montserrat(
-        color: Colors.white.withValues(alpha: 0.45),
-        fontSize: 15,
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.montserrat(
+        fontSize: 16,
         fontWeight: FontWeight.w400,
-      ),
-      filled: true,
-      fillColor: _fieldFill,
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-      suffixIcon: suffix,
-      suffixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-      border: border,
-      enabledBorder: border,
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(_radius),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
+        color: Colors.white,
       ),
     );
   }
 
-  Widget _fieldLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 6, bottom: 8),
-      child: Text(
-        text,
-        style: GoogleFonts.montserrat(
-          color: Colors.white,
-          fontSize: 13,
+  /// Same glass field shell as [EditProfilePage].
+  Widget _glassFieldShell({required Widget child}) {
+    const radius = BorderRadius.all(Radius.circular(100));
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: radius,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.22),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.10),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _glassInputDecoration({Widget? suffixIcon}) {
+    const radius = BorderRadius.all(Radius.circular(100));
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.transparent,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      suffixIcon: suffixIcon,
+      suffixIconConstraints: const BoxConstraints(minHeight: 48, minWidth: 44),
+      border: const OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: const OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide(
+          color: Colors.white.withValues(alpha: 0.42),
+          width: 1,
+        ),
+      ),
+      disabledBorder: const OutlineInputBorder(
+        borderRadius: radius,
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  Widget _profileField({
+    required TextEditingController controller,
+    FocusNode? focusNode,
+    TextInputAction? textInputAction,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    TextInputType? keyboardType,
+    ValueChanged<String>? onSubmitted,
+    String? hint,
+    Widget? suffix,
+    TextStyle? style,
+  }) {
+    final valueStyle = style ??
+        GoogleFonts.montserrat(
+          fontSize: 16,
           fontWeight: FontWeight.w400,
+          color: _fieldText,
+        );
+    return _glassFieldShell(
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        textInputAction: textInputAction,
+        textCapitalization: textCapitalization,
+        keyboardType: keyboardType,
+        onSubmitted: onSubmitted,
+        maxLines: 1,
+        textAlignVertical: TextAlignVertical.center,
+        style: valueStyle,
+        decoration: _glassInputDecoration(suffixIcon: suffix).copyWith(
+          hintText: hint,
+          hintStyle: GoogleFonts.montserrat(
+            fontSize: valueStyle.fontSize ?? 16,
+            color: Colors.white.withValues(alpha: 0.45),
+          ),
         ),
       ),
     );
@@ -306,29 +416,27 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(_radius),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            color: _fieldFill,
-            borderRadius: BorderRadius.circular(_radius),
-            border: Border.all(color: _fieldBorder),
-          ),
+        borderRadius: BorderRadius.circular(100),
+        child: _glassFieldShell(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    hasValue ? value : hint,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.montserrat(
-                      color: hasValue
-                          ? _fieldText
-                          : Colors.white.withValues(alpha: 0.45),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      hasValue ? value : hint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.left,
+                      style: GoogleFonts.montserrat(
+                        color: hasValue
+                            ? _fieldText
+                            : Colors.white.withValues(alpha: 0.45),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
                 ),
@@ -345,8 +453,8 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
     return GestureDetector(
       onTap: _pickImage,
       child: SizedBox(
-        width: 72,
-        height: 72,
+        width: 56,
+        height: 56,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -359,7 +467,7 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                     ? Icon(
                         Icons.person_outline,
                         color: Colors.white.withValues(alpha: 0.8),
-                        size: 34,
+                        size: 26,
                       )
                     : null,
               ),
@@ -368,8 +476,8 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
               left: -2,
               bottom: -2,
               child: Container(
-                width: 28,
-                height: 28,
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
                   color: const Color(0xFF0CADC5),
                   shape: BoxShape.circle,
@@ -378,7 +486,7 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                 child: const Icon(
                   Icons.camera_alt,
                   color: Colors.white,
-                  size: 14,
+                  size: 11,
                 ),
               ),
             ),
@@ -452,28 +560,22 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                               0,
                             ),
                             child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 18),
-                                  child: ChevronScreenBackButton(
-                                    iconColor: Colors.white,
-                                  ),
+                                const ChevronScreenBackButton(
+                                  iconColor: Colors.white,
                                 ),
                                 const SizedBox(width: 4),
                                 Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 20),
-                                    child: Text(
-                                      'Add Profile',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.boldonse(
-                                        color: const Color(0xFFDFE7E9),
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w400,
-                                        height: 1,
-                                      ),
+                                  child: Text(
+                                    'Add Profile',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.boldonse(
+                                      color: const Color(0xFFDFE7E9),
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w400,
+                                      height: 1,
                                     ),
                                   ),
                                 ),
@@ -492,38 +594,31 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                                 24 + keyboardInset.clamp(0.0, 24.0),
                               ),
                               children: [
-                                _fieldLabel('Full Name'),
-                                TextField(
+                                _buildLabel('Full Name'),
+                                const SizedBox(height: 6),
+                                _profileField(
                                   controller: _fullName,
                                   focusNode: _fullNameFocus,
                                   textInputAction: TextInputAction.next,
                                   textCapitalization: TextCapitalization.words,
                                   onSubmitted: (_) =>
                                       _nickNameFocus.requestFocus(),
-                                  style: GoogleFonts.montserrat(
-                                    color: _fieldText,
-                                    fontSize: 15,
-                                  ),
-                                  decoration: _fieldDecoration(
-                                    hint: 'Jane Doe',
-                                  ),
+                                  hint: 'Jane Doe',
                                 ),
                                 const SizedBox(height: 20),
-                                _fieldLabel('Nick Name'),
-                                TextField(
+                                _buildLabel('Nick Name'),
+                                const SizedBox(height: 6),
+                                _profileField(
                                   controller: _nickName,
                                   focusNode: _nickNameFocus,
                                   textInputAction: TextInputAction.next,
                                   textCapitalization: TextCapitalization.words,
                                   onSubmitted: (_) => _nickNameFocus.unfocus(),
-                                  style: GoogleFonts.montserrat(
-                                    color: _fieldText,
-                                    fontSize: 15,
-                                  ),
-                                  decoration: _fieldDecoration(hint: 'Jane'),
+                                  hint: 'Jane',
                                 ),
                                 const SizedBox(height: 20),
-                                _fieldLabel('DOB'),
+                                _buildLabel('DOB'),
+                                const SizedBox(height: 6),
                                 _tapField(
                                   value: dobLabel,
                                   hint: 'dd/mm/yyyy',
@@ -535,8 +630,9 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                                   onTap: _pickDob,
                                 ),
                                 const SizedBox(height: 20),
-                                _fieldLabel('Add Size'),
-                                TextField(
+                                _buildLabel('Add Size'),
+                                const SizedBox(height: 6),
+                                _profileField(
                                   controller: _size,
                                   focusNode: _sizeFocus,
                                   keyboardType:
@@ -544,47 +640,48 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                                     decimal: true,
                                   ),
                                   textInputAction: TextInputAction.done,
-                                  style: GoogleFonts.montserrat(
-                                    color: _fieldText,
-                                    fontSize: 15,
+                                  hint: 'Example: 11',
+                                  style: GoogleFonts.boldonse(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.0,
                                   ),
-                                  decoration: _fieldDecoration(
-                                    hint: 'Example: 11',
-                                    suffix: GestureDetector(
-                                      onTap: _pickSizeUnit,
-                                      behavior: HitTestBehavior.opaque,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 14,
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              _sizeUnit,
-                                              style: GoogleFonts.montserrat(
-                                                color: _fieldText,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
+                                  suffix: GestureDetector(
+                                    key: _sizeUnitKey,
+                                    onTap: _pickSizeUnit,
+                                    behavior: HitTestBehavior.opaque,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            _sizeUnit,
+                                            style: GoogleFonts.boldonse(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w400,
+                                              height: 1.0,
                                             ),
-                                            const SizedBox(width: 2),
-                                            Icon(
-                                              Icons.keyboard_arrow_down_rounded,
-                                              color: _fieldText.withValues(
-                                                alpha: 0.9,
-                                              ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Icon(
+                                            Icons.keyboard_arrow_down_rounded,
+                                            color: Colors.white.withValues(
+                                              alpha: 0.9,
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                _fieldLabel(
+                                _buildLabel(
                                   'Do they have any foot abnormality?',
                                 ),
+                                const SizedBox(height: 6),
                                 _tapField(
                                   value: _abnormality ?? '',
                                   hint: 'Example: Wide Foot',
@@ -595,20 +692,32 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                                   onTap: _pickAbnormality,
                                 ),
                                 const SizedBox(height: 36),
-                                SizedBox(
-                                  height: 52,
-                                  width: double.infinity,
+                                Center(
                                   child: ElevatedButton(
                                     onPressed: _submitted ? null : _submit,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: _saveBtnBg,
-                                      foregroundColor: _saveBtnFg,
-                                      disabledBackgroundColor: _saveBtnBg
-                                          .withValues(alpha: 0.7),
-                                      elevation: 0,
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: _saveBtnTeal,
+                                      disabledBackgroundColor: Colors.white,
+                                      disabledForegroundColor: _saveBtnTeal,
+                                      elevation: 2,
+                                      shadowColor: Colors.black.withValues(
+                                        alpha: 0.10,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 48,
+                                        vertical: 10,
+                                      ),
+                                      minimumSize: const Size(210, 48),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.padded,
                                       shape: RoundedRectangleBorder(
                                         borderRadius:
                                             BorderRadius.circular(100),
+                                        side: const BorderSide(
+                                          color: _saveBtnBorder,
+                                          width: 1,
+                                        ),
                                       ),
                                     ),
                                     child: _submitted
@@ -617,14 +726,15 @@ class _AddFamilyProfilePageState extends State<AddFamilyProfilePage> {
                                             height: 22,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              color: _saveBtnFg,
+                                              color: _saveBtnTeal,
                                             ),
                                           )
                                         : Text(
                                             'Save Profile',
-                                            style: GoogleFonts.montserrat(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700,
+                                            style: GoogleFonts.boldonse(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w400,
+                                              color: _saveBtnTeal,
                                             ),
                                           ),
                                   ),
