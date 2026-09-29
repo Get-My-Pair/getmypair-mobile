@@ -27,9 +27,9 @@ class MobileOTPPage extends StatefulWidget {
 class _MobileOTPPageState extends State<MobileOTPPage> {
   static const String _kAuthBgAsset = 'assets/images/bg/auth.png';
   static const String _kAuthBgFallbackAsset = 'assets/images/bg.png';
-  static const String _kAuthFacebookIcon = 'assets/images/icons/auth/facebook.svg';
-  static const String _kAuthGoogleIcon = 'assets/images/icons/auth/google.svg';
-  static const String _kAuthAppleIcon = 'assets/images/icons/auth/apple.svg';
+  // static const String _kAuthFacebookIcon = 'assets/images/icons/auth/facebook.svg';
+  // static const String _kAuthGoogleIcon = 'assets/images/icons/auth/google.svg';
+  // static const String _kAuthAppleIcon = 'assets/images/icons/auth/apple.svg';
   static const Color _kPrimary = Color(0xFF062F35);
   static const Color _kAccent = Color(0xFF0F6876);
   /// Text/icons on the teal sweep (Figma: white).
@@ -232,7 +232,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     final topInset = layoutMediaQuery.padding.top;
     // Keep hero responsive across short/tall phones.
     // Previous 0.95 factor made this almost always hit max height.
-    final headerSweepHeight = (size.height * 0.25).clamp(132.0, 205.0);
+    final headerSweepHeight = (size.height * 0.28).clamp(148.0, 230.0);
     final cardTop = topInset + headerSweepHeight;
 
     return Scaffold(
@@ -332,13 +332,13 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                       builder: (context, constraints) {
                         final squeeze = (constraints.maxHeight / 640).clamp(0.72, 1.0);
                         final horizontalPad = (constraints.maxWidth * 0.1).clamp(16.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.06 * squeeze).clamp(8.0, 48.0);
+                        final topPad = (constraints.maxHeight * 0.10 * squeeze).clamp(24.0, 72.0);
                         final verticalGapXs = constraints.maxHeight * 0.012 * squeeze;
                         final verticalGapSm = constraints.maxHeight * 0.02 * squeeze;
                         final verticalGapMd = constraints.maxHeight * 0.032 * squeeze;
-                        final verticalGapLg = constraints.maxHeight * 0.05 * squeeze;
+                        // final verticalGapLg = constraints.maxHeight * 0.05 * squeeze;
                         final controlHeight = constraints.maxHeight * 0.082 * squeeze;
-                        final iconTileSize = constraints.maxWidth * 0.13;
+                        // final iconTileSize = constraints.maxWidth * 0.13;
                         return Padding(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
@@ -595,49 +595,50 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               ),
                             ),
                           ),
-                          SizedBox(height: verticalGapLg.clamp(12.0, 34.0)),
-                          Row(
-                            children: [
-                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: (constraints.maxWidth * 0.07).clamp(12.0, 30.0),
-                                ),
-                                child: Text(
-                                  'or Sign Up with',
-                                  style: GoogleFonts.montserrat(
-                                    color: const Color(0x33000000),
-                                    fontSize: fieldTextSize,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                            ],
-                          ),
-                          SizedBox(height: verticalGapSm.clamp(22.0, 38.0)),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: (constraints.maxWidth * 0.14).clamp(16.0, 48.0),
-                            runSpacing: verticalGapSm.clamp(8.0, 18.0),
-                            children: [
-                              _SocialIconTile(
-                                assetPath: _kAuthFacebookIcon,
-                                contentInset: 6,
-                                innerScale: 1.0,
-                                tileSize: iconTileSize.clamp(36.0, 48.0),
-                              ),
-                              _SocialIconTile(
-                                assetPath: _kAuthGoogleIcon,
-                                tileSize: iconTileSize.clamp(36.0, 48.0),
-                              ),
-                              _SocialIconTile(
-                                assetPath: _kAuthAppleIcon,
-                                tileSize: iconTileSize.clamp(36.0, 48.0),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: verticalGapLg.clamp(30.0, 50.0)),
+                          // Social sign-up (Facebook, Google, Apple) is not needed for now.
+                          // SizedBox(height: verticalGapLg.clamp(12.0, 34.0)),
+                          // Row(
+                          //   children: [
+                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                          //     Padding(
+                          //       padding: EdgeInsets.symmetric(
+                          //         horizontal: (constraints.maxWidth * 0.07).clamp(12.0, 30.0),
+                          //       ),
+                          //       child: Text(
+                          //         'or Sign Up with',
+                          //         style: GoogleFonts.montserrat(
+                          //           color: const Color(0x33000000),
+                          //           fontSize: fieldTextSize,
+                          //           fontWeight: FontWeight.w400,
+                          //         ),
+                          //       ),
+                          //     ),
+                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                          //   ],
+                          // ),
+                          // SizedBox(height: verticalGapSm.clamp(22.0, 38.0)),
+                          // Wrap(
+                          //   alignment: WrapAlignment.center,
+                          //   spacing: (constraints.maxWidth * 0.14).clamp(16.0, 48.0),
+                          //   runSpacing: verticalGapSm.clamp(8.0, 18.0),
+                          //   children: [
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthFacebookIcon,
+                          //       contentInset: 6,
+                          //       innerScale: 1.0,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthGoogleIcon,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthAppleIcon,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //   ],
+                          // ),
+                          SizedBox(height: verticalGapMd.clamp(8.0, 16.0)),
                         LayoutBuilder(
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
@@ -829,6 +830,7 @@ class _WelcomeRichText extends StatelessWidget {
   }
 }
 
+/*
 class _SocialIconTile extends StatelessWidget {
   const _SocialIconTile({
     this.assetPath,
@@ -900,6 +902,7 @@ class _SocialIconTile extends StatelessWidget {
     );
   }
 }
+*/
 
 class _SendingOtpProgress extends StatelessWidget {
   const _SendingOtpProgress({required this.progress});
