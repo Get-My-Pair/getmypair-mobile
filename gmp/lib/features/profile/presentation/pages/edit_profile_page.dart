@@ -40,14 +40,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final TextEditingController _nameController;
   late final TextEditingController _nickNameController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _passwordController;
   late final TextEditingController _usSizeController;
   late final TextEditingController _ukSizeController;
   late final TextEditingController _euroSizeController;
   late final TextEditingController _abnormalityController;
   bool _isPickingImage = false;
-  bool _showPassword = false;
 
   static String _prefsKey(String userId, String field) =>
       'profile_extra_${userId}_$field';
@@ -63,10 +60,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _phoneController = TextEditingController(
       text: profile.isSelfActive ? profile.phone : '',
     );
-    _emailController = TextEditingController(
-      text: profile.isSelfActive ? (profile.email ?? '') : '',
-    );
-    _passwordController = TextEditingController();
     _usSizeController = TextEditingController(text: '10');
     _ukSizeController = TextEditingController(text: '09');
     _euroSizeController = TextEditingController(text: '41');
@@ -115,11 +108,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _prefsKey(id, 'abnormality'),
       _abnormalityController.text.trim(),
     );
-    final pwd = _passwordController.text.trim();
-    if (pwd.isNotEmpty && pwd != '........') {
-      // Password change is not supported via API yet — store only a flag for UX.
-      await prefs.setBool(_prefsKey(id, 'password_updated_local'), true);
-    }
   }
 
   @override
@@ -127,8 +115,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _nameController.dispose();
     _nickNameController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
     _usSizeController.dispose();
     _ukSizeController.dispose();
     _euroSizeController.dispose();
@@ -255,10 +241,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
     if (profile.isSelfActive) {
       _phoneController.text = profile.phone;
-      _emailController.text = profile.email ?? '';
     } else {
       _phoneController.text = '';
-      _emailController.text = '';
     }
   }
 
@@ -300,11 +284,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final betweenGroups = sx(20, 10, 20);
     final afterPassword = sx(18, 10, 20);
 
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 3; i++) {
       h += labelLineHeight();
       h += labelToField;
       h += fieldBlockHeight(i);
-      h += i < 4 ? betweenGroups : afterPassword;
+      h += i < 2 ? betweenGroups : afterPassword;
     }
 
     h += labelLineHeight();
@@ -325,7 +309,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final name = _nameController.text.trim();
     final nick = _nickNameController.text.trim();
     final phone = _phoneController.text.trim();
-    final trimmedEmail = _emailController.text.trim();
     if (name.isEmpty) {
       await showAppFeedbackAlert(
         context,
@@ -363,27 +346,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final member = profile.activeFamilyMember;
     final currentName = member?.name.trim() ?? profile.name.trim();
     final nameChanged = name != currentName;
-    final prevEmail = (profile.email ?? '').trim().toLowerCase();
-    final newEmailNorm =
-        trimmedEmail.isEmpty ? '' : trimmedEmail.toLowerCase();
-    var emailChanged = profile.isSelfActive && prevEmail != newEmailNorm;
-    if (profile.isSelfActive &&
-        trimmedEmail.isEmpty &&
-        profile.email != null &&
-        profile.email!.trim().isNotEmpty) {
-      await showAppFeedbackAlert(
-        context,
-        message:
-            'Removing your email is not supported in the app yet. Leave the field as-is or enter a new email.',
-        type: AppFeedbackType.warning,
-      );
-      emailChanged = false;
-    }
 
     await _persistLocalExtras();
     if (!mounted) return;
 
-    if (!nameChanged && !emailChanged) {
+    if (!nameChanged) {
       await showAppFeedbackAlert(
         context,
         message: 'Profile details saved.',
@@ -408,7 +375,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ProfileUpdateRequested(
             accessToken: widget.accessToken,
             name: nameChanged ? name : null,
-            email: emailChanged && trimmedEmail.isNotEmpty ? trimmedEmail : null,
           ),
         );
   }
@@ -612,55 +578,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   hint: editingFamily
                                       ? 'Saved on My Profile'
                                       : null,
-                                ),
-                                SizedBox(
-                                  height: fieldGroupSpace,
-                                ),
-                                _buildLabel('E-Mail Address', contentScale),
-                                SizedBox(
-                                  height: labelToFieldSpace,
-                                ),
-                                _profileField(
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  scale: contentScale,
-                                  readOnly: editingFamily,
-                                  hint: editingFamily
-                                      ? 'Saved on My Profile'
-                                      : null,
-                                ),
-                                SizedBox(
-                                  height: fieldGroupSpace,
-                                ),
-                                _buildLabel('Password', contentScale),
-                                SizedBox(
-                                  height: labelToFieldSpace,
-                                ),
-                                _profileField(
-                                  formFieldKey: ValueKey(_showPassword),
-                                  controller: _passwordController,
-                                  obscureText: !_showPassword,
-                                  obscuringCharacter: '*',
-                                  keyboardType: TextInputType.visiblePassword,
-                                  scale: contentScale,
-                                  readOnly: editingFamily,
-                                  suffix: editingFamily
-                                      ? null
-                                      : IconButton(
-                                    onPressed: () => setState(
-                                      () => _showPassword = !_showPassword,
-                                    ),
-                                    splashRadius:
-                                        (22 * contentScale).clamp(18.0, 22.0),
-                                    icon: Icon(
-                                      _showPassword
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
-                                      color: const Color(0xCCFFFFFF),
-                                      size: (24 * contentScale)
-                                          .clamp(20.0, 24.0),
-                                    ),
-                                  ),
                                 ),
                                 SizedBox(
                                   height:

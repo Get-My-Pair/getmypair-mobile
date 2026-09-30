@@ -35,24 +35,6 @@ class RehomeMyPairPage extends StatelessWidget {
     ),
   ];
 
-  static const List<_ArticleCardData> _articles = [
-    _ArticleCardData(
-      title: 'Give Back: Where Donated Shoes Go',
-      summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image: 'assets/images/img/caremypair/air1.png',
-    ),
-    _ArticleCardData(
-      title: 'Extend the Life of Every Pair',
-      summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image: 'assets/images/img/caremypair/air23.png',
-    ),
-    _ArticleCardData(
-      title: 'Community Impact Stories',
-      summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image: 'assets/images/img/caremypair/air23.png',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -121,9 +103,9 @@ class RehomeMyPairPage extends StatelessWidget {
                             child: _SecondaryServiceCard(
                               label: 'Rent\nMyPair',
                               iconAsset:
-                                  'assets/images/icons/rehomemypair/rentmypair.png',
-                              iconWidth: 78,
-                              iconHeight: 38,
+                                  'assets/images/icons/rehomemypair/rentmypair_outline.png',
+                              iconWidth: 56,
+                              iconHeight: 26,
                               preserveIconColors: true,
                               labelFontSize: 15,
                               onTap: () => showComingSoon(
@@ -165,31 +147,6 @@ class RehomeMyPairPage extends StatelessWidget {
                               feature: 'DIY videos',
                             ),
                             child: _VideoCard(data: _journeyVideos[i]),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Articles',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 172,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _articles.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 13),
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'Rehome articles',
-                            ),
-                            child: _ArticleCard(data: _articles[i]),
                           ),
                         ),
                       ),
@@ -368,8 +325,8 @@ class _PrimaryDonateCard extends StatelessWidget {
             children: [
               Image.asset(
                 'assets/images/icons/rehomemypair/sellmypair.png',
-                width: 40,
-                height: 40,
+                width: 48,
+                height: 22,
                 fit: BoxFit.contain,
                 color: Colors.white,
                 colorBlendMode: BlendMode.srcIn,
@@ -559,116 +516,6 @@ class _VideoCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ArticleCardData {
-  final String title;
-  final String summary;
-  final String image;
-
-  const _ArticleCardData({
-    required this.title,
-    required this.summary,
-    required this.image,
-  });
-}
-
-class _ArticleCard extends StatelessWidget {
-  final _ArticleCardData data;
-
-  const _ArticleCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 160,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFFE2E2E2)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 4,
-            offset: Offset(2, 2),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(5),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(5)),
-                  child: data.image.startsWith('http')
-                      ? Image.network(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        )
-                      : Image.asset(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(9, 9, 9, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          data.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.montserrat(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Expanded(
-                          child: Text(
-                            data.summary,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFF929292),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
