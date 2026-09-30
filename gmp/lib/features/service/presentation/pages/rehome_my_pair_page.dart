@@ -9,7 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'donate_my_pair_page.dart';
 
 /// Rehome hub — same shell as [CareMyPairPage]: search, service cards, media rows.
-/// Donate opens [DonateMyPairPage] (article grid, then [DonateMyPairDetailsPage] / pickup / summary).
+/// Sell opens [DonateMyPairPage] (article grid, then [DonateMyPairDetailsPage] / pickup / summary).
 class RehomeMyPairPage extends StatelessWidget {
   const RehomeMyPairPage({super.key});
 
@@ -32,21 +32,6 @@ class RehomeMyPairPage extends StatelessWidget {
     _VideoCardData(
       title: 'Odor-Free Feet: How to De-Stink Your Shoes Naturally',
       image: 'assets/images/img/caremypair/vid13.png',
-    ),
-  ];
-
-  static const List<_VideoCardData> _sellingVideos = [
-    _VideoCardData(
-      title: 'Selling Made Simple: Prep Your Pair',
-      image: 'assets/images/img/caremypair/vid2.png',
-    ),
-    _VideoCardData(
-      title: 'Price It Right: Second-Hand Footwear Tips',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
-    _VideoCardData(
-      title: 'Photo Tips for a Quick Sale',
-      image: 'assets/images/img/caremypair/vid2.png',
     ),
   ];
 
@@ -134,14 +119,16 @@ class RehomeMyPairPage extends StatelessWidget {
                           const SizedBox(width: 14),
                           Expanded(
                             child: _SecondaryServiceCard(
-                              label: 'Sell\nMyPair',
+                              label: 'Rent\nMyPair',
                               iconAsset:
-                                  'assets/images/icons/rehomemypair/sellmypair.png',
-                              iconSize: 64,
+                                  'assets/images/icons/rehomemypair/rentmypair.png',
+                              iconWidth: 78,
+                              iconHeight: 38,
+                              preserveIconColors: true,
                               labelFontSize: 15,
                               onTap: () => showComingSoon(
                                 context,
-                                feature: 'Sell MyPair',
+                                feature: 'RentMyPair',
                               ),
                             ),
                           ),
@@ -149,7 +136,7 @@ class RehomeMyPairPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
                       Text(
-                        'The Journey of a Pair: How We Give Back',
+                        'In Demand Right Now',
                         style: GoogleFonts.boldonse(
                           color: const Color(0xFF062F35),
                           fontSize: 16,
@@ -178,40 +165,6 @@ class RehomeMyPairPage extends StatelessWidget {
                               feature: 'DIY videos',
                             ),
                             child: _VideoCard(data: _journeyVideos[i]),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Selling Made Simple',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Videos',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 113,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _sellingVideos.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 14),
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'Selling videos',
-                            ),
-                            child: _VideoCard(data: _sellingVideos[i]),
                           ),
                         ),
                       ),
@@ -413,15 +366,18 @@ class _PrimaryDonateCard extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SvgPicture.asset(
-                'assets/images/icons/caremypair/rmp.svg',
+              Image.asset(
+                'assets/images/icons/rehomemypair/sellmypair.png',
                 width: 40,
                 height: 40,
+                fit: BoxFit.contain,
+                color: Colors.white,
+                colorBlendMode: BlendMode.srcIn,
               ),
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
-                  'Donate\nMyPair',
+                  'Sell\nMyPair',
                   maxLines: 2,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.boldonse(
@@ -444,17 +400,23 @@ class _SecondaryServiceCard extends StatelessWidget {
   static const double _cardHeight = 86;
   final String label;
   final String iconAsset;
-  final double iconSize;
+  final double iconWidth;
+  final double iconHeight;
   final double labelFontSize;
+  final bool preserveIconColors;
   final VoidCallback onTap;
 
   const _SecondaryServiceCard({
     required this.label,
     required this.iconAsset,
-    this.iconSize = 38,
+    double iconSize = 38,
+    double? iconWidth,
+    double? iconHeight,
     this.labelFontSize = 16,
+    this.preserveIconColors = false,
     required this.onTap,
-  });
+  })  : iconWidth = iconWidth ?? iconSize,
+        iconHeight = iconHeight ?? iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -494,20 +456,26 @@ class _SecondaryServiceCard extends StatelessWidget {
                     iconAsset.endsWith('.png')
                         ? Image.asset(
                             iconAsset,
-                            width: iconSize,
-                            height: iconSize,
+                            width: iconWidth,
+                            height: iconHeight,
                             fit: BoxFit.contain,
-                            color: AppColors.greyedButtonLabel,
-                            colorBlendMode: BlendMode.srcIn,
+                            color: preserveIconColors
+                                ? null
+                                : AppColors.greyedButtonLabel,
+                            colorBlendMode: preserveIconColors
+                                ? null
+                                : BlendMode.srcIn,
                           )
                         : SvgPicture.asset(
                             iconAsset,
-                            width: iconSize,
-                            height: iconSize,
-                            colorFilter: const ColorFilter.mode(
-                              AppColors.greyedButtonLabel,
-                              BlendMode.srcIn,
-                            ),
+                            width: iconWidth,
+                            height: iconHeight,
+                            colorFilter: preserveIconColors
+                                ? null
+                                : const ColorFilter.mode(
+                                    AppColors.greyedButtonLabel,
+                                    BlendMode.srcIn,
+                                  ),
                           ),
                     const SizedBox(width: 12),
                     Flexible(

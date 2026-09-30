@@ -5,7 +5,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/features/profile/domain/entities/user_profile.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:gmp/features/profile/presentation/bloc/profile_state.dart';
 import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
 import 'package:gmp/injection_container.dart';
 
@@ -103,6 +105,8 @@ class FloatingGradientBottomNav extends StatelessWidget {
                       selected ? selectedIconColor : Colors.white;
                   final iconSize =
                       tab.semanticIndex == 2 ? iconBase + 1 : iconBase;
+                  final avatarSize = (dynamicHitSize * (selected ? 0.82 : 0.74))
+                      .clamp(22.0, 36.0);
                   return SizedBox(
                     width: dynamicHitSize,
                     height: hitSize,
@@ -146,7 +150,21 @@ class FloatingGradientBottomNav extends StatelessWidget {
                                     ]
                                   : null,
                             ),
-                            child: tab.svgAsset != null
+                            child: tab.semanticIndex == 2
+                                ? _BottomNavProfileAvatar(
+                                    size: avatarSize,
+                                    selected: selected,
+                                    fallback: SvgPicture.asset(
+                                      _profileIcon,
+                                      width: iconSize,
+                                      height: iconSize,
+                                      colorFilter: ColorFilter.mode(
+                                        iconColor,
+                                        BlendMode.srcIn,
+                                      ),
+                                    ),
+                                  )
+                                : tab.svgAsset != null
                                 ? SvgPicture.asset(
                                     tab.svgAsset!,
                                     width: iconSize,
@@ -174,6 +192,78 @@ class FloatingGradientBottomNav extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Active profile photo on the Profile tab. Falls back to the person icon
+/// when the image is missing, still loading, or [ProfileBloc] is not in scope.
+class _BottomNavProfileAvatar extends StatelessWidget {
+  const _BottomNavProfileAvatar({
+    required this.size,
+    required this.selected,
+    required this.fallback,
+  });
+
+  final double size;
+  final bool selected;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    ProfileBloc? bloc;
+    try {
+      bloc = context.read<ProfileBloc>();
+    } catch (_) {
+      bloc = null;
+    }
+    if (bloc == null) return fallback;
+
+    return BlocBuilder<ProfileBloc, ProfileState>(
+      bloc: bloc,
+      builder: (context, state) {
+        final profile = _profileFromState(state);
+        final url = profile?.activeProfileImage?.trim();
+        if (url == null || url.isEmpty) return fallback;
+
+        return SizedBox(
+          width: size,
+          height: size,
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: selected
+                  ? null
+                  : Border.all(color: Colors.white, width: 1.5),
+            ),
+            child: ClipOval(
+              child: Image.network(
+                url,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return fallback;
+                },
+                errorBuilder: (context, error, stackTrace) => fallback,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+UserProfile? _profileFromState(ProfileState state) {
+  if (state is ProfileLoaded) return state.profile;
+  if (state is ProfileUpdating) return state.profile;
+  if (state is ProfileImageUploading) return state.profile;
+  if (state is ProfileError) return state.profile;
+  if (state is AddressActionLoading) return state.profile;
+  if (state is ProfileSwitching) return state.profile;
+  return null;
 }
 
 class _NavTab {
