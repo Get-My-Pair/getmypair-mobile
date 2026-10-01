@@ -103,9 +103,9 @@ class RehomeMyPairPage extends StatelessWidget {
                             child: _SecondaryServiceCard(
                               label: 'Rent\nMyPair',
                               iconAsset:
-                                  'assets/images/icons/rehomemypair/rentmypair_outline.png',
-                              iconWidth: 56,
-                              iconHeight: 26,
+                                  'assets/images/icons/rehomemypair/rentmypair_shoe.png',
+                              iconWidth: 64,
+                              iconHeight: 32,
                               preserveIconColors: true,
                               labelFontSize: 15,
                               onTap: () => showComingSoon(
@@ -304,7 +304,7 @@ class _PrimaryDonateCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: Container(
           height: _cardHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF09DFFF), Color(0xFF063035)],
@@ -321,26 +321,29 @@ class _PrimaryDonateCard extends StatelessWidget {
             ],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/images/icons/rehomemypair/sellmypair.png',
-                width: 48,
-                height: 22,
-                fit: BoxFit.contain,
-                color: Colors.white,
-                colorBlendMode: BlendMode.srcIn,
+              const SizedBox(
+                width: 64,
+                height: 32,
+                child: Image(
+                  image: AssetImage(
+                    'assets/images/icons/rehomemypair/sellmypair.png',
+                  ),
+                  fit: BoxFit.contain,
+                  color: Colors.white,
+                  colorBlendMode: BlendMode.srcIn,
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Flexible(
                 child: Text(
                   'Sell\nMyPair',
                   maxLines: 2,
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.left,
                   style: GoogleFonts.boldonse(
                     color: Colors.white,
-                    fontSize: 16,
-                    height: 1.9,
+                    fontSize: 15,
+                    height: 1.25,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -408,42 +411,42 @@ class _SecondaryServiceCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    iconAsset.endsWith('.png')
-                        ? Image.asset(
-                            iconAsset,
-                            width: iconWidth,
-                            height: iconHeight,
-                            fit: BoxFit.contain,
-                            color: preserveIconColors
-                                ? null
-                                : AppColors.greyedButtonLabel,
-                            colorBlendMode: preserveIconColors
-                                ? null
-                                : BlendMode.srcIn,
-                          )
-                        : SvgPicture.asset(
-                            iconAsset,
-                            width: iconWidth,
-                            height: iconHeight,
-                            colorFilter: preserveIconColors
-                                ? null
-                                : const ColorFilter.mode(
-                                    AppColors.greyedButtonLabel,
-                                    BlendMode.srcIn,
-                                  ),
-                          ),
-                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: iconWidth,
+                      height: iconHeight,
+                      child: iconAsset.endsWith('.png')
+                          ? Image.asset(
+                              iconAsset,
+                              fit: BoxFit.contain,
+                              color: preserveIconColors
+                                  ? null
+                                  : AppColors.greyedButtonLabel,
+                              colorBlendMode: preserveIconColors
+                                  ? null
+                                  : BlendMode.srcIn,
+                            )
+                          : SvgPicture.asset(
+                              iconAsset,
+                              fit: BoxFit.contain,
+                              colorFilter: preserveIconColors
+                                  ? null
+                                  : const ColorFilter.mode(
+                                      AppColors.greyedButtonLabel,
+                                      BlendMode.srcIn,
+                                    ),
+                            ),
+                    ),
+                    const SizedBox(width: 10),
                     Flexible(
                       child: Text(
                         label,
                         maxLines: 2,
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.left,
                         style: GoogleFonts.boldonse(
                           color: AppColors.greyedButtonLabel,
                           fontSize: labelFontSize,
-                    height: 1.9,
+                          height: 1.25,
                           fontWeight: FontWeight.w400,
                         ),
                       ),

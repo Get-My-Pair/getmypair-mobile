@@ -154,7 +154,7 @@ flutter:
     - assets/images/icons/caremypair/wmp.svg
     - assets/images/icons/rehomemypair/
     - assets/images/icons/rehomemypair/sellmypair.png
-    - assets/images/icons/rehomemypair/rentmypair_outline.png
+    - assets/images/icons/rehomemypair/rentmypair_shoe.png
     - assets/images/icons/savemypair/
     - assets/images/icons/myrack/
     - assets/images/icons/myrack/filter.svg
@@ -179,7 +179,6 @@ flutter:
     - assets/images/icons/profile/toggle-left.svg
     - assets/images/icons/profile/watch.svg
     - assets/images/icons/home.svg
-    - assets/images/icons/shoe.svg
     - assets/images/icons/profile.svg
     - assets/images/logo/
     - assets/images/logo/gmp_app_logo_white_1.png
