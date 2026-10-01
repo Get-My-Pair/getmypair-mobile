@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
@@ -9,7 +10,6 @@ import 'package:gmp/features/profile/domain/entities/user_profile.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_state.dart';
 import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
-import 'package:gmp/injection_container.dart';
 
 /// Pill-shaped floating bar: angular (conic) teal sweep from Figma `825:756`,
 /// white icons, selected tab on a solid white circle (icon in dark teal).
@@ -194,8 +194,8 @@ class FloatingGradientBottomNav extends StatelessWidget {
   }
 }
 
-/// Active profile photo on the Profile tab. Falls back to the person icon
-/// when the image is missing, still loading, or [ProfileBloc] is not in scope.
+/// Active profile photo on the Profile tab. Every page uses the dashboard
+/// profile: the photo when one exists, otherwise the first letter of the name.
 class _BottomNavProfileAvatar extends StatelessWidget {
   const _BottomNavProfileAvatar({
     required this.size,
@@ -215,14 +215,18 @@ class _BottomNavProfileAvatar extends StatelessWidget {
     } catch (_) {
       bloc = null;
     }
-    if (bloc == null) return fallback;
+    bloc ??= ProfileBlocAnchor.current;
+    if (bloc == null || bloc.isClosed) return fallback;
 
     return BlocBuilder<ProfileBloc, ProfileState>(
       bloc: bloc,
       builder: (context, state) {
         final profile = _profileFromState(state);
         final url = profile?.activeProfileImage?.trim();
-        if (url == null || url.isEmpty) return fallback;
+        final letter = _profileInitial(profile);
+        if (url == null || url.isEmpty) {
+          return letter == null ? fallback : _letterAvatar(letter);
+        }
 
         return SizedBox(
           width: size,
@@ -244,9 +248,10 @@ class _BottomNavProfileAvatar extends StatelessWidget {
                 gaplessPlayback: true,
                 loadingBuilder: (context, child, progress) {
                   if (progress == null) return child;
-                  return fallback;
+                  return letter == null ? fallback : _letterAvatar(letter);
                 },
-                errorBuilder: (context, error, stackTrace) => fallback,
+                errorBuilder: (context, error, stackTrace) =>
+                    letter == null ? fallback : _letterAvatar(letter),
               ),
             ),
           ),
@@ -254,6 +259,42 @@ class _BottomNavProfileAvatar extends StatelessWidget {
       },
     );
   }
+
+  Widget _letterAvatar(String letter) {
+    final color = selected
+        ? FloatingGradientBottomNav.selectedIconColor
+        : Colors.white;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? Colors.transparent : const Color(0x33FFFFFF),
+          border: selected
+              ? null
+              : Border.all(color: Colors.white, width: 1.5),
+        ),
+        child: Center(
+          child: Text(
+            letter,
+            style: GoogleFonts.boldonse(
+              color: color,
+              fontSize: (size * 0.46).clamp(11.0, 16.0),
+              height: 1,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String? _profileInitial(UserProfile? profile) {
+  final name = profile?.activeDisplayName.trim() ?? '';
+  if (name.isEmpty) return null;
+  return name[0].toUpperCase();
 }
 
 UserProfile? _profileFromState(ProfileState state) {
@@ -342,16 +383,18 @@ class DashboardLinkedBottomNav extends StatelessWidget {
               onProfileTabWhenCannotPop!();
               return;
             }
-            ProfileBloc profileBloc;
-            try {
-              profileBloc = context.read<ProfileBloc>();
-            } catch (_) {
-              profileBloc = sl<ProfileBloc>();
-            }
+            final resolved = () {
+              try {
+                return context.read<ProfileBloc>();
+              } catch (_) {
+                return ProfileBlocAnchor.current;
+              }
+            }();
+            if (resolved == null || resolved.isClosed) return;
             nav.push(
               MaterialPageRoute(
                 builder: (_) => BlocProvider.value(
-                  value: profileBloc,
+                  value: resolved,
                   child: const ProfilePage(),
                 ),
               ),

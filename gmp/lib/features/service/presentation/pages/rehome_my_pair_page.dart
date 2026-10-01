@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
-import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -101,13 +100,6 @@ class RehomeMyPairPage extends StatelessWidget {
                           const SizedBox(width: 14),
                           Expanded(
                             child: _SecondaryServiceCard(
-                              label: 'Rent\nMyPair',
-                              iconAsset:
-                                  'assets/images/icons/rehomemypair/rentmypair_shoe.png',
-                              iconWidth: 64,
-                              iconHeight: 32,
-                              preserveIconColors: true,
-                              labelFontSize: 15,
                               onTap: () => showComingSoon(
                                 context,
                                 feature: 'RentMyPair',
@@ -290,7 +282,7 @@ class _SearchBar extends StatelessWidget {
 }
 
 class _PrimaryDonateCard extends StatelessWidget {
-  static const double _cardHeight = 86;
+  static const double _cardHeight = 108;
   final VoidCallback onTap;
 
   const _PrimaryDonateCard({required this.onTap});
@@ -320,11 +312,11 @@ class _PrimaryDonateCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
+          child: const Row(
             children: [
-              const SizedBox(
-                width: 64,
-                height: 32,
+              SizedBox(
+                width: 56,
+                height: 34,
                 child: Image(
                   image: AssetImage(
                     'assets/images/icons/rehomemypair/sellmypair.png',
@@ -334,18 +326,12 @@ class _PrimaryDonateCard extends StatelessWidget {
                   colorBlendMode: BlendMode.srcIn,
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Flexible(
-                child: Text(
-                  'Sell\nMyPair',
-                  maxLines: 2,
-                  textAlign: TextAlign.left,
-                  style: GoogleFonts.boldonse(
-                    color: Colors.white,
-                    fontSize: 15,
-                    height: 1.25,
-                    fontWeight: FontWeight.w400,
-                  ),
+                child: _TwoLineLabel(
+                  first: 'Sell',
+                  second: 'MyPair',
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -356,103 +342,156 @@ class _PrimaryDonateCard extends StatelessWidget {
   }
 }
 
+class _TwoLineLabel extends StatelessWidget {
+  final String first;
+  final String second;
+  final Color color;
+
+  const _TwoLineLabel({
+    required this.first,
+    required this.second,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = GoogleFonts.boldonse(
+      color: color,
+      fontSize: 15,
+      height: 1,
+      fontWeight: FontWeight.w400,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(first, maxLines: 1, softWrap: false, style: style),
+        ),
+        const SizedBox(height: 16),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(second, maxLines: 1, softWrap: false, style: style),
+        ),
+      ],
+    );
+  }
+}
+
+class _RentTaggedShoe extends StatelessWidget {
+  const _RentTaggedShoe();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 56,
+      height: 34,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          const Positioned(
+            top: 6,
+            left: 2,
+            right: 2,
+            child: SizedBox(
+              height: 26,
+              child: Image(
+                image: AssetImage(
+                  'assets/images/icons/rehomemypair/rentmypair_shoe.png',
+                ),
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 3,
+            child: Transform.rotate(
+              angle: -0.27,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF062F35),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  child: Text(
+                    'RENT',
+                    style: GoogleFonts.boldonse(
+                      color: Colors.white,
+                      fontSize: 7,
+                      height: 1,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SecondaryServiceCard extends StatelessWidget {
-  static const double _cardHeight = 86;
-  final String label;
-  final String iconAsset;
-  final double iconWidth;
-  final double iconHeight;
-  final double labelFontSize;
-  final bool preserveIconColors;
+  static const double _cardHeight = 108;
   final VoidCallback onTap;
 
-  const _SecondaryServiceCard({
-    required this.label,
-    required this.iconAsset,
-    double iconSize = 38,
-    double? iconWidth,
-    double? iconHeight,
-    this.labelFontSize = 16,
-    this.preserveIconColors = false,
-    required this.onTap,
-  })  : iconWidth = iconWidth ?? iconSize,
-        iconHeight = iconHeight ?? iconSize;
+  const _SecondaryServiceCard({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     const radius = BorderRadius.all(Radius.circular(10));
-    const borderSide = BorderSide(color: AppColors.greyedButtonLabel);
 
-    return RepaintBoundary(
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          borderRadius: radius,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 4,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: AppColors.greyedButtonFill,
-          shape: const RoundedRectangleBorder(
-            borderRadius: radius,
-            side: borderSide,
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x19000000),
+            blurRadius: 4,
+            offset: Offset(0, 4),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: radius,
-            child: SizedBox(
-              height: _cardHeight,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: iconWidth,
-                      height: iconHeight,
-                      child: iconAsset.endsWith('.png')
-                          ? Image.asset(
-                              iconAsset,
-                              fit: BoxFit.contain,
-                              color: preserveIconColors
-                                  ? null
-                                  : AppColors.greyedButtonLabel,
-                              colorBlendMode: preserveIconColors
-                                  ? null
-                                  : BlendMode.srcIn,
-                            )
-                          : SvgPicture.asset(
-                              iconAsset,
-                              fit: BoxFit.contain,
-                              colorFilter: preserveIconColors
-                                  ? null
-                                  : const ColorFilter.mode(
-                                      AppColors.greyedButtonLabel,
-                                      BlendMode.srcIn,
-                                    ),
-                            ),
+        ],
+      ),
+      child: Material(
+        color: const Color(0xFFDFE7E9),
+        shape: const RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(
+            width: 1,
+            color: Color(0xFF0F6876),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: const SizedBox(
+            height: _cardHeight,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                children: [
+                  _RentTaggedShoe(),
+                  SizedBox(width: 10),
+                  Flexible(
+                    child: _TwoLineLabel(
+                      first: 'Rent',
+                      second: 'MyPair',
+                      color: Color(0xFF062F35),
                     ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        label,
-                        maxLines: 2,
-                        textAlign: TextAlign.left,
-                        style: GoogleFonts.boldonse(
-                          color: AppColors.greyedButtonLabel,
-                          fontSize: labelFontSize,
-                          height: 1.25,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -75,8 +75,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
           );
         }
       },
-      child: BlocProvider<ProfileBloc>(
-        create: (_) => sl<ProfileBloc>(),
+      child: _DashboardProfileHost(
         child: Builder(
           builder: (innerContext) {
             if (!_profileLoadScheduled) {
@@ -133,6 +132,43 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
           }
         },
       ),
+    );
+  }
+}
+
+/// Keeps one [ProfileBloc] for the dashboard and registers it so pushed
+/// pages can show the same photo or name initial in the bottom bar.
+class _DashboardProfileHost extends StatefulWidget {
+  const _DashboardProfileHost({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_DashboardProfileHost> createState() => _DashboardProfileHostState();
+}
+
+class _DashboardProfileHostState extends State<_DashboardProfileHost> {
+  late final ProfileBloc _bloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _bloc = sl<ProfileBloc>();
+    ProfileBlocAnchor.attach(_bloc);
+  }
+
+  @override
+  void dispose() {
+    ProfileBlocAnchor.detach(_bloc);
+    _bloc.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<ProfileBloc>.value(
+      value: _bloc,
+      child: widget.child,
     );
   }
 }

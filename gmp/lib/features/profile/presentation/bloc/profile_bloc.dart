@@ -10,6 +10,18 @@ import '../utils/active_profile_store.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
 
+/// Dashboard-owned [ProfileBloc] so the bottom bar on every pushed page
+/// can show the same loaded profile photo or initial.
+class ProfileBlocAnchor {
+  static ProfileBloc? current;
+
+  static void attach(ProfileBloc bloc) => current = bloc;
+
+  static void detach(ProfileBloc bloc) {
+    if (identical(current, bloc)) current = null;
+  }
+}
+
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final GetUserProfile getUserProfile;
   final UpdateUserProfile updateUserProfile;
