@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/features/profile/domain/entities/user_profile.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_state.dart';
@@ -248,7 +249,9 @@ class _BottomNavProfileAvatar extends StatelessWidget {
                 gaplessPlayback: true,
                 loadingBuilder: (context, child, progress) {
                   if (progress == null) return child;
-                  return letter == null ? fallback : _letterAvatar(letter);
+                  return const AppSkeletonPulse(
+                    child: ColoredBox(color: Color(0xFFB7C9CE)),
+                  );
                 },
                 errorBuilder: (context, error, stackTrace) =>
                     letter == null ? fallback : _letterAvatar(letter),

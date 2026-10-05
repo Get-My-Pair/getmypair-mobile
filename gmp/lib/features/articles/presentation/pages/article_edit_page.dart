@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_dropdown.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/greyed_button_shell.dart';
@@ -394,8 +395,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   Widget build(BuildContext context) {
     if (_article == null && _loading) {
       return _buildWithBg(
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+        body: const AppSkeletonCards(
+          color: Color(0x66FFFFFF),
         ),
       );
     }
@@ -468,7 +469,9 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
     if (_article == null) {
       return _buildWithBg(
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: const AppSkeletonCards(
+          color: Color(0x66FFFFFF),
+        ),
       );
     }
 

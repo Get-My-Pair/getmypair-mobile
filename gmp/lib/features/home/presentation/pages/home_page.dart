@@ -23,7 +23,6 @@ import '../../../profile/presentation/bloc/profile_event.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
-import '../../../profile/presentation/utils/profile_switch_loading.dart';
 import '../../../profile/presentation/utils/user_notifications.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
 import '../../../profile/presentation/pages/saved_addresses_page.dart';
@@ -207,6 +206,10 @@ class _HomePageState extends State<HomePage> {
   int _pairsInCare = 0;
   String? _lastActiveProfileId;
   int _switchLoadGen = 0;
+
+  /// True from the moment a profile switch starts until rack and stats
+  /// for that profile have both finished loading.
+  bool _profileDataLoading = false;
 
   static String _formatPlacemarkForHomeHeader(Placemark p) {
     final locality = p.locality?.trim();
@@ -615,6 +618,15 @@ class _HomePageState extends State<HomePage> {
       },
       child: BlocListener<ProfileBloc, ProfileState>(
         listener: (context, state) {
+          if (state is ProfileSwitching) {
+            if (!_profileDataLoading && mounted) {
+              setState(() => _profileDataLoading = true);
+            }
+            return;
+          }
+          if (state is ProfileError && _profileDataLoading) {
+            if (mounted) setState(() => _profileDataLoading = false);
+          }
           if (state is ProfileLoaded || state is AddressActionLoading) {
             _maybePromptSaveDetectedLocation();
           }
@@ -622,28 +634,26 @@ class _HomePageState extends State<HomePage> {
             final activeId = state.profile.isSelfActive
                 ? kSelfProfileId
                 : state.profile.activeProfileId;
-            if (_lastActiveProfileId != activeId) {
-              _lastActiveProfileId = activeId;
-              final gen = ++_switchLoadGen;
-              () async {
-                try {
-                  await Future.wait<void>([
-                    _loadRackPreview(),
-                    _loadHomeStats(),
-                  ]);
-                } finally {
-                  if (!mounted || gen != _switchLoadGen) return;
-                  await WidgetsBinding.instance.endOfFrame;
-                  if (!mounted || gen != _switchLoadGen) return;
-                  await WidgetsBinding.instance.endOfFrame;
-                  if (!mounted || gen != _switchLoadGen) return;
-                  ProfileSwitchLoading.onDetailsReady(
-                    context,
-                    profileId: activeId,
-                  );
-                }
-              }();
+            final changed = _lastActiveProfileId != null &&
+                _lastActiveProfileId != activeId;
+            _lastActiveProfileId = activeId;
+            if (!changed && !_profileDataLoading) return;
+            final gen = ++_switchLoadGen;
+            if (!_profileDataLoading && mounted) {
+              setState(() => _profileDataLoading = true);
             }
+            () async {
+              try {
+                await Future.wait<void>([
+                  _loadRackPreview(),
+                  _loadHomeStats(),
+                ]);
+              } finally {
+                if (mounted && gen == _switchLoadGen) {
+                  setState(() => _profileDataLoading = false);
+                }
+              }
+            }();
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
@@ -695,8 +705,11 @@ class _HomePageState extends State<HomePage> {
                                   pairsDonatedDisplay: _pairsDonatedDisplay,
                                   pairsSoldDisplay: _pairsSoldDisplay,
                                   pairsInCareDisplay: _pairsInCareDisplay,
-                                  statsLoading: _statsLoading,
-                                  pairsInRackLoading: _pairsInRackLoading,
+                                  statsLoading:
+                                      _statsLoading || _profileDataLoading,
+                                  pairsInRackLoading: _pairsInRackLoading ||
+                                      _profileDataLoading,
+                                  contentLoading: _profileDataLoading,
                                   layoutScale: layoutScale,
                                   onLocationTap: _openSavedLocationPage,
                                 );
@@ -929,9 +942,10 @@ class _HomePageState extends State<HomePage> {
                                                           SizedBox(
                                                               height: rackThumbGap),
                                                           Expanded(
-                                                            child: _rackLoading &&
-                                                                  _rackArticles ==
-                                                                      null
+                                                            child: _profileDataLoading ||
+                                                                    (_rackLoading &&
+                                                                        _rackArticles ==
+                                                                            null)
                                                               ? const _RackThumbSkeleton()
                                                               : _rackError !=
                                                                       null
@@ -1533,12 +1547,14 @@ class _HomeProfileSelectRow extends StatelessWidget {
 /// With 3+ profiles, tapping the cluster opens Figma Frame 241 picker.
 class _HomeProfileAvatarStack extends StatefulWidget {
   final UserProfile? profile;
+  final bool loading;
   final VoidCallback onTapCurrent;
   final void Function(String profileId)? onTapOther;
 
   const _HomeProfileAvatarStack({
     required this.profile,
     required this.onTapCurrent,
+    this.loading = false,
     this.onTapOther,
   });
 
@@ -1552,6 +1568,12 @@ class _HomeProfileAvatarStackState extends State<_HomeProfileAvatarStack> {
   OverlayEntry? _menuEntry;
 
   bool get _menuOpen => _menuEntry != null;
+
+  @override
+  void didUpdateWidget(covariant _HomeProfileAvatarStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.loading && _menuOpen) _removeMenu();
+  }
 
   @override
   void dispose() {
@@ -1668,6 +1690,27 @@ class _HomeProfileAvatarStackState extends State<_HomeProfileAvatarStack> {
     final narrow = MediaQuery.sizeOf(context).width < 360;
     final rLarge = ((narrow ? 22.0 : 24.0) * s).clamp(20.0, 26.0);
     final rSmall = ((narrow ? 10.0 : 11.0) * s).clamp(9.0, 13.0);
+
+    if (widget.loading) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _HomeSkeletonBone(
+            width: rLarge * 2,
+            height: rLarge * 2,
+            radius: rLarge,
+            color: Colors.white.withValues(alpha: 0.28),
+          ),
+          const SizedBox(width: 6),
+          _HomeSkeletonBone(
+            width: rSmall * 2,
+            height: rSmall * 2,
+            radius: rSmall,
+            color: Colors.white.withValues(alpha: 0.28),
+          ),
+        ],
+      );
+    }
 
     if (widget.profile == null) {
       return GestureDetector(
@@ -1786,6 +1829,7 @@ class _HomeTopCard extends StatelessWidget {
   final String pairsInCareDisplay;
   final bool statsLoading;
   final bool pairsInRackLoading;
+  final bool contentLoading;
   final Future<void> Function() onLocationTap;
   final double layoutScale;
 
@@ -1798,6 +1842,7 @@ class _HomeTopCard extends StatelessWidget {
     required this.pairsInCareDisplay,
     required this.statsLoading,
     required this.pairsInRackLoading,
+    required this.contentLoading,
     required this.onLocationTap,
     this.layoutScale = 1.0,
   });
@@ -1907,19 +1952,28 @@ class _HomeTopCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Text(
-                            'Hello, $greetingName!',
-                            textAlign: TextAlign.left,
-                            style: GoogleFonts.boldonse(
-                              fontSize: ((compact ? 46.0 : 48.0) * s).clamp(
-                                13.0,
-                                23.0,
-                              ),
-                              fontWeight: FontWeight.w400,
-                              color: _kOnHeaderText,
-                              height: 1.1,
-                            ),
-                          ),
+                          child: contentLoading
+                              ? Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: _HomeSkeletonBone(
+                                    width: 168,
+                                    height: ((compact ? 46.0 : 48.0) * s)
+                                        .clamp(13.0, 23.0),
+                                    radius: 8,
+                                    color: Colors.white.withValues(alpha: 0.28),
+                                  ),
+                                )
+                              : Text(
+                                  'Hello, $greetingName!',
+                                  textAlign: TextAlign.left,
+                                  style: GoogleFonts.boldonse(
+                                    fontSize: ((compact ? 46.0 : 48.0) * s)
+                                        .clamp(13.0, 23.0),
+                                    fontWeight: FontWeight.w400,
+                                    color: _kOnHeaderText,
+                                    height: 1.1,
+                                  ),
+                                ),
                         ),
                         const _HomeNotificationBellSection(),
                       ],
@@ -1993,19 +2047,30 @@ class _HomeTopCard extends StatelessWidget {
                                         ],
                                       ),
                                       SizedBox(height: (4 * s).clamp(2.0, 6.0)),
-                                      Text(
-                                        addressLine,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.montserrat(
-                                          fontSize:
-                                              ((compact ? 14.0 : 16.0) * s)
+                                      contentLoading
+                                          ? _HomeSkeletonBone(
+                                              width: 120,
+                                              height: ((compact ? 14.0 : 16.0) *
+                                                      s)
                                                   .clamp(10.0, 16.0),
-                                          fontWeight: FontWeight.w400,
-                                          color: _kOnHeaderTextMuted,
-                                          height: 1.2,
-                                        ),
-                                      ),
+                                              radius: 6,
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.28),
+                                            )
+                                          : Text(
+                                              addressLine,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.montserrat(
+                                                fontSize:
+                                                    ((compact ? 14.0 : 16.0) *
+                                                            s)
+                                                        .clamp(10.0, 16.0),
+                                                fontWeight: FontWeight.w400,
+                                                color: _kOnHeaderTextMuted,
+                                                height: 1.2,
+                                              ),
+                                            ),
                                     ],
                                   ),
                                 ),
@@ -2032,6 +2097,7 @@ class _HomeTopCard extends StatelessWidget {
                                 : null;
                             return _HomeProfileAvatarStack(
                               profile: profile,
+                              loading: contentLoading,
                               onTapCurrent: () {
                                 final profileBloc = context.read<ProfileBloc>();
                                 Navigator.of(context).push(

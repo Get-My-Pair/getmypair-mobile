@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -258,11 +259,7 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
                       ),
                       Expanded(
                         child: _loading
-                            ? const Center(
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFF11999E),
-                                ),
-                              )
+                            ? const AppSkeletonList(itemCount: 4)
                             : _error != null
                                 ? Center(
                                     child: Padding(

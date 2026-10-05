@@ -3,6 +3,7 @@ import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
@@ -244,9 +245,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
 
   Widget _buildBody(BuildContext context, [BoxConstraints? constraints]) {
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: _teal),
-      );
+      return const AppSkeletonCards();
     }
     if (_error != null) {
       return Center(

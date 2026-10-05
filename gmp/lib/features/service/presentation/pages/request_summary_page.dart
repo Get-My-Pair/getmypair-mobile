@@ -5,6 +5,7 @@ import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/core/bgtheme.dart';
@@ -287,8 +288,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         centerTitle: false,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+          ? const AppSkeletonCards(
+              color: Color(0x66FFFFFF),
             )
           : ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
@@ -559,9 +560,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                 child: ClipRRect(
                   borderRadius: panelRadius,
                   child: _loading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: Color(0xFF11999E)),
-                        )
+                      ? const AppSkeletonCards()
                       : ListView(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
                           children: [

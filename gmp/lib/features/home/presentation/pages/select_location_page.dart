@@ -15,6 +15,7 @@ import '../../../../core/bgtheme.dart';
 import '../../../../core/maps/google_maps_js_loader.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/errors/exceptions.dart';
@@ -477,7 +478,11 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
               ),
               const SizedBox(height: 14),
               if (_isLoadingCobblers)
-                const Center(child: CircularProgressIndicator())
+                const AppSkeletonList(
+                  itemCount: 3,
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                )
               else if (_cobblerLoadError != null)
                 Text(
                   _cobblerLoadError!,
@@ -831,12 +836,14 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                     children: [
                                       ColoredBox(color: _mapGrey),
                                       if (!_mapsReady)
-                                        Center(
-                                          child: _mapsLoadError == null
-                                              ? const CircularProgressIndicator(
-                                                  color: _tealButton,
-                                                )
-                                              : Padding(
+                                        _mapsLoadError == null
+                                            ? const AppSkeletonPulse(
+                                                child: ColoredBox(
+                                                  color: Color(0xFFD5E2E6),
+                                                ),
+                                              )
+                                            : Center(
+                                                child: Padding(
                                                   padding: const EdgeInsets.all(16),
                                                   child: Text(
                                                     'Map failed to load.\n'
@@ -850,7 +857,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                                                     ),
                                                   ),
                                                 ),
-                                        )
+                                              )
                                       else
                                         GoogleMap(
                                           initialCameraPosition: CameraPosition(
@@ -1086,12 +1093,11 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
         ),
-        child: const Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+        child: const AppSkeletonList(
+          itemCount: 2,
+          shrinkWrap: true,
+          padding: EdgeInsets.symmetric(vertical: 4),
+          color: Color(0x66FFFFFF),
         ),
       );
     }

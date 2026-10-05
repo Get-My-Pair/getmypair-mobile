@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
@@ -85,8 +86,9 @@ class _SelectAddressPageState extends State<SelectAddressPage> {
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+          ? const AppSkeletonList(
+              itemCount: 4,
+              color: Color(0x66FFFFFF),
             )
           : Padding(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),

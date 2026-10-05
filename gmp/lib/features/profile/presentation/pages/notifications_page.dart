@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../injection_container.dart' as di;
 import '../../../../routes.dart';
@@ -148,7 +149,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             final profileItems = buildProfileNotifications(profile);
 
             if (_loading) {
-              return const Center(child: CircularProgressIndicator());
+              return const AppSkeletonList(itemCount: 6);
             }
 
             if (_error != null) {

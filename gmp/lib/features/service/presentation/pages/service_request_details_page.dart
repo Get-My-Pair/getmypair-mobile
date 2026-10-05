@@ -5,6 +5,7 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/payment/presentation/bloc/payment_bloc.dart';
@@ -163,18 +164,8 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
-                          return Container(
-                            color: AppColors.surfaceVariant,
-                            child: const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF11999E),
-                                ),
-                              ),
-                            ),
+                          return const AppSkeletonPulse(
+                            child: ColoredBox(color: AppColors.surfaceVariant),
                           );
                         },
                         errorBuilder: (_, _, _) => Container(
@@ -580,11 +571,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                       ),
                       Expanded(
                         child: _loading
-                            ? const Center(
-                                child: CircularProgressIndicator(
-                                  color: Color(0xFF11999E),
-                                ),
-                              )
+                            ? const AppSkeletonCards()
                             : _error != null
                                 ? Center(
                                     child: Padding(

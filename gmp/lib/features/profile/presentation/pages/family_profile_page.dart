@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../routes.dart';
@@ -16,7 +17,6 @@ import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
-import '../utils/profile_switch_loading.dart';
 
 const Color _kSheetTeal = Color(0xFF12899B);
 const Color _kSheetBg = Color(0xFFF5F5F5);
@@ -130,7 +130,6 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
   Widget build(BuildContext context) {
     return BlocConsumer<ProfileBloc, ProfileState>(
       listener: (context, state) async {
-        ProfileSwitchLoading.sync(context, state);
         if (state is ProfileError) {
           if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
           await showAppFeedbackAlert(
@@ -267,16 +266,15 @@ class _FamilyProfilePageState extends State<FamilyProfilePage> {
                                 SizedBox(
                                   height: (18 * layoutScale).clamp(10.0, 22.0),
                                 ),
-                                if (state is AddressActionLoading)
-                                  const Padding(
-                                    padding: EdgeInsets.only(bottom: 12),
-                                    child: LinearProgressIndicator(
-                                      minHeight: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
                                 Expanded(
-                                  child: ListView.builder(
+                                  child: state is ProfileSwitching
+                                      ? AppSkeletonList(
+                                          itemCount: 4,
+                                          color: Colors.white
+                                              .withValues(alpha: 0.35),
+                                          padding: const EdgeInsets.only(top: 8),
+                                        )
+                                      : ListView.builder(
                                     itemCount: profiles.length,
                                     itemBuilder: (context, index) {
                                       final item = profiles[index];

@@ -9,6 +9,7 @@ import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
@@ -410,10 +411,8 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                     ),
                     child: const ClipRRect(
                       borderRadius: _panelRadius,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: _rackTealAccent,
-                        ),
+                      child: AppSkeletonCards(
+                        padding: EdgeInsets.fromLTRB(16, 24, 16, 24),
                       ),
                     ),
                   ),

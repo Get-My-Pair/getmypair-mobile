@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -146,12 +147,26 @@ class _ProfilePageState extends State<ProfilePage> {
           }
         },
         builder: (context, state) {
-          if (state is ProfileLoading || state is ProfileInitial) {
-            return const AnnotatedRegion<SystemUiOverlayStyle>(
-              value: kProfileLightScaffoldSystemUi,
+          if (state is ProfileLoading ||
+              state is ProfileInitial ||
+              state is ProfileSwitching) {
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: kProfileGradientHeaderSystemUi,
               child: Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
+                body: Container(
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage(BgTheme.backgroundImageAsset),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: AppSkeletonList(
+                      itemCount: 6,
+                      color: Colors.white.withValues(alpha: 0.38),
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+                    ),
+                  ),
                 ),
               ),
             );

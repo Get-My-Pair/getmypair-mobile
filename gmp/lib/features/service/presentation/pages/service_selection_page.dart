@@ -4,6 +4,7 @@ import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
@@ -664,8 +665,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           automaticallyImplyLeading: false,
           centerTitle: false,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+        body: const AppSkeletonCards(
+          color: Color(0x66FFFFFF),
         ),
       );
     }
@@ -845,11 +846,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   child: ClipRRect(
                     borderRadius: _repairFlowPanelRadius,
                     child: _loading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF11999E),
-                            ),
-                          )
+                        ? const AppSkeletonCards()
                         : _buildRepairSingleServicePanel(context),
                   ),
                 ),
