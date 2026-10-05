@@ -824,7 +824,8 @@ class _FilterChipPill extends StatelessWidget {
   }
 }
 
-/// Soft rack grid placeholder while articles API loads (no circular spinner).
+/// Rack-shaped placeholder while articles load.
+/// Same chrome and shelf rows as My Rack: three shoes per shelf.
 class _RackGridSkeleton extends StatefulWidget {
   const _RackGridSkeleton();
 
@@ -834,6 +835,9 @@ class _RackGridSkeleton extends StatefulWidget {
 
 class _RackGridSkeletonState extends State<_RackGridSkeleton>
     with SingleTickerProviderStateMixin {
+  static const Color _bone = Color(0xFFB7C9CE);
+  static const Color _rackDark = Color(0xFF062F35);
+
   late final AnimationController _controller;
 
   @override
@@ -855,55 +859,233 @@ class _RackGridSkeletonState extends State<_RackGridSkeleton>
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-    final hPad = (12.0 * uiScale).clamp(10.0, 20.0);
-    final gap = (10.0 * uiScale).clamp(8.0, 14.0);
+    final headerHInset = (12.0 * uiScale).clamp(10.0, 20.0);
+    final titleLeftInset = (headerHInset - 4).clamp(10.0, 18.0);
+    final topTitleGap = (20.0 * uiScale).clamp(18.0, 28.0);
+    final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
+    const plusSize = 42.0;
+    const searchHeight = 42.0;
+    final filtersHeight = (28.0 * uiScale).clamp(26.0, 32.0);
+    final sectionGap = (10.0 * uiScale).clamp(8.0, 14.0);
+    final spacing = (10.0 * uiScale).clamp(8.0, 14.0);
+    final searchFont = (16.0 * uiScale).clamp(13.0, 17.0);
+    final nameSize = (12.5 * uiScale).clamp(11.0, 14.0);
+    final labelGap = (3.0 * uiScale).clamp(2.0, 5.0);
+    final panelPad = (6.0 * uiScale).clamp(4.0, 8.0);
+    // Shoe thumbs sit inside the shelf with BoxFit.contain, so the
+    // placeholder stays a short wide bone instead of filling the cell.
+    final shoeWidth = (56.0 * uiScale).clamp(48.0, 62.0);
+    final shoeHeight = (34.0 * uiScale).clamp(28.0, 40.0);
+    final labelWidth = (42.0 * uiScale).clamp(36.0, 48.0);
+    const chipWidths = <double>[68, 50, 70, 54, 76];
 
     return FadeTransition(
-      opacity: Tween<double>(begin: 0.4, end: 0.85).animate(
+      opacity: Tween<double>(begin: 0.4, end: 0.9).animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
       ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 16),
-        child: Column(
-          children: [
-            for (var row = 0; row < 2; row++) ...[
-              if (row > 0) SizedBox(height: gap),
-              Expanded(
-                child: Row(
-                  children: [
-                    for (var col = 0; col < 3; col++) ...[
-                      if (col > 0) SizedBox(width: gap),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFB7C9CE),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              height: 10,
-                              width: double.infinity,
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFB7C9CE),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ],
-                        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              titleLeftInset,
+              topTitleGap,
+              headerHInset,
+              0,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: _bone,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Container(
+                  width: titleSize * 4.6,
+                  height: titleSize,
+                  decoration: BoxDecoration(
+                    color: _rackDark.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: plusSize,
+                  height: plusSize,
+                  decoration: const BoxDecoration(
+                    color: _bone,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: (14.0 * uiScale).clamp(12.0, 18.0)),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: headerHInset),
+            child: Container(
+              height: searchHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(color: _bone, width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: const BoxDecoration(
+                      color: _bone,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: searchFont * 3.6,
+                    height: searchFont,
+                    decoration: BoxDecoration(
+                      color: _bone,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: sectionGap),
+          SizedBox(
+            height: filtersHeight,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: headerHInset),
+              itemCount: chipWidths.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, index) {
+                return Container(
+                  width: chipWidths[index],
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: _bone),
+                  ),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: (8.0 * uiScale).clamp(6.0, 10.0)),
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.fromLTRB(
+                headerHInset,
+                2,
+                headerHInset,
+                (24.0 * uiScale).clamp(20.0, 30.0),
+              ),
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 4,
+              itemBuilder: (context, rowIndex) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: rowIndex == 3 ? 0 : spacing),
+                  child: _RackRow(
+                    uiScale: uiScale,
+                    children: [
+                      _RackSkeletonCell(
+                        shoeWidth: shoeWidth,
+                        shoeHeight: shoeHeight,
+                        labelWidth: labelWidth,
+                        labelHeight: nameSize,
+                        labelGap: labelGap,
+                        panelPad: panelPad,
+                      ),
+                      _RackSkeletonCell(
+                        shoeWidth: shoeWidth,
+                        shoeHeight: shoeHeight,
+                        labelWidth: labelWidth,
+                        labelHeight: nameSize,
+                        labelGap: labelGap,
+                        panelPad: panelPad,
+                      ),
+                      _RackSkeletonCell(
+                        shoeWidth: shoeWidth,
+                        shoeHeight: shoeHeight,
+                        labelWidth: labelWidth,
+                        labelHeight: nameSize,
+                        labelGap: labelGap,
+                        panelPad: panelPad,
                       ),
                     ],
-                  ],
-                ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Container(
+            height: (16.0 * uiScale).clamp(12.0, 20.0),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(18),
+                topRight: Radius.circular(18),
               ),
-            ],
-          ],
-        ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One shoe slot on a skeleton shelf: compact image bone plus a short label.
+class _RackSkeletonCell extends StatelessWidget {
+  const _RackSkeletonCell({
+    required this.shoeWidth,
+    required this.shoeHeight,
+    required this.labelWidth,
+    required this.labelHeight,
+    required this.labelGap,
+    required this.panelPad,
+  });
+
+  final double shoeWidth;
+  final double shoeHeight;
+  final double labelWidth;
+  final double labelHeight;
+  final double labelGap;
+  final double panelPad;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(panelPad, panelPad, panelPad, panelPad - 1),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const Spacer(),
+          Container(
+            width: shoeWidth,
+            height: shoeHeight,
+            decoration: BoxDecoration(
+              color: const Color(0xFFB7C9CE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          SizedBox(height: labelGap),
+          Container(
+            width: labelWidth,
+            height: labelHeight,
+            decoration: BoxDecoration(
+              color: const Color(0xFFB7C9CE),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
       ),
     );
   }
