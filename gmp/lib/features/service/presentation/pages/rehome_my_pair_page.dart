@@ -5,10 +5,8 @@ import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'donate_my_pair_page.dart';
-
 /// Rehome hub — same shell as [CareMyPairPage]: search, service cards, media rows.
-/// Sell opens [DonateMyPairPage] (article grid, then [DonateMyPairDetailsPage] / pickup / summary).
+/// Sell and Rent are coming soon. Donate lives on SaveMyPair.
 class RehomeMyPairPage extends StatelessWidget {
   const RehomeMyPairPage({super.key});
 
@@ -94,7 +92,10 @@ class RehomeMyPairPage extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _PrimaryDonateCard(
-                              onTap: () => _openDonateFlow(context),
+                              onTap: () => showComingSoon(
+                                context,
+                                feature: 'SellMyPair',
+                              ),
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -160,13 +161,6 @@ class RehomeMyPairPage extends StatelessWidget {
     );
   }
 
-  void _openDonateFlow(BuildContext context) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const DonateMyPairPage(),
-      ),
-    );
-  }
 }
 
 class _Header extends StatelessWidget {

@@ -13,7 +13,6 @@ import '../../../auth/presentation/pages/mobile_otp_page.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/figma_home_assets.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
@@ -35,6 +34,7 @@ import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
+import '../../../service/presentation/pages/save_my_pair_page.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
 import 'chatbot_page.dart';
@@ -1081,10 +1081,17 @@ class _HomePageState extends State<HomePage> {
                                                 iconHeight: actionIconH,
                                                 cellHeight: equalBlockH,
                                                 layoutScale: layoutScale,
-                                                onTap: () => showComingSoon(
-                                                  context,
-                                                  feature: 'Save',
-                                                ),
+                                                onTap: () =>
+                                                    Navigator.of(context)
+                                                        .push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) =>
+                                                        const SaveMyPairPage(),
+                                                  ),
+                                                )
+                                                        .then((_) {
+                                                  if (mounted) _loadHomeStats();
+                                                }),
                                               ),
                                               right: _QuickActionCard(
                                                 label: 'Style Me\nMyPair',
