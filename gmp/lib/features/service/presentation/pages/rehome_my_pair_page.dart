@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/features/sell/presentation/pages/sell_my_pair_page.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Rehome hub — same shell as [CareMyPairPage]: search, service cards, media rows.
-/// Sell and Rent are coming soon. Donate lives on SaveMyPair.
+/// Rehome hub. Sell My Pair opens the luxury and everyday selling flow. Rent stays coming soon.
 class RehomeMyPairPage extends StatelessWidget {
   const RehomeMyPairPage({super.key});
 
@@ -16,21 +16,6 @@ class RehomeMyPairPage extends StatelessWidget {
     bottomLeft: Radius.circular(50),
     bottomRight: Radius.circular(50),
   );
-
-  static const List<_VideoCardData> _journeyVideos = [
-    _VideoCardData(
-      title: 'Suede Saver: How to Clean and Protect Suede Shoes',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
-    _VideoCardData(
-      title: 'Everyday Shoe Care Hacks Using Household Items',
-      image: 'assets/images/img/caremypair/vid2.png',
-    ),
-    _VideoCardData(
-      title: 'Odor-Free Feet: How to De-Stink Your Shoes Naturally',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +60,18 @@ class RehomeMyPairPage extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
                       children: [
                       _Header(onBack: () => Navigator.maybePop(context)),
+                      const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 36),
+                        child: Text(
+                          'Give Your Pair a Second Life!!',
+                          style: GoogleFonts.boldonse(
+                            color: const Color(0xFF0E7C8A),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       const _SearchBar(),
                       const SizedBox(height: 28),
@@ -92,10 +89,13 @@ class RehomeMyPairPage extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _PrimaryDonateCard(
-                              onTap: () => showComingSoon(
-                                context,
-                                feature: 'SellMyPair',
-                              ),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const SellMyPairPage(),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -120,28 +120,42 @@ class RehomeMyPairPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        'Videos',
+                        'Top Bidded Brands',
                         style: GoogleFonts.montserrat(
                           color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 113,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _journeyVideos.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 14),
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'DIY videos',
-                            ),
-                            child: _VideoCard(data: _journeyVideos[i]),
-                          ),
+                      const SizedBox(height: 12),
+                      const SizedBox(
+                        height: 92,
+                        child: Row(
+                          children: [
+                            Expanded(child: _BrandTile(label: 'GUCCI', tone: _BrandTone.gucci)),
+                            SizedBox(width: 10),
+                            Expanded(child: _BrandTile(label: 'PRADA', tone: _BrandTone.prada)),
+                            SizedBox(width: 10),
+                            Expanded(child: _BrandTile(label: 'BA', tone: _BrandTone.balenciaga)),
+                          ],
                         ),
+                      ),
+                      const SizedBox(height: 22),
+                      Text(
+                        'Most Requested Rental Styles',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.black,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Row(
+                        children: [
+                          Expanded(child: _RentalStyle(label: 'Statement Heels')),
+                          Expanded(child: _RentalStyle(label: 'Designer Boots')),
+                          Expanded(child: _RentalStyle(label: 'Trail Shoes')),
+                        ],
                       ),
                     ],
                   ),
@@ -495,67 +509,72 @@ class _SecondaryServiceCard extends StatelessWidget {
   }
 }
 
-class _VideoCardData {
-  final String title;
-  final String image;
+enum _BrandTone { gucci, prada, balenciaga }
 
-  const _VideoCardData({required this.title, required this.image});
-}
+class _BrandTile extends StatelessWidget {
+  final String label;
+  final _BrandTone tone;
 
-class _VideoCard extends StatelessWidget {
-  final _VideoCardData data;
-
-  const _VideoCard({required this.data});
+  const _BrandTile({required this.label, required this.tone});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 174,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            data.image.startsWith('http')
-                ? Image.network(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
-                  )
-                : Image.asset(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
-                  ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xCC000000)],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: Text(
-                data.title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.montserrat(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+    final Color bg;
+    final Color fg;
+    switch (tone) {
+      case _BrandTone.gucci:
+        bg = const Color(0xFFC4A36A);
+        fg = const Color(0xFF5C3B16);
+      case _BrandTone.prada:
+        bg = Colors.black;
+        fg = Colors.white;
+      case _BrandTone.balenciaga:
+        bg = Colors.white;
+        fg = Colors.black;
+    }
+    return Container(
+      height: 88,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+        border: tone == _BrandTone.balenciaga ? Border.all(color: const Color(0xFFD7D7D7)) : null,
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.cinzel(
+          color: fg,
+          fontSize: tone == _BrandTone.balenciaga ? 22 : 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 1,
         ),
       ),
+    );
+  }
+}
+
+class _RentalStyle extends StatelessWidget {
+  final String label;
+
+  const _RentalStyle({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Image.asset(
+          'assets/images/icons/myrack/shoe.png',
+          height: 72,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => const Icon(Icons.ice_skating, size: 48, color: Color(0xFF0E7C8A)),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserrat(fontSize: 12, color: Colors.black87),
+        ),
+      ],
     );
   }
 }

@@ -86,6 +86,10 @@ class ApiEndpoints {
   static String get articlesUploadImage =>
       '$baseUrl$articlesPrefix/upload-image';
 
+  static const String sellPrefix = '/api/sell';
+  static String get sellListings => '$baseUrl$sellPrefix/listings';
+  static String get sellUploadProof => '$baseUrl$sellPrefix/upload-proof';
+
   // Module 4 – Service Requests
   static const String servicePrefix = '/api/service';
   static String get serviceCreate => '$baseUrl$servicePrefix/create';

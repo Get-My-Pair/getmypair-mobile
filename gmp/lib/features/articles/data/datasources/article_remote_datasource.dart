@@ -14,6 +14,7 @@ abstract class ArticleRemoteDataSource {
     required String brand,
     required String model,
     required String category,
+    String footwearType = 'everyday',
     required String color,
     int? purchaseYear,
     required String condition,
@@ -30,6 +31,7 @@ abstract class ArticleRemoteDataSource {
     String? brand,
     String? model,
     String? category,
+    String? footwearType,
     String? color,
     int? purchaseYear,
     String? condition,
@@ -144,6 +146,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
     required String brand,
     required String model,
     required String category,
+    String footwearType = 'everyday',
     required String color,
     int? purchaseYear,
     required String condition,
@@ -155,6 +158,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final body = <String, dynamic>{
         'brand': brand,
         'model': model,
+        'footwearType': footwearType,
         'category': category,
         'color': color,
         'condition': condition,
@@ -234,6 +238,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
     String? brand,
     String? model,
     String? category,
+    String? footwearType,
     String? color,
     int? purchaseYear,
     String? condition,
@@ -246,6 +251,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       if (brand != null) body['brand'] = brand;
       if (model != null) body['model'] = model;
       if (category != null) body['category'] = category;
+      if (footwearType != null) body['footwearType'] = footwearType;
       if (color != null) body['color'] = color;
       if (purchaseYear != null) body['purchaseYear'] = purchaseYear;
       if (condition != null) body['condition'] = condition;

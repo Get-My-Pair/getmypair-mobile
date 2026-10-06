@@ -31,6 +31,7 @@ import 'features/articles/domain/usecases/create_article.dart';
 import 'features/articles/domain/usecases/upload_article_image.dart';
 import 'features/articles/domain/usecases/update_article.dart';
 import 'features/articles/domain/usecases/delete_article.dart';
+import 'features/sell/data/sell_remote_datasource.dart';
 import 'features/payment/data/datasources/payment_remote_datasource.dart';
 import 'features/payment/data/repositories/payment_repository_impl.dart';
 import 'features/payment/domain/repositories/payment_repository.dart';
@@ -222,6 +223,9 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<DeleteArticle>()) {
     sl.registerLazySingleton(() => DeleteArticle(sl()));
+  }
+  if (!sl.isRegistered<SellRemoteDataSource>()) {
+    sl.registerLazySingleton(() => SellRemoteDataSource());
   }
 
   //! Features - Payment (Module 5)

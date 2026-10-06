@@ -18,6 +18,8 @@ class Article extends Equatable {
   final String brand;
   final String model;
   final String category;
+  /// `luxury` or `everyday`.
+  final String footwearType;
   final String color;
   final int? purchaseYear;
   final List<ArticleMaterial> materials;
@@ -36,6 +38,7 @@ class Article extends Equatable {
     required this.brand,
     required this.model,
     required this.category,
+    this.footwearType = 'everyday',
     required this.color,
     this.purchaseYear,
     this.materials = const [],
@@ -62,6 +65,7 @@ class Article extends Equatable {
         brand,
         model,
         category,
+        footwearType,
         color,
         purchaseYear,
         materials,

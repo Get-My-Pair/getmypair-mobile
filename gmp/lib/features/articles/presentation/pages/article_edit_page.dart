@@ -51,6 +51,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   String? _error;
 
   String _category = 'sports_shoe';
+  String _footwearType = 'everyday';
   String _condition = 'good';
   String _sizeRegion = 'UK';
   String? _selectedSizeNumber;
@@ -61,6 +62,10 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   final List<File> _imageFiles = [];
   List<String> _existingImageUrls = [];
 
+  static const List<Map<String, String>> _footwearTypes = [
+    {'value': 'luxury', 'label': 'Luxury'},
+    {'value': 'everyday', 'label': 'Everyday'},
+  ];
   static const List<Map<String, String>> _categories = [
     {'value': 'sports_shoe', 'label': 'Sports shoe'},
     {'value': 'casual', 'label': 'Casual'},
@@ -200,6 +205,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     _modelController.text = article.model;
     _brandController.text = article.brand;
     _category = article.category;
+    _footwearType = article.footwearType == 'luxury' ? 'luxury' : 'everyday';
     _condition = article.condition.isNotEmpty ? article.condition : 'good';
     _purchaseYear = article.purchaseYear;
     _existingImageUrls = List<String>.from(article.images);
@@ -370,6 +376,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             brand: _brandController.text.trim(),
             model: _modelController.text.trim(),
             category: _category,
+            footwearType: _footwearType,
             color: _resolvedColor!,
             purchaseYear: _purchaseYear,
             condition: _condition,
@@ -545,6 +552,13 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
               ),
               const SizedBox(height: 20),
               _purchaseYearDropdown(),
+              const SizedBox(height: 20),
+              _dropdownWithLabel(
+                'Type of Footwear',
+                _footwearType,
+                _footwearTypes,
+                (v) => setState(() => _footwearType = v ?? _footwearType),
+              ),
               const SizedBox(height: 20),
               _dropdownWithLabel(
                 'Category',

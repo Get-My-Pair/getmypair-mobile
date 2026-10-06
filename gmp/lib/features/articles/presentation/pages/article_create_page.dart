@@ -36,6 +36,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   final _brandController = TextEditingController(text: 'Nike');
 
   String _category = 'sports_shoe';
+  String _footwearType = 'everyday';
   String _sizeRegion = 'UK';
   String? _selectedSizeNumber;
   String? _selectedColorName;
@@ -87,6 +88,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   bool _submitting = false;
   String? _errorMessage;
 
+  static const List<Map<String, String>> _footwearTypes = [
+    {'value': 'luxury', 'label': 'Luxury'},
+    {'value': 'everyday', 'label': 'Everyday'},
+  ];
   static const List<Map<String, String>> _categories = [
     {'value': 'sports_shoe', 'label': 'Sports shoe'},
     {'value': 'casual', 'label': 'Casual'},
@@ -225,6 +230,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             brand: _brandController.text.trim(),
             model: _modelController.text.trim(),
             category: _category,
+            footwearType: _footwearType,
             color: _resolvedColor!,
             purchaseYear: _purchaseYear,
             condition: _condition,
@@ -354,6 +360,13 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 ),
                 const SizedBox(height: 20),
                 _purchaseYearDropdown(),
+                const SizedBox(height: 20),
+                _dropdownWithLabel(
+                  'Type of Footwear',
+                  _footwearType,
+                  _footwearTypes,
+                  (v) => setState(() => _footwearType = v!),
+                ),
                 const SizedBox(height: 20),
                 _dropdownWithLabel('Category', _category, _categories, (v) => setState(() => _category = v!)),
                 const SizedBox(height: 24),
