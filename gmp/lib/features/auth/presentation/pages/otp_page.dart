@@ -12,7 +12,6 @@ import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import '../widgets/otp_dev_dialog.dart';
 import 'ai_onboarding_page.dart';
 
 class OTPPage extends StatefulWidget {
@@ -21,13 +20,11 @@ class OTPPage extends StatefulWidget {
     required this.mobile,
     this.countryCode,
     this.phoneNumber,
-    this.prefilledOtp,
   });
 
   final String mobile;
   final String? countryCode;
   final String? phoneNumber;
-  final String? prefilledOtp;
 
   @override
   State<OTPPage> createState() => _OTPPageState();
@@ -58,10 +55,6 @@ class _OTPPageState extends State<OTPPage> {
   void initState() {
     super.initState();
     _startResendTimer();
-    final prefilled = _cleanOtp(widget.prefilledOtp);
-    if (prefilled.length == 6) {
-      _otp = prefilled;
-    }
   }
 
   @override
@@ -69,13 +62,6 @@ class _OTPPageState extends State<OTPPage> {
     _timer?.cancel();
     _verifyingProgressTimer?.cancel();
     super.dispose();
-  }
-
-  String _cleanOtp(String? value) => (value ?? '').trim().replaceAll(RegExp(r'[^0-9]'), '');
-
-  String? get _initialOtpValue {
-    final value = _cleanOtp(widget.prefilledOtp);
-    return value.length == 6 ? value : null;
   }
 
   String get _displayPhoneNumber {
@@ -148,22 +134,6 @@ class _OTPPageState extends State<OTPPage> {
     _startResendTimer();
   }
 
-  void _showOtpDialog(BuildContext hostContext, String otp) {
-    showDevOtpDialog(
-      context: hostContext,
-      otp: otp,
-      primaryActionLabel: 'Close',
-      onPrimary: () {},
-      secondaryActionLabel: 'Copy & Close',
-      onSecondary: (dialogContext) => copyOtpAndCloseDialog(
-        dialogContext: dialogContext,
-        hostContext: hostContext,
-        otp: otp,
-        onAfterCopy: () async {},
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -207,15 +177,11 @@ class _OTPPageState extends State<OTPPage> {
               (route) => false,
             );
           } else if (state is AuthOTPSent) {
-            if (state.otp != null && state.otp!.isNotEmpty) {
-              _showOtpDialog(context, state.otp!);
-            } else {
-              await showAppFeedbackAlert(
-                context,
-                message: 'OTP sent successfully',
-                type: AppFeedbackType.success,
-              );
-            }
+            await showAppFeedbackAlert(
+              context,
+              message: 'OTP sent successfully',
+              type: AppFeedbackType.success,
+            );
           } else if (state is AuthError) {
             setState(() => _isVerifyingOtp = false);
             _stopVerifyingProgress();
@@ -326,7 +292,6 @@ class _OTPPageState extends State<OTPPage> {
                             ),
                             SizedBox(height: verticalGapSm.clamp(10.0, 20.0)),
                             _OtpCard(
-                              initialOtpValue: _initialOtpValue,
                               countdownText: _resendCountdown > 0
                                   ? 'Code expires in ${_formatTime(_resendCountdown)}'
                                   : 'Code expired - Tap to resend',
@@ -461,7 +426,6 @@ class _VerifyOtpProgress extends StatelessWidget {
 
 class _OtpCard extends StatelessWidget {
   const _OtpCard({
-    required this.initialOtpValue,
     required this.countdownText,
     required this.canResend,
     required this.clockIconUrl,
@@ -470,7 +434,6 @@ class _OtpCard extends StatelessWidget {
     required this.onCompleted,
   });
 
-  final String? initialOtpValue;
   final String countdownText;
   final bool canResend;
   final String clockIconUrl;
@@ -524,7 +487,6 @@ class _OtpCard extends StatelessWidget {
                   Center(
                     child: MaterialPinField(
                       length: 6,
-                      initialValue: initialOtpValue,
                       onChanged: onChanged,
                       onCompleted: onCompleted,
                       theme: MaterialPinTheme(

@@ -104,14 +104,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         body: {'mobile': normalizedMobile},
       );
 
-      // Return response data which may include OTP in development mode
       final data = response['data'] as Map<String, dynamic>? ?? {};
-      
-      if (kDebugMode && data.containsKey('otp')) {
-        // ignore: avoid_print
-        print('DEBUG: OTP received from backend: ${data['otp']}');
-      }
-      
       return data;
     } catch (e) {
       if (e is NetworkException) {
