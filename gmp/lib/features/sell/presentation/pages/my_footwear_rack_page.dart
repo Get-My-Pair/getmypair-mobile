@@ -7,7 +7,7 @@ import 'package:gmp/features/sell/presentation/widgets/sell_shell.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Full list of submitted luxury or everyday sell requests, coloured by review.
+/// Full Luxury / Everyday sell rack — same shelf UI as My Rack.
 class MyFootwearRackPage extends StatefulWidget {
   final String footwearType;
 
@@ -63,6 +63,12 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
     );
   }
 
+  String _label(SellListing listing) {
+    if (listing.model.trim().isNotEmpty) return listing.model.trim();
+    if (listing.brand.trim().isNotEmpty) return listing.brand.trim();
+    return 'Shoe';
+  }
+
   void _onListingTap(SellListing listing) {
     if (listing.status == 'rejected') {
       _openRejectedSheet(listing);
@@ -81,7 +87,6 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
       );
       return;
     }
-    // In review — status only (no edit while pending).
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -140,13 +145,15 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => FootwearSelectionPage(
-                          footwearType: widget.footwearType,
-                        ),
-                      ),
-                    ).then((_) => _load());
+                    Navigator.of(context)
+                        .push(
+                          MaterialPageRoute(
+                            builder: (_) => FootwearSelectionPage(
+                              footwearType: widget.footwearType,
+                            ),
+                          ),
+                        )
+                        .then((_) => _load());
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: SellColors.teal,
@@ -184,7 +191,7 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
         SellPageHeader(title: title),
         const SizedBox(height: 10),
         _StatusLegend(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         if (_loading)
           const Padding(
             padding: EdgeInsets.only(top: 40),
@@ -198,65 +205,31 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
             style: GoogleFonts.montserrat(fontSize: 14, height: 1.4),
           )
         else
-          _grid(),
+          _shelves(),
       ],
     );
   }
 
-  Widget _grid() {
+  Widget _shelves() {
     final rows = <Widget>[];
     for (var i = 0; i < _listings.length; i += 3) {
       final slice = _listings.skip(i).take(3).toList();
       rows.add(
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        SellRackShelf(
           children: [
-            for (var c = 0; c < 3; c++)
-              Expanded(
-                child: c < slice.length ? _tile(slice[c]) : const SizedBox.shrink(),
+            for (final listing in slice)
+              SellRackShoeCell(
+                imageUrl: listing.imageUrl,
+                label: _label(listing),
+                status: listing.status,
+                onTap: () => _onListingTap(listing),
               ),
           ],
         ),
       );
-      rows.add(const Divider(color: SellColors.line, thickness: 1.4, height: 28));
+      rows.add(SizedBox(height: i + 3 < _listings.length ? 10 : 0));
     }
     return Column(children: rows);
-  }
-
-  Widget _tile(SellListing listing) {
-    final name = listing.model.trim().isNotEmpty ? listing.model : listing.brand;
-    final short = name.length <= 10 ? name : '${name.substring(0, 9)}...';
-    final color = sellStatusColor(listing.status);
-    return GestureDetector(
-      onTap: () => _onListingTap(listing),
-      child: Column(
-        children: [
-          SellShoeThumb(
-            imageUrl: listing.imageUrl,
-            status: listing.status,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            short,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.montserrat(
-              color: SellColors.teal,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Text(
-            sellStatusLabel(listing.status),
-            style: GoogleFonts.montserrat(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

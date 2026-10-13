@@ -216,9 +216,16 @@ class _RackPreview extends StatelessWidget {
     required this.onExpand,
   });
 
+  String _label(SellListing listing) {
+    if (listing.model.trim().isNotEmpty) return listing.model.trim();
+    if (listing.brand.trim().isNotEmpty) return listing.brand.trim();
+    return 'Shoe';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
@@ -234,59 +241,56 @@ class _RackPreview extends StatelessWidget {
             ),
             IconButton(
               onPressed: onExpand,
+              tooltip: 'Open rack',
               icon: const Icon(Icons.open_in_new_rounded, color: SellColors.ink, size: 18),
             ),
           ],
         ),
         const SizedBox(height: 6),
-        SizedBox(
-          height: 78,
-          child: loading
-              ? const Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: SellColors.teal),
-                  ),
-                )
-              : listings.isEmpty
-                  ? Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'No requests yet',
-                        style: GoogleFonts.montserrat(color: Colors.black45, fontSize: 13),
-                      ),
-                    )
-                  : Row(
-                      children: [
-                        for (final item in listings)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: _StatusShoe(listing: item, onTap: onExpand),
-                          ),
-                      ],
-                    ),
-        ),
-        const Divider(color: SellColors.line, thickness: 1.2),
+        if (loading)
+          const SizedBox(
+            height: 104,
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2, color: SellColors.teal),
+              ),
+            ),
+          )
+        else if (listings.isEmpty)
+          GestureDetector(
+            onTap: onExpand,
+            child: Container(
+              height: 104,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: SellRackShelf.shelfBg,
+                border: Border(
+                  bottom: BorderSide(color: SellRackShelf.shelfBorder, width: 3),
+                ),
+                borderRadius: SellRackShelf.shelfRadius,
+              ),
+              child: Text(
+                'No requests yet — tap ↗ to open your rack',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(color: Colors.black45, fontSize: 13),
+              ),
+            ),
+          )
+        else
+          SellRackShelf(
+            children: [
+              for (final item in listings)
+                SellRackShoeCell(
+                  imageUrl: item.imageUrl,
+                  label: _label(item),
+                  status: item.status,
+                  onTap: onExpand,
+                ),
+            ],
+          ),
       ],
-    );
-  }
-}
-
-class _StatusShoe extends StatelessWidget {
-  final SellListing listing;
-  final VoidCallback onTap;
-
-  const _StatusShoe({required this.listing, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SellShoeThumb(
-        imageUrl: listing.imageUrl,
-        status: listing.status,
-      ),
     );
   }
 }
