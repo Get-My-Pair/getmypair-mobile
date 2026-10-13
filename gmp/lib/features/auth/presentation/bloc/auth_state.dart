@@ -31,11 +31,13 @@ class AuthUnauthenticated extends AuthState {
 
 class AuthOTPSent extends AuthState {
   final String mobile;
+  /// Present in dummy / no-DLT mode when the API returns the code.
+  final String? otp;
 
-  const AuthOTPSent(this.mobile);
+  const AuthOTPSent(this.mobile, {this.otp});
 
   @override
-  List<Object?> get props => [mobile];
+  List<Object?> get props => [mobile, otp];
 }
 
 class AuthOTPVerified extends AuthState {

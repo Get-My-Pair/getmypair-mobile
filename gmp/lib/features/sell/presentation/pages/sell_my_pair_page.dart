@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/features/sell/data/sell_remote_datasource.dart';
 import 'package:gmp/features/sell/presentation/pages/footwear_selection_page.dart';
 import 'package:gmp/features/sell/presentation/pages/my_footwear_rack_page.dart';
@@ -117,7 +118,17 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
             ),
           ],
         ),
-        const SizedBox(height: 26),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 14,
+          runSpacing: 8,
+          children: [
+            _HubLegend(asset: SellColors.reviewIcon, label: 'In review'),
+            _HubLegend(asset: SellColors.approvedIcon, label: 'Approved'),
+            _HubLegend(asset: SellColors.rejectedIcon, label: 'Rejected'),
+          ],
+        ),
+        const SizedBox(height: 18),
         _RackPreview(
           title: 'My Luxury Rack',
           listings: _of('luxury'),
@@ -205,9 +216,16 @@ class _RackPreview extends StatelessWidget {
     required this.onExpand,
   });
 
+  String _label(SellListing listing) {
+    if (listing.model.trim().isNotEmpty) return listing.model.trim();
+    if (listing.brand.trim().isNotEmpty) return listing.brand.trim();
+    return 'Shoe';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
@@ -223,59 +241,78 @@ class _RackPreview extends StatelessWidget {
             ),
             IconButton(
               onPressed: onExpand,
+              tooltip: 'Open rack',
               icon: const Icon(Icons.open_in_new_rounded, color: SellColors.ink, size: 18),
             ),
           ],
         ),
         const SizedBox(height: 6),
-        SizedBox(
-          height: 78,
-          child: loading
-              ? const Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: SellColors.teal),
-                  ),
-                )
-              : listings.isEmpty
-                  ? Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'No requests yet',
-                        style: GoogleFonts.montserrat(color: Colors.black45, fontSize: 13),
-                      ),
-                    )
-                  : Row(
-                      children: [
-                        for (final item in listings)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: _StatusShoe(listing: item, onTap: onExpand),
-                          ),
-                      ],
-                    ),
-        ),
-        const Divider(color: SellColors.line, thickness: 1.2),
+        if (loading)
+          const SizedBox(
+            height: 104,
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2, color: SellColors.teal),
+              ),
+            ),
+          )
+        else if (listings.isEmpty)
+          GestureDetector(
+            onTap: onExpand,
+            child: Container(
+              height: 104,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: SellRackShelf.shelfBg,
+                border: Border(
+                  bottom: BorderSide(color: SellRackShelf.shelfBorder, width: 3),
+                ),
+                borderRadius: SellRackShelf.shelfRadius,
+              ),
+              child: Text(
+                'No requests yet — tap ↗ to open your rack',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(color: Colors.black45, fontSize: 13),
+              ),
+            ),
+          )
+        else
+          SellRackShelf(
+            children: [
+              for (final item in listings)
+                SellRackShoeCell(
+                  imageUrl: item.imageUrl,
+                  label: _label(item),
+                  status: item.status,
+                  onTap: onExpand,
+                ),
+            ],
+          ),
       ],
     );
   }
 }
 
-class _StatusShoe extends StatelessWidget {
-  final SellListing listing;
-  final VoidCallback onTap;
+class _HubLegend extends StatelessWidget {
+  final String asset;
+  final String label;
 
-  const _StatusShoe({required this.listing, required this.onTap});
+  const _HubLegend({required this.asset, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SellShoeThumb(
-        imageUrl: listing.imageUrl,
-        ringColor: sellStatusColor(listing.status),
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SvgPicture.asset(asset, width: 18, height: 18),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.montserrat(fontSize: 12, color: Colors.black54),
+        ),
+      ],
     );
   }
 }
