@@ -55,6 +55,7 @@ class AppRoutes {
             mobile: args?['mobile'] ?? '',
             countryCode: args?['countryCode'],
             phoneNumber: args?['phoneNumber'],
+            prefilledOtp: args?['prefilledOtp'],
           ),
         );
       case profileCompletion:

@@ -224,7 +224,8 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
           await showAppFeedbackAlert(
             context,
             title: 'Submitted',
-            message: 'Your footwear is in review. It shows in yellow on your rack until it is approved or rejected.',
+            message:
+                'Your footwear is in review. Check My Rack for the review icon until admin approves or rejects it.',
             type: AppFeedbackType.success,
           );
           if (!mounted) return;

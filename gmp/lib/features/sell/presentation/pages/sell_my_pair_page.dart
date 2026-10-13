@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/features/sell/data/sell_remote_datasource.dart';
 import 'package:gmp/features/sell/presentation/pages/footwear_selection_page.dart';
 import 'package:gmp/features/sell/presentation/pages/my_footwear_rack_page.dart';
@@ -117,7 +118,17 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
             ),
           ],
         ),
-        const SizedBox(height: 26),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 14,
+          runSpacing: 8,
+          children: [
+            _HubLegend(asset: SellColors.reviewIcon, label: 'In review'),
+            _HubLegend(asset: SellColors.approvedIcon, label: 'Approved'),
+            _HubLegend(asset: SellColors.rejectedIcon, label: 'Rejected'),
+          ],
+        ),
+        const SizedBox(height: 18),
         _RackPreview(
           title: 'My Luxury Rack',
           listings: _of('luxury'),
@@ -274,8 +285,30 @@ class _StatusShoe extends StatelessWidget {
       onTap: onTap,
       child: SellShoeThumb(
         imageUrl: listing.imageUrl,
-        ringColor: sellStatusColor(listing.status),
+        status: listing.status,
       ),
+    );
+  }
+}
+
+class _HubLegend extends StatelessWidget {
+  final String asset;
+  final String label;
+
+  const _HubLegend({required this.asset, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SvgPicture.asset(asset, width: 18, height: 18),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.montserrat(fontSize: 12, color: Colors.black54),
+        ),
+      ],
     );
   }
 }

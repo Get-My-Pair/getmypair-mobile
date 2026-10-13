@@ -104,7 +104,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         body: {'mobile': normalizedMobile},
       );
 
+      // May include OTP in dummy mode (USE_MSG91_SMS=false on the API).
       final data = response['data'] as Map<String, dynamic>? ?? {};
+
+      if (kDebugMode && data.containsKey('otp')) {
+        // ignore: avoid_print
+        print('DEBUG: OTP received from backend: ${data['otp']}');
+      }
+
       return data;
     } catch (e) {
       if (e is NetworkException) {

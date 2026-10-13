@@ -12,6 +12,7 @@ import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../widgets/otp_dev_dialog.dart';
 import 'otp_page.dart';
 import 'privacy_policy_page.dart';
 import 'terms_of_service_page.dart';
@@ -155,14 +156,31 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     context.read<AuthBloc>().add(AuthSendOTP(fullMobile));
   }
 
-  void _openOtpPage(String mobile) {
+  void _openOtpPage(String mobile, {String? otp}) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => OTPPage(
           mobile: mobile,
           countryCode: _selectedCountry.dialCode,
           phoneNumber: _phoneController.text,
+          prefilledOtp: otp,
         ),
+      ),
+    );
+  }
+
+  void _showOtpDialog(String otp, String mobile) {
+    showDevOtpDialog(
+      context: context,
+      otp: otp,
+      primaryActionLabel: 'Continue',
+      onPrimary: () => _openOtpPage(mobile, otp: otp),
+      secondaryActionLabel: 'Copy & Continue',
+      onSecondary: (dialogContext) => copyOtpAndCloseDialog(
+        dialogContext: dialogContext,
+        hostContext: context,
+        otp: otp,
+        onAfterCopy: () async => _openOtpPage(mobile, otp: otp),
       ),
     );
   }
@@ -237,7 +255,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             setState(() => _isSendingOtp = false);
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
-            if (ModalRoute.of(context)?.isCurrent ?? false) {
+            if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
+            if (state.otp != null && state.otp!.isNotEmpty) {
+              _showOtpDialog(state.otp!, state.mobile);
+            } else {
               _openOtpPage(state.mobile);
             }
           } else if (state is AuthError) {

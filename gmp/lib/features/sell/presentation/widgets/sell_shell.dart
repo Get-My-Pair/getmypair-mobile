@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,9 +10,9 @@ class SellColors {
   static const Color price = Color(0xFF12808C);
   static const Color panel = Color(0xFFF0F0F0);
   static const Color line = Color(0xFF8FD0DA);
-  static const Color pending = Color(0xFFF5C400);
-  static const Color approved = Color(0xFF1FA84A);
-  static const Color rejected = Color(0xFFE53935);
+  static const Color pending = Color(0xFFE99000);
+  static const Color approved = Color(0xFF0FB800);
+  static const Color rejected = Color(0xFFFF0000);
 
   static const BorderRadius panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -19,6 +20,10 @@ class SellColors {
     bottomLeft: Radius.circular(50),
     bottomRight: Radius.circular(50),
   );
+
+  static const String reviewIcon = 'assets/images/sellmypair/review.svg';
+  static const String approvedIcon = 'assets/images/sellmypair/done.svg';
+  static const String rejectedIcon = 'assets/images/sellmypair/reject.svg';
 }
 
 Color sellStatusColor(String status) {
@@ -40,6 +45,18 @@ String sellStatusLabel(String status) {
       return 'Rejected';
     default:
       return 'In review';
+  }
+}
+
+/// Status badge asset for the My Rack footwear thumb (top-right).
+String sellStatusIconAsset(String status) {
+  switch (status) {
+    case 'approved':
+      return SellColors.approvedIcon;
+    case 'rejected':
+      return SellColors.rejectedIcon;
+    default:
+      return SellColors.reviewIcon;
   }
 }
 
@@ -178,11 +195,23 @@ class SellPageHeader extends StatelessWidget {
 class SellShoeThumb extends StatelessWidget {
   final String? imageUrl;
   final Color? ringColor;
+  /// When set, draws the sellmypair status SVG in the top-right (My Rack style).
+  final String? status;
 
-  const SellShoeThumb({super.key, this.imageUrl, this.ringColor});
+  const SellShoeThumb({
+    super.key,
+    this.imageUrl,
+    this.ringColor,
+    this.status,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final size = (72.0 * (width / 390)).clamp(60.0, 84.0);
+    final badge = (22.0 * (width / 390)).clamp(18.0, 26.0);
+    final color = status != null ? sellStatusColor(status!) : ringColor;
+
     final image = imageUrl != null && imageUrl!.isNotEmpty
         ? Image.network(
             imageUrl!,
@@ -190,18 +219,38 @@ class SellShoeThumb extends StatelessWidget {
             errorBuilder: (_, _, _) => const _FallbackShoe(),
           )
         : const _FallbackShoe();
-    return Container(
-      width: 72,
-      height: 72,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: ringColor ?? Colors.transparent,
-          width: ringColor == null ? 0 : 3,
-        ),
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: color ?? Colors.transparent,
+                  width: color == null ? 0 : 2.5,
+                ),
+              ),
+              child: image,
+            ),
+          ),
+          if (status != null)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: SvgPicture.asset(
+                sellStatusIconAsset(status!),
+                width: badge,
+                height: badge,
+              ),
+            ),
+        ],
       ),
-      child: image,
     );
   }
 }
