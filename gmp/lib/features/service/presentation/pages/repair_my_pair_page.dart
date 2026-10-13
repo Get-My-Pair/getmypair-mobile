@@ -20,13 +20,15 @@ class RepairMyPairPage extends StatefulWidget {
   final String pageTitle;
   final List<String> allowedServiceTypes;
   final String description;
+  /// Teal tagline under the title (Rehome-style header).
+  final String tagline;
 
   const RepairMyPairPage({
     super.key,
     this.pageTitle = 'RepairMyPair',
     this.allowedServiceTypes = const ['repair'],
-    this.description =
-        'RepairMyPair is a service that restores any part of your footwear.\n\nSelect one or more pairs you\'d like to repair.',
+    this.tagline = 'Give Your Pair a Second Life!!',
+    this.description = '',
   });
 
   @override
@@ -292,7 +294,6 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     final navH = dashboardLinkedBottomNavStackHeight(context);
     final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
     final fs = (16 * layoutScale).clamp(12.0, 16.0);
-    final titleFs = (24 * layoutScale).clamp(17.0, 24.0);
     final pillH = (48 * layoutScale).clamp(40.0, 52.0);
     final rowGap = (10 * layoutScale).clamp(6.0, 14.0);
     final rowH = (112 * layoutScale).clamp(96.0, 128.0);
@@ -302,43 +303,27 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     return ListView(
       padding: EdgeInsets.fromLTRB(20, 16, 20, navH + 32),
       children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: () => Navigator.maybePop(context),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: _dark,
-                size: (24 * layoutScale).clamp(18.0, 24.0),
-              ),
-            ),
-            SizedBox(width: 6 * layoutScale),
-            Expanded(
-              child: Text(
-                widget.pageTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.boldonse(
-                  color: _dark,
-                  fontSize: titleFs,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-          ],
+        _PageHeader(
+          title: widget.pageTitle,
+          tagline: widget.tagline,
+          titleFontSize: 20,
+          taglineFontSize: 12,
+          iconSize: 20,
+          gap: 6,
+          onBack: () => Navigator.maybePop(context),
         ),
-        SizedBox(height: 10 * layoutScale),
-        Text(
-          widget.description,
-          style: GoogleFonts.montserrat(
-            color: Colors.black,
-            fontSize: fs,
-            fontWeight: FontWeight.w400,
+        if (widget.description.trim().isNotEmpty) ...[
+          SizedBox(height: 10 * layoutScale),
+          Text(
+            widget.description,
+            style: GoogleFonts.montserrat(
+              color: Colors.black,
+              fontSize: fs,
+              fontWeight: FontWeight.w400,
+            ),
           ),
-        ),
-        SizedBox(height: 14 * layoutScale),
+        ],
+        SizedBox(height: 24 * layoutScale),
         ...List.generate(rows, (row) {
           return Padding(
             padding: EdgeInsets.only(bottom: row == rows - 1 ? 0 : rowGap),
@@ -438,41 +423,25 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(10, 12, 12, 128),
       children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: () => Navigator.maybePop(context),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: _dark,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              widget.pageTitle,
-              style: GoogleFonts.boldonse(
-                color: _dark,
-                fontSize: 24,
+        _PageHeader(
+          title: widget.pageTitle,
+          tagline: widget.tagline,
+          onBack: () => Navigator.maybePop(context),
+        ),
+        if (widget.description.trim().isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: 363,
+            child: Text(
+              widget.description,
+              style: GoogleFonts.montserrat(
+                color: Colors.black,
+                fontSize: 16,
                 fontWeight: FontWeight.w400,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: 363,
-          child: Text(
-            widget.description,
-            style: GoogleFonts.montserrat(
-              color: Colors.black,
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
-            ),
           ),
-        ),
+        ],
         const SizedBox(height: 14),
         ...List.generate(rows, (row) {
           return Padding(
@@ -560,6 +529,82 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Matches Rehome header:
+/// ← Title
+///    Teal tagline
+class _PageHeader extends StatelessWidget {
+  final String title;
+  final String tagline;
+  final VoidCallback onBack;
+  final double titleFontSize;
+  final double taglineFontSize;
+  final double iconSize;
+  final double gap;
+
+  const _PageHeader({
+    required this.title,
+    required this.tagline,
+    required this.onBack,
+    this.titleFontSize = 24,
+    this.taglineFontSize = 14,
+    this.iconSize = 24,
+    this.gap = 6,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            IconButton(
+              onPressed: onBack,
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: _RepairMyPairPageState._dark,
+                size: iconSize,
+              ),
+            ),
+            SizedBox(width: gap),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.boldonse(
+                  color: _RepairMyPairPageState._dark,
+                  fontSize: titleFontSize,
+                  fontWeight: FontWeight.w400,
+                  height: 1.1,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (tagline.trim().isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: Text(
+              tagline,
+              style: GoogleFonts.boldonse(
+                color: const Color(0xFF0E7C8A),
+                fontSize: taglineFontSize,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

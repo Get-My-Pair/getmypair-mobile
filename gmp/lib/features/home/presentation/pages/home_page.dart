@@ -2398,10 +2398,18 @@ class _RackThumbSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final gap = (constraints.maxWidth * 0.04).clamp(8.0, 14.0);
+        final maxW = constraints.hasBoundedWidth
+            ? math.max(0.0, constraints.maxWidth)
+            : 0.0;
+        final maxH = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight)
+            : 0.0;
+        if (maxW <= 0 || maxH <= 0) return const SizedBox.shrink();
+
+        final gap = math.min((maxW * 0.04).clamp(4.0, 14.0).toDouble(), maxW / 4);
         final thumbW =
-            ((constraints.maxWidth - (gap * 2)) / 3).clamp(48.0, 120.0);
-        final thumbH = constraints.maxHeight.clamp(40.0, 96.0);
+            math.max(0.0, (maxW - (gap * 2)) / 3).clamp(0.0, 120.0).toDouble();
+        final thumbH = math.min(maxH, 96.0);
         return Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2450,15 +2458,31 @@ class _RackThumbStrip extends StatelessWidget {
       builder: (context, constraints) {
         final fitCount = articles.length <= 3 ? articles.length : 3;
         final visible = articles.take(fitCount).toList();
-        final safeGap = gap.clamp(4.0, 14.0);
-        final radius = BorderRadius.circular((12 * (gap / 10)).clamp(8.0, 12.0));
-        final cellW =
-            (constraints.maxWidth - safeGap * (visible.length - 1)) /
-            visible.length;
+        final maxW = constraints.hasBoundedWidth
+            ? math.max(0.0, constraints.maxWidth)
+            : 0.0;
+        final maxH = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight)
+            : 0.0;
+        if (maxW <= 0 || maxH <= 0 || visible.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final gapSlots = math.max(0, visible.length - 1);
+        final safeGap = gapSlots == 0
+            ? 0.0
+            : math.min(gap.clamp(4.0, 14.0).toDouble(), maxW / gapSlots);
+        final radius = BorderRadius.circular(
+          (12 * (gap / 10)).clamp(8.0, 12.0).toDouble(),
+        );
+        final cellW = gapSlots == 0
+            ? maxW
+            : math.max(0.0, (maxW - safeGap * gapSlots) / visible.length);
         // Keep thumbs shorter than the strip so they don’t fill the card edge-to-edge.
-        final cellH = math
-            .min(constraints.maxHeight * 0.82, cellW * 0.78)
-            .clamp(40.0, constraints.maxHeight);
+        // Floor at 40 only when the slot is at least that tall — clamp throws if
+        // the lower bound is above the available height (short Chrome windows).
+        final preferred = math.min(maxH * 0.82, cellW * 0.78);
+        final cellH = preferred.clamp(math.min(40.0, maxH), maxH).toDouble();
 
         return Align(
           alignment: Alignment.center,
