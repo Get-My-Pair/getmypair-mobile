@@ -102,16 +102,16 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
             Expanded(
               child: _ServiceCard(
                 label: 'Luxury',
-                icon: Icons.diamond_outlined,
+                iconAsset: 'assets/images/Vector (5).svg',
                 filled: true,
                 onTap: () => _openSelection('luxury'),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: _ServiceCard(
                 label: 'Everyday',
-                icon: Icons.sentiment_satisfied_alt_outlined,
+                iconAsset: 'assets/images/Group 144.svg',
                 filled: false,
                 onTap: () => _openSelection('everyday'),
               ),
@@ -147,15 +147,56 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
   }
 }
 
+/// Matches Rehome SellMyPair / RentMyPair tile proportions (~2.25× wide as tall).
+class _ServiceCardMetrics {
+  final double height;
+  final double padH;
+  final double padV;
+  final double iconSize;
+  final double iconLeftInset;
+  final double gap;
+  final double fontSize;
+
+  const _ServiceCardMetrics({
+    required this.height,
+    required this.padH,
+    required this.padV,
+    required this.iconSize,
+    required this.iconLeftInset,
+    required this.gap,
+    required this.fontSize,
+  });
+
+  static _ServiceCardMetrics fromWidth(double cardWidth) {
+    final height = (cardWidth / 2.25).clamp(68.0, 86.0);
+    final padH = (cardWidth * 0.06).clamp(8.0, 12.0);
+    final padV = (height * 0.12).clamp(8.0, 12.0);
+    final innerH = (height - padV * 2).clamp(18.0, height);
+    final iconSize = (innerH * 0.78).clamp(30.0, 42.0);
+    final iconLeftInset = (cardWidth * 0.04).clamp(6.0, 12.0);
+    final gap = (cardWidth * 0.05).clamp(8.0, 12.0);
+    final fontSize = (innerH * 0.28).clamp(12.0, 15.0);
+    return _ServiceCardMetrics(
+      height: height,
+      padH: padH,
+      padV: padV,
+      iconSize: iconSize,
+      iconLeftInset: iconLeftInset,
+      gap: gap,
+      fontSize: fontSize,
+    );
+  }
+}
+
 class _ServiceCard extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final String iconAsset;
   final bool filled;
   final VoidCallback onTap;
 
   const _ServiceCard({
     required this.label,
-    required this.icon,
+    required this.iconAsset,
     required this.filled,
     required this.onTap,
   });
@@ -163,42 +204,71 @@ class _ServiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = filled ? Colors.white : SellColors.ink;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          height: 92,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: filled
-                ? const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [Color(0xFF06343A), Color(0xFF14D7EA)],
-                  )
-                : null,
-            color: filled ? null : const Color(0xFFE7EEF0),
-            border: filled ? null : Border.all(color: SellColors.teal, width: 1.2),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.boldonse(
-                  color: color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final m = _ServiceCardMetrics.fromWidth(constraints.maxWidth);
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: Ink(
+              height: m.height,
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(
+                m.padH + m.iconLeftInset,
+                m.padV,
+                m.padH,
+                m.padV,
               ),
-            ],
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                gradient: filled
+                    ? const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [Color(0xFF06343A), Color(0xFF14D7EA)],
+                      )
+                    : null,
+                color: filled ? null : const Color(0xFFE7EEF0),
+                border: filled
+                    ? null
+                    : Border.all(color: SellColors.teal, width: 1.2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    iconAsset,
+                    width: m.iconSize,
+                    height: m.iconSize,
+                    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                  ),
+                  SizedBox(width: m.gap),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.boldonse(
+                        color: color,
+                        fontSize: m.fontSize,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -242,7 +312,15 @@ class _RackPreview extends StatelessWidget {
             IconButton(
               onPressed: onExpand,
               tooltip: 'Open rack',
-              icon: const Icon(Icons.open_in_new_rounded, color: SellColors.ink, size: 18),
+              icon: SvgPicture.asset(
+                'assets/images/maximize.svg',
+                width: 18,
+                height: 18,
+                colorFilter: const ColorFilter.mode(
+                  SellColors.ink,
+                  BlendMode.srcIn,
+                ),
+              ),
             ),
           ],
         ),
@@ -271,10 +349,34 @@ class _RackPreview extends StatelessWidget {
                 ),
                 borderRadius: SellRackShelf.shelfRadius,
               ),
-              child: Text(
-                'No requests yet — tap ↗ to open your rack',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.montserrat(color: Colors.black45, fontSize: 13),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'No requests yet — tap ',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.black45,
+                      fontSize: 13,
+                    ),
+                  ),
+                  SvgPicture.asset(
+                    'assets/images/maximize.svg',
+                    width: 14,
+                    height: 14,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.black45,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  Text(
+                    ' to open your rack',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.black45,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
             ),
           )

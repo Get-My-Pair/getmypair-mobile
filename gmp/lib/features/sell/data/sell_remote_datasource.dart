@@ -18,6 +18,8 @@ class SellListing {
   final String? rejectReason;
   final String brand;
   final String model;
+  final String category;
+  final String color;
   final String? imageUrl;
 
   const SellListing({
@@ -31,6 +33,8 @@ class SellListing {
     this.rejectReason,
     required this.brand,
     required this.model,
+    this.category = '',
+    this.color = '',
     this.imageUrl,
   });
 
@@ -57,6 +61,8 @@ class SellListing {
       rejectReason: json['rejectReason']?.toString(),
       brand: (articleMap['brand'] ?? '').toString(),
       model: (articleMap['model'] ?? '').toString(),
+      category: (articleMap['category'] ?? '').toString(),
+      color: (articleMap['color'] ?? '').toString(),
       imageUrl: imageUrl,
     );
   }

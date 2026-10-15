@@ -9,6 +9,7 @@ class MaintainMyPairPage extends StatelessWidget {
     return const RepairMyPairPage(
       pageTitle: 'MaintainMyPair',
       allowedServiceTypes: ['maintenance'],
+      tagline: '',
       description:
           'MaintainMyPair helps keep your footwear in top condition.\n\nSelect one or more pairs you\'d like to maintain.',
     );
