@@ -20,6 +20,9 @@ Module 2 handles all profile-related operations including viewing, editing, and 
 - Edit profile information
 - Upload profile image
 - Manage saved addresses (Add, Edit, Delete)
+- Family members + active profile switch (`X-Active-Profile-Id`)
+- Manage devices (`/api/auth/sessions`)
+- In-app notifications
 - Profile image cropping
 - Form validation
 

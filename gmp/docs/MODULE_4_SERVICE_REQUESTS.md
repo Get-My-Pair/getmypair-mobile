@@ -17,9 +17,11 @@
 
 Module 4 lets customers request **shoe care services** tied to a Module 3 **article** (digital passport): repair, maintenance, wash, donate, and dispose. Flows collect address, optional problem description, proof photos/videos, pickup mode, and estimated cost, then create a request on the backend.
 
-**Feature path:** `lib/features/service/`
+**Rehome hub** also opens **Sell My Pair** (Module 6) — selling is not a `serviceType`; it uses `/api/sell`.
 
-**Important:** There is no dedicated `ServiceBloc` or repository layer. Presentation pages call `DioClient` / `http` directly with `GetValidAccessToken`, plus `GetArticleById` and `ProfileBloc` / `GetUserProfile` for context.
+**Feature path:** `lib/features/service/` (care / donate / dispose) · sell under `lib/features/sell/`
+
+**Important:** There is no dedicated `ServiceBloc` or repository layer for care flows. Presentation pages call `DioClient` / `http` directly with `GetValidAccessToken`, plus `GetArticleById` and `ProfileBloc` / `GetUserProfile` for context.
 
 ---
 
@@ -32,6 +34,7 @@ Module 4 lets customers request **shoe care services** tied to a Module 3 **arti
 | `wash` | CareMyPair → WashMyPair | `WashMyPairPage` (`allowedServiceTypes: ['wash']`) |
 | `donate` | RehomeMyPair → Donate | `DonateMyPairPage` / `DonateMyPairFlow` |
 | `dispose` | Service selection (multi-option) | `ServiceSelectionPage` when dispose allowed |
+| *(not a serviceType)* | RehomeMyPair → **Sell My Pair** | Module 6 — `/api/sell` · [MODULE_6_SELL_MY_PAIR.md](MODULE_6_SELL_MY_PAIR.md) |
 
 **Estimates (client defaults in `ServiceSelectionPage`):**
 - Repair: ₹1000 (`kRepairEstimateRupees`)
@@ -122,7 +125,7 @@ All authenticated calls use `DioClient` or multipart helpers with bearer token a
 | Screen | File | Role |
 |--------|------|------|
 | **CareMyPairPage** | `care_my_pair_page.dart` | Hub: Repair / Maintain / Wash cards, DIY content, link to request list |
-| **RehomeMyPairPage** | `rehome_my_pair_page.dart` | Donate entry, educational content |
+| **RehomeMyPairPage** | `rehome_my_pair_page.dart` | Donate + **Sell My Pair** entry (rent coming soon) |
 | **RepairMyPairPage** | `repair_my_pair_page.dart` | Article grid → `ServiceSelectionPage` |
 | **MaintainMyPairPage** | `maintain_my_pair_page.dart` | Single-service wrapper |
 | **WashMyPairPage** | `wash_my_pair_page.dart` | Single-service wrapper |

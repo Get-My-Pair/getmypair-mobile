@@ -19,9 +19,11 @@ Module 1 handles the complete authentication flow for the GetMyPair mobile appli
 - Mobile OTP-based authentication (primary); email login stub only
 - `SplashScreen` with **local session** fast-path (refresh/access token in SharedPreferences)
 - Three-step **onboarding** (`OnboardingFlowPage`) before login
-- OTP verification with resend and dev-mode OTP hint
+- OTP verification with resend; **development OTP dialog** when API returns `data.otp`
+- Backend controls SMS vs dummy OTP via `USE_MSG91_SMS` (see API `ENV.md`)
 - **AI onboarding** (`AiOnboardingPage`) for new users after OTP, then profile completion
 - Access + refresh JWT storage; `GetValidAccessToken` for API calls
+- Manage devices: `GET/DELETE /api/auth/sessions`
 - Background `AuthCheckStatus` on launch without forcing logout on transient network errors
 
 ---
@@ -68,7 +70,9 @@ If the backend later rejects the refresh token, `AuthUnauthenticated` is emitted
 
 ### 1. POST /api/auth/send-otp
 
-**Purpose:** Send OTP to user's mobile number
+**Purpose:** Request OTP for the mobile number.
+
+**Headers:** `X-App-Source: USER_APP`, `X-App-Version`
 
 **Request Body:**
 ```json
@@ -77,14 +81,25 @@ If the backend later rejects the refresh token, `AuthUnauthenticated` is emitted
 }
 ```
 
-**Response:**
+**Response — SMS mode** (`USE_MSG91_SMS=true` on API):
 ```json
 {
   "success": true,
   "message": "OTP sent successfully",
-  "otp": "123456"  // Only in development mode
+  "data": { "expiresIn": 300 }
 }
 ```
+
+**Response — dummy mode** (`USE_MSG91_SMS=false`):
+```json
+{
+  "success": true,
+  "message": "OTP sent successfully",
+  "data": { "expiresIn": 300, "otp": "123456" }
+}
+```
+
+When `data.otp` is present, the app shows `otp_dev_dialog.dart` and can prefill `OTPPage`. When absent, the user enters the SMS code manually.
 
 **Error Response:**
 ```json
@@ -93,6 +108,8 @@ If the backend later rejects the refresh token, `AuthUnauthenticated` is emitted
   "message": "Rate limit exceeded. Please try again later."
 }
 ```
+
+Backend detail: `getmypair-api/server/docs/MODULE_1_DOCUMENTATION.md` · `ENV.md`.
 
 ---
 
@@ -232,14 +249,14 @@ context.read<AuthBloc>().add(AuthSendOTP(fullMobile));
 ```
 
 **Navigation:**
-- On success → Navigate to `OTPPage` with mobile number
-- In dev mode → Show OTP dialog, then navigate
+- On `AuthOTPSent` with `otp` → show `otp_dev_dialog`, then `OTPPage` (optional prefill)
+- On `AuthOTPSent` without `otp` → open `OTPPage` (user types SMS code)
 
 **Route:** `/mobile-otp`
 
 **State Management:**
 - Listens to `AuthBloc` for `AuthOTPSent` state
-- Shows error snackbar on `AuthError` state
+- Shows feedback alert on `AuthError` state
 
 ---
 

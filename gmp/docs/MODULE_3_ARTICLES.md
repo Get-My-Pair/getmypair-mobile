@@ -19,12 +19,15 @@ Module 3 is the **Digital Shoe Passport**: each registered shoe is an **article*
 **Key features:**
 - List all user articles (`GET /api/articles/my`)
 - Add shoe with brand, model, category, color, condition, materials, images
+- **`footwearType`:** `luxury` \| `everyday` (default everyday) — used by Sell My Pair racks
 - Upload images to Cloudinary via backend (`POST /api/articles/upload-image`)
 - View rack detail UI with stats and service shortcuts
 - Edit and delete existing articles
 - Filter chips and shelf-style list UI on `ArticleListPage`
+- Home **My Rack** preview uses the same shelf / thumb language
 
-**Feature path:** `lib/features/articles/`
+**Feature path:** `lib/features/articles/`  
+**Sell integration:** [MODULE_6_SELL_MY_PAIR.md](MODULE_6_SELL_MY_PAIR.md)
 
 ---
 
