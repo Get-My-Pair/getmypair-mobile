@@ -20,6 +20,10 @@ class RehomeMyPairPage extends StatefulWidget {
 }
 
 class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
+  /// Flip to `true` when real brand/rental media assets are ready.
+  /// Paths and UI below stay in place — only visibility is gated.
+  static const bool _showStaticMedia = false;
+
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
@@ -27,6 +31,7 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
     bottomRight: Radius.circular(50),
   );
 
+  // --- Static media paths / fallbacks (enable via _showStaticMedia) ---
   static const List<_RentalStyleData> _fallbackStyles = [
     _RentalStyleData(label: 'Statement Heels'),
     _RentalStyleData(label: 'Designer Boots'),
@@ -232,65 +237,69 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 32),
-                        Text(
-                          'In Demand Right Now',
-                          style: GoogleFonts.boldonse(
-                            color: const Color(0xFF062F35),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'Top Bidded Brands',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.black,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const SizedBox(
-                          height: 105,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.symmetric(horizontal: 14),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _DemandBrandImage(
-                                  asset: 'assets/images/rehome1 (2).png',
-                                  width: 184,
-                                  height: 103,
-                                ),
-                                SizedBox(width: 14),
-                                _DemandBrandImage(
-                                  asset: 'assets/images/rehome1 (1).png',
-                                  width: 129,
-                                  height: 105,
-                                ),
-                                SizedBox(width: 14),
-                                _DemandBrandImage(
-                                  asset: 'assets/images/rehome1 (3).png',
-                                  width: 187,
-                                  height: 105,
-                                ),
-                              ],
+                        // Brand / rental media rows hidden until assets are ready.
+                        if (_showStaticMedia) ...[
+                          const SizedBox(height: 32),
+                          Text(
+                            'In Demand Right Now',
+                            style: GoogleFonts.boldonse(
+                              color: const Color(0xFF062F35),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 22),
-                        Text(
-                          'Most Requested Rental Styles',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.black,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(height: 14),
+                          Text(
+                            'Top Bidded Brands',
+                            style: GoogleFonts.montserrat(
+                              color: Colors.black,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildRentalStylesRow(),
+                          const SizedBox(height: 12),
+                          const SizedBox(
+                            height: 105,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              padding: EdgeInsets.symmetric(horizontal: 14),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Static image paths — restore with _showStaticMedia.
+                                  _DemandBrandImage(
+                                    asset: 'assets/images/rehome1 (2).png',
+                                    width: 184,
+                                    height: 103,
+                                  ),
+                                  SizedBox(width: 14),
+                                  _DemandBrandImage(
+                                    asset: 'assets/images/rehome1 (1).png',
+                                    width: 129,
+                                    height: 105,
+                                  ),
+                                  SizedBox(width: 14),
+                                  _DemandBrandImage(
+                                    asset: 'assets/images/rehome1 (3).png',
+                                    width: 187,
+                                    height: 105,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          Text(
+                            'Most Requested Rental Styles',
+                            style: GoogleFonts.montserrat(
+                              color: Colors.black,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildRentalStylesRow(),
+                        ],
                       ],
                     ),
                   ),

@@ -16,6 +16,10 @@ import 'package:gmp/features/service/presentation/pages/wash_my_pair_page.dart';
 class CareMyPairPage extends StatelessWidget {
   const CareMyPairPage({super.key});
 
+  /// Flip to `true` when real video/article assets are ready.
+  /// Paths and UI below stay in place — only visibility is gated.
+  static const bool _showStaticMedia = false;
+
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
@@ -23,6 +27,7 @@ class CareMyPairPage extends StatelessWidget {
     bottomRight: Radius.circular(50),
   );
 
+  // --- Static media paths (placeholder assets; enable via _showStaticMedia) ---
   static const List<_VideoCardData> _repairVideos = [
     _VideoCardData(
       title: 'Fix Scuffs Fast: At-Home Sole & Upper Repair',
@@ -182,27 +187,30 @@ class CareMyPairPage extends StatelessWidget {
                         ),
                       ),
                       const _MyServiceRequestsSection(),
-                      const SizedBox(height: 32),
-                      ..._buildVideoSections(context),
-                      const SizedBox(height: 24),
-                      Text('Articles', style: _subsectionLabel(context)),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 172,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _articles.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(width: 13),
-                          itemBuilder: (_, i) => _ArticleCard(
-                            data: _articles[i],
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'Care articles',
+                      // Videos + articles hidden until real media is ready.
+                      if (_showStaticMedia) ...[
+                        const SizedBox(height: 32),
+                        ..._buildVideoSections(context),
+                        const SizedBox(height: 24),
+                        Text('Articles', style: _subsectionLabel(context)),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          height: 172,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _articles.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 13),
+                            itemBuilder: (_, i) => _ArticleCard(
+                              data: _articles[i],
+                              onTap: () => showComingSoon(
+                                context,
+                                feature: 'Care articles',
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

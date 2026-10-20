@@ -12,6 +12,10 @@ import 'donate_my_pair_page.dart';
 class SaveMyPairPage extends StatelessWidget {
   const SaveMyPairPage({super.key});
 
+  /// Flip to `true` when real video assets are ready.
+  /// Paths and UI below stay in place — only visibility is gated.
+  static const bool _showStaticMedia = false;
+
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
@@ -19,6 +23,7 @@ class SaveMyPairPage extends StatelessWidget {
     bottomRight: Radius.circular(50),
   );
 
+  // --- Static media paths (placeholder assets; enable via _showStaticMedia) ---
   static const List<_VideoCardData> _saveVideos = [
     _VideoCardData(
       title: 'Give a Pair a Second Life',
@@ -123,30 +128,33 @@ class SaveMyPairPage extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 32),
-                        Text(
-                          'Pass It On',
-                          style: _sectionTitle(context),
-                        ),
-                        const SizedBox(height: 14),
-                        Text('Videos', style: _subsectionLabel(context)),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          height: 113,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _saveVideos.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 14),
-                            itemBuilder: (_, index) => _VideoCard(
-                              data: _saveVideos[index],
-                              onTap: () => showComingSoon(
-                                context,
-                                feature: 'Save DIY videos',
+                        // Videos hidden until real media is ready.
+                        if (_showStaticMedia) ...[
+                          const SizedBox(height: 32),
+                          Text(
+                            'Pass It On',
+                            style: _sectionTitle(context),
+                          ),
+                          const SizedBox(height: 14),
+                          Text('Videos', style: _subsectionLabel(context)),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 113,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _saveVideos.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 14),
+                              itemBuilder: (_, index) => _VideoCard(
+                                data: _saveVideos[index],
+                                onTap: () => showComingSoon(
+                                  context,
+                                  feature: 'Save DIY videos',
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
