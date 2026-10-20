@@ -21,6 +21,7 @@ import 'package:gmp/injection_container.dart';
 
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
 import 'article_edit_page.dart';
+import 'shoe_care_history_page.dart';
 
 /// Module 3 – Article details. Figma rack-detail layout: gradient shell, panel, stats, actions.
 class ArticleDetailsPage extends StatefulWidget {
@@ -886,9 +887,13 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => showComingSoon(
-                      context,
-                      feature: 'Shoe care history',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ShoeCareHistoryPage(
+                          articleId: article.id,
+                          article: article,
+                        ),
+                      ),
                     ),
                     borderRadius: BorderRadius.circular(10),
                     splashColor: Colors.transparent,

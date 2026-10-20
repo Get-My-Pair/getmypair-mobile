@@ -38,6 +38,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _showAllAddresses = false;
+  String _searchQuery = '';
 
   /// Real phone GPS + app permission status (not a dummy toggle).
   bool _deviceLocationOn = false;
@@ -47,15 +48,46 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _searchController.addListener(_onSearchChanged);
     _refreshDeviceLocationStatus();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final next = _searchController.text.trim();
+    if (next == _searchQuery) return;
+    setState(() {
+      _searchQuery = next;
+      // Searching shows all matches; reset collapse when query clears.
+      if (_searchQuery.isNotEmpty) {
+        _showAllAddresses = true;
+      }
+    });
+  }
+
+  List<Address> _filterAddresses(List<Address> addresses) {
+    final query = _searchQuery.toLowerCase();
+    if (query.isEmpty) return addresses;
+
+    return addresses.where((address) {
+      final label = address == addresses.first ? 'home' : 'other';
+      final haystack = [
+        label,
+        address.addressLine1,
+        address.city,
+        address.state,
+        address.pincode,
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    }).toList(growable: false);
   }
 
   @override
@@ -191,9 +223,11 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
         final isLoading = state is AddressActionLoading;
 
         final allAddresses = currentProfile.addresses;
-        final visibleAddresses = _showAllAddresses
-            ? allAddresses
-            : allAddresses.take(2).toList(growable: false);
+        final filteredAddresses = _filterAddresses(allAddresses);
+        final isSearching = _searchQuery.isNotEmpty;
+        final visibleAddresses = (isSearching || _showAllAddresses)
+            ? filteredAddresses
+            : filteredAddresses.take(2).toList(growable: false);
 
         final locationLabel = _checkingDeviceLocation
             ? 'Checking…'
@@ -303,6 +337,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
                             const SizedBox(height: 12),
                             if (allAddresses.isEmpty)
                               _buildEmptyState()
+                            else if (filteredAddresses.isEmpty)
+                              _buildNoSearchResults()
                             else ...[
                               ...visibleAddresses.map(
                                 (address) => _AddressRow(
@@ -317,7 +353,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
                                   isHome: address == allAddresses.first,
                                 ),
                               ),
-                              if (allAddresses.length > 2)
+                              if (!isSearching && filteredAddresses.length > 2)
                                 Center(
                                   child: InkWell(
                                     onTap: () => setState(
@@ -394,7 +430,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
           Expanded(
             child: TextField(
               controller: _searchController,
-              readOnly: true,
+              textInputAction: TextInputAction.search,
               style: GoogleFonts.montserrat(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -420,6 +456,17 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
               ),
             ),
           ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+              },
+              child: const Icon(
+                Icons.close_rounded,
+                size: 20,
+                color: Color(0x99000000),
+              ),
+            ),
         ],
       ),
     );
@@ -436,6 +483,26 @@ class _SavedAddressesPageState extends State<SavedAddressesPage>
       ),
       child: Text(
         'No saved addresses yet. Tap Add New Address to continue.',
+        style: GoogleFonts.montserrat(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoSearchResults() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        'No addresses match "$_searchQuery".',
         style: GoogleFonts.montserrat(
           fontSize: 14,
           fontWeight: FontWeight.w400,

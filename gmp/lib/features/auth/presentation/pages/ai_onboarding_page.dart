@@ -169,7 +169,8 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
   int _index = 0;
   DateTime? _birthDate;
   String? _gender;
-  final Set<String> _rack = <String>{};
+  /// Default: solo rack ("Just Me") so the step is ready without a tap.
+  final Set<String> _rack = <String>{'Just Me'};
   final Set<String> _troubles = <String>{};
   bool _ttsReady = false;
   String? _ttsError;
