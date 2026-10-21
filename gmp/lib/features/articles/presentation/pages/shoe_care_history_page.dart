@@ -6,12 +6,14 @@ import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/service/presentation/pages/care_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/pages/service_request_details_page.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-/// Care history for one article — repair / maintenance / wash requests.
+/// Care history for **one shoe** — repair / maintenance / wash only.
+/// Opened from Article details → “Last sent to shoe care”.
 class ShoeCareHistoryPage extends StatefulWidget {
   final String articleId;
   final Article? article;
@@ -31,6 +33,7 @@ class ShoeCareHistoryPage extends StatefulWidget {
     bottomRight: Radius.circular(50),
   );
 
+  /// Donate / dispose are rehome — not shown on care history.
   static const Set<String> _careTypes = {
     'repair',
     'maintenance',
@@ -77,7 +80,7 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
           final list =
               ((res['data'] as Map<String, dynamic>?)?['requests'] as List?) ??
                   const [];
-          final targetId = widget.articleId.trim();
+          final targetId = widget.articleId.trim().toLowerCase();
           final filtered = list
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
@@ -87,9 +90,20 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
                 if (!ShoeCareHistoryPage._careTypes.contains(type)) {
                   return false;
                 }
-                return _articleIdOf(r) == targetId;
+                return _articleIdOf(r).toLowerCase() == targetId;
               })
-              .toList();
+              .toList()
+            ..sort((a, b) {
+              final da = DateTime.tryParse(
+                    (a['createdAt'] ?? '').toString(),
+                  ) ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+              final db = DateTime.tryParse(
+                    (b['createdAt'] ?? '').toString(),
+                  ) ??
+                  DateTime.fromMillisecondsSinceEpoch(0);
+              return db.compareTo(da);
+            });
 
           if (!mounted) return;
           setState(() {
@@ -107,12 +121,13 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
     );
   }
 
+  /// Resolves article id whether API returns a string or populated object.
   static String _articleIdOf(Map<String, dynamic> r) {
-    final raw = r['articleId'];
+    final raw = r['articleId'] ?? r['article'];
     if (raw is Map) {
-      return (raw['_id'] ?? raw['id'] ?? '').toString();
+      return (raw['_id'] ?? raw['id'] ?? '').toString().trim();
     }
-    return (raw ?? '').toString();
+    return (raw ?? '').toString().trim();
   }
 
   static String _serviceLabel(String raw) {
@@ -145,16 +160,32 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
     return DateFormat('h:mm a').format(dt.toLocal());
   }
 
+  static String? _costLabel(Map<String, dynamic> r) {
+    final actual = r['actualCost'];
+    final estimated = r['estimatedCost'];
+    num? n;
+    if (actual is num) {
+      n = actual;
+    } else if (estimated is num) {
+      n = estimated;
+    } else {
+      n = num.tryParse((actual ?? estimated ?? '').toString());
+    }
+    if (n == null) return null;
+    final whole = n == n.roundToDouble();
+    return whole ? '₹${n.toInt()}' : '₹${n.toStringAsFixed(0)}';
+  }
+
   String get _subtitle {
     final a = widget.article;
-    if (a == null) return 'Past care visits for this pair';
+    if (a == null) return 'Care services for this pair only';
     final brand = a.brand.trim();
     final model = a.model.trim();
     if (brand.isEmpty && model.isEmpty) {
-      return 'Past care visits for this pair';
+      return 'Care services for this pair only';
     }
-    if (model.isEmpty) return brand;
-    if (brand.isEmpty) return model;
+    if (model.isEmpty) return '$brand · care history';
+    if (brand.isEmpty) return '$model · care history';
     return '$brand · $model';
   }
 
@@ -325,12 +356,36 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'When this pair is sent for repair, wash, or maintenance, visits will show up here.',
+                'Repair, wash, and maintenance for this shoe will appear here.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.montserrat(
                   color: const Color(0xFF5C5C5C),
                   fontSize: 14,
                   height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CareMyPairPage(),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: ShoeCareHistoryPage._teal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 12,
+                  ),
+                ),
+                child: Text(
+                  'Book shoe care',
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -343,11 +398,27 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
       color: ShoeCareHistoryPage._teal,
       onRefresh: _load,
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
-        itemCount: _entries.length,
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 120),
+        itemCount: _entries.length + 1,
         itemBuilder: (context, index) {
-          final r = _entries[index];
-          final isLast = index == _entries.length - 1;
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                '${_entries.length} care '
+                '${_entries.length == 1 ? 'visit' : 'visits'}',
+                style: GoogleFonts.montserrat(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black.withValues(alpha: 0.45),
+                ),
+              ),
+            );
+          }
+          final r = _entries[index - 1];
+          final isLast = index == _entries.length;
+          final problem =
+              (r['problemDescription'] ?? '').toString().trim();
           return _CareTimelineTile(
             request: r,
             isLast: isLast,
@@ -356,8 +427,15 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
             ),
             dateLabel: _formatDate((r['createdAt'] ?? '').toString()),
             timeLabel: _formatTime((r['createdAt'] ?? '').toString()),
+            costLabel: _costLabel(r),
+            problemSnippet:
+                problem.isEmpty
+                    ? null
+                    : (problem.length > 80
+                        ? '${problem.substring(0, 80)}…'
+                        : problem),
             onTap: () async {
-              final id = (r['_id'] ?? '').toString();
+              final id = (r['_id'] ?? r['id'] ?? '').toString();
               if (id.isEmpty) return;
               await Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
@@ -379,6 +457,8 @@ class _CareTimelineTile extends StatelessWidget {
   final String serviceLabel;
   final String? dateLabel;
   final String? timeLabel;
+  final String? costLabel;
+  final String? problemSnippet;
   final VoidCallback onTap;
 
   const _CareTimelineTile({
@@ -387,6 +467,8 @@ class _CareTimelineTile extends StatelessWidget {
     required this.serviceLabel,
     required this.dateLabel,
     required this.timeLabel,
+    required this.costLabel,
+    required this.problemSnippet,
     required this.onTap,
   });
 
@@ -485,6 +567,31 @@ class _CareTimelineTile extends StatelessWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: Colors.black.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ],
+                        if (costLabel != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            costLabel!,
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF062F35),
+                            ),
+                          ),
+                        ],
+                        if (problemSnippet != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            problemSnippet!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black.withValues(alpha: 0.55),
+                              height: 1.35,
                             ),
                           ),
                         ],

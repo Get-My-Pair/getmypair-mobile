@@ -932,7 +932,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Last sent to\nshoe care',
+                              'Shoe care\nhistory',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.montserrat(
