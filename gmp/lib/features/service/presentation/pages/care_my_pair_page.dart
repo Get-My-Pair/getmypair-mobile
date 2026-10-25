@@ -18,7 +18,7 @@ class CareMyPairPage extends StatelessWidget {
 
   /// Flip to `true` when real video/article assets are ready.
   /// Paths and UI below stay in place — only visibility is gated.
-  static const bool _showStaticMedia = false;
+  static const bool _showStaticMedia = true;
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),

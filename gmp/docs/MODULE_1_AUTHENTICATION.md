@@ -99,7 +99,7 @@ If the backend later rejects the refresh token, `AuthUnauthenticated` is emitted
 }
 ```
 
-When `data.otp` is present, the app shows `otp_dev_dialog.dart` and can prefill `OTPPage`. When absent, the user enters the SMS code manually.
+When `data.otp` is present **and** the app is a debug build, the app shows `otp_dev_dialog.dart` and can prefill `OTPPage`. Release builds never show that dialog. When OTP is absent (production MSG91), the user enters the SMS code manually.
 
 **Error Response:**
 ```json

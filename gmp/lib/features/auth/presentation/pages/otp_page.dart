@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -207,7 +208,11 @@ class _OTPPageState extends State<OTPPage> {
               (route) => false,
             );
           } else if (state is AuthOTPSent) {
-            if (state.otp != null && state.otp!.isNotEmpty) {
+            // Dev/dummy API may return OTP; production SMS mode never does.
+            // Never show the OTP popup in release builds.
+            if (kDebugMode &&
+                state.otp != null &&
+                state.otp!.isNotEmpty) {
               _showOtpDialog(context, state.otp!);
             } else {
               await showAppFeedbackAlert(
