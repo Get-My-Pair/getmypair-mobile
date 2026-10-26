@@ -4,7 +4,9 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
+import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/features/sell/presentation/widgets/sell_shell.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -27,8 +29,9 @@ class RepairMyPairPage extends StatefulWidget {
     super.key,
     this.pageTitle = 'RepairMyPair',
     this.allowedServiceTypes = const ['repair'],
-    this.tagline = 'Give Your Pair a Second Life!!',
-    this.description = '',
+    this.tagline = '',
+    this.description =
+        'RepairMyPair is a service that restores any part of your footwear. Please select the footwear you\'d like to repair.',
   });
 
   @override
@@ -41,6 +44,12 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     topRight: Radius.circular(20),
     bottomLeft: Radius.circular(50),
     bottomRight: Radius.circular(50),
+  );
+
+  /// Content card sits above the full-bleed white Next dock (square bottom).
+  static const BorderRadius _panelRadiusAboveDock = BorderRadius.only(
+    topLeft: Radius.circular(20),
+    topRight: Radius.circular(20),
   );
   static const Color _teal = Color(0xFF11999E);
   static const Color _dark = Color(0xFF062F35);
@@ -191,6 +200,18 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
     const topInset = 52.0;
 
+    final hideBottomNav = !_isDonateOnlyPicker;
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final uiScaleBody = (width / 390).clamp(0.84, 1.12).toDouble();
+    final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScaleBody);
+    final pillH = (48 * layoutScale).clamp(40.0, 52.0);
+    final fs = (16 * layoutScale).clamp(12.0, 16.0);
+    final canNext = _selectedArticleIds.isNotEmpty && !_submitting;
+    // White dock height (padding + button + safe area) for content clearance.
+    final dockH = hideBottomNav ? (14 + pillH + 14 + bottomSafe) : 0.0;
+    final panelRadius =
+        hideBottomNav ? _panelRadiusAboveDock : _panelRadius;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -207,13 +228,13 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                   horizontalInset,
                   topInset,
                   horizontalInset,
-                  0,
+                  hideBottomNav ? dockH - 12 : 0,
                 ),
                 child: DecoratedBox(
-                  decoration: const ShapeDecoration(
-                    color: Color(0xFFF0F0F0),
-                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
-                    shadows: [
+                  decoration: ShapeDecoration(
+                    color: const Color(0xFFF0F0F0),
+                    shape: RoundedRectangleBorder(borderRadius: panelRadius),
+                    shadows: const [
                       BoxShadow(
                         color: Color(0x19000000),
                         blurRadius: 10,
@@ -222,7 +243,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: _panelRadius,
+                    borderRadius: panelRadius,
                     child: _isDonateOnlyPicker
                         ? _buildBody(context)
                         : LayoutBuilder(
@@ -234,13 +255,115 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
               ),
             ),
           ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
-          ),
+          if (hideBottomNav)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildFullBleedNextDock(
+                canNext: canNext,
+                pillH: pillH,
+                fontSize: fs,
+                bottomSafe: bottomSafe,
+              ),
+            ),
+          if (!hideBottomNav)
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFullBleedNextDock({
+    required bool canNext,
+    required double pillH,
+    required double fontSize,
+    required double bottomSafe,
+  }) {
+    const pillW = 168.0;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomSafe),
+      child: Center(
+        child: SizedBox(
+          width: pillW,
+          height: pillH,
+          child: canNext
+              ? DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Color(0xFF063239),
+                        Color(0xFF0CADC5),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(100),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 4,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: TextButton(
+                    onPressed: _goNext,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Next',
+                            style: GoogleFonts.boldonse(
+                              color: Colors.white,
+                              fontSize: fontSize,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                  ),
+                )
+              : DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFBDBDBD),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Next',
+                      style: GoogleFonts.boldonse(
+                        color: const Color(0xFF4A4A4A),
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -291,17 +414,14 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
 
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-    final navH = dashboardLinkedBottomNavStackHeight(context);
     final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
     final fs = (16 * layoutScale).clamp(12.0, 16.0);
-    final pillH = (48 * layoutScale).clamp(40.0, 52.0);
     final rowGap = (10 * layoutScale).clamp(6.0, 14.0);
     final rowH = (112 * layoutScale).clamp(96.0, 128.0);
-    final sidePad = (8 * layoutScale).clamp(6.0, 10.0);
 
     final rows = (_articles.length + 2) ~/ 3;
     return ListView(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, navH + 32),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       children: [
         _PageHeader(
           title: widget.pageTitle,
@@ -320,100 +440,34 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
               color: Colors.black,
               fontSize: fs,
               fontWeight: FontWeight.w400,
+              height: 1.35,
             ),
           ),
         ],
         SizedBox(height: 24 * layoutScale),
+        // Same My Rack shelf chrome as home / sell rack selection.
         ...List.generate(rows, (row) {
           return Padding(
             padding: EdgeInsets.only(bottom: row == rows - 1 ? 0 : rowGap),
-            child: _ShoeRow(
-              rowHeight: rowH,
-              horizontalPadding: sidePad,
-              verticalPadding: sidePad,
+            child: SellRackShelf(
+              height: rowH,
               children: List.generate(3, (col) {
                 final index = row * 3 + col;
                 if (index >= _articles.length) {
-                  return const Expanded(child: SizedBox.shrink());
+                  return const SizedBox.shrink();
                 }
                 final article = _articles[index];
-                return Expanded(
-                  child: _ShoeOption(
-                    layoutScale: layoutScale,
-                    label: _displayName(article),
-                    imageUrl: _imageUrl(article.rackHeroImagePath),
-                    selected: _selectedArticleIds.contains(article.id),
-                    onTap: () => _toggleArticleSelection(article.id),
-                  ),
+                return _ShoeOption(
+                  layoutScale: layoutScale,
+                  label: _displayName(article),
+                  imageUrl: _imageUrl(article.rackHeroImagePath),
+                  selected: _selectedArticleIds.contains(article.id),
+                  onTap: () => _toggleArticleSelection(article.id),
                 );
               }),
             ),
           );
         }),
-        SizedBox(height: 18 * layoutScale),
-        Center(
-            child: SizedBox(
-              width: (164 * layoutScale).clamp(132.0, 180.0),
-              height: pillH,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.centerRight,
-                    end: Alignment.centerLeft,
-                    colors: [
-                      Color(0xFF0CADC5),
-                      Color(0xFF063239),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(100),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextButton(
-                  onPressed: _submitting ? null : _goNext,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Next',
-                              style: GoogleFonts.boldonse(
-                                color: Colors.white,
-                                fontSize: fs,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            SizedBox(width: 20 * layoutScale),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: Colors.white,
-                              size: (16 * layoutScale).clamp(13.0, 16.0),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -446,20 +500,18 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
         ...List.generate(rows, (row) {
           return Padding(
             padding: EdgeInsets.only(bottom: row == rows - 1 ? 0 : 10),
-            child: _ShoeRow(
+            child: SellRackShelf(
               children: List.generate(3, (col) {
                 final index = row * 3 + col;
                 if (index >= _articles.length) {
-                  return const Expanded(child: SizedBox.shrink());
+                  return const SizedBox.shrink();
                 }
                 final article = _articles[index];
-                return Expanded(
-                  child: _ShoeOption(
-                    label: _displayName(article),
-                    imageUrl: _imageUrl(article.rackHeroImagePath),
-                    selected: _selectedArticleIds.contains(article.id),
-                    onTap: () => _toggleArticleSelection(article.id),
-                  ),
+                return _ShoeOption(
+                  label: _displayName(article),
+                  imageUrl: _imageUrl(article.rackHeroImagePath),
+                  selected: _selectedArticleIds.contains(article.id),
+                  onTap: () => _toggleArticleSelection(article.id),
                 );
               }),
             ),
@@ -610,42 +662,6 @@ class _PageHeader extends StatelessWidget {
   }
 }
 
-class _ShoeRow extends StatelessWidget {
-  final List<Widget> children;
-  final double rowHeight;
-  final double horizontalPadding;
-  final double verticalPadding;
-
-  const _ShoeRow({
-    required this.children,
-    this.rowHeight = 112,
-    this.horizontalPadding = 8,
-    this.verticalPadding = 8,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: rowHeight,
-      padding: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: verticalPadding,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F0F0),
-        borderRadius: BorderRadius.circular(10),
-        border: const Border(
-          bottom: BorderSide(color: _RepairMyPairPageState._teal, width: 2),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      ),
-    );
-  }
-}
-
 class _ShoeOption extends StatelessWidget {
   final String label;
   final String imageUrl;
@@ -663,19 +679,20 @@ class _ShoeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radio = (22 * layoutScale).clamp(18.0, 24.0);
-    final checkSz = (14 * layoutScale).clamp(12.0, 16.0);
-    final shoeIcon = (42 * layoutScale).clamp(32.0, 48.0);
-    final labelFs = (16 * layoutScale).clamp(13.0, 16.0);
-    final borderW = (2 * layoutScale).clamp(1.5, 2.0);
+    final radio = (20 * layoutScale).clamp(16.0, 22.0);
+    final checkSz = (12 * layoutScale).clamp(10.0, 14.0);
+    final shoeIcon = (36 * layoutScale).clamp(28.0, 42.0);
+    final labelFs = (12.5 * layoutScale).clamp(11.0, 14.0);
+    final borderW = (1.8 * layoutScale).clamp(1.4, 2.0);
+    final short = label.length <= 10 ? label : '${label.substring(0, 9)}...';
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 2 * layoutScale),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
         child: Column(
           children: [
-            SizedBox(height: 2 * layoutScale),
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
@@ -702,27 +719,34 @@ class _ShoeOption extends StatelessWidget {
                     : null,
               ),
             ),
-            SizedBox(height: 4 * layoutScale),
             Expanded(
-              child: imageUrl.isEmpty
-                  ? Icon(
-                      Icons.checkroom_outlined,
-                      color: const Color(0xFF8D8D8D),
-                      size: shoeIcon,
-                    )
-                  : Image.network(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => Icon(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
+                child: imageUrl.isEmpty
+                    ? Icon(
                         Icons.checkroom_outlined,
                         color: const Color(0xFF8D8D8D),
                         size: shoeIcon,
+                      )
+                    : ArticleRackShoeImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.contain,
+                        placeholder: Icon(
+                          Icons.checkroom_outlined,
+                          color: const Color(0xFF8D8D8D),
+                          size: shoeIcon,
+                        ),
+                        errorPlaceholder: Icon(
+                          Icons.checkroom_outlined,
+                          color: const Color(0xFF8D8D8D),
+                          size: shoeIcon,
+                        ),
                       ),
-                    ),
+              ),
             ),
             SizedBox(height: 2 * layoutScale),
             Text(
-              label,
+              short,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.boldonse(

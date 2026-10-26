@@ -6,7 +6,6 @@ import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
-import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
@@ -70,7 +69,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       widget.service.value == 'donate' ||
       widget.service.value == 'dispose';
 
-  String get _flowPageTitle {
+  String get _serviceDisplayTitle {
     switch (widget.service.value) {
       case 'maintenance':
         return 'MaintainMyPair';
@@ -85,35 +84,27 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     }
   }
 
-  String get _serviceDisplayTitle {
-    switch (widget.service.value) {
-      case 'maintenance':
-        return 'Maintain My Pair';
-      case 'wash':
-        return 'Wash My Pair';
-      case 'donate':
-        return 'Donate My Pair';
-      case 'dispose':
-        return 'Dispose My Pair';
-      default:
-        return 'Repair My Pair';
-    }
+  String get _footwearDetailsLabel {
+    if (!_articlesLoaded) return 'Loading...';
+    return _articles
+        .map((a) {
+          final color = a.color.trim();
+          final brand = a.brand.trim();
+          if (color.isNotEmpty && brand.isNotEmpty) return '$color, $brand';
+          if (brand.isNotEmpty) return brand;
+          if (a.model.trim().isNotEmpty) return a.model.trim();
+          return 'Footwear';
+        })
+        .join(' · ');
   }
 
-  String get _confirmButtonLabel {
-    switch (widget.service.value) {
-      case 'donate':
-        return 'All Set for Donation';
-      case 'dispose':
-        return 'All Set for Disposal';
-      default:
-        return 'Request Quotation';
-    }
+  String get _repairShopLabel {
+    final city = widget.address.city.trim();
+    if (city.isNotEmpty) return city;
+    final line = widget.address.addressLine1.trim();
+    if (line.isNotEmpty) return line;
+    return 'Nearby';
   }
-
-  bool get _hideEstimationRow =>
-      widget.service.value == 'donate' ||
-      widget.service.value == 'dispose';
 
   bool get _articlesLoaded => _articles.isNotEmpty;
 
@@ -124,9 +115,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         .where((n) => n.isNotEmpty)
         .join(', ');
   }
-
-  int get _totalEstimatedRupees =>
-      widget.estimatedCostRupees * widget.articleIds.length;
 
   @override
   void initState() {
@@ -522,21 +510,20 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   }
 
   Widget _buildRepairSummaryPage() {
-    final footwearName = _footwearDisplayName;
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final problemText = widget.problemDescription?.trim().isNotEmpty == true
         ? widget.problemDescription!.trim()
-        : 'Lorem ipsum dolor sit amet consectetur. Ut vitae libero lorem tincidunt egestas congue. Enim ultricies luctus porta ut.';
+        : '—';
 
     const panelRadius = BorderRadius.only(
       topLeft: Radius.circular(20),
       topRight: Radius.circular(20),
-      bottomLeft: Radius.circular(50),
-      bottomRight: Radius.circular(50),
     );
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    const dockContentH = 58.0;
+    final dockH = 14 + dockContentH + 14 + bottomSafe;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         children: [
@@ -544,7 +531,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
+              padding: EdgeInsets.fromLTRB(10, 52, 10, dockH - 12),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),
@@ -562,257 +549,254 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   child: _loading
                       ? const AppSkeletonCards()
                       : ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                          padding: const EdgeInsets.fromLTRB(
+                            20,
+                            16,
+                            20,
+                            24,
+                          ),
                           children: [
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: _submitting ? null : () => Navigator.pop(context),
-                                  icon: const Icon(
-                                    Icons.arrow_back_ios_new_rounded,
-                                    color: Color(0xFF062F35),
-                                    size: 24,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  alignment: Alignment.centerLeft,
-                                  constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _flowPageTitle,
-                                  style: GoogleFonts.boldonse(
-                                    color: const Color(0xFF062F35),
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Summary',
-                              style: GoogleFonts.boldonse(
-                                color: const Color(0xFF062F35),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            _summaryLine('Type of service:', _serviceDisplayTitle),
-                            _summaryLine('Name of my footwear:', footwearName),
-                            _summaryLine(
-                              'Pickup scheduled on:',
-                              widget.pickupScheduleLabel ?? 'Not specified',
-                              singleLineValue: true,
-                            ),
-                            if (!_hideEstimationRow)
-                              _summaryLine(
-                                'Estimation cost:',
-                                widget.articleIds.length > 1
-                                    ? '₹${widget.estimatedCostRupees} × ${widget.articleIds.length} = ₹$_totalEstimatedRupees'
-                                    : '₹${widget.estimatedCostRupees}',
-                              ),
-                            _summaryLine('Problem described:', ''),
-                            const SizedBox(height: 2),
-                            Text(
-                              problemText,
-                              style: GoogleFonts.montserrat(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            _buildProofPreviewStrip(),
-                            const SizedBox(height: 24),
-                            Center(
-                              child: SizedBox(
-                                width: 237,
-                                height: 48,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.centerRight,
-                                      end: Alignment.centerLeft,
-                                      colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-                                    ),
-                                    borderRadius: BorderRadius.circular(100),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color(0x19000000),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 4),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        onPressed: _submitting
+                                            ? null
+                                            : () => Navigator.pop(context),
+                                        icon: const Icon(
+                                          Icons.arrow_back_ios_new_rounded,
+                                          color: Color(0xFF062F35),
+                                          size: 24,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        alignment: Alignment.centerLeft,
+                                        constraints:
+                                            const BoxConstraints.tightFor(
+                                          width: 26,
+                                          height: 26,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Confirming Service',
+                                        style: GoogleFonts.boldonse(
+                                          color: const Color(0xFF062F35),
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w400,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  child: TextButton(
-                                    onPressed: _submitting || !_articlesLoaded
-                                        ? null
-                                        : _confirmRequest,
-                                    style: TextButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(100),
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    'Service Details',
+                                    style: GoogleFonts.boldonse(
+                                      color: const Color(0xFF062F35),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _detailRow(
+                                    icon: Icons.handyman_outlined,
+                                    label: 'Service Type',
+                                    value: _serviceDisplayTitle,
+                                  ),
+                                  _detailRow(
+                                    icon: Icons.storefront_outlined,
+                                    label: widget.service.value == 'repair'
+                                        ? 'Repair Shop'
+                                        : 'Service Location',
+                                    value: _repairShopLabel,
+                                  ),
+                                  _detailRow(
+                                    icon: Icons.calendar_today_outlined,
+                                    label: 'Slot Details',
+                                    value: widget.pickupScheduleLabel ??
+                                        'Not specified',
+                                  ),
+                                  _detailRow(
+                                    icon: Icons.checkroom_outlined,
+                                    label: 'Footwear Details',
+                                    value: _footwearDetailsLabel,
+                                  ),
+                                  _detailRow(
+                                    icon: Icons.chat_bubble_outline_rounded,
+                                    label: 'Reason for Service',
+                                    value: problemText,
+                                    multiline: true,
+                                  ),
+                                  _detailRow(
+                                    icon: Icons.photo_camera_outlined,
+                                    label: 'Problem Area Photos',
+                                    value: '',
+                                    trailing: _buildProofPreviewStripCompact(),
+                                  ),
+                                  if (_error != null) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _error!,
+                                      style: GoogleFonts.montserrat(
+                                        color: AppColors.error,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    child: _submitting
-                                        ? const SizedBox(
-                                            height: 22,
-                                            width: 22,
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : Text(
-                                            _confirmButtonLabel,
-                                            style: GoogleFonts.boldonse(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
-            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                _error!,
-                                style: GoogleFonts.montserrat(
-                                  color: AppColors.error,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                                  ],
                           ],
                         ),
                 ),
               ),
             ),
           ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
-          ),
-          SizedBox(height: bottomSafe),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryLine(
-    String key,
-    String value, {
-    bool singleLineValue = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            key,
-            style: GoogleFonts.boldonse(
-              color: const Color(0xFF12899B),
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              value,
-              maxLines: singleLineValue ? 1 : 2,
-              overflow: TextOverflow.ellipsis,
-              softWrap: !singleLineValue,
-              style: GoogleFonts.montserrat(
-                color: Colors.black,
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
+          if (!_loading)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
+                ),
+                padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomSafe),
+                child: _submitting
+                    ? const SizedBox(
+                        height: dockContentH,
+                        child: Center(
+                          child: SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Color(0xFF11899B),
+                            ),
+                          ),
+                        ),
+                      )
+                    : SizedBox(
+                        height: dockContentH,
+                        child: _SlideToConfirm(
+                          enabled: _articlesLoaded && !_submitting,
+                          onConfirmed: _confirmRequest,
+                        ),
+                      ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildProofPreviewStrip() {
+  Widget _detailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool multiline = false,
+    Widget? trailing,
+  }) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDFE7E9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF0F6876),
+                    width: 1.3,
+                  ),
+                ),
+                child: Icon(icon, color: const Color(0xFF11899B), size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF11899B),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (value.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        value,
+                        maxLines: multiline ? 6 : 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF5A5A5A),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                    if (trailing != null) ...[
+                      const SizedBox(height: 10),
+                      trailing,
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, thickness: 1, color: Color(0xFFD7DEE0)),
+      ],
+    );
+  }
+
+  Widget _buildProofPreviewStripCompact() {
     final images = widget.proofImages;
-    final videos = widget.proofVideos;
-    if (images.isEmpty && videos.isEmpty) {
+    if (images.isEmpty) {
       return Text(
-        'No proof photos or videos attached.',
+        'No photos attached',
         style: GoogleFonts.montserrat(
           color: const Color(0xFF8D8D8D),
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.w400,
         ),
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (images.isNotEmpty)
-          SizedBox(
-            height: 104,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: images.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, index) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 104,
-                    height: 104,
-                    child: FutureBuilder(
-                      future: images[index].readAsBytes(),
-                      builder: (context, snap) {
-                        if (!snap.hasData) {
-                          return Container(
-                            color: const Color(0xFFD6D6D6),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF11999E),
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        return Image.memory(
-                          snap.data!,
-                          fit: BoxFit.cover,
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
+    return SizedBox(
+      height: 72,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: images.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, index) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 96,
+              height: 72,
+              child: FutureBuilder(
+                future: images[index].readAsBytes(),
+                builder: (context, snap) {
+                  if (!snap.hasData) {
+                    return Container(color: const Color(0xFFDFE7E9));
+                  }
+                  return Image.memory(snap.data!, fit: BoxFit.cover);
+                },
+              ),
             ),
-          ),
-        if (videos.isNotEmpty) ...[
-          if (images.isNotEmpty) const SizedBox(height: 10),
-          Text(
-            '${videos.length} video(s) attached: ${videos.map((v) => v.name).join(', ')}',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.montserrat(
-              color: Colors.black87,
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ],
+          );
+        },
+      ),
     );
   }
 
@@ -870,6 +854,131 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SlideToConfirm extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback onConfirmed;
+
+  const _SlideToConfirm({
+    required this.enabled,
+    required this.onConfirmed,
+  });
+
+  @override
+  State<_SlideToConfirm> createState() => _SlideToConfirmState();
+}
+
+class _SlideToConfirmState extends State<_SlideToConfirm> {
+  double _dx = 0;
+  bool _fired = false;
+
+  static const double _thumb = 52;
+  static const double _height = 58;
+
+  @override
+  void didUpdateWidget(covariant _SlideToConfirm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled && _dx != 0) {
+      setState(() {
+        _dx = 0;
+        _fired = false;
+      });
+    }
+  }
+
+  void _onDragUpdate(DragUpdateDetails details, double maxDx) {
+    if (!widget.enabled || _fired) return;
+    setState(() {
+      _dx = (_dx + details.delta.dx).clamp(0.0, maxDx);
+    });
+  }
+
+  void _onDragEnd(double maxDx) {
+    if (!widget.enabled || _fired) return;
+    if (_dx >= maxDx * 0.85) {
+      setState(() {
+        _dx = maxDx;
+        _fired = true;
+      });
+      widget.onConfirmed();
+    } else {
+      setState(() => _dx = 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxDx = (constraints.maxWidth - _thumb - 8).clamp(0.0, 400.0);
+        return Container(
+          height: _height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE4E4E4),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                'Slide to confirm',
+                style: GoogleFonts.boldonse(
+                  color: const Color(0xFF9A9A9A),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              Positioned(
+                right: 16,
+                child: Icon(
+                  Icons.storefront_outlined,
+                  color: const Color(0xFF11899B).withValues(alpha: 0.85),
+                  size: 26,
+                ),
+              ),
+              Positioned(
+                left: 4 + _dx,
+                child: GestureDetector(
+                  onHorizontalDragUpdate: widget.enabled
+                      ? (d) => _onDragUpdate(d, maxDx)
+                      : null,
+                  onHorizontalDragEnd:
+                      widget.enabled ? (_) => _onDragEnd(maxDx) : null,
+                  child: Container(
+                    width: _thumb,
+                    height: _thumb,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: widget.enabled
+                            ? const [Color(0xFF09DFFF), Color(0xFF063035)]
+                            : const [Color(0xFF9BB5BA), Color(0xFF6A8186)],
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.checkroom_outlined,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

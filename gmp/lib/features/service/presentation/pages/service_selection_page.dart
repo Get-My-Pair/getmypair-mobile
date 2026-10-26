@@ -6,7 +6,6 @@ import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
-import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/home/presentation/pages/select_location_page.dart';
@@ -17,8 +16,6 @@ import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-
 import '../utils/service_flow_article.dart';
 import '../utils/service_flow_layout.dart';
 import '../widgets/service_flow_pickup_pill.dart';
@@ -75,8 +72,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   static const BorderRadius _repairFlowPanelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
-    bottomLeft: Radius.circular(50),
-    bottomRight: Radius.circular(50),
   );
 
   static const int kMaxProofImages = 5;
@@ -157,11 +152,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   List<DateTime> get _pickupDays {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
-    return List.generate(3, (index) => start.add(Duration(days: index)));
+    return List.generate(7, (index) => start.add(Duration(days: index)));
   }
 
   List<String> get _pickupDayLabels =>
       _pickupDays.map((d) => '${d.day}${_dayOrdinal(d.day)} ${DateFormat('EEEE').format(d)}').toList();
+
+  List<String> get _pickupDayShortLabels =>
+      _pickupDays.map((d) => DateFormat('EEE').format(d)).toList();
 
   List<DateTime> get _pickupSlotDateTimes {
     final selectedDay = _pickupDays[_selectedPickupDay.clamp(0, _pickupDays.length - 1)];
@@ -481,6 +479,59 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       });
     } else {
       setState(() => _showRepairStep0FieldErrors = true);
+    }
+  }
+
+  Future<void> _showPhotoSourceSheet() async {
+    if (_submitting || _proofImages.length >= kMaxProofImages) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFFF0F0F0),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined,
+                      color: Color(0xFF11899B)),
+                  title: Text(
+                    'Upload Photos',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(ctx, 'gallery'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined,
+                      color: Color(0xFF11899B)),
+                  title: Text(
+                    'Take Pictures',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(ctx, 'camera'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'camera') {
+      await _takePicture();
+    } else {
+      await _pickImages();
     }
   }
 
@@ -809,6 +860,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
+    final pillH = (48 * layoutScale).clamp(40.0, 52.0);
+    final fs = (16 * layoutScale).clamp(12.0, 16.0);
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final dockH = 14 + pillH + 14 + bottomSafe;
+    final step0CanNext = _repairStep0Complete && !_submitting;
+    final step1CanNext = _selectedPickupSlot >= 0 &&
+        _selectedAddress != null &&
+        !_submitting;
+    final canNext = _repairStep == 0 ? step0CanNext : step1CanNext;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -827,7 +888,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   horizontalInset,
                   kServiceFlowTopInset,
                   horizontalInset,
-                  0,
+                  dockH - 12,
                 ),
                 child: DecoratedBox(
                   decoration: const ShapeDecoration(
@@ -853,17 +914,114 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               ),
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Offstage(
-              offstage: MediaQuery.viewInsetsOf(context).bottom > 0,
-              child: const DashboardLinkedBottomNav(selectedTabIndex: 1),
+          if (!_loading)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _repairFlowNextButton(
+                enabled: canNext,
+                height: pillH,
+                fontSize: fs,
+                onPressed: _repairStep == 0 ? _onRepairStepZeroNext : _submit,
+              ),
             ),
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _repairFlowNextButton({
+    required bool enabled,
+    required double height,
+    required double fontSize,
+    required VoidCallback? onPressed,
+  }) {
+    const pillW = 168.0;
+    final button = !enabled
+        ? SizedBox(
+            width: pillW,
+            height: height,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFFBDBDBD),
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Center(
+                child: Text(
+                  'Next',
+                  style: GoogleFonts.boldonse(
+                    color: const Color(0xFF4A4A4A),
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+            ),
+          )
+        : SizedBox(
+            width: pillW,
+            height: height,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xFF063239),
+                    Color(0xFF0CADC5),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(100),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextButton(
+                onPressed: onPressed,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Next',
+                        style: GoogleFonts.boldonse(
+                          color: Colors.white,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+              ),
+            ),
+          );
+
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomInset),
+      child: Center(child: button),
     );
   }
 
@@ -871,7 +1029,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   Widget _buildRepairSingleServicePanel(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-    final navH = dashboardLinkedBottomNavStackHeight(context);
     final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
     final fs = (16 * layoutScale).clamp(12.0, 16.0);
     final titleFs = (24 * layoutScale).clamp(17.0, 24.0);
@@ -882,19 +1039,18 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
     final effectiveUploadH = uploadTapH;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    // resizeToAvoidBottomInset already shrinks the body; do not add keyboard
-    // height again or the column overflows (~59px).
-    final panelBottomPad = keyboardInset > 0 ? 8.0 : navH + 6;
+    final contentHPad = (12 * layoutScale).clamp(10.0, 14.0);
 
     final title = widget.flowPageTitle ?? 'RepairMyPair';
     final selectedArticles = widget.selectedArticles;
 
+    // Next dock is rendered full-bleed in [_buildRepairOnlyPage] Stack.
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        (12 * layoutScale).clamp(10.0, 14.0),
+        contentHPad,
         16,
         20,
-        panelBottomPad,
+        keyboardInset > 0 ? 8.0 : 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1009,7 +1165,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           fontWeight: FontWeight.w400,
                         ),
                         filled: true,
-                        fillColor: Colors.white.withValues(alpha: 0.10),
+                        fillColor: const Color(0xFFDFE7E9),
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: (12 * layoutScale).clamp(8.0, 14.0),
@@ -1030,9 +1186,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
+                          borderSide: const BorderSide(
                             width: 1.2,
-                            color: const Color(0xFF12899B),
+                            color: Color(0xFF12899B),
                           ),
                         ),
                       ),
@@ -1058,12 +1214,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                     SizedBox(
                       height: effectiveUploadH,
                       child: InkWell(
-                        onTap: _submitting ? null : _pickImages,
+                        onTap: _submitting ? null : _showPhotoSourceSheet,
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
                           alignment: Alignment.center,
                           decoration: ShapeDecoration(
-                            color: Colors.white.withValues(alpha: 0.10),
+                            color: const Color(0xFFDFE7E9),
                             shape: RoundedRectangleBorder(
                               side: const BorderSide(
                                 width: 1,
@@ -1072,38 +1228,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            alignment: WrapAlignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              GestureDetector(
-                                onTap: _submitting ? null : _pickImages,
-                                child: Text(
-                                  'Upload Photos ',
-                                  style: GoogleFonts.boldonse(
-                                    color: const Color(0xFF12899B),
-                                    fontSize: actionFs,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
+                              Icon(
+                                Icons.photo_camera_outlined,
+                                color: const Color(0xFF8D8D8D),
+                                size: (28 * layoutScale).clamp(22.0, 30.0),
                               ),
+                              SizedBox(height: 8 * layoutScale),
                               Text(
-                                'or',
+                                'Upload Photos or Take Pictures',
+                                textAlign: TextAlign.center,
                                 style: GoogleFonts.boldonse(
-                                  color: const Color(0xFFABABAB),
+                                  color: const Color(0xFF8D8D8D),
                                   fontSize: actionFs,
                                   fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _submitting ? null : _takePicture,
-                                child: Text(
-                                  ' Take Pictures',
-                                  style: GoogleFonts.boldonse(
-                                    color: const Color(0xFF12899B),
-                                    fontSize: actionFs,
-                                    fontWeight: FontWeight.w400,
-                                  ),
                                 ),
                               ),
                             ],
@@ -1251,74 +1391,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                         'Please choose an option.',
                         layoutScale,
                       ),
-                    if (_repairStep0Complete) ...[
-                      SizedBox(height: 10 * layoutScale),
-                      Center(
-                        child: SizedBox(
-                          width: (164 * layoutScale).clamp(132.0, 180.0),
-                          height: pillH,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.centerRight,
-                                end: Alignment.centerLeft,
-                                colors: [
-                                  Color(0xFF0CADC5),
-                                  Color(0xFF063239),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(100),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x19000000),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: TextButton(
-                              onPressed:
-                                  _submitting ? null : _onRepairStepZeroNext,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                              ),
-                              child: _submitting
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Next',
-                                          style: GoogleFonts.boldonse(
-                                            color: Colors.white,
-                                            fontSize: fs,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                        SizedBox(width: 20 * layoutScale),
-                                        Icon(
-                                          Icons.arrow_forward_ios_rounded,
-                                          color: Colors.white,
-                                          size: (16 * layoutScale)
-                                              .clamp(13.0, 16.0),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -1335,104 +1407,193 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SizedBox(
-                        height: (26 * layoutScale).clamp(20.0, 36.0),
+                        height: (18 * layoutScale).clamp(12.0, 24.0),
                       ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Pickup address',
+                              style: GoogleFonts.boldonse(
+                                color: const Color(0xFF062F35),
+                                fontSize: fs,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: _submitting ? null : _pickAddress,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.edit_square,
+                                color: const Color(0xFF062F35),
+                                size: (22 * layoutScale).clamp(18.0, 24.0),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10 * layoutScale),
+                      Container(
+                        padding: EdgeInsets.fromLTRB(
+                          12 * layoutScale,
+                          12 * layoutScale,
+                          12 * layoutScale,
+                          12 * layoutScale,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDFE7E9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: (36 * layoutScale).clamp(30.0, 40.0),
+                              height: (36 * layoutScale).clamp(30.0, 40.0),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFF11899B),
+                                  width: 1.4,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.home_outlined,
+                                color: const Color(0xFF11899B),
+                                size: (20 * layoutScale).clamp(16.0, 22.0),
+                              ),
+                            ),
+                            SizedBox(width: 12 * layoutScale),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Home',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.montserrat(
+                                      color: const Color(0xFF12899B),
+                                      fontSize:
+                                          (14 * layoutScale).clamp(12.0, 15.0),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4 * layoutScale),
+                                  Text(
+                                    _selectedAddress == null
+                                        ? 'No address selected'
+                                        : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.montserrat(
+                                      color: const Color(0xFF4E7F8A),
+                                      fontSize:
+                                          (13 * layoutScale).clamp(11.0, 14.0),
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 22 * layoutScale),
                       Text(
-                        'Home Pickup',
+                        'Select a date',
                         style: GoogleFonts.boldonse(
                           color: const Color(0xFF062F35),
                           fontSize: fs,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(height: (16 * layoutScale).clamp(12.0, 20.0)),
-                      if (_proofImages.isNotEmpty) ...[
-                        SizedBox(height: 8 * layoutScale),
-                        Text(
-                          'Your uploaded photos (${_proofImages.length})',
-                          style: GoogleFonts.montserrat(
-                            color: const Color(0xFF4E7F8A),
-                            fontSize: (12 * layoutScale).clamp(10.0, 13.0),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: 6 * layoutScale),
-                        SizedBox(
-                          height: (52 * layoutScale).clamp(44.0, 60.0),
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _proofImages.length,
-                            separatorBuilder: (_, _) =>
-                                SizedBox(width: 6 * layoutScale),
-                            itemBuilder: (_, i) {
-                              final w =
-                                  (48 * layoutScale).clamp(40.0, 56.0);
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: SizedBox(
-                                  width: w,
-                                  height: w,
-                                  child: FutureBuilder(
-                                    future: _proofImages[i].readAsBytes(),
-                                    builder: (context, snap) {
-                                      if (!snap.hasData) {
-                                        return Container(
-                                          color: const Color(0xFFDFE7E9),
-                                        );
-                                      }
-                                      return Image.memory(
-                                        snap.data!,
-                                        fit: BoxFit.cover,
-                                      );
-                                    },
+                      SizedBox(height: 12 * layoutScale),
+                      SizedBox(
+                        height: (78 * layoutScale).clamp(68.0, 90.0),
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _pickupDays.length,
+                          separatorBuilder: (_, _) =>
+                              SizedBox(width: 10 * layoutScale),
+                          itemBuilder: (_, index) {
+                            final selected = _selectedPickupDay == index;
+                            final day = _pickupDays[index];
+                            return InkWell(
+                              onTap: _submitting
+                                  ? null
+                                  : () => setState(() {
+                                        _selectedPickupDay = index;
+                                        _selectedPickupSlot = -1;
+                                      }),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _pickupDayShortLabels[index],
+                                    style: GoogleFonts.montserrat(
+                                      color: const Color(0xFF12899B),
+                                      fontSize: (12 * layoutScale)
+                                          .clamp(11.0, 13.0),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                  SizedBox(height: 6 * layoutScale),
+                                  Container(
+                                    width: (48 * layoutScale).clamp(42.0, 54.0),
+                                    height:
+                                        (48 * layoutScale).clamp(42.0, 54.0),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: selected
+                                          ? const Color(0xFF12899B)
+                                          : const Color(0xFFDFE7E9),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xFF0F6876),
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '${day.day}',
+                                      style: GoogleFonts.boldonse(
+                                        color: selected
+                                            ? Colors.white
+                                            : const Color(0xFF12899B),
+                                        fontSize: (16 * layoutScale)
+                                            .clamp(14.0, 18.0),
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      ],
-                      SizedBox(height: 8 * layoutScale),
+                      ),
+                      SizedBox(height: 22 * layoutScale),
                       Text(
-                        'Please choose a time slot from the options below',
-                        style: GoogleFonts.montserrat(
+                        'Select a time slot',
+                        style: GoogleFonts.boldonse(
                           color: const Color(0xFF062F35),
                           fontSize: fs,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(height: 20 * layoutScale),
-                      Row(
-                        children: [
-                          Text(
-                            _pickupDayLabels[_selectedPickupDay.clamp(
-                              0,
-                              _pickupDayLabels.length - 1,
-                            )],
-                            style: GoogleFonts.boldonse(
-                              color: const Color(0xFF12899B),
-                              fontSize: pillFs,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          SizedBox(width: 8 * layoutScale),
-                          SvgPicture.asset(
-                            'assets/images/calendar.svg',
-                            width: (18 * layoutScale).clamp(16.0, 20.0),
-                            height: (18 * layoutScale).clamp(16.0, 20.0),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 14 * layoutScale),
+                      SizedBox(height: 12 * layoutScale),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _pickupSlotLabels.length,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
-                          crossAxisSpacing: 14 * layoutScale,
-                          mainAxisSpacing: 16 * layoutScale,
-                          childAspectRatio: 2.1,
+                          crossAxisSpacing: 12 * layoutScale,
+                          mainAxisSpacing: 12 * layoutScale,
+                          childAspectRatio: 2.2,
                         ),
                         itemBuilder: (_, index) {
                           final selected = _selectedPickupSlot == index;
@@ -1443,26 +1604,26 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                       _selectedPickupSlot =
                                           selected ? -1 : index;
                                     }),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             child: Container(
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 gradient: selected
                                     ? const LinearGradient(
-                                        begin: Alignment.centerRight,
-                                        end: Alignment.centerLeft,
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
                                         colors: [
-                                          Color(0xFF0CADC5),
                                           Color(0xFF063239),
+                                          Color(0xFF0CADC5),
                                         ],
                                       )
                                     : null,
                                 color: selected
                                     ? null
                                     : const Color(0xFFDFE7E9),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  width: 1,
+                                  width: 1.2,
                                   color: selected
                                       ? Colors.transparent
                                       : const Color(0xFF0F6876),
@@ -1474,177 +1635,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                   color: selected
                                       ? Colors.white
                                       : const Color(0xFF12899B),
-                                  fontSize: (13 * layoutScale).clamp(11.0, 13.0),
+                                  fontSize:
+                                      (13 * layoutScale).clamp(11.0, 13.0),
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ),
                           );
                         },
-                      ),
-                      SizedBox(height: 24 * layoutScale),
-                      Text(
-                        'Pickup Address',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
-                          fontSize: fs,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      SizedBox(height: 10 * layoutScale),
-                      Container(
-                        padding: EdgeInsets.fromLTRB(
-                          8 * layoutScale,
-                          6 * layoutScale,
-                          8 * layoutScale,
-                          10 * layoutScale,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: (30 * layoutScale).clamp(26.0, 34.0),
-                              height: (30 * layoutScale).clamp(26.0, 34.0),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: const Color(0xFF11899B),
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.home_outlined,
-                                color: const Color(0xFF11899B),
-                                size: (17 * layoutScale).clamp(14.0, 18.0),
-                              ),
-                            ),
-                            SizedBox(width: 10 * layoutScale),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _selectedAddress?.addressLine1
-                                                .isNotEmpty ==
-                                            true
-                                        ? _selectedAddress!.addressLine1
-                                        : 'Home',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.montserrat(
-                                      color: const Color(0xFF12899B),
-                                      fontSize:
-                                          (13 * layoutScale).clamp(11.0, 13.0),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 2 * layoutScale),
-                                  Text(
-                                    _selectedAddress == null
-                                        ? 'No address selected'
-                                        : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.montserrat(
-                                      color: const Color(0xFF4E7F8A),
-                                      fontSize:
-                                          (13 * layoutScale).clamp(11.0, 13.0),
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 8 * layoutScale),
-                            InkWell(
-                              onTap: _submitting ? null : _pickAddress,
-                              borderRadius: BorderRadius.circular(100),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: (10 * layoutScale).clamp(8.0, 12.0),
-                                  vertical: (4 * layoutScale).clamp(3.0, 6.0),
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF11899B),
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                                child: Text(
-                                  'Change',
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize:
-                                        (11 * layoutScale).clamp(10.0, 12.0),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 24 * layoutScale),
-                      Center(
-                        child: SizedBox(
-                          width: (164 * layoutScale).clamp(132.0, 180.0),
-                          height: pillH,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.centerRight,
-                                end: Alignment.centerLeft,
-                                colors: [
-                                  Color(0xFF0CADC5),
-                                  Color(0xFF063239),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(100),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x19000000),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: TextButton(
-                              onPressed: _submitting ? null : _submit,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                              ),
-                              child: _submitting
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Next',
-                                          style: GoogleFonts.boldonse(
-                                            color: Colors.white,
-                                            fontSize: fs,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                        SizedBox(width: 20 * layoutScale),
-                                        Icon(
-                                          Icons.arrow_forward_ios_rounded,
-                                          color: Colors.white,
-                                          size: (16 * layoutScale)
-                                              .clamp(13.0, 16.0),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -1713,59 +1711,64 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       final imgH = (96 * layoutScale).clamp(80.0, 112.0);
       final subtitleFs = (fontSize * 0.88).clamp(11.0, 14.0);
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (name.isNotEmpty)
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.boldonse(
-                color: const Color(0xFF11899B),
-                fontSize: fontSize,
-                fontWeight: FontWeight.w400,
-                height: 1.05,
-              ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (name.isNotEmpty)
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.boldonse(
+                      color: const Color(0xFF11899B),
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w400,
+                      height: 1.05,
+                    ),
+                  ),
+                if (subtitle.isNotEmpty) ...[
+                  SizedBox(height: 4 * layoutScale),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontSize: subtitleFs,
+                      fontWeight: FontWeight.w400,
+                      height: 1.15,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          if (subtitle.isNotEmpty)
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.montserrat(
-                color: const Color(0xFF062F35),
-                fontSize: subtitleFs,
-                fontWeight: FontWeight.w400,
-                height: 1.15,
-              ),
-            ),
-          if (article.imageUrl.isNotEmpty) ...[
-            SizedBox(height: 2 * layoutScale),
-            Center(
-              child: SizedBox(
+          ),
+          if (article.imageUrl.isNotEmpty)
+            SizedBox(
+              width: imgW,
+              height: imgH,
+              child: ArticleRackShoeImage(
+                imageUrl: article.imageUrl,
                 width: imgW,
                 height: imgH,
-                child: ArticleRackShoeImage(
-                  imageUrl: article.imageUrl,
-                  width: imgW,
-                  height: imgH,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.center,
-                  placeholder: Icon(
-                    Icons.checkroom_outlined,
-                    color: const Color(0xFF8D8D8D),
-                    size: iconSize,
-                  ),
-                  errorPlaceholder: Icon(
-                    Icons.checkroom_outlined,
-                    color: const Color(0xFF8D8D8D),
-                    size: iconSize,
-                  ),
+                fit: BoxFit.contain,
+                alignment: Alignment.centerRight,
+                placeholder: Icon(
+                  Icons.checkroom_outlined,
+                  color: const Color(0xFF8D8D8D),
+                  size: iconSize,
+                ),
+                errorPlaceholder: Icon(
+                  Icons.checkroom_outlined,
+                  color: const Color(0xFF8D8D8D),
+                  size: iconSize,
                 ),
               ),
             ),
-          ],
         ],
       );
     }

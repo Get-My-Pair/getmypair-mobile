@@ -10,15 +10,17 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:gmp/features/service/presentation/pages/maintain_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/pages/repair_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/pages/service_request_details_page.dart';
 import 'package:gmp/features/service/presentation/pages/service_request_list_page.dart';
 import 'package:gmp/features/service/presentation/pages/wash_my_pair_page.dart';
+import 'package:intl/intl.dart';
 
 class CareMyPairPage extends StatelessWidget {
   const CareMyPairPage({super.key});
 
   /// Flip to `true` when real video/article assets are ready.
   /// Paths and UI below stay in place — only visibility is gated.
-  static const bool _showStaticMedia = true;
+  static const bool _showStaticMedia = false;
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -132,91 +134,101 @@ class CareMyPairPage extends StatelessWidget {
                   horizontalInset,
                   0,
                 ),
-              child: DecoratedBox(
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFF0F0F0),
-                  shape: RoundedRectangleBorder(borderRadius: _panelRadius),
-                  shadows: [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: _panelRadius,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
-                    children: [
-                      _Header(onBack: () => Navigator.maybePop(context)),
-                      const SizedBox(height: 24),
-                      const _SearchBar(),
-                      const SizedBox(height: 28),
-                      Text('Our Services', style: _sectionTitle(context)),
-                      const SizedBox(height: 14),
-                      _PrimaryServiceCard(
-                        label: 'RepairMyPair',
-                        onTap: () => _openRepairPage(context),
+                child: DecoratedBox(
+                  decoration: const ShapeDecoration(
+                    color: Color(0xFFF0F0F0),
+                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
+                    shadows: [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
                       ),
-                      const SizedBox(height: 19),
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: _SecondaryServiceCard(
-                                label: 'Maintain\nMyPair',
-                                iconAsset:
-                                    'assets/images/icons/caremypair/mmp.svg',
-                                iconSize: 68,
-                                onTap: () => _openMaintainPage(context),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _SecondaryServiceCard(
-                                label: 'Wash\nMyPair',
-                                iconAsset:
-                                    'assets/images/icons/caremypair/wmp.svg',
-                                iconLabelGap: 20,
-                                onTap: () => _openWashPage(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const _MyServiceRequestsSection(),
-                      // Videos + articles hidden until real media is ready.
-                      if (_showStaticMedia) ...[
-                        const SizedBox(height: 32),
-                        ..._buildVideoSections(context),
-                        const SizedBox(height: 24),
-                        Text('Articles', style: _subsectionLabel(context)),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _panelRadius,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 120),
+                      children: [
+                        _Header(onBack: () => Navigator.maybePop(context)),
                         const SizedBox(height: 20),
-                        SizedBox(
-                          height: 172,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _articles.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 13),
-                            itemBuilder: (_, i) => _ArticleCard(
-                              data: _articles[i],
-                              onTap: () => showComingSoon(
-                                context,
-                                feature: 'Care articles',
+                        const _SearchBar(),
+                        const SizedBox(height: 24),
+                        Text('Our Services', style: _sectionTitle(context)),
+                        const SizedBox(height: 14),
+                        _PrimaryServiceCard(
+                          label: 'RepairMyPair',
+                          onTap: () => _openRepairPage(context),
+                        ),
+                        const SizedBox(height: 12),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _SecondaryServiceCard(
+                                  label: 'Maintain MyPair',
+                                  iconAsset:
+                                      'assets/images/icons/caremypair/mmp.svg',
+                                  iconSize: 48,
+                                  onTap: () => _openMaintainPage(context),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _SecondaryServiceCard(
+                                  label: 'Wash MyPair',
+                                  iconAsset:
+                                      'assets/images/icons/caremypair/wmp.svg',
+                                  iconSize: 48,
+                                  onTap: () => _openWashPage(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const _ActiveServiceSection(),
+                        const SizedBox(height: 16),
+                        _ServiceHistoryButton(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const ServiceRequestListPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        // Videos + articles hidden until real media is ready.
+                        if (_showStaticMedia) ...[
+                          const SizedBox(height: 32),
+                          ..._buildVideoSections(context),
+                          const SizedBox(height: 24),
+                          Text('Articles', style: _subsectionLabel(context)),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 172,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _articles.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 13),
+                              itemBuilder: (_, i) => _ArticleCard(
+                                data: _articles[i],
+                                onTap: () => showComingSoon(
+                                  context,
+                                  feature: 'Care articles',
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           ),
           const Positioned(
             left: 0,
@@ -230,7 +242,8 @@ class CareMyPairPage extends StatelessWidget {
   }
 
   List<Widget> _buildVideoSections(BuildContext context) {
-    const sections = <({String title, List<_VideoCardData> videos, String feature})>[
+    const sections =
+        <({String title, List<_VideoCardData> videos, String feature})>[
       (
         title: 'Repair at Home: Quick Fixes',
         videos: _repairVideos,
@@ -310,7 +323,11 @@ class _Header extends StatelessWidget {
           onPressed: onBack,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35), size: 24),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF062F35),
+            size: 24,
+          ),
         ),
         const SizedBox(width: 6),
         Text(
@@ -326,80 +343,62 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Same shell as [ArticleListPage] rack search (gradient stroke, white fill); no filter icon.
 class _SearchBar extends StatelessWidget {
   const _SearchBar();
 
   @override
   Widget build(BuildContext context) {
-    const searchHeight = 42.0;
+    const searchHeight = 44.0;
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
 
     return Container(
       height: searchHeight,
-      padding: const EdgeInsets.all(1.2),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
-        ),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFB7C9CD), width: 1.2),
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(100),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Row(
-            children: [
-              SvgPicture.asset(
-                'assets/images/search.svg',
-                width: 22,
-                height: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  textAlignVertical: TextAlignVertical.center,
-                  style: GoogleFonts.montserrat(
-                    fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                    color: Colors.black87,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(
+          children: [
+            SvgPicture.asset(
+              'assets/images/search.svg',
+              width: 20,
+              height: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                textAlignVertical: TextAlignVertical.center,
+                style: GoogleFonts.montserrat(
+                  fontSize: (15.0 * uiScale).clamp(13.0, 16.0),
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w400,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  isCollapsed: false,
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  hintText: 'Search',
+                  hintStyle: GoogleFonts.montserrat(
+                    color: Colors.black.withValues(alpha: 0.34),
+                    fontSize: (15.0 * uiScale).clamp(13.0, 16.0),
                     fontWeight: FontWeight.w400,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    isCollapsed: false,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search',
-                    hintStyle: GoogleFonts.montserrat(
-                      color: Colors.black.withValues(alpha: 0.34),
-                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                      fontWeight: FontWeight.w400,
-                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -419,17 +418,17 @@ class _PrimaryServiceCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           height: _cardHeight,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF09DFFF), Color(0xFF063035)],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x19000000),
@@ -469,47 +468,14 @@ class _SecondaryServiceCard extends StatelessWidget {
   final String label;
   final String iconAsset;
   final double iconSize;
-  final double labelFontSize;
-  final double iconLabelGap;
   final VoidCallback onTap;
 
   const _SecondaryServiceCard({
     required this.label,
     required this.iconAsset,
-    this.iconSize = 38,
-    this.labelFontSize = 16,
-    this.iconLabelGap = 12,
+    this.iconSize = 42,
     required this.onTap,
   });
-
-  TextStyle get _labelStyle => GoogleFonts.boldonse(
-        color: const Color(0xFF062F35),
-        fontSize: labelFontSize,
-        height: 1.1,
-        fontWeight: FontWeight.w400,
-      );
-
-  Widget _buildLabelText() {
-    final lines = label.split('\n');
-    if (lines.length >= 2) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(lines[0], textAlign: TextAlign.center, style: _labelStyle),
-          const SizedBox(height: 5),
-          Text(lines[1], textAlign: TextAlign.center, style: _labelStyle),
-        ],
-      );
-    }
-    return Text(
-      label,
-      maxLines: 2,
-      textAlign: TextAlign.center,
-      style: _labelStyle,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -518,20 +484,20 @@ class _SecondaryServiceCard extends StatelessWidget {
       clipBehavior: Clip.none,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: _minCardHeight),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
             color: const Color(0xFFDFE7E9),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF0F6876)),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF0F6876), width: 1.2),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x19000000),
+                color: Color(0x14000000),
                 blurRadius: 4,
-                offset: Offset(0, 4),
+                offset: Offset(0, 3),
               ),
             ],
           ),
@@ -544,8 +510,20 @@ class _SecondaryServiceCard extends StatelessWidget {
                 width: iconSize,
                 height: iconSize,
               ),
-              SizedBox(width: iconLabelGap),
-              Flexible(child: _buildLabelText()),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.boldonse(
+                    color: const Color(0xFF062F35),
+                    fontSize: 13,
+                    height: 1.15,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -554,26 +532,28 @@ class _SecondaryServiceCard extends StatelessWidget {
   }
 }
 
-/// Shows the "My service requests" entry only once the user has at least one
-/// created request. Hidden entirely (including its top spacing) otherwise.
-class _MyServiceRequestsSection extends StatefulWidget {
-  const _MyServiceRequestsSection();
+/// Loads the newest non-terminal care request and shows the Active Service card.
+class _ActiveServiceSection extends StatefulWidget {
+  const _ActiveServiceSection();
+
+  static const Set<String> _careTypes = {'repair', 'maintenance', 'wash'};
+  static const Set<String> _terminalStatuses = {'completed', 'cancelled'};
+  static const Set<String> _terminalTracking = {'delivered', 'cancelled'};
 
   @override
-  State<_MyServiceRequestsSection> createState() =>
-      _MyServiceRequestsSectionState();
+  State<_ActiveServiceSection> createState() => _ActiveServiceSectionState();
 }
 
-class _MyServiceRequestsSectionState extends State<_MyServiceRequestsSection> {
-  bool _hasRequests = false;
+class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
+  Map<String, dynamic>? _active;
 
   @override
   void initState() {
     super.initState();
-    _loadHasRequests();
+    _load();
   }
 
-  Future<void> _loadHasRequests() async {
+  Future<void> _load() async {
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
 
@@ -588,8 +568,13 @@ class _MyServiceRequestsSectionState extends State<_MyServiceRequestsSection> {
           final list =
               ((res['data'] as Map<String, dynamic>?)?['requests'] as List?) ??
                   const [];
+          final active = list
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .where(_isActiveCareRequest)
+              .toList();
           if (!mounted) return;
-          setState(() => _hasRequests = list.isNotEmpty);
+          setState(() => _active = active.isEmpty ? null : active.first);
         } catch (_) {
           // Keep hidden on failure.
         }
@@ -597,32 +582,158 @@ class _MyServiceRequestsSectionState extends State<_MyServiceRequestsSection> {
     );
   }
 
+  static bool _isActiveCareRequest(Map<String, dynamic> r) {
+    final type = (r['serviceType'] ?? '').toString().trim().toLowerCase();
+    if (!_ActiveServiceSection._careTypes.contains(type)) return false;
+    final status = (r['status'] ?? '').toString().trim().toLowerCase();
+    if (_ActiveServiceSection._terminalStatuses.contains(status)) return false;
+    final tracking =
+        (r['trackingState'] ?? '').toString().trim().toLowerCase();
+    if (_ActiveServiceSection._terminalTracking.contains(tracking)) {
+      return false;
+    }
+    return true;
+  }
+
+  static String _serviceLabel(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'repair':
+        return 'RepairMyPair';
+      case 'maintenance':
+        return 'MaintainMyPair';
+      case 'wash':
+        return 'WashMyPair';
+      default:
+        if (raw.isEmpty) return 'Service';
+        return raw.replaceAll('_', ' ');
+    }
+  }
+
+  static String _iconAsset(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'maintenance':
+        return 'assets/images/icons/caremypair/mmp.svg';
+      case 'wash':
+        return 'assets/images/icons/caremypair/wmp.svg';
+      default:
+        return 'assets/images/icons/caremypair/rmp.svg';
+    }
+  }
+
+  static String _ordinalDay(int day) {
+    if (day >= 11 && day <= 13) return '${day}th';
+    switch (day % 10) {
+      case 1:
+        return '${day}st';
+      case 2:
+        return '${day}nd';
+      case 3:
+        return '${day}rd';
+      default:
+        return '${day}th';
+    }
+  }
+
+  /// Prefer requested pickup; otherwise estimate ~7 days from createdAt.
+  static String _estimatedDelivery(Map<String, dynamic> r) {
+    DateTime? dt = DateTime.tryParse(
+      (r['requestedPickupAt'] ?? '').toString(),
+    );
+    dt ??= DateTime.tryParse((r['createdAt'] ?? '').toString());
+    if (dt == null) return 'TBD';
+    // Use pickup window if present; else rough ETA from creation.
+    if (r['requestedPickupAt'] == null ||
+        (r['requestedPickupAt']?.toString() ?? '').trim().isEmpty) {
+      dt = dt.add(const Duration(days: 7));
+    }
+    final local = dt.toLocal();
+    return '${_ordinalDay(local.day)} ${DateFormat('MMM yyyy').format(local)}';
+  }
+
+  static String _requestId(Map<String, dynamic> r) {
+    return (r['_id'] ?? r['id'] ?? '').toString().trim();
+  }
+
+  void _openActive(BuildContext context) {
+    final id = _active == null ? '' : _requestId(_active!);
+    if (id.isEmpty) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const ServiceRequestListPage(),
+        ),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ServiceRequestDetailsPage(requestId: id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!_hasRequests) return const SizedBox.shrink();
+    if (_active == null) return const SizedBox.shrink();
+
+    final serviceType = (_active!['serviceType'] ?? '').toString();
+    final label = _serviceLabel(serviceType);
+    final eta = _estimatedDelivery(_active!);
+    final iconAsset = _iconAsset(serviceType);
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 16),
-        _MyServiceRequestsCard(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ServiceRequestListPage(),
-              ),
-            );
-          },
+        const SizedBox(height: 28),
+        InkWell(
+          onTap: () => _openActive(context),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Active Service',
+                    style: GoogleFonts.boldonse(
+                      color: const Color(0xFF062F35),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF062F35),
+                  size: 28,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _ActiveServiceCard(
+          serviceLabel: label,
+          estimatedDelivery: eta,
+          iconAsset: iconAsset,
+          onTap: () => _openActive(context),
         ),
       ],
     );
   }
 }
 
-class _MyServiceRequestsCard extends StatelessWidget {
+class _ActiveServiceCard extends StatelessWidget {
+  final String serviceLabel;
+  final String estimatedDelivery;
+  final String iconAsset;
   final VoidCallback onTap;
 
-  const _MyServiceRequestsCard({required this.onTap});
+  const _ActiveServiceCard({
+    required this.serviceLabel,
+    required this.estimatedDelivery,
+    required this.iconAsset,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -630,67 +741,150 @@ class _MyServiceRequestsCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
           decoration: BoxDecoration(
             color: const Color(0xFFDFE7E9),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF0F6876)),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x19000000),
+                color: Color(0x14000000),
                 blurRadius: 4,
-                offset: Offset(0, 4),
+                offset: Offset(0, 3),
               ),
             ],
           ),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F6876).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFDFE7E9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFF0F6876),
+                    width: 1.4,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.assignment_turned_in_outlined,
-                  color: Color(0xFF062F35),
-                  size: 26,
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  iconAsset,
+                  width: 30,
+                  height: 30,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF0F6876),
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      'My service requests',
-                      style: GoogleFonts.boldonse(
-                        color: const Color(0xFF062F35),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
+                    Expanded(
+                      child: _LabeledValue(
+                        label: 'Service Type',
+                        value: serviceLabel,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'View progress on all your active and past services.',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        fontSize: 12,
-                        height: 1.3,
-                        fontWeight: FontWeight.w400,
+                    Expanded(
+                      child: _LabeledValue(
+                        label: 'Estimated Delivery',
+                        value: estimatedDelivery,
                       ),
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LabeledValue extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _LabeledValue({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF11899B),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF5A5A5A),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ServiceHistoryButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ServiceHistoryButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8EEEE),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF0F6876), width: 1.2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 4,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
               const Icon(
-                Icons.chevron_right_rounded,
+                Icons.history_rounded,
                 color: Color(0xFF062F35),
-                size: 28,
+                size: 26,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Service History',
+                style: GoogleFonts.boldonse(
+                  color: const Color(0xFF062F35),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ],
           ),
@@ -723,49 +917,49 @@ class _VideoCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(6),
           child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            data.image.startsWith('http')
-                ? Image.network(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
-                  )
-                : Image.asset(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
+            borderRadius: BorderRadius.circular(6),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                data.image.startsWith('http')
+                    ? Image.network(
+                        data.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            Container(color: Colors.grey.shade400),
+                      )
+                    : Image.asset(
+                        data.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            Container(color: Colors.grey.shade400),
+                      ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0xCC000000)],
+                    ),
                   ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xCC000000)],
                 ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: Text(
-                data.title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.montserrat(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                Positioned(
+                  left: 8,
+                  right: 8,
+                  bottom: 8,
+                  child: Text(
+                    data.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       ),
@@ -799,91 +993,93 @@ class _ArticleCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(5),
         child: Container(
-      width: 160,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFFE2E2E2)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 4,
-            offset: Offset(2, 2),
-            spreadRadius: 0,
+          width: 160,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: const Color(0xFFE2E2E2)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 4,
+                offset: Offset(2, 2),
+                spreadRadius: 0,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(5),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-                  child: data.image.startsWith('http')
-                      ? Image.network(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        )
-                      : Image.asset(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(9, 9, 9, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          data.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.montserrat(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Expanded(
-                          child: Text(
-                            data.summary,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFF929292),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(5),
+                      ),
+                      child: data.image.startsWith('http')
+                          ? Image.network(
+                              data.image,
+                              width: 160,
+                              height: 86,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 160,
+                                height: 86,
+                                color: Colors.grey.shade300,
+                              ),
+                            )
+                          : Image.asset(
+                              data.image,
+                              width: 160,
+                              height: 86,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 160,
+                                height: 86,
+                                color: Colors.grey.shade300,
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(9, 9, 9, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.montserrat(
+                                color: Colors.black,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Expanded(
+                              child: Text(
+                                data.summary,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFF929292),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
         ),
       ),
     );

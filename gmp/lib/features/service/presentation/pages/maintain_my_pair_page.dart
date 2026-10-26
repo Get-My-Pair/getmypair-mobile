@@ -11,7 +11,7 @@ class MaintainMyPairPage extends StatelessWidget {
       allowedServiceTypes: ['maintenance'],
       tagline: '',
       description:
-          'MaintainMyPair helps keep your footwear in top condition.\n\nSelect one or more pairs you\'d like to maintain.',
+          'MaintainMyPair is a service that keeps your footwear in top condition. Please select the footwear you\'d like to maintain.',
     );
   }
 }
