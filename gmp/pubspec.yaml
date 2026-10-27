@@ -148,6 +148,7 @@ flutter:
     - assets/images/phone.svg
     - assets/images/img/caremypair/
     - assets/images/icons/
+    - assets/images/icons/alert-circle.svg
     - assets/images/icons/caremypair/
     - assets/images/icons/caremypair/rmp.svg
     - assets/images/icons/caremypair/mmp.svg
