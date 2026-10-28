@@ -153,7 +153,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   List<DateTime> get _pickupDays {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
-    return List.generate(7, (index) => start.add(Duration(days: index)));
+    return List.generate(5, (index) => start.add(Duration(days: index)));
   }
 
   List<String> get _pickupDayLabels =>
@@ -1068,7 +1068,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
     final effectiveUploadH = uploadTapH;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final contentHPad = (12 * layoutScale).clamp(10.0, 14.0);
+    // Match Figma side inset — left was tighter than right; bump slightly.
+    final contentHPadLeft = (16 * layoutScale).clamp(14.0, 18.0);
+    final contentHPadRight = (20 * layoutScale).clamp(16.0, 22.0);
 
     final title = widget.flowPageTitle ?? 'RepairMyPair';
     final selectedArticles = widget.selectedArticles;
@@ -1076,9 +1078,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     // Next dock is rendered full-bleed in [_buildRepairOnlyPage] Stack.
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        contentHPad,
+        contentHPadLeft,
         16,
-        20,
+        contentHPadRight,
         keyboardInset > 0 ? 8.0 : 0,
       ),
       child: Column(
@@ -1470,83 +1472,84 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                             borderRadius: BorderRadius.circular(8),
                             child: Padding(
                               padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                Icons.edit_square,
-                                color: const Color(0xFF062F35),
-                                size: (22 * layoutScale).clamp(18.0, 24.0),
+                              child: SvgPicture.asset(
+                                'assets/images/icons/profile/edit.svg',
+                                width: (22 * layoutScale).clamp(18.0, 24.0),
+                                height: (22 * layoutScale).clamp(18.0, 24.0),
+                                colorFilter: const ColorFilter.mode(
+                                  Color(0xFF062F35),
+                                  BlendMode.srcIn,
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 10 * layoutScale),
-                      Container(
-                        padding: EdgeInsets.fromLTRB(
-                          12 * layoutScale,
-                          12 * layoutScale,
-                          12 * layoutScale,
-                          12 * layoutScale,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDFE7E9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: (36 * layoutScale).clamp(30.0, 40.0),
-                              height: (36 * layoutScale).clamp(30.0, 40.0),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0xFF11899B),
-                                  width: 1.4,
+                      SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: (38 * layoutScale).clamp(32.0, 42.0),
+                            height: (38 * layoutScale).clamp(32.0, 42.0),
+                            decoration: BoxDecoration(
+                              color: const Color(0x33D9D9D9),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: const Color(0xFF12899B),
+                                width: 1.2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: SvgPicture.asset(
+                              'assets/images/icons/profile/home.svg',
+                              width: (18 * layoutScale).clamp(15.0, 20.0),
+                              height: (18 * layoutScale).clamp(15.0, 20.0),
+                              colorFilter: const ColorFilter.mode(
+                                Color(0xFF12899B),
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: (14 * layoutScale).clamp(12.0, 16.0)),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Home',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.montserrat(
+                                    color: const Color(0xFF12899B),
+                                    fontSize:
+                                        (14 * layoutScale).clamp(12.0, 15.0),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                              child: Icon(
-                                Icons.home_outlined,
-                                color: const Color(0xFF11899B),
-                                size: (20 * layoutScale).clamp(16.0, 22.0),
-                              ),
-                            ),
-                            SizedBox(width: 12 * layoutScale),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Home',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.montserrat(
-                                      color: const Color(0xFF12899B),
-                                      fontSize:
-                                          (14 * layoutScale).clamp(12.0, 15.0),
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                SizedBox(
+                                  height: (8 * layoutScale).clamp(6.0, 10.0),
+                                ),
+                                Text(
+                                  _selectedAddress == null
+                                      ? 'No address selected'
+                                      : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.montserrat(
+                                    color: const Color(0xFF4E7F8A),
+                                    fontSize:
+                                        (13 * layoutScale).clamp(11.0, 14.0),
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.35,
                                   ),
-                                  SizedBox(height: 4 * layoutScale),
-                                  Text(
-                                    _selectedAddress == null
-                                        ? 'No address selected'
-                                        : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.montserrat(
-                                      color: const Color(0xFF4E7F8A),
-                                      fontSize:
-                                          (13 * layoutScale).clamp(11.0, 14.0),
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 22 * layoutScale),
+                      SizedBox(height: (28 * layoutScale).clamp(22.0, 32.0)),
                       Text(
                         'Select a date',
                         style: GoogleFonts.boldonse(
@@ -1555,17 +1558,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(height: 12 * layoutScale),
+                      SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
                       SizedBox(
-                        height: (78 * layoutScale).clamp(68.0, 90.0),
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _pickupDays.length,
-                          separatorBuilder: (_, _) =>
-                              SizedBox(width: 10 * layoutScale),
-                          itemBuilder: (_, index) {
+                        height: (82 * layoutScale).clamp(72.0, 92.0),
+                        child: Row(
+                          // Flush with section titles: first/last at edges.
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(_pickupDays.length, (index) {
                             final selected = _selectedPickupDay == index;
                             final day = _pickupDays[index];
+                            final box =
+                                (42 * layoutScale).clamp(36.0, 48.0);
                             return InkWell(
                               onTap: _submitting
                                   ? null
@@ -1573,53 +1576,57 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                         _selectedPickupDay = index;
                                         _selectedPickupSlot = -1;
                                       }),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    _pickupDayShortLabels[index],
-                                    style: GoogleFonts.montserrat(
-                                      color: const Color(0xFF12899B),
-                                      fontSize: (12 * layoutScale)
-                                          .clamp(11.0, 13.0),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 6 * layoutScale),
-                                  Container(
-                                    width: (48 * layoutScale).clamp(42.0, 54.0),
-                                    height:
-                                        (48 * layoutScale).clamp(42.0, 54.0),
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: selected
-                                          ? const Color(0xFF12899B)
-                                          : const Color(0xFFDFE7E9),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: const Color(0xFF0F6876),
-                                        width: 1.2,
+                              borderRadius: BorderRadius.circular(5),
+                              child: SizedBox(
+                                width: box,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _pickupDayShortLabels[index],
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.montserrat(
+                                        color: const Color(0xFF12899B),
+                                        fontSize: (11 * layoutScale)
+                                            .clamp(10.0, 12.0),
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    child: Text(
-                                      '${day.day}',
-                                      style: GoogleFonts.boldonse(
+                                    SizedBox(height: 8 * layoutScale),
+                                    Container(
+                                      width: box,
+                                      height: box,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
                                         color: selected
-                                            ? Colors.white
-                                            : const Color(0xFF12899B),
-                                        fontSize: (16 * layoutScale)
-                                            .clamp(14.0, 18.0),
-                                        fontWeight: FontWeight.w400,
+                                            ? const Color(0xFF12899B)
+                                            : const Color(0x33D9D9D9),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: const Color(0xFF12899B),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${day.day}',
+                                        style: GoogleFonts.montserrat(
+                                          color: selected
+                                              ? Colors.white
+                                              : const Color(0xFF12899B),
+                                          fontSize: (14 * layoutScale)
+                                              .clamp(12.0, 15.0),
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             );
-                          },
+                          }),
                         ),
                       ),
-                      SizedBox(height: 22 * layoutScale),
+                      SizedBox(height: (28 * layoutScale).clamp(22.0, 32.0)),
                       Text(
                         'Select a time slot',
                         style: GoogleFonts.boldonse(
@@ -1628,63 +1635,99 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(height: 12 * layoutScale),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _pickupSlotLabels.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12 * layoutScale,
-                          mainAxisSpacing: 12 * layoutScale,
-                          childAspectRatio: 2.2,
-                        ),
-                        itemBuilder: (_, index) {
-                          final selected = _selectedPickupSlot == index;
-                          return InkWell(
-                            onTap: _submitting
-                                ? null
-                                : () => setState(() {
-                                      _selectedPickupSlot =
-                                          selected ? -1 : index;
-                                    }),
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                gradient: selected
-                                    ? const LinearGradient(
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                        colors: [
-                                          Color(0xFF063239),
-                                          Color(0xFF0CADC5),
-                                        ],
-                                      )
-                                    : null,
-                                color: selected
-                                    ? null
-                                    : const Color(0xFFDFE7E9),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  width: 1.2,
-                                  color: selected
-                                      ? Colors.transparent
-                                      : const Color(0xFF0F6876),
+                      SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Same side inset as titles/dates: spaceBetween edges.
+                          final chipH =
+                              (40 * layoutScale).clamp(36.0, 44.0);
+                          final rowGap =
+                              (14 * layoutScale).clamp(12.0, 18.0);
+                          // Keep chips compact; leftover width becomes mid gaps.
+                          final chipW = ((constraints.maxWidth - 72) / 3)
+                              .clamp(70.0, 86.0);
+                          const radius = 5.0;
+                          final labels = _pickupSlotLabels;
+                          final rows = <Widget>[];
+                          for (var r = 0; r < 3; r++) {
+                            final rowChildren = <Widget>[];
+                            for (var c = 0; c < 3; c++) {
+                              final index = r * 3 + c;
+                              if (index >= labels.length) break;
+                              final selected = _selectedPickupSlot == index;
+                              rowChildren.add(
+                                SizedBox(
+                                  width: chipW,
+                                  height: chipH,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _submitting
+                                          ? null
+                                          : () => setState(() {
+                                                _selectedPickupSlot =
+                                                    selected ? -1 : index;
+                                              }),
+                                      borderRadius:
+                                          BorderRadius.circular(radius),
+                                      child: Ink(
+                                        decoration: BoxDecoration(
+                                          gradient: selected
+                                              ? const LinearGradient(
+                                                  begin: Alignment.centerLeft,
+                                                  end: Alignment.centerRight,
+                                                  colors: [
+                                                    Color(0xFF063239),
+                                                    Color(0xFF0CADC5),
+                                                  ],
+                                                )
+                                              : null,
+                                          color: selected
+                                              ? null
+                                              : const Color(0x33D9D9D9),
+                                          borderRadius:
+                                              BorderRadius.circular(radius),
+                                          border: Border.all(
+                                            width: 1,
+                                            color: selected
+                                                ? Colors.transparent
+                                                : const Color(0xFF12899B),
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            labels[index],
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.montserrat(
+                                              color: selected
+                                                  ? Colors.white
+                                                  : const Color(0xFF12899B),
+                                              fontSize: (11 * layoutScale)
+                                                  .clamp(10.0, 12.0),
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
+                              );
+                            }
+                            rows.add(
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: rowChildren,
                               ),
-                              child: Text(
-                                _pickupSlotLabels[index],
-                                style: GoogleFonts.boldonse(
-                                  color: selected
-                                      ? Colors.white
-                                      : const Color(0xFF12899B),
-                                  fontSize:
-                                      (13 * layoutScale).clamp(11.0, 13.0),
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ),
+                            );
+                            if (r < 2) {
+                              rows.add(SizedBox(height: rowGap));
+                            }
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: rows,
                           );
                         },
                       ),
