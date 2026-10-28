@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
@@ -556,35 +557,42 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                             24,
                           ),
                           children: [
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        onPressed: _submitting
-                                            ? null
-                                            : () => Navigator.pop(context),
-                                        icon: const Icon(
-                                          Icons.arrow_back_ios_new_rounded,
-                                          color: Color(0xFF062F35),
-                                          size: 24,
+                                  Transform.translate(
+                                    offset: const Offset(-8, 0),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          onPressed: _submitting
+                                              ? null
+                                              : () => Navigator.pop(context),
+                                          icon: const Icon(
+                                            Icons.arrow_back_ios_new_rounded,
+                                            color: Color(0xFF062F35),
+                                            size: 22,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          alignment: Alignment.centerLeft,
+                                          constraints:
+                                              const BoxConstraints.tightFor(
+                                            width: 24,
+                                            height: 24,
+                                          ),
                                         ),
-                                        padding: EdgeInsets.zero,
-                                        alignment: Alignment.centerLeft,
-                                        constraints:
-                                            const BoxConstraints.tightFor(
-                                          width: 26,
-                                          height: 26,
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            'Confirming Service',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.boldonse(
+                                              color: const Color(0xFF062F35),
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Confirming Service',
-                                        style: GoogleFonts.boldonse(
-                                          color: const Color(0xFF062F35),
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 18),
                                   Text(
@@ -597,36 +605,42 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   ),
                                   const SizedBox(height: 8),
                                   _detailRow(
-                                    icon: Icons.handyman_outlined,
+                                    iconAsset:
+                                        'assets/images/icons/profile/serv.svg',
                                     label: 'Service Type',
                                     value: _serviceDisplayTitle,
                                   ),
                                   _detailRow(
-                                    icon: Icons.storefront_outlined,
+                                    iconAsset:
+                                        'assets/images/icons/profile/map-pin.svg',
                                     label: widget.service.value == 'repair'
                                         ? 'Repair Shop'
                                         : 'Service Location',
                                     value: _repairShopLabel,
                                   ),
                                   _detailRow(
-                                    icon: Icons.calendar_today_outlined,
+                                    iconAsset:
+                                        'assets/images/icons/profile/watch.svg',
                                     label: 'Slot Details',
                                     value: widget.pickupScheduleLabel ??
                                         'Not specified',
                                   ),
                                   _detailRow(
-                                    icon: Icons.checkroom_outlined,
+                                    iconAsset:
+                                        'assets/images/icons/shoe.svg',
                                     label: 'Footwear Details',
                                     value: _footwearDetailsLabel,
                                   ),
                                   _detailRow(
-                                    icon: Icons.chat_bubble_outline_rounded,
+                                    iconAsset:
+                                        'assets/images/icons/profile/Vector (2).svg',
                                     label: 'Reason for Service',
                                     value: problemText,
                                     multiline: true,
                                   ),
                                   _detailRow(
-                                    icon: Icons.photo_camera_outlined,
+                                    iconAsset:
+                                        'assets/images/icons/profile/Group 129.svg',
                                     label: 'Problem Area Photos',
                                     value: '',
                                     trailing: _buildProofPreviewStripCompact(),
@@ -692,7 +706,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   }
 
   Widget _detailRow({
-    required IconData icon,
+    required String iconAsset,
     required String label,
     required String value,
     bool multiline = false,
@@ -701,24 +715,34 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.only(top: 18, bottom: 24),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
+                padding: const EdgeInsets.all(11),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDFE7E9),
-                  borderRadius: BorderRadius.circular(10),
+                  color: const Color(0x33D9D9D9),
+                  borderRadius: BorderRadius.circular(5),
                   border: Border.all(
-                    color: const Color(0xFF0F6876),
-                    width: 1.3,
+                    color: const Color(0xFF12899B),
+                    width: 1,
                   ),
                 ),
-                child: Icon(icon, color: const Color(0xFF11899B), size: 22),
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  iconAsset,
+                  width: 22,
+                  height: 22,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF12899B),
+                    BlendMode.srcIn,
+                  ),
+                ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -726,21 +750,21 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     Text(
                       label,
                       style: GoogleFonts.montserrat(
-                        color: const Color(0xFF11899B),
-                        fontSize: 13,
+                        color: const Color(0xFF12899B),
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (value.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         value,
                         maxLines: multiline ? 6 : 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.montserrat(
                           color: const Color(0xFF5A5A5A),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
                           height: 1.35,
                         ),
                       ),
@@ -755,7 +779,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
             ],
           ),
         ),
-        const Divider(height: 1, thickness: 1, color: Color(0xFFD7DEE0)),
+        const Divider(height: 1, thickness: 1, color: Color(0xFFD8D8D8)),
       ],
     );
   }
