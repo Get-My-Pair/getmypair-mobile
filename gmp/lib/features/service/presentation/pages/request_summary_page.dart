@@ -158,24 +158,13 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 
-  Future<void> _confirmRequest() async {
-    if (_submitting) return;
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-
+  /// Returns `null` on success, otherwise an error message.
+  Future<String?> _submitServiceRequest() async {
     final tokenResult = await sl<GetValidAccessToken>().call();
-    if (!mounted) return;
+    if (!mounted) return 'Please try again';
 
-    await tokenResult.fold(
-      (_) async {
-        if (!mounted) return;
-        setState(() {
-          _submitting = false;
-          _error = 'Please sign in again';
-        });
-      },
+    return await tokenResult.fold(
+      (_) async => 'Please sign in again',
       (token) async {
         try {
           final photoUrls = <String>[];
@@ -202,7 +191,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
               'photos': photoUrls,
               'videos': videoUrls,
               'estimatedCost': widget.estimatedCostRupees,
-              'pickupMode': widget.homePickup ? 'home_pickup' : 'cobbler_nearby',
+              'pickupMode':
+                  widget.homePickup ? 'home_pickup' : 'cobbler_nearby',
             };
             if (desc != null && desc.isNotEmpty) {
               body['problemDescription'] = desc;
@@ -223,12 +213,13 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
 
             final requestId =
                 (res['data'] is Map && (res['data'] as Map)['request'] is Map)
-                    ? ((res['data'] as Map)['request'] as Map)['_id']?.toString()
+                    ? ((res['data'] as Map)['request'] as Map)['_id']
+                        ?.toString()
                     : null;
             if (requestId != null) createdIds.add(requestId);
           }
 
-          if (!mounted) return;
+          if (!mounted) return null;
           final count = widget.articleIds.length;
           await showAppFeedbackAlert(
             context,
@@ -239,21 +230,28 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     : 'Request created',
             type: AppFeedbackType.success,
           );
-          if (!mounted) return;
-          Navigator.pop(context, true);
+          return null;
         } catch (e) {
-          if (!mounted) return;
-          setState(() {
-            _submitting = false;
-            _error = e.toString().replaceFirst('Exception: ', '');
-          });
-        } finally {
-          if (mounted) {
-            setState(() => _submitting = false);
-          }
+          return e.toString().replaceFirst('Exception: ', '');
         }
       },
     );
+  }
+
+  Future<void> _confirmRequest() async {
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final error = await _submitServiceRequest();
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (error == null) {
+      Navigator.pop(context, true);
+      return;
+    }
+    setState(() => _error = error);
   }
 
   @override
@@ -612,7 +610,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   ),
                                   _detailRow(
                                     iconAsset:
-                                        'assets/images/icons/profile/map-pin.svg',
+                                        'assets/images/icons/Vector (3).svg',
                                     label: widget.service.value == 'repair'
                                         ? 'Repair Shop'
                                         : 'Service Location',
@@ -620,7 +618,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   ),
                                   _detailRow(
                                     iconAsset:
-                                        'assets/images/icons/profile/watch.svg',
+                                        'assets/images/icons/calendar.svg',
                                     label: 'Slot Details',
                                     value: widget.pickupScheduleLabel ??
                                         'Not specified',
@@ -633,14 +631,14 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   ),
                                   _detailRow(
                                     iconAsset:
-                                        'assets/images/icons/profile/Vector (2).svg',
+                                        'assets/images/icons/message-circle.svg',
                                     label: 'Reason for Service',
                                     value: problemText,
                                     multiline: true,
                                   ),
                                   _detailRow(
                                     iconAsset:
-                                        'assets/images/icons/profile/Group 129.svg',
+                                        'assets/images/icons/camera.svg',
                                     label: 'Problem Area Photos',
                                     value: '',
                                     trailing: _buildProofPreviewStripCompact(),
@@ -715,7 +713,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 18, bottom: 24),
+          padding: const EdgeInsets.only(top: 14, bottom: 20),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -887,6 +885,7 @@ class _SlideToConfirm extends StatefulWidget {
   final VoidCallback onConfirmed;
 
   const _SlideToConfirm({
+    super.key,
     required this.enabled,
     required this.onConfirmed,
   });
@@ -957,10 +956,14 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
               ),
               Positioned(
                 right: 16,
-                child: Icon(
-                  Icons.storefront_outlined,
-                  color: const Color(0xFF11899B).withValues(alpha: 0.85),
-                  size: 26,
+                child: SvgPicture.asset(
+                  'assets/images/icons/Vector (3).svg',
+                  width: 24,
+                  height: 24,
+                  colorFilter: ColorFilter.mode(
+                    const Color(0xFF12899B).withValues(alpha: 0.85),
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
               Positioned(
@@ -991,10 +994,15 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.checkroom_outlined,
-                      color: Colors.white,
-                      size: 26,
+                    alignment: Alignment.center,
+                    child: SvgPicture.asset(
+                      'assets/images/icons/shoe.svg',
+                      width: 26,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                 ),
