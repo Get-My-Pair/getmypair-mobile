@@ -23,7 +23,7 @@ import '../widgets/service_flow_pickup_pill.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
 
-/// Maintenance care option shown when user selects MaintainMyPair.
+/// Care option shown on MaintainMyPair / WashMyPair after article selection.
 class MaintenancePlanData {
   final String id;
   final String label;
@@ -113,6 +113,32 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     ),
   ];
 
+  static const List<MaintenancePlanData> _washPlans = [
+    MaintenancePlanData(
+      id: 'exterior_surface_deep_clean',
+      label: 'Exterior & Surface Deep Cleaning',
+      description:
+          'Comprehensive deep cleaning that lifts dirt from uppers, scrubs soles clean, and restores yellowed midsoles across all materials.',
+      priceRupees: 300,
+    ),
+    MaintenancePlanData(
+      id: 'interior_care_sanitization',
+      label: 'Interior Care & Sanitization',
+      description:
+          'Deep interior extraction wash and antibacterial treatment to eliminate trapped sweat, dirt, and odor-causing bacteria.',
+      priceRupees: 300,
+    ),
+    MaintenancePlanData(
+      id: 'detailing_finishing',
+      label: 'Detailing & Finishing',
+      description:
+          'Targeted stain treatment, deep lace soaking, and controlled moisture extraction for a spot-free, safe finish.',
+      priceRupees: 300,
+    ),
+  ];
+
+  bool _careOptionsScrollbarNeeded = false;
+
   bool _loading = true;
   bool _submitting = false;
   String? _error;
@@ -122,7 +148,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   ServiceOptionData? _selectedService;
   MaintenancePlanData? _selectedMaintenancePlan;
-  final Set<String> _selectedMaintenanceOptionIds = {};
+  final Set<String> _selectedCareOptionIds = {};
   int _repairStep = 0;
   bool _homePickup = true;
   bool _pickupModeChosen = false;
@@ -268,30 +294,37 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   bool get _isMaintenanceFlow => _singleFlowType == 'maintenance';
 
+  bool get _isWashFlow => _singleFlowType == 'wash';
+
+  /// MaintainMyPair / WashMyPair share the checkbox options UI; content differs.
+  bool get _isCareOptionsFlow => _isMaintenanceFlow || _isWashFlow;
+
   bool get _repairStep0ProblemValid =>
       _problemController.text.trim().isNotEmpty;
 
   bool get _repairStep0PhotosValid => _proofImages.isNotEmpty;
 
-  bool get _repairStep0MaintenanceValid =>
-      _selectedMaintenanceOptionIds.isNotEmpty;
+  bool get _repairStep0CareOptionsValid => _selectedCareOptionIds.isNotEmpty;
 
   // Kept for pickup UI (commented out below); re-enable in `_repairStep0Complete`.
   // ignore: unused_element
   bool get _repairStep0PickupValid => _pickupModeChosen;
 
   // Pickup mode UI is temporarily commented out (future); do not require it yet.
-  // MaintainMyPair step 0: select care options (Figma 2851-4014).
-  bool get _repairStep0Complete => _isMaintenanceFlow
-      ? _repairStep0MaintenanceValid
+  // MaintainMyPair / WashMyPair step 0: select care options (Figma 2851-4014).
+  bool get _repairStep0Complete => _isCareOptionsFlow
+      ? _repairStep0CareOptionsValid
       : (_repairStep0ProblemValid && _repairStep0PhotosValid);
 
-  List<MaintenancePlanData> get _selectedMaintenanceOptions => _maintenancePlans
-      .where((p) => _selectedMaintenanceOptionIds.contains(p.id))
+  List<MaintenancePlanData> get _activeCarePlans =>
+      _isWashFlow ? _washPlans : _maintenancePlans;
+
+  List<MaintenancePlanData> get _selectedCareOptions => _activeCarePlans
+      .where((p) => _selectedCareOptionIds.contains(p.id))
       .toList(growable: false);
 
-  MaintenancePlanData? get _resolvedMaintenancePlan {
-    final selected = _selectedMaintenanceOptions;
+  MaintenancePlanData? get _resolvedCarePlan {
+    final selected = _selectedCareOptions;
     if (selected.isEmpty) return _selectedMaintenancePlan;
     if (selected.length == 1) return selected.first;
     return MaintenancePlanData(
@@ -302,15 +335,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
-  void _toggleMaintenanceOption(String id) {
+  void _toggleCareOption(String id) {
     if (_submitting) return;
     setState(() {
-      if (_selectedMaintenanceOptionIds.contains(id)) {
-        _selectedMaintenanceOptionIds.remove(id);
+      if (_selectedCareOptionIds.contains(id)) {
+        _selectedCareOptionIds.remove(id);
       } else {
-        _selectedMaintenanceOptionIds.add(id);
+        _selectedCareOptionIds.add(id);
       }
-      _selectedMaintenancePlan = _resolvedMaintenancePlan;
+      _selectedMaintenancePlan =
+          _isMaintenanceFlow ? _resolvedCarePlan : null;
       _showRepairStep0FieldErrors = true;
     });
   }
@@ -324,12 +358,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     }
     _problemController.addListener(_onRepairStep0FieldsChanged);
     _problemFocusNode.addListener(_onProblemFocusChanged);
+    _repairStep0ScrollController.addListener(_updateCareOptionsScrollbarNeeded);
     _load();
   }
 
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
+    _scheduleCareOptionsScrollbarCheck();
     if (_problemFocusNode.hasFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future<void>.delayed(const Duration(milliseconds: 150), () {
@@ -337,6 +373,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         });
       });
     }
+  }
+
+  void _updateCareOptionsScrollbarNeeded() {
+    if (!mounted || !_isCareOptionsFlow) return;
+    if (!_repairStep0ScrollController.hasClients) return;
+    final needed =
+        _repairStep0ScrollController.position.maxScrollExtent > 0.5;
+    if (needed != _careOptionsScrollbarNeeded) {
+      setState(() => _careOptionsScrollbarNeeded = needed);
+    }
+  }
+
+  void _scheduleCareOptionsScrollbarCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateCareOptionsScrollbarNeeded();
+    });
   }
 
   void _onRepairStep0FieldsChanged() {
@@ -373,6 +425,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     WidgetsBinding.instance.removeObserver(this);
     _problemController.removeListener(_onRepairStep0FieldsChanged);
     _problemFocusNode.removeListener(_onProblemFocusChanged);
+    _repairStep0ScrollController
+        .removeListener(_updateCareOptionsScrollbarNeeded);
     _problemFocusNode.dispose();
     _repairStep0ScrollController.dispose();
     _problemController.dispose();
@@ -633,9 +687,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     setState(() {
       _selectedService = opt;
       _repairStep = 0;
-      if (opt.value != 'maintenance') {
+      if (opt.value != 'maintenance' && opt.value != 'wash') {
         _selectedMaintenancePlan = null;
-        _selectedMaintenanceOptionIds.clear();
+        _selectedCareOptionIds.clear();
+      } else {
+        _selectedCareOptionIds.clear();
+        _selectedMaintenancePlan = null;
       }
     });
   }
@@ -693,10 +750,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       case 'repair':
         return kRepairEstimateRupees;
       case 'wash':
+        // Flat wash estimate; selected options are captured in problemDescription.
         return kWashEstimateRupees;
       case 'maintenance':
-        return (_resolvedMaintenancePlan ?? _maintenancePlans.first)
-            .priceRupees;
+        return (_resolvedCarePlan ?? _maintenancePlans.first).priceRupees;
       case 'donate':
       case 'dispose':
         return 0;
@@ -718,12 +775,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       );
       return;
     }
-    if (_selectedService!.value == 'maintenance' &&
-        _selectedMaintenanceOptionIds.isEmpty &&
+    if ((_selectedService!.value == 'maintenance' ||
+            _selectedService!.value == 'wash') &&
+        _selectedCareOptionIds.isEmpty &&
         !_isSingleServiceFlow) {
       await showAppFeedbackAlert(
         context,
-        message: 'Please select at least one maintenance option',
+        message: 'Please select at least one option',
         type: AppFeedbackType.warning,
       );
       return;
@@ -761,9 +819,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           proofVideos: List<XFile>.from(_proofVideos),
           estimatedCostRupees: est,
           problemDescription: () {
-            if (_selectedService!.value == 'maintenance') {
+            if (_selectedService!.value == 'maintenance' ||
+                _selectedService!.value == 'wash') {
               final labels =
-                  _selectedMaintenanceOptions.map((p) => p.label).join(', ');
+                  _selectedCareOptions.map((p) => p.label).join(', ');
               return labels.isEmpty ? null : labels;
             }
             final text = _problemController.text.trim();
@@ -776,7 +835,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   ? null
                   : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
           maintenancePlan: _selectedService!.value == 'maintenance'
-              ? (_resolvedMaintenancePlan ?? _maintenancePlans.first)
+              ? (_resolvedCarePlan ?? _maintenancePlans.first)
               : null,
           homePickup: _homePickup,
           requestedPickupAt: _homePickup &&
@@ -1192,93 +1251,105 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             Expanded(
               child: ColoredBox(
                 color: const Color(0xFFF0F0F0),
-                child: RawScrollbar(
-                  controller: _repairStep0ScrollController,
-                  thumbVisibility: true,
-                  trackVisibility: _isMaintenanceFlow,
-                  interactive: true,
-                  radius: const Radius.circular(4),
-                  thickness: _isMaintenanceFlow ? 6 : 4,
-                  thumbColor: const Color(0xFF6B6B6B),
-                  trackColor: const Color(0x336B6B6B),
-                  trackRadius: const Radius.circular(4),
-                  padding: EdgeInsets.only(
-                    right: 2,
-                    top: _isMaintenanceFlow
-                        ? (36 * layoutScale).clamp(28.0, 44.0)
-                        : (8 * layoutScale).clamp(4.0, 10.0),
-                    // Keep thumb clear of the Next dock / card bottom (Figma).
-                    bottom: _isMaintenanceFlow
-                        ? (72 * layoutScale).clamp(56.0, 88.0)
-                        : (8 * layoutScale).clamp(4.0, 10.0),
-                  ),
-                  child: SingleChildScrollView(
+                child: NotificationListener<ScrollMetricsNotification>(
+                  onNotification: (_) {
+                    _updateCareOptionsScrollbarNeeded();
+                    return false;
+                  },
+                  child: RawScrollbar(
                     controller: _repairStep0ScrollController,
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    physics: const ClampingScrollPhysics(),
+                    // Show only when content overflows (when scroll is needed).
+                    thumbVisibility: _isCareOptionsFlow
+                        ? _careOptionsScrollbarNeeded
+                        : false,
+                    trackVisibility: _isCareOptionsFlow &&
+                        _careOptionsScrollbarNeeded,
+                    interactive: true,
+                    radius: const Radius.circular(4),
+                    thickness: _isCareOptionsFlow ? 6 : 4,
+                    thumbColor: const Color(0xFF6B6B6B),
+                    trackColor: const Color(0x336B6B6B),
+                    trackRadius: const Radius.circular(4),
                     padding: EdgeInsets.only(
-                      bottom: 16,
-                      right: _isMaintenanceFlow ? 14 : 0,
+                      right: 2,
+                      top: _isCareOptionsFlow
+                          ? (36 * layoutScale).clamp(28.0, 44.0)
+                          : (8 * layoutScale).clamp(4.0, 10.0),
+                      // Keep thumb clear of the Next dock / card bottom (Figma).
+                      bottom: _isCareOptionsFlow
+                          ? (72 * layoutScale).clamp(56.0, 88.0)
+                          : (8 * layoutScale).clamp(4.0, 10.0),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildRepairFlowAppBar(
-                          context,
-                          title: title,
-                          layoutScale: layoutScale,
-                          titleFontSize: titleFs,
-                          onBack: _submitting
-                              ? null
-                              : () {
-                                  if (_repairStep > 0) {
-                                    setState(() => _repairStep -= 1);
-                                    return;
-                                  }
-                                  Navigator.pop(context);
-                                },
-                        ),
-                        SizedBox(
-                          height: keyboardInset > 0
-                              ? 8
-                              : (26 * layoutScale).clamp(20.0, 36.0),
-                        ),
-                        if (selectedArticles.isNotEmpty) ...[
-                          _buildSelectedFootwearHeader(
-                            selectedArticles,
+                    child: SingleChildScrollView(
+                      controller: _repairStep0ScrollController,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.only(
+                        bottom: 16,
+                        right: _isCareOptionsFlow &&
+                                _careOptionsScrollbarNeeded
+                            ? 14
+                            : 0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildRepairFlowAppBar(
+                            context,
+                            title: title,
                             layoutScale: layoutScale,
-                            fontSize: fs,
-                            iconSize: iconSz,
-                            compact: _isMaintenanceFlow,
+                            titleFontSize: titleFs,
+                            onBack: _submitting
+                                ? null
+                                : () {
+                                    if (_repairStep > 0) {
+                                      setState(() => _repairStep -= 1);
+                                      return;
+                                    }
+                                    Navigator.pop(context);
+                                  },
                           ),
                           SizedBox(
-                            height: _isMaintenanceFlow
-                                ? (12 * layoutScale).clamp(8.0, 16.0)
-                                : 8 * layoutScale,
+                            height: keyboardInset > 0
+                                ? 8
+                                : (26 * layoutScale).clamp(20.0, 36.0),
                           ),
-                        ],
-                        if (_isMaintenanceFlow) ...[
-                        Text(
-                          'How can we help you today?',
-                          style: GoogleFonts.montserrat(
-                            color: const Color(0xFF8D8D8D),
-                            fontSize:
-                                (14 * layoutScale).clamp(12.0, 14.0),
-                            fontWeight: FontWeight.w300,
+                          if (selectedArticles.isNotEmpty) ...[
+                            _buildSelectedFootwearHeader(
+                              selectedArticles,
+                              layoutScale: layoutScale,
+                              fontSize: fs,
+                              iconSize: iconSz,
+                              compact: _isCareOptionsFlow,
+                            ),
+                            SizedBox(
+                              height: _isCareOptionsFlow
+                                  ? (12 * layoutScale).clamp(8.0, 16.0)
+                                  : 8 * layoutScale,
+                            ),
+                          ],
+                          if (_isCareOptionsFlow) ...[
+                          Text(
+                            'How can we help you today?',
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF062F35),
+                              fontSize:
+                                  (16 * layoutScale).clamp(14.0, 16.0),
+                              fontWeight: FontWeight.w400,
+                            ),
                           ),
-                        ),
-                        if (_showRepairStep0FieldErrors &&
-                            !_repairStep0MaintenanceValid)
-                          _repairStep0InlineError(
-                            'Please select at least one option.',
-                            layoutScale,
+                          if (_showRepairStep0FieldErrors &&
+                              !_repairStep0CareOptionsValid)
+                            _repairStep0InlineError(
+                              'Please select at least one option.',
+                              layoutScale,
+                            ),
+                          SizedBox(
+                            height: (18 * layoutScale).clamp(12.0, 24.0),
                           ),
-                        SizedBox(
-                          height: (18 * layoutScale).clamp(12.0, 24.0),
-                        ),
-                        _buildMaintenanceOptionsList(layoutScale),
-                      ] else ...[
+                          _buildCareOptionsList(layoutScale),
+                        ] else ...[
                       KeyedSubtree(
                         key: _problemFieldKey,
                         child: Column(
@@ -1561,6 +1632,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                       ],
                     ],
                   ),
+                ),
                 ),
                 ),
               ),
@@ -1865,8 +1937,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
-  /// MaintainMyPair care options — Figma node 2851-4014.
-  Widget _buildMaintenanceOptionsList(double layoutScale) {
+  /// MaintainMyPair / WashMyPair care options — Figma node 2851-4014.
+  Widget _buildCareOptionsList(double layoutScale) {
+    final plans = _activeCarePlans;
     final titleFs = (14 * layoutScale).clamp(12.0, 14.0);
     final bodyFs = (16 * layoutScale).clamp(13.0, 16.0);
     final box = (22 * layoutScale).clamp(20.0, 24.0);
@@ -1876,13 +1949,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < _maintenancePlans.length; i++) ...[
+        for (var i = 0; i < plans.length; i++) ...[
           if (i > 0) SizedBox(height: itemGap),
-          _buildMaintenanceOptionRow(
-            plan: _maintenancePlans[i],
-            selected: _selectedMaintenanceOptionIds.contains(
-              _maintenancePlans[i].id,
-            ),
+          _buildCareOptionRow(
+            plan: plans[i],
+            selected: _selectedCareOptionIds.contains(plans[i].id),
             layoutScale: layoutScale,
             titleFs: titleFs,
             bodyFs: bodyFs,
@@ -1894,7 +1965,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
-  Widget _buildMaintenanceOptionRow({
+  Widget _buildCareOptionRow({
     required MaintenancePlanData plan,
     required bool selected,
     required double layoutScale,
@@ -1904,7 +1975,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     required double gap,
   }) {
     return InkWell(
-      onTap: _submitting ? null : () => _toggleMaintenanceOption(plan.id),
+      onTap: _submitting ? null : () => _toggleCareOption(plan.id),
       borderRadius: BorderRadius.circular(8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2046,7 +2117,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.montserrat(
-                  color: const Color(0xFF8D8D8D),
+                  color: Colors.black,
                   fontSize: subtitleFs,
                   fontWeight: FontWeight.w400,
                   height: 1.15,
@@ -2501,23 +2572,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         ),
       ];
     }
-    if (s == 'wash') {
-      return [
-        _estimationCard(
-          title: 'Estimated cost',
-          amountRupees: kWashEstimateRupees,
-          subtitle: 'Estimated wash service charge',
-        ),
-      ];
-    }
-    if (s == 'maintenance') {
+    if (s == 'wash' || s == 'maintenance') {
       return [
         _sectionTitle(
           'How can we help you today?',
           'Select one or more care options.',
         ),
         const SizedBox(height: 14),
-        _buildMaintenanceOptionsList(1),
+        _buildCareOptionsList(1),
       ];
     }
     if (s == 'donate' || s == 'dispose') {

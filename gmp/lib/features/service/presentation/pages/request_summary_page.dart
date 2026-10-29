@@ -636,7 +636,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                     value: problemText,
                                     multiline: true,
                                   ),
-                                  if (widget.service.value != 'maintenance')
+                                  if (widget.service.value != 'maintenance' &&
+                                      widget.service.value != 'wash')
                                     _detailRow(
                                       iconAsset:
                                           'assets/images/icons/camera.svg',
