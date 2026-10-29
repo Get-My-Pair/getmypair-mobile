@@ -636,13 +636,15 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                     value: problemText,
                                     multiline: true,
                                   ),
-                                  _detailRow(
-                                    iconAsset:
-                                        'assets/images/icons/camera.svg',
-                                    label: 'Problem Area Photos',
-                                    value: '',
-                                    trailing: _buildProofPreviewStripCompact(),
-                                  ),
+                                  if (widget.service.value != 'maintenance')
+                                    _detailRow(
+                                      iconAsset:
+                                          'assets/images/icons/camera.svg',
+                                      label: 'Problem Area Photos',
+                                      value: '',
+                                      trailing:
+                                          _buildProofPreviewStripCompact(),
+                                    ),
                                   if (_error != null) ...[
                                     const SizedBox(height: 12),
                                     Text(

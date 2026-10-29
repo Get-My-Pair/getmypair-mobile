@@ -23,15 +23,17 @@ import '../widgets/service_flow_pickup_pill.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
 
-/// Maintenance subscription plan shown when user selects Maintenance service.
+/// Maintenance care option shown when user selects MaintainMyPair.
 class MaintenancePlanData {
   final String id;
   final String label;
+  final String description;
   final int priceRupees;
 
   const MaintenancePlanData({
     required this.id,
     required this.label,
+    this.description = '',
     required this.priceRupees,
   });
 }
@@ -81,9 +83,34 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   static const int kWashEstimateRupees = 300;
 
   static const List<MaintenancePlanData> _maintenancePlans = [
-    MaintenancePlanData(id: '1m', label: '1 month', priceRupees: 299),
-    MaintenancePlanData(id: '3m', label: '3 months', priceRupees: 999),
-    MaintenancePlanData(id: '6m', label: '6 months', priceRupees: 1500),
+    MaintenancePlanData(
+      id: 'protection_conditioning',
+      label: 'Protection & Conditioning',
+      description:
+          'Protect and revive your footwear with hydrophobic weatherproofing, UV shielding, and deep-leather conditioning to keep your shoes soft, vibrant, and dirt-resistant.',
+      priceRupees: 299,
+    ),
+    MaintenancePlanData(
+      id: 'surface_care_polishing',
+      label: 'Preventive Surface Care & Polishing',
+      description:
+          'Restore your footwear\'s original shine with material-specific brushing, premium polishing, and precise edge detailing to eliminate buildup and yellowing.',
+      priceRupees: 299,
+    ),
+    MaintenancePlanData(
+      id: 'structural_shape',
+      label: 'Structural & Shape Maintenance',
+      description:
+          'Refresh your shoes inside and out with professional steam reshaping, antimicrobial lining sanitization, and factory-fresh lace care.',
+      priceRupees: 299,
+    ),
+    MaintenancePlanData(
+      id: 'storage_preservation',
+      label: 'Storage & Preservation Prep',
+      description:
+          'Safeguard your footwear from long-term wear with custom sole protection and humidity-controlled seasonal storage prep.',
+      priceRupees: 299,
+    ),
   ];
 
   bool _loading = true;
@@ -95,6 +122,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   ServiceOptionData? _selectedService;
   MaintenancePlanData? _selectedMaintenancePlan;
+  final Set<String> _selectedMaintenanceOptionIds = {};
   int _repairStep = 0;
   bool _homePickup = true;
   bool _pickupModeChosen = false;
@@ -238,18 +266,54 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   bool get _isSingleServiceFlow => _visibleOptions.length == 1;
 
+  bool get _isMaintenanceFlow => _singleFlowType == 'maintenance';
+
   bool get _repairStep0ProblemValid =>
       _problemController.text.trim().isNotEmpty;
 
   bool get _repairStep0PhotosValid => _proofImages.isNotEmpty;
+
+  bool get _repairStep0MaintenanceValid =>
+      _selectedMaintenanceOptionIds.isNotEmpty;
 
   // Kept for pickup UI (commented out below); re-enable in `_repairStep0Complete`.
   // ignore: unused_element
   bool get _repairStep0PickupValid => _pickupModeChosen;
 
   // Pickup mode UI is temporarily commented out (future); do not require it yet.
-  bool get _repairStep0Complete =>
-      _repairStep0ProblemValid && _repairStep0PhotosValid;
+  // MaintainMyPair step 0: select care options (Figma 2851-4014).
+  bool get _repairStep0Complete => _isMaintenanceFlow
+      ? _repairStep0MaintenanceValid
+      : (_repairStep0ProblemValid && _repairStep0PhotosValid);
+
+  List<MaintenancePlanData> get _selectedMaintenanceOptions => _maintenancePlans
+      .where((p) => _selectedMaintenanceOptionIds.contains(p.id))
+      .toList(growable: false);
+
+  MaintenancePlanData? get _resolvedMaintenancePlan {
+    final selected = _selectedMaintenanceOptions;
+    if (selected.isEmpty) return _selectedMaintenancePlan;
+    if (selected.length == 1) return selected.first;
+    return MaintenancePlanData(
+      id: selected.map((p) => p.id).join(','),
+      label: selected.map((p) => p.label).join(', '),
+      description: selected.map((p) => p.description).join('\n'),
+      priceRupees: selected.fold<int>(0, (sum, p) => sum + p.priceRupees),
+    );
+  }
+
+  void _toggleMaintenanceOption(String id) {
+    if (_submitting) return;
+    setState(() {
+      if (_selectedMaintenanceOptionIds.contains(id)) {
+        _selectedMaintenanceOptionIds.remove(id);
+      } else {
+        _selectedMaintenanceOptionIds.add(id);
+      }
+      _selectedMaintenancePlan = _resolvedMaintenancePlan;
+      _showRepairStep0FieldErrors = true;
+    });
+  }
 
   @override
   void initState() {
@@ -571,6 +635,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       _repairStep = 0;
       if (opt.value != 'maintenance') {
         _selectedMaintenancePlan = null;
+        _selectedMaintenanceOptionIds.clear();
       }
     });
   }
@@ -630,7 +695,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       case 'wash':
         return kWashEstimateRupees;
       case 'maintenance':
-        return (_selectedMaintenancePlan ?? _maintenancePlans.first).priceRupees;
+        return (_resolvedMaintenancePlan ?? _maintenancePlans.first)
+            .priceRupees;
       case 'donate':
       case 'dispose':
         return 0;
@@ -653,11 +719,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       return;
     }
     if (_selectedService!.value == 'maintenance' &&
-        _selectedMaintenancePlan == null &&
+        _selectedMaintenanceOptionIds.isEmpty &&
         !_isSingleServiceFlow) {
       await showAppFeedbackAlert(
         context,
-        message: 'Please select a maintenance plan',
+        message: 'Please select at least one maintenance option',
         type: AppFeedbackType.warning,
       );
       return;
@@ -694,9 +760,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           proofImages: List<XFile>.from(_proofImages),
           proofVideos: List<XFile>.from(_proofVideos),
           estimatedCostRupees: est,
-          problemDescription: _problemController.text.trim().isEmpty
-              ? null
-              : _problemController.text.trim(),
+          problemDescription: () {
+            if (_selectedService!.value == 'maintenance') {
+              final labels =
+                  _selectedMaintenanceOptions.map((p) => p.label).join(', ');
+              return labels.isEmpty ? null : labels;
+            }
+            final text = _problemController.text.trim();
+            return text.isEmpty ? null : text;
+          }(),
           pickupModeLabel: _homePickup ? 'Home Pickup' : 'Cobblers Nearby',
           pickupScheduleLabel: !_homePickup && _cobblerNearbyLocationSummary != null
               ? _cobblerNearbyLocationSummary
@@ -704,7 +776,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   ? null
                   : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
           maintenancePlan: _selectedService!.value == 'maintenance'
-              ? (_selectedMaintenancePlan ?? _maintenancePlans.first)
+              ? (_resolvedMaintenancePlan ?? _maintenancePlans.first)
               : null,
           homePickup: _homePickup,
           requestedPickupAt: _homePickup &&
@@ -1120,44 +1192,93 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             Expanded(
               child: ColoredBox(
                 color: const Color(0xFFF0F0F0),
-                child: SingleChildScrollView(
+                child: RawScrollbar(
                   controller: _repairStep0ScrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildRepairFlowAppBar(
-                        context,
-                        title: title,
-                        layoutScale: layoutScale,
-                        titleFontSize: titleFs,
-                        onBack: _submitting
-                            ? null
-                            : () {
-                                if (_repairStep > 0) {
-                                  setState(() => _repairStep -= 1);
-                                  return;
-                                }
-                                Navigator.pop(context);
-                              },
-                      ),
-                      SizedBox(
-                        height: keyboardInset > 0
-                            ? 8
-                            : (26 * layoutScale).clamp(20.0, 36.0),
-                      ),
-                      if (selectedArticles.isNotEmpty) ...[
-                        _buildSelectedFootwearHeader(
-                          selectedArticles,
+                  thumbVisibility: true,
+                  trackVisibility: _isMaintenanceFlow,
+                  interactive: true,
+                  radius: const Radius.circular(4),
+                  thickness: _isMaintenanceFlow ? 6 : 4,
+                  thumbColor: const Color(0xFF6B6B6B),
+                  trackColor: const Color(0x336B6B6B),
+                  trackRadius: const Radius.circular(4),
+                  padding: EdgeInsets.only(
+                    right: 2,
+                    top: _isMaintenanceFlow
+                        ? (36 * layoutScale).clamp(28.0, 44.0)
+                        : (8 * layoutScale).clamp(4.0, 10.0),
+                    // Keep thumb clear of the Next dock / card bottom (Figma).
+                    bottom: _isMaintenanceFlow
+                        ? (72 * layoutScale).clamp(56.0, 88.0)
+                        : (8 * layoutScale).clamp(4.0, 10.0),
+                  ),
+                  child: SingleChildScrollView(
+                    controller: _repairStep0ScrollController,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.only(
+                      bottom: 16,
+                      right: _isMaintenanceFlow ? 14 : 0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildRepairFlowAppBar(
+                          context,
+                          title: title,
                           layoutScale: layoutScale,
-                          fontSize: fs,
-                          iconSize: iconSz,
+                          titleFontSize: titleFs,
+                          onBack: _submitting
+                              ? null
+                              : () {
+                                  if (_repairStep > 0) {
+                                    setState(() => _repairStep -= 1);
+                                    return;
+                                  }
+                                  Navigator.pop(context);
+                                },
                         ),
-                        SizedBox(height: 8 * layoutScale),
-                      ],
+                        SizedBox(
+                          height: keyboardInset > 0
+                              ? 8
+                              : (26 * layoutScale).clamp(20.0, 36.0),
+                        ),
+                        if (selectedArticles.isNotEmpty) ...[
+                          _buildSelectedFootwearHeader(
+                            selectedArticles,
+                            layoutScale: layoutScale,
+                            fontSize: fs,
+                            iconSize: iconSz,
+                            compact: _isMaintenanceFlow,
+                          ),
+                          SizedBox(
+                            height: _isMaintenanceFlow
+                                ? (12 * layoutScale).clamp(8.0, 16.0)
+                                : 8 * layoutScale,
+                          ),
+                        ],
+                        if (_isMaintenanceFlow) ...[
+                        Text(
+                          'How can we help you today?',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF8D8D8D),
+                            fontSize:
+                                (14 * layoutScale).clamp(12.0, 14.0),
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                        if (_showRepairStep0FieldErrors &&
+                            !_repairStep0MaintenanceValid)
+                          _repairStep0InlineError(
+                            'Please select at least one option.',
+                            layoutScale,
+                          ),
+                        SizedBox(
+                          height: (18 * layoutScale).clamp(12.0, 24.0),
+                        ),
+                        _buildMaintenanceOptionsList(layoutScale),
+                      ] else ...[
                       KeyedSubtree(
                         key: _problemFieldKey,
                         child: Column(
@@ -1437,8 +1558,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                       //     'Please choose an option.',
                       //     layoutScale,
                       //   ),
+                      ],
                     ],
                   ),
+                ),
                 ),
               ),
             ),
@@ -1742,6 +1865,105 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
+  /// MaintainMyPair care options — Figma node 2851-4014.
+  Widget _buildMaintenanceOptionsList(double layoutScale) {
+    final titleFs = (14 * layoutScale).clamp(12.0, 14.0);
+    final bodyFs = (16 * layoutScale).clamp(13.0, 16.0);
+    final box = (22 * layoutScale).clamp(20.0, 24.0);
+    final gap = (26 * layoutScale).clamp(16.0, 26.0);
+    final itemGap = (27 * layoutScale).clamp(18.0, 28.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < _maintenancePlans.length; i++) ...[
+          if (i > 0) SizedBox(height: itemGap),
+          _buildMaintenanceOptionRow(
+            plan: _maintenancePlans[i],
+            selected: _selectedMaintenanceOptionIds.contains(
+              _maintenancePlans[i].id,
+            ),
+            layoutScale: layoutScale,
+            titleFs: titleFs,
+            bodyFs: bodyFs,
+            checkboxSize: box,
+            gap: gap,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMaintenanceOptionRow({
+    required MaintenancePlanData plan,
+    required bool selected,
+    required double layoutScale,
+    required double titleFs,
+    required double bodyFs,
+    required double checkboxSize,
+    required double gap,
+  }) {
+    return InkWell(
+      onTap: _submitting ? null : () => _toggleMaintenanceOption(plan.id),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: checkboxSize,
+            height: checkboxSize,
+            decoration: BoxDecoration(
+              color: selected
+                  ? const Color(0xFF12899B)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: const Color(0xFF12899B),
+                width: 1.5,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: selected
+                ? Icon(
+                    Icons.check,
+                    size: (checkboxSize * 0.55).clamp(14.0, 22.0),
+                    color: Colors.white,
+                  )
+                : null,
+          ),
+          SizedBox(width: gap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  plan.label,
+                  style: GoogleFonts.boldonse(
+                    color: const Color(0xFF12899B),
+                    fontSize: titleFs,
+                    fontWeight: FontWeight.w400,
+                    height: 1.55,
+                  ),
+                ),
+                SizedBox(height: (10 * layoutScale).clamp(8.0, 12.0)),
+                Text(
+                  plan.description,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF062F35),
+                    fontSize: bodyFs,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w300,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRepairFlowAppBar(
     BuildContext context, {
     required String title,
@@ -1786,6 +2008,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     required double layoutScale,
     required double fontSize,
     required double iconSize,
+    bool compact = false,
   }) {
     if (articles.length == 1) {
       final article = articles.first;
@@ -1794,9 +2017,74 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       if (name.isEmpty && subtitle.isEmpty && article.imageUrl.isEmpty) {
         return const SizedBox.shrink();
       }
+      final subtitleFs = (fontSize * 0.88).clamp(11.0, 14.0);
+
+      // MaintainMyPair Figma: name + subtitle, then centered shoe image below.
+      if (compact) {
+        final imgW = (180 * layoutScale).clamp(140.0, 220.0);
+        final imgH = (120 * layoutScale).clamp(96.0, 148.0);
+        final graySubtitle = subtitle.isNotEmpty ? subtitle : name;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (name.isNotEmpty)
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.boldonse(
+                  color: const Color(0xFF12899B),
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w400,
+                  height: 1.05,
+                ),
+              ),
+            if (graySubtitle.isNotEmpty) ...[
+              SizedBox(height: 4 * layoutScale),
+              Text(
+                graySubtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.montserrat(
+                  color: const Color(0xFF8D8D8D),
+                  fontSize: subtitleFs,
+                  fontWeight: FontWeight.w400,
+                  height: 1.15,
+                ),
+              ),
+            ],
+            if (article.imageUrl.isNotEmpty) ...[
+              SizedBox(height: (10 * layoutScale).clamp(8.0, 14.0)),
+              Center(
+                child: SizedBox(
+                  width: imgW,
+                  height: imgH,
+                  child: ArticleRackShoeImage(
+                    imageUrl: article.imageUrl,
+                    width: imgW,
+                    height: imgH,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    placeholder: Icon(
+                      Icons.checkroom_outlined,
+                      color: const Color(0xFF8D8D8D),
+                      size: iconSize,
+                    ),
+                    errorPlaceholder: Icon(
+                      Icons.checkroom_outlined,
+                      color: const Color(0xFF8D8D8D),
+                      size: iconSize,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      }
+
       final imgW = (180 * layoutScale).clamp(140.0, 220.0);
       final imgH = (120 * layoutScale).clamp(96.0, 148.0);
-      final subtitleFs = (fontSize * 0.88).clamp(11.0, 14.0);
 
       // Figma: article name + brand first, then centered article image.
       return Column(
@@ -2224,61 +2512,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     }
     if (s == 'maintenance') {
       return [
-        _sectionTitle('Choose a plan', 'Select how long you want coverage.'),
-        const SizedBox(height: 10),
-        ..._maintenancePlans.map((p) {
-          final sel = _selectedMaintenancePlan?.id == p.id;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              onTap: _submitting
-                  ? null
-                  : () => setState(() => _selectedMaintenancePlan = p),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: sel
-                      ? AppColors.primary.withOpacity(0.1)
-                      : AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: sel ? AppColors.primary : AppColors.border,
-                    width: sel ? 2 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      sel ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: sel ? AppColors.primary : AppColors.textTertiary,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        p.label,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '₹${p.priceRupees}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: sel ? AppColors.primary : AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
+        _sectionTitle(
+          'How can we help you today?',
+          'Select one or more care options.',
+        ),
+        const SizedBox(height: 14),
+        _buildMaintenanceOptionsList(1),
       ];
     }
     if (s == 'donate' || s == 'dispose') {
