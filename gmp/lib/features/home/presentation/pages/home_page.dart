@@ -1024,10 +1024,16 @@ class _HomePageState extends State<HomePage> {
                                       final rackThumbStripGap =
                                           _homeScaled(10, layoutScale);
                                       final rackClipRadius = _rackCardClipRadius();
-                                      return Column(
+                                      // When search returns many service rows the
+                                      // fixed pack can exceed the viewport — scroll
+                                      // instead of BOTTOM OVERFLOWED.
+                                      final searching =
+                                          _searchQuery.trim().isNotEmpty;
+                                      final bodyColumn = Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         mainAxisAlignment: MainAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           SizedBox(height: headerToRackGap),
                                           SizedBox(
@@ -1298,10 +1304,18 @@ class _HomePageState extends State<HomePage> {
                                                   ),
                                                 );
                                               }
-                                              return Column(children: rows);
+                                              return Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: rows,
+                                              );
                                             },
                                           ),
                                         ],
+                                      );
+                                      if (!searching) return bodyColumn;
+                                      return SingleChildScrollView(
+                                        physics: const ClampingScrollPhysics(),
+                                        child: bodyColumn,
                                       );
                                     },
                                   ),
