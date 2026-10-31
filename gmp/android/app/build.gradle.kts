@@ -21,7 +21,7 @@ val googleMapsApiKey: String =
 
 android {
     namespace = "com.getmypair.userapp"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
