@@ -83,42 +83,91 @@ int? parseInr(String value) {
 class SellFlowScaffold extends StatelessWidget {
   final List<Widget> children;
 
+  /// Optional max width for the grey panel on tablets / desktop.
+  static const double panelMaxWidth = 720;
+
   const SellFlowScaffold({super.key, required this.children});
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final horizontalInset = (10.0 * (width / 390)).clamp(8.0, 16.0);
+    final size = MediaQuery.sizeOf(context);
+    final width = size.width;
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 20.0);
+    final topInset = (40.0 * uiScale).clamp(28.0, 52.0);
+    final contentPadH = (14.0 * uiScale).clamp(10.0, 20.0);
+    final contentPadTop = (12.0 * uiScale).clamp(10.0, 16.0);
+    final bottomNavH = dashboardLinkedBottomNavStackHeight(context);
+    final contentPadBottom = bottomNavH + (12.0 * uiScale).clamp(8.0, 16.0);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
         children: [
           ...BgTheme.background(),
           Positioned.fill(
             child: SafeArea(
               bottom: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(horizontalInset, 52, horizontalInset, 0),
-                child: DecoratedBox(
-                  decoration: const ShapeDecoration(
-                    color: SellColors.panel,
-                    shape: RoundedRectangleBorder(borderRadius: SellColors.panelRadius),
-                    shadows: [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalInset,
+                    topInset,
+                    horizontalInset,
+                    0,
                   ),
-                  child: ClipRRect(
-                    borderRadius: SellColors.panelRadius,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 130),
-                      children: children,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: panelMaxWidth),
+                    child: DecoratedBox(
+                      decoration: const ShapeDecoration(
+                        color: SellColors.panel,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: SellColors.panelRadius,
+                        ),
+                        shadows: [
+                          BoxShadow(
+                            color: Color(0x19000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: SellColors.panelRadius,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final minBodyH = (constraints.maxHeight -
+                                    contentPadTop -
+                                    contentPadBottom)
+                                .clamp(0.0, double.infinity);
+                            // ClampingScrollPhysics: no bounce when content
+                            // fits; scrolls only when the body overflows.
+                            return SingleChildScrollView(
+                              physics: const ClampingScrollPhysics(),
+                              padding: EdgeInsets.fromLTRB(
+                                contentPadH,
+                                contentPadTop,
+                                contentPadH,
+                                contentPadBottom,
+                              ),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: minBodyH,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: children,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -146,6 +195,13 @@ class SellPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final titleSize = (24.0 * uiScale).clamp(20.0, 28.0);
+    final subtitleSize = (14.0 * uiScale).clamp(12.0, 16.0);
+    final iconSize = (22.0 * uiScale).clamp(18.0, 24.0);
+    final backBox = (26.0 * uiScale).clamp(24.0, 30.0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -154,21 +210,29 @@ class SellPageHeader extends StatelessWidget {
             IconButton(
               onPressed: onBack ?? () => Navigator.maybePop(context),
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-              icon: const Icon(
+              constraints: BoxConstraints.tightFor(
+                width: backBox,
+                height: backBox,
+              ),
+              icon: Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: SellColors.ink,
-                size: 22,
+                size: iconSize,
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: (4.0 * uiScale).clamp(2.0, 6.0)),
             Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.boldonse(
-                  color: SellColors.ink,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w400,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  style: GoogleFonts.boldonse(
+                    color: SellColors.ink,
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
             ),
@@ -176,12 +240,15 @@ class SellPageHeader extends StatelessWidget {
         ),
         if (subtitle != null)
           Padding(
-            padding: const EdgeInsets.only(left: 34, top: 2),
+            padding: EdgeInsets.only(
+              left: (backBox + 8).clamp(28.0, 40.0),
+              top: 2,
+            ),
             child: Text(
               subtitle!,
               style: GoogleFonts.boldonse(
                 color: SellColors.teal,
-                fontSize: 14,
+                fontSize: subtitleSize,
                 height: 1.2,
                 fontWeight: FontWeight.w400,
               ),
@@ -213,13 +280,15 @@ class SellRackShelf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.12);
-    final shelfH = (height * uiScale).clamp(92.0, 118.0);
-    final hPad = (8.0 * uiScale).clamp(6.0, 10.0);
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final shelfH = (height * uiScale).clamp(88.0, 128.0);
+    final hPad = (8.0 * uiScale).clamp(6.0, 12.0);
+    final vPad = (10.0 * uiScale).clamp(8.0, 12.0);
     final gap = (2.0 * uiScale).clamp(1.0, 4.0);
 
     return Container(
       height: shelfH,
+      width: double.infinity,
       decoration: const BoxDecoration(
         color: shelfBg,
         border: Border(bottom: BorderSide(color: shelfBorder, width: 3)),
@@ -228,7 +297,7 @@ class SellRackShelf extends StatelessWidget {
       child: ClipRRect(
         borderRadius: shelfRadius,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: List.generate(3, (index) {
@@ -266,8 +335,8 @@ class SellRackShoeCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.12);
-    final nameSize = (12.5 * uiScale).clamp(11.0, 14.0);
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final nameSize = (12.5 * uiScale).clamp(10.5, 14.0);
     final labelGap = (3.0 * uiScale).clamp(2.0, 5.0);
     final badge = (20.0 * uiScale).clamp(16.0, 24.0);
     final short = label.length <= 10 ? label : '${label.substring(0, 9)}...';

@@ -66,37 +66,46 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final bodySize = (14.0 * uiScale).clamp(12.5, 16.0);
+    final sectionSize = (16.0 * uiScale).clamp(14.0, 18.0);
+    final gapSm = (12.0 * uiScale).clamp(8.0, 14.0);
+    final gapMd = (16.0 * uiScale).clamp(12.0, 20.0);
+    final gapLg = (18.0 * uiScale).clamp(14.0, 22.0);
+    final cardGap = (8.0 * uiScale).clamp(6.0, 12.0);
+
     return SellFlowScaffold(
       children: [
         const SellPageHeader(title: 'SellMyPair'),
-        const SizedBox(height: 16),
+        SizedBox(height: gapMd),
         Text(
           'SellMyPair lets you sell any footwear, from daily wear to high-end luxury, directly to the GetMyPair community.',
           style: GoogleFonts.montserrat(
             color: Colors.black87,
-            fontSize: 14,
+            fontSize: bodySize,
             height: 1.35,
           ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: (14.0 * uiScale).clamp(10.0, 16.0)),
         Text(
           'Select the type of footwear you’d like to sell:',
           style: GoogleFonts.montserrat(
             color: Colors.black87,
-            fontSize: 14,
+            fontSize: bodySize,
             height: 1.35,
           ),
         ),
-        const SizedBox(height: 18),
+        SizedBox(height: gapLg),
         Text(
           'Our Services',
           style: GoogleFonts.boldonse(
             color: SellColors.ink,
-            fontSize: 16,
+            fontSize: sectionSize,
             fontWeight: FontWeight.w400,
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: gapSm),
         Row(
           children: [
             Expanded(
@@ -107,7 +116,7 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
                 onTap: () => _openSelection('luxury'),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: cardGap),
             Expanded(
               child: _ServiceCard(
                 label: 'Everyday',
@@ -118,24 +127,24 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
             ),
           ],
         ),
-        const SizedBox(height: 18),
+        SizedBox(height: gapLg),
         Wrap(
-          spacing: 14,
-          runSpacing: 8,
+          spacing: (14.0 * uiScale).clamp(10.0, 18.0),
+          runSpacing: (8.0 * uiScale).clamp(6.0, 12.0),
           children: [
             _HubLegend(asset: SellColors.reviewIcon, label: 'In review'),
             _HubLegend(asset: SellColors.approvedIcon, label: 'Approved'),
             _HubLegend(asset: SellColors.rejectedIcon, label: 'Rejected'),
           ],
         ),
-        const SizedBox(height: 18),
+        SizedBox(height: gapLg),
         _RackPreview(
           title: 'My Luxury Rack',
           listings: _of('luxury'),
           loading: _loading,
           onExpand: () => _openRack('luxury'),
         ),
-        const SizedBox(height: 18),
+        SizedBox(height: gapLg),
         _RackPreview(
           title: 'My Everyday Rack',
           listings: _of('everyday'),
@@ -168,14 +177,14 @@ class _ServiceCardMetrics {
   });
 
   static _ServiceCardMetrics fromWidth(double cardWidth) {
-    final height = (cardWidth / 2.25).clamp(68.0, 86.0);
-    final padH = (cardWidth * 0.06).clamp(8.0, 12.0);
-    final padV = (height * 0.12).clamp(8.0, 12.0);
+    final height = (cardWidth / 2.25).clamp(64.0, 96.0);
+    final padH = (cardWidth * 0.06).clamp(8.0, 14.0);
+    final padV = (height * 0.12).clamp(8.0, 14.0);
     final innerH = (height - padV * 2).clamp(18.0, height);
-    final iconSize = (innerH * 0.78).clamp(30.0, 42.0);
-    final iconLeftInset = (cardWidth * 0.04).clamp(6.0, 12.0);
-    final gap = (cardWidth * 0.05).clamp(8.0, 12.0);
-    final fontSize = (innerH * 0.28).clamp(12.0, 15.0);
+    final iconSize = (innerH * 0.78).clamp(28.0, 46.0);
+    final iconLeftInset = (cardWidth * 0.04).clamp(6.0, 14.0);
+    final gap = (cardWidth * 0.05).clamp(8.0, 14.0);
+    final fontSize = (innerH * 0.28).clamp(12.0, 16.0);
     return _ServiceCardMetrics(
       height: height,
       padH: padH,
@@ -294,6 +303,14 @@ class _RackPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final titleSize = (16.0 * uiScale).clamp(14.0, 18.0);
+    final emptySize = (13.0 * uiScale).clamp(11.5, 14.5);
+    // Match [SellRackShelf] height math (base 104 × uiScale).
+    final shelfH = (104.0 * uiScale).clamp(88.0, 128.0);
+    final iconBtn = (18.0 * uiScale).clamp(16.0, 22.0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -302,9 +319,11 @@ class _RackPreview extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.boldonse(
                   color: SellColors.ink,
-                  fontSize: 16,
+                  fontSize: titleSize,
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -312,10 +331,15 @@ class _RackPreview extends StatelessWidget {
             IconButton(
               onPressed: onExpand,
               tooltip: 'Open rack',
+              visualDensity: VisualDensity.compact,
+              constraints: BoxConstraints.tightFor(
+                width: (40.0 * uiScale).clamp(36.0, 44.0),
+                height: (40.0 * uiScale).clamp(36.0, 44.0),
+              ),
               icon: SvgPicture.asset(
                 'assets/images/maximize.svg',
-                width: 18,
-                height: 18,
+                width: iconBtn,
+                height: iconBtn,
                 colorFilter: const ColorFilter.mode(
                   SellColors.ink,
                   BlendMode.srcIn,
@@ -324,15 +348,19 @@ class _RackPreview extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
         if (loading)
-          const SizedBox(
-            height: 104,
-            child: Center(
+          SizedBox(
+            height: shelfH,
+            width: double.infinity,
+            child: const Center(
               child: SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: SellColors.teal),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: SellColors.teal,
+                ),
               ),
             ),
           )
@@ -340,8 +368,12 @@ class _RackPreview extends StatelessWidget {
           GestureDetector(
             onTap: onExpand,
             child: Container(
-              height: 104,
+              height: shelfH,
+              width: double.infinity,
               alignment: Alignment.center,
+              padding: EdgeInsets.symmetric(
+                horizontal: (12.0 * uiScale).clamp(8.0, 16.0),
+              ),
               decoration: const BoxDecoration(
                 color: SellRackShelf.shelfBg,
                 border: Border(
@@ -349,34 +381,37 @@ class _RackPreview extends StatelessWidget {
                 ),
                 borderRadius: SellRackShelf.shelfRadius,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'No requests yet — tap ',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black45,
-                      fontSize: 13,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'No requests yet — tap ',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black45,
+                        fontSize: emptySize,
+                      ),
                     ),
-                  ),
-                  SvgPicture.asset(
-                    'assets/images/maximize.svg',
-                    width: 14,
-                    height: 14,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.black45,
-                      BlendMode.srcIn,
+                    SvgPicture.asset(
+                      'assets/images/maximize.svg',
+                      width: (14.0 * uiScale).clamp(12.0, 16.0),
+                      height: (14.0 * uiScale).clamp(12.0, 16.0),
+                      colorFilter: const ColorFilter.mode(
+                        Colors.black45,
+                        BlendMode.srcIn,
+                      ),
                     ),
-                  ),
-                  Text(
-                    ' to open your rack',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.black45,
-                      fontSize: 13,
+                    Text(
+                      ' to open your rack',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black45,
+                        fontSize: emptySize,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           )
@@ -405,14 +440,22 @@ class _HubLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final icon = (18.0 * uiScale).clamp(16.0, 22.0);
+    final fontSize = (12.0 * uiScale).clamp(11.0, 14.0);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SvgPicture.asset(asset, width: 18, height: 18),
-        const SizedBox(width: 6),
+        SvgPicture.asset(asset, width: icon, height: icon),
+        SizedBox(width: (6.0 * uiScale).clamp(4.0, 8.0)),
         Text(
           label,
-          style: GoogleFonts.montserrat(fontSize: 12, color: Colors.black54),
+          style: GoogleFonts.montserrat(
+            fontSize: fontSize,
+            color: Colors.black54,
+          ),
         ),
       ],
     );
