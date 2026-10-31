@@ -64,11 +64,14 @@ class _ArticleListPageState extends State<ArticleListPage> {
 </svg>
 ''';
   static const List<Map<String, String>> _filterTabs = [
-    {'value': 'formal', 'label': 'Formals'},
-    {'value': 'sports_shoe', 'label': 'Nike'},
+    {'value': '', 'label': 'All'},
+    {'value': 'sports_shoe', 'label': 'Sports'},
     {'value': 'casual', 'label': 'Casuals'},
-    {'value': 'boot', 'label': 'Heels'},
-    {'value': 'sandal', 'label': 'Converse'},
+    {'value': 'formal', 'label': 'Formals'},
+    {'value': 'sandal', 'label': 'Sandal'},
+    {'value': 'boot', 'label': 'Boot'},
+    {'value': 'slipper', 'label': 'Slipper'},
+    {'value': 'other', 'label': 'Other'},
   ];
 
   @override
@@ -508,12 +511,21 @@ class _ArticleListPageState extends State<ArticleListPage> {
               final tab = _filterTabs[i];
               final value = tab['value']!;
               final label = tab['label']!;
+              final isAll = value.isEmpty;
+              final selected = isAll
+                  ? (_filterCategory == null || _filterCategory!.isEmpty)
+                  : _filterCategory == value;
               return _FilterChipPill(
                 label: label,
-                selected: _filterCategory == value,
+                selected: selected,
                 onTap: () => setState(() {
-                  _filterCategory =
-                      _filterCategory == value ? null : value;
+                  if (isAll) {
+                    _filterCategory = null;
+                  } else if (_filterCategory == value) {
+                    _filterCategory = null;
+                  } else {
+                    _filterCategory = value;
+                  }
                 }),
               );
             },
@@ -1503,11 +1515,14 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   static const List<Map<String, String>> _filterTabs = [
-    {'value': 'formal', 'label': 'Formals'},
-    {'value': 'sports_shoe', 'label': 'Nike'},
+    {'value': '', 'label': 'All'},
+    {'value': 'sports_shoe', 'label': 'Sports'},
     {'value': 'casual', 'label': 'Casuals'},
-    {'value': 'boot', 'label': 'Heels'},
-    {'value': 'sandal', 'label': 'Converse'},
+    {'value': 'formal', 'label': 'Formals'},
+    {'value': 'sandal', 'label': 'Sandal'},
+    {'value': 'boot', 'label': 'Boot'},
+    {'value': 'slipper', 'label': 'Slipper'},
+    {'value': 'other', 'label': 'Other'},
   ];
 
   Widget _buildRackBody(BuildContext context) {

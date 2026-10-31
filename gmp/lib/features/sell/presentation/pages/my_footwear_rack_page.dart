@@ -31,11 +31,14 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
 </svg>
 ''';
   static const List<Map<String, String>> _filterTabs = [
-    {'value': 'formal', 'label': 'Formals'},
-    {'value': 'sports_shoe', 'label': 'Nike'},
+    {'value': '', 'label': 'All'},
+    {'value': 'sports_shoe', 'label': 'Sports'},
     {'value': 'casual', 'label': 'Casuals'},
-    {'value': 'boot', 'label': 'Heels'},
-    {'value': 'sandal', 'label': 'Converse'},
+    {'value': 'formal', 'label': 'Formals'},
+    {'value': 'sandal', 'label': 'Sandal'},
+    {'value': 'boot', 'label': 'Boot'},
+    {'value': 'slipper', 'label': 'Slipper'},
+    {'value': 'other', 'label': 'Other'},
   ];
 
   List<SellListing> _listings = [];
@@ -538,12 +541,21 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
             itemBuilder: (_, i) {
               final tab = _filterTabs[i];
               final value = tab['value']!;
-              final selected = _filterCategory == value;
+              final isAll = value.isEmpty;
+              final selected = isAll
+                  ? (_filterCategory == null || _filterCategory!.isEmpty)
+                  : _filterCategory == value;
               return _FilterChipPill(
                 label: tab['label']!,
                 selected: selected,
                 onTap: () => setState(() {
-                  _filterCategory = selected ? null : value;
+                  if (isAll) {
+                    _filterCategory = null;
+                  } else if (_filterCategory == value) {
+                    _filterCategory = null;
+                  } else {
+                    _filterCategory = value;
+                  }
                 }),
               );
             },

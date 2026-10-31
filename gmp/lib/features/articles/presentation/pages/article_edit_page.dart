@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_dropdown.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/theme/app_colors.dart';
@@ -81,7 +82,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   static const List<String> _euSizes = [
     '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
   ];
-  static const List<String> _sizeRegions = ['UK', 'US', 'EU'];
+  static const List<String> _sizeRegions = ['UK', 'US', 'EU', 'Bha'];
   static const List<String> _colorNames = [
     'Black',
     'White',
@@ -231,6 +232,10 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   }
 
   void _setSizeRegion(String region) {
+    if (region == 'Bha') {
+      showComingSoon(context, feature: 'Bha size');
+      return;
+    }
     setState(() {
       _sizeRegion = region;
       if (_selectedSizeNumber != null &&

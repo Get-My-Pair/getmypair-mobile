@@ -326,19 +326,19 @@ class _HomePageState extends State<HomePage> {
   bool _profileDataLoading = false;
 
   static String _formatPlacemarkForHomeHeader(Placemark p) {
-    final locality = p.locality?.trim();
-    final administrativeArea = p.administrativeArea?.trim();
-
-    // Home header shows city only.
-    if (locality != null && locality.isNotEmpty) {
-      return '📍 $locality';
-    }
-
-    if (administrativeArea != null && administrativeArea.isNotEmpty) {
-      return '📍 $administrativeArea';
-    }
-
-    return _fallbackAddress;
+    final parts = [
+      p.subThoroughfare,
+      p.thoroughfare,
+      p.subLocality,
+      p.locality,
+      p.administrativeArea,
+      p.postalCode,
+    ]
+        .where((e) => e != null && e.toString().trim().isNotEmpty)
+        .map((e) => e!.trim())
+        .toList();
+    if (parts.isEmpty) return _fallbackAddress;
+    return '📍 ${parts.join(', ')}';
   }
 
   @override
@@ -634,9 +634,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   static String _formatAddressForHeader(Address address) {
-    final city = address.city.trim();
-    if (city.isEmpty) return '';
-    return '📍 $city';
+    final pieces = [
+      address.addressLine1.trim(),
+      address.city.trim(),
+      address.state.trim(),
+      address.pincode.trim(),
+    ].where((v) => v.isNotEmpty).toList();
+    if (pieces.isEmpty) return '';
+    return '📍 ${pieces.join(', ')}';
   }
 
   void _applySavedAddressToHeader() {
@@ -2073,15 +2078,7 @@ class _HomeTopCard extends StatelessWidget {
         )
         .toList();
     if (cleanedSegments.isEmpty) return 'Bangalore';
-    // Already city-only.
-    if (cleanedSegments.length == 1) return cleanedSegments.first;
-    // Older full addresses: "line1, city, state, pincode" → city only.
-    final withoutPin = cleanedSegments
-        .where((e) => !RegExp(r'^\d{4,}$').hasMatch(e))
-        .toList();
-    if (withoutPin.isEmpty) return cleanedSegments.first;
-    if (withoutPin.length >= 3) return withoutPin[1];
-    return withoutPin.last;
+    return cleanedSegments.join(', ');
   }
 
   @override
@@ -2272,7 +2269,7 @@ class _HomeTopCard extends StatelessWidget {
                                             )
                                           : Text(
                                               addressLine,
-                                              maxLines: 1,
+                                              maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                               style: GoogleFonts.montserrat(
                                                 fontSize:
@@ -2828,65 +2825,171 @@ class _HomeActionPairRow extends StatelessWidget {
 class _CarbonCreditsChip extends StatelessWidget {
   const _CarbonCreditsChip();
 
+  Future<void> _openCarbonCreditsPopup(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => const _CarbonCreditsPopup(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _homeLayoutScale(context);
-    final numberSize = (14 * s).clamp(12.0, 16.0);
     final labelSize = (14 * s).clamp(11.0, 15.0);
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        (12 * s).clamp(10.0, 16.0),
-        (4 * s).clamp(3.0, 6.0),
-        (16 * s).clamp(12.0, 20.0),
-        (4 * s).clamp(3.0, 6.0),
-      ),
-      decoration: BoxDecoration(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openCarbonCreditsPopup(context),
         borderRadius: BorderRadius.circular(100),
-        gradient: const LinearGradient(
-          begin: Alignment(0.85, 0.41),
-          end: Alignment(-0.30, 1.29),
-          colors: [Color(0xFFAFEDD6), Color(0xFF09DFFF)],
+        child: Ink(
+          padding: EdgeInsets.fromLTRB(
+            (12 * s).clamp(10.0, 16.0),
+            (4 * s).clamp(3.0, 6.0),
+            (16 * s).clamp(12.0, 20.0),
+            (4 * s).clamp(3.0, 6.0),
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(100),
+            gradient: const LinearGradient(
+              begin: Alignment(0.85, 0.41),
+              end: Alignment(-0.30, 1.29),
+              colors: [Color(0xFFAFEDD6), Color(0xFF09DFFF)],
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: (16 * s).clamp(14.0, 20.0),
+                height: (20 * s).clamp(16.0, 24.0),
+                child: SvgPicture.asset(
+                  _kCarbonCreditsLeafAsset,
+                  fit: BoxFit.contain,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.black,
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+              SizedBox(width: (8 * s).clamp(6.0, 10.0)),
+              Text(
+                'Carbon Credits',
+                style: GoogleFonts.montserrat(
+                  color: Colors.black,
+                  fontSize: labelSize,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: (16 * s).clamp(14.0, 20.0),
-            height: (20 * s).clamp(16.0, 24.0),
-            child: SvgPicture.asset(
-              _kCarbonCreditsLeafAsset,
-              fit: BoxFit.contain,
-              colorFilter: const ColorFilter.mode(
-                Colors.black,
-                BlendMode.srcIn,
+    );
+  }
+}
+
+class _CarbonCreditsPopup extends StatelessWidget {
+  const _CarbonCreditsPopup();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment(0.85, 0.41),
+                  end: Alignment(-0.30, 1.29),
+                  colors: [Color(0xFFAFEDD6), Color(0xFF09DFFF)],
+                ),
+              ),
+              alignment: Alignment.center,
+              child: SvgPicture.asset(
+                _kCarbonCreditsLeafAsset,
+                width: 28,
+                height: 32,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF062F35),
+                  BlendMode.srcIn,
+                ),
               ),
             ),
-          ),
-          SizedBox(width: (8 * s).clamp(6.0, 10.0)),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '50',
-                  style: GoogleFonts.boldonse(
-                    color: Colors.black,
-                    fontSize: numberSize,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                TextSpan(
-                  text: '  Carbon Credits',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.black,
-                    fontSize: labelSize,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 16),
+            Text(
+              'Carbon Credits',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.boldonse(
+                color: const Color(0xFF062F35),
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              'Earn carbon credits by caring for, repairing, and giving your footwear a second life with GetMyPair.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.montserrat(
+                color: const Color(0xFF5C6E73),
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(100),
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFF063239), Color(0xFF0CADC5)],
+                  ),
+                ),
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                  ),
+                  child: Text(
+                    'Got it',
+                    style: GoogleFonts.boldonse(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
