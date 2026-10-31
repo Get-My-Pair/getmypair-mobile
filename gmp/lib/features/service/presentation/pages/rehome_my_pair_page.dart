@@ -11,7 +11,6 @@ import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Rehome hub. Sell My Pair opens the luxury and everyday selling flow. Rent stays coming soon.
 class RehomeMyPairPage extends StatefulWidget {
   const RehomeMyPairPage({super.key});
 
@@ -20,9 +19,7 @@ class RehomeMyPairPage extends StatefulWidget {
 }
 
 class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
-  /// Flip to `true` when real brand/rental media assets are ready.
-  /// Paths and UI below stay in place — only visibility is gated.
-  static const bool _showStaticMedia = false;
+  static const bool _showStaticMedia = true;
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -31,7 +28,6 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
     bottomRight: Radius.circular(50),
   );
 
-  // --- Static media paths / fallbacks (enable via _showStaticMedia) ---
   static const List<_RentalStyleData> _fallbackStyles = [
     _RentalStyleData(label: 'Statement Heels'),
     _RentalStyleData(label: 'Designer Boots'),
@@ -81,7 +77,6 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
           final articles = await sl<GetMyArticles>().call(token);
           if (!mounted) return;
 
-          // Prefer unique categories; fall back to recent articles.
           final byCategory = <String, Article>{};
           for (final article in articles) {
             final key = article.category.trim().toLowerCase();
@@ -237,7 +232,6 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                             ),
                           ],
                         ),
-                        // Brand / rental media rows hidden until assets are ready.
                         if (_showStaticMedia) ...[
                           const SizedBox(height: 32),
                           Text(
@@ -266,7 +260,6 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Static image paths — restore with _showStaticMedia.
                                   _DemandBrandImage(
                                     asset: 'assets/images/rehome1 (2).png',
                                     width: 184,
@@ -474,13 +467,11 @@ class _ServiceCardMetrics {
     required this.lineGap,
   });
 
-  /// Matches home Care/Rehome tile proportions (~2.25× wide as tall).
   static _ServiceCardMetrics fromWidth(double cardWidth) {
     final height = (cardWidth / 2.25).clamp(68.0, 86.0);
     final padH = (cardWidth * 0.06).clamp(8.0, 12.0);
     final padV = (height * 0.12).clamp(8.0, 12.0);
     final innerH = (height - padV * 2).clamp(18.0, height);
-    // Slightly larger icons, nudged right via left inset.
     final iconH = (innerH * 0.78).clamp(30.0, 42.0);
     final iconW = (iconH * 1.15).clamp(34.0, 48.0);
     final iconLeftInset = (cardWidth * 0.04).clamp(6.0, 12.0);
