@@ -7,6 +7,7 @@ import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/sell/presentation/pages/sell_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -36,6 +37,63 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
 
   bool _loadingStyles = true;
   List<_RentalStyleData> _rentalStyles = _fallbackStyles;
+  String _searchQuery = '';
+
+  List<HubSearchHit> _rehomeSearchHits(BuildContext context) {
+    final hits = <HubSearchHit>[
+      HubSearchHit(
+        title: 'SellMyPair',
+        subtitle: 'List footwear for sale',
+        keywords: [
+          'sell',
+          'listing',
+          'marketplace',
+          'rehome',
+          'rehomemypair',
+          'service',
+        ],
+        icon: Icons.sell_outlined,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SellMyPairPage()),
+          );
+        },
+      ),
+      HubSearchHit(
+        title: 'RentMyPair',
+        subtitle: 'Rent pairs from the community',
+        keywords: [
+          'rent',
+          'rental',
+          'rehome',
+          'rehomemypair',
+          'service',
+        ],
+        icon: Icons.event_available_outlined,
+        onTap: () => showComingSoon(context, feature: 'RentMyPair'),
+      ),
+    ];
+
+    for (final style in _rentalStyles) {
+      hits.add(
+        HubSearchHit(
+          title: style.label,
+          subtitle: 'Requested rental style',
+          keywords: [
+            'style',
+            'rental',
+            'rent',
+            'rehome',
+            ...style.label.toLowerCase().split(' '),
+          ],
+          icon: Icons.ice_skating_outlined,
+          onTap: () => showComingSoon(context, feature: 'RentMyPair'),
+        ),
+      );
+    }
+
+    return hits;
+  }
 
   @override
   void initState() {
@@ -197,8 +255,18 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                       children: [
                         _Header(onBack: () => Navigator.maybePop(context)),
                         const SizedBox(height: 24),
-                        const _SearchBar(),
+                        _SearchBar(
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
+                        ),
                         const SizedBox(height: 28),
+                        if (_searchQuery.trim().isNotEmpty)
+                          HubScopedSearchResults(
+                            query: _searchQuery,
+                            hubName: 'RehomeMyPair',
+                            hits: _rehomeSearchHits(context),
+                          )
+                        else ...[
                         Text(
                           'Our Services',
                           style: GoogleFonts.boldonse(
@@ -293,6 +361,7 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                           const SizedBox(height: 12),
                           _buildRentalStylesRow(),
                         ],
+                        ],
                       ],
                     ),
                   ),
@@ -366,7 +435,9 @@ class _Header extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+  final ValueChanged<String>? onChanged;
+
+  const _SearchBar({this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -409,6 +480,7 @@ class _SearchBar extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: TextField(
+                  onChanged: onChanged,
                   textAlignVertical: TextAlignVertical.center,
                   style: GoogleFonts.montserrat(
                     fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
@@ -427,7 +499,7 @@ class _SearchBar extends StatelessWidget {
                     disabledBorder: InputBorder.none,
                     errorBorder: InputBorder.none,
                     focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search',
+                    hintText: 'Search RehomeMyPair',
                     hintStyle: GoogleFonts.montserrat(
                       color: Colors.black.withValues(alpha: 0.34),
                       fontSize: (16.0 * uiScale).clamp(13.0, 17.0),

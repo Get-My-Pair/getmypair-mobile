@@ -3,18 +3,25 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'donate_my_pair_page.dart';
 
 /// Save hub — same shell as [CareMyPairPage]: search, service cards, media rows.
 /// Donate opens the existing [DonateMyPairPage] flow. Recycle is coming soon.
-class SaveMyPairPage extends StatelessWidget {
+class SaveMyPairPage extends StatefulWidget {
   const SaveMyPairPage({super.key});
 
+  @override
+  State<SaveMyPairPage> createState() => _SaveMyPairPageState();
+}
+
+class _SaveMyPairPageState extends State<SaveMyPairPage> {
   /// Flip to `true` when real video assets are ready.
   /// Paths and UI below stay in place — only visibility is gated.
   static const bool _showStaticMedia = false;
+  String _searchQuery = '';
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -45,15 +52,68 @@ class SaveMyPairPage extends StatelessWidget {
     fontWeight: FontWeight.w400,
   );
 
-  static TextStyle _sectionTitle(BuildContext context) =>
+  TextStyle _sectionTitle(BuildContext context) =>
       GoogleFonts.boldonse(textStyle: _sectionTitleStyle);
 
-  static TextStyle _subsectionLabel(BuildContext context) =>
+  TextStyle _subsectionLabel(BuildContext context) =>
       GoogleFonts.montserrat(
         color: Colors.black,
         fontSize: 16,
         fontWeight: FontWeight.w400,
       );
+
+  List<HubSearchHit> _saveSearchHits(BuildContext context) {
+    final hits = <HubSearchHit>[
+      HubSearchHit(
+        title: 'DonateMyPair',
+        subtitle: 'Give pairs a second life',
+        keywords: [
+          'donate',
+          'charity',
+          'give',
+          'save',
+          'savemypair',
+          'service',
+        ],
+        icon: Icons.volunteer_activism_outlined,
+        onTap: () => _openDonateFlow(context),
+      ),
+      HubSearchHit(
+        title: 'RecycleMyPair',
+        subtitle: 'Responsible footwear recycling',
+        keywords: [
+          'recycle',
+          'recycling',
+          'save',
+          'savemypair',
+          'service',
+        ],
+        icon: Icons.recycling_outlined,
+        onTap: () => showComingSoon(context, feature: 'RecycleMyPair'),
+      ),
+    ];
+
+    if (_showStaticMedia) {
+      for (final video in _saveVideos) {
+        hits.add(
+          HubSearchHit(
+            title: video.title,
+            subtitle: 'Save video',
+            keywords: [
+              'video',
+              'diy',
+              'save',
+              ...video.title.toLowerCase().split(' '),
+            ],
+            icon: Icons.play_circle_outline,
+            onTap: () => showComingSoon(context, feature: 'Save DIY videos'),
+          ),
+        );
+      }
+    }
+
+    return hits;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +121,7 @@ class SaveMyPairPage extends StatelessWidget {
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
     const topInset = 52.0;
+    final searching = _searchQuery.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -99,61 +160,71 @@ class SaveMyPairPage extends StatelessWidget {
                       children: [
                         _Header(onBack: () => Navigator.maybePop(context)),
                         const SizedBox(height: 24),
-                        const _SearchBar(),
+                        _SearchBar(
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
+                        ),
                         const SizedBox(height: 28),
-                        Text('Our Services', style: _sectionTitle(context)),
-                        const SizedBox(height: 14),
-                        IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                child: _ServiceCard(
-                                  label: 'Donate\nMyPair',
-                                  icon: Icons.volunteer_activism_outlined,
-                                  onTap: () => _openDonateFlow(context),
+                        if (searching)
+                          HubScopedSearchResults(
+                            query: _searchQuery,
+                            hubName: 'SaveMyPair',
+                            hits: _saveSearchHits(context),
+                          )
+                        else ...[
+                          Text('Our Services', style: _sectionTitle(context)),
+                          const SizedBox(height: 14),
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: _ServiceCard(
+                                    label: 'Donate\nMyPair',
+                                    icon: Icons.volunteer_activism_outlined,
+                                    onTap: () => _openDonateFlow(context),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _ServiceCard(
-                                  label: 'Recycle\nMyPair',
-                                  icon: Icons.recycling_outlined,
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _ServiceCard(
+                                    label: 'Recycle\nMyPair',
+                                    icon: Icons.recycling_outlined,
+                                    onTap: () => showComingSoon(
+                                      context,
+                                      feature: 'RecycleMyPair',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_showStaticMedia) ...[
+                            const SizedBox(height: 32),
+                            Text(
+                              'Pass It On',
+                              style: _sectionTitle(context),
+                            ),
+                            const SizedBox(height: 14),
+                            Text('Videos', style: _subsectionLabel(context)),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              height: 113,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _saveVideos.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 14),
+                                itemBuilder: (_, index) => _VideoCard(
+                                  data: _saveVideos[index],
                                   onTap: () => showComingSoon(
                                     context,
-                                    feature: 'RecycleMyPair',
+                                    feature: 'Save DIY videos',
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                        // Videos hidden until real media is ready.
-                        if (_showStaticMedia) ...[
-                          const SizedBox(height: 32),
-                          Text(
-                            'Pass It On',
-                            style: _sectionTitle(context),
-                          ),
-                          const SizedBox(height: 14),
-                          Text('Videos', style: _subsectionLabel(context)),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            height: 113,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _saveVideos.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(width: 14),
-                              itemBuilder: (_, index) => _VideoCard(
-                                data: _saveVideos[index],
-                                onTap: () => showComingSoon(
-                                  context,
-                                  feature: 'Save DIY videos',
-                                ),
-                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ],
                     ),
@@ -216,7 +287,9 @@ class _Header extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+  final ValueChanged<String>? onChanged;
+
+  const _SearchBar({this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -259,6 +332,7 @@ class _SearchBar extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: TextField(
+                  onChanged: onChanged,
                   textAlignVertical: TextAlignVertical.center,
                   style: GoogleFonts.montserrat(
                     fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
@@ -277,7 +351,7 @@ class _SearchBar extends StatelessWidget {
                     disabledBorder: InputBorder.none,
                     errorBorder: InputBorder.none,
                     focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search',
+                    hintText: 'Search SaveMyPair',
                     hintStyle: GoogleFonts.montserrat(
                       color: Colors.black.withValues(alpha: 0.34),
                       fontSize: (16.0 * uiScale).clamp(13.0, 17.0),

@@ -13,14 +13,21 @@ import 'package:gmp/features/service/presentation/pages/repair_my_pair_page.dart
 import 'package:gmp/features/service/presentation/pages/service_request_details_page.dart';
 import 'package:gmp/features/service/presentation/pages/service_request_list_page.dart';
 import 'package:gmp/features/service/presentation/pages/wash_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:intl/intl.dart';
 
-class CareMyPairPage extends StatelessWidget {
+class CareMyPairPage extends StatefulWidget {
   const CareMyPairPage({super.key});
 
+  @override
+  State<CareMyPairPage> createState() => _CareMyPairPageState();
+}
+
+class _CareMyPairPageState extends State<CareMyPairPage> {
   /// Flip to `true` when real video/article assets are ready.
   /// Paths and UI below stay in place — only visibility is gated.
   static const bool _showStaticMedia = false;
+  String _searchQuery = '';
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -99,15 +106,107 @@ class CareMyPairPage extends StatelessWidget {
     fontWeight: FontWeight.w400,
   );
 
-  static TextStyle _sectionTitle(BuildContext context) =>
+  TextStyle _sectionTitle(BuildContext context) =>
       GoogleFonts.boldonse(textStyle: _sectionTitleStyle);
 
-  static TextStyle _subsectionLabel(BuildContext context) =>
+  TextStyle _subsectionLabel(BuildContext context) =>
       GoogleFonts.montserrat(
         color: Colors.black,
         fontSize: 16,
         fontWeight: FontWeight.w400,
       );
+
+  List<HubSearchHit> _careSearchHits(BuildContext context) {
+    final hits = <HubSearchHit>[
+      HubSearchHit(
+        title: 'RepairMyPair',
+        subtitle: 'Professional repair & restoration',
+        keywords: ['repair', 'fix', 'cobbler', 'care', 'caremypair', 'service'],
+        icon: Icons.build_outlined,
+        onTap: () => _openRepairPage(context),
+      ),
+      HubSearchHit(
+        title: 'MaintainMyPair',
+        subtitle: 'Routine care & maintenance',
+        keywords: [
+          'maintain',
+          'maintenance',
+          'care',
+          'caremypair',
+          'service',
+        ],
+        icon: Icons.handyman_outlined,
+        onTap: () => _openMaintainPage(context),
+      ),
+      HubSearchHit(
+        title: 'WashMyPair',
+        subtitle: 'Deep wash & refresh',
+        keywords: [
+          'wash',
+          'clean',
+          'cleaning',
+          'care',
+          'caremypair',
+          'service',
+        ],
+        icon: Icons.local_laundry_service_outlined,
+        onTap: () => _openWashPage(context),
+      ),
+      HubSearchHit(
+        title: 'Active Service',
+        subtitle: 'Track your current Care request',
+        keywords: ['active', 'track', 'status', 'ongoing', 'care'],
+        icon: Icons.timelapse_rounded,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ServiceRequestListPage(),
+            ),
+          );
+        },
+      ),
+      HubSearchHit(
+        title: 'Service History',
+        subtitle: 'Past CareMyPair requests',
+        keywords: ['history', 'past', 'requests', 'orders', 'care'],
+        icon: Icons.history_rounded,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ServiceRequestListPage(),
+            ),
+          );
+        },
+      ),
+    ];
+
+    if (_showStaticMedia) {
+      for (final article in _articles) {
+        hits.add(
+          HubSearchHit(
+            title: article.title,
+            subtitle: 'Care article',
+            keywords: ['article', 'guide', 'diy', 'care', ...article.title.toLowerCase().split(' ')],
+            icon: Icons.article_outlined,
+            onTap: () => showComingSoon(context, feature: 'Care articles'),
+          ),
+        );
+      }
+      for (final video in [..._repairVideos, ..._maintainVideos, ..._washVideos]) {
+        hits.add(
+          HubSearchHit(
+            title: video.title,
+            subtitle: 'Care video',
+            keywords: ['video', 'diy', 'care', ...video.title.toLowerCase().split(' ')],
+            icon: Icons.play_circle_outline,
+            onTap: () => showComingSoon(context, feature: 'Care DIY videos'),
+          ),
+        );
+      }
+    }
+
+    return hits;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +214,7 @@ class CareMyPairPage extends StatelessWidget {
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
     const topInset = 52.0;
+    final searching = _searchQuery.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -153,73 +253,84 @@ class CareMyPairPage extends StatelessWidget {
                       children: [
                         _Header(onBack: () => Navigator.maybePop(context)),
                         const SizedBox(height: 24),
-                        const _SearchBar(),
+                        _SearchBar(
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
+                        ),
                         const SizedBox(height: 28),
-                        Text('Our Services', style: _sectionTitle(context)),
-                        const SizedBox(height: 14),
-                        _PrimaryServiceCard(
-                          label: 'RepairMyPair',
-                          onTap: () => _openRepairPage(context),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _SecondaryServiceCard(
-                                firstLine: 'Maintain',
-                                secondLine: 'MyPair',
-                                iconAsset:
-                                    'assets/images/icons/caremypair/mmp.svg',
-                                iconScale: 1.28,
-                                onTap: () => _openMaintainPage(context),
+                        if (searching)
+                          HubScopedSearchResults(
+                            query: _searchQuery,
+                            hubName: 'CareMyPair',
+                            hits: _careSearchHits(context),
+                          )
+                        else ...[
+                          Text('Our Services', style: _sectionTitle(context)),
+                          const SizedBox(height: 14),
+                          _PrimaryServiceCard(
+                            label: 'RepairMyPair',
+                            onTap: () => _openRepairPage(context),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _SecondaryServiceCard(
+                                  firstLine: 'Maintain',
+                                  secondLine: 'MyPair',
+                                  iconAsset:
+                                      'assets/images/icons/caremypair/mmp.svg',
+                                  iconScale: 1.28,
+                                  onTap: () => _openMaintainPage(context),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _SecondaryServiceCard(
-                                firstLine: 'Wash',
-                                secondLine: 'MyPair',
-                                iconAsset:
-                                    'assets/images/icons/caremypair/wmp.svg',
-                                onTap: () => _openWashPage(context),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _SecondaryServiceCard(
+                                  firstLine: 'Wash',
+                                  secondLine: 'MyPair',
+                                  iconAsset:
+                                      'assets/images/icons/caremypair/wmp.svg',
+                                  onTap: () => _openWashPage(context),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const _ActiveServiceSection(),
-                        const SizedBox(height: 16),
-                        _ServiceHistoryButton(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const ServiceRequestListPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        // Videos + articles hidden until real media is ready.
-                        if (_showStaticMedia) ...[
-                          const SizedBox(height: 32),
-                          ..._buildVideoSections(context),
-                          const SizedBox(height: 24),
-                          Text('Articles', style: _subsectionLabel(context)),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            height: 172,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _articles.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(width: 13),
-                              itemBuilder: (_, i) => _ArticleCard(
-                                data: _articles[i],
-                                onTap: () => showComingSoon(
-                                  context,
-                                  feature: 'Care articles',
+                            ],
+                          ),
+                          const _ActiveServiceSection(),
+                          const SizedBox(height: 16),
+                          _ServiceHistoryButton(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const ServiceRequestListPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          if (_showStaticMedia) ...[
+                            const SizedBox(height: 32),
+                            ..._buildVideoSections(context),
+                            const SizedBox(height: 24),
+                            Text('Articles', style: _subsectionLabel(context)),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              height: 172,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _articles.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 13),
+                                itemBuilder: (_, i) => _ArticleCard(
+                                  data: _articles[i],
+                                  onTap: () => showComingSoon(
+                                    context,
+                                    feature: 'Care articles',
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
                       ],
                     ),
@@ -342,7 +453,9 @@ class _Header extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+  final ValueChanged<String>? onChanged;
+
+  const _SearchBar({this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -385,6 +498,7 @@ class _SearchBar extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: TextField(
+                  onChanged: onChanged,
                   textAlignVertical: TextAlignVertical.center,
                   style: GoogleFonts.montserrat(
                     fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
@@ -403,7 +517,7 @@ class _SearchBar extends StatelessWidget {
                     disabledBorder: InputBorder.none,
                     errorBorder: InputBorder.none,
                     focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search',
+                    hintText: 'Search CareMyPair',
                     hintStyle: GoogleFonts.montserrat(
                       color: Colors.black.withValues(alpha: 0.34),
                       fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
