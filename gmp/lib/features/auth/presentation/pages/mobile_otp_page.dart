@@ -41,6 +41,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
 
   final TextEditingController _phoneController = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
+  final GlobalKey _phoneFieldKey = GlobalKey();
 
   CountryCode _selectedCountry = CountryCode.popularCountries[0];
 
@@ -55,11 +56,42 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   double? _layoutViewportHeight;
 
   @override
+  void initState() {
+    super.initState();
+    _phoneFocusNode.addListener(_onPhoneFocusChanged);
+  }
+
+  @override
   void dispose() {
     _sendingProgressTimer?.cancel();
+    _phoneFocusNode.removeListener(_onPhoneFocusChanged);
     _phoneController.dispose();
     _phoneFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onPhoneFocusChanged() {
+    if (_phoneFocusNode.hasFocus) {
+      _ensurePhoneFieldVisible();
+    }
+  }
+
+  void _ensurePhoneFieldVisible() {
+    void scrollIntoView() {
+      if (!mounted || !_phoneFocusNode.hasFocus) return;
+      final fieldContext = _phoneFieldKey.currentContext;
+      if (fieldContext == null) return;
+      Scrollable.ensureVisible(
+        fieldContext,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        alignment: 0.12,
+      );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => scrollIntoView());
+    // Second pass after the IME finishes resizing the viewport.
+    Future<void>.delayed(const Duration(milliseconds: 320), scrollIntoView);
   }
 
   void _startSendingProgress() {
@@ -206,11 +238,20 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     _layoutViewportHeight = height;
   }
 
+  /// Keyboard height under both iOS (viewInsets) and Android `adjustResize`
+  /// (viewport shrink with optional empty viewInsets).
+  double _keyboardInset(MediaQueryData mediaQuery, double layoutHeight) {
+    final fromInsets = mediaQuery.viewInsets.bottom;
+    final fromShrink = (layoutHeight - mediaQuery.size.height).clamp(0.0, layoutHeight);
+    return math.max(fromInsets, fromShrink);
+  }
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     _syncLayoutViewportHeight(mediaQuery);
     final layoutHeight = _layoutViewportHeight!;
+    final keyboardInset = _keyboardInset(mediaQuery, layoutHeight);
     final layoutMediaQuery = mediaQuery.copyWith(
       size: Size(mediaQuery.size.width, layoutHeight),
       viewInsets: EdgeInsets.zero,
@@ -235,10 +276,23 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     // Previous 0.95 factor made this almost always hit max height.
     final headerSweepHeight = (size.height * 0.28).clamp(148.0, 230.0);
     final cardTop = topInset + headerSweepHeight;
+    // On compact screens (e.g. Galaxy S25), slide the panel up just enough to
+    // keep the phone field + Send OTP above the IME. Closed-keyboard layout is
+    // unchanged (keyboardInset == 0).
+    const minFormViewport = 300.0;
+    final effectiveCardTop = keyboardInset > 0
+        ? math.min(
+            cardTop,
+            (layoutHeight - keyboardInset - minFormViewport).clamp(
+              topInset + 8.0,
+              cardTop,
+            ),
+          )
+        : cardTop;
 
     return Scaffold(
-      // Keep hero + card geometry stable when the keyboard opens (avoid inset resize +
-      // Column reflow that pushes content upward).
+      // Keep hero + card geometry stable when the keyboard opens; the card is
+      // inset from the bottom by [keyboardInset] and its body scrolls instead.
       resizeToAvoidBottomInset: false,
       body: ClipRect(
         child: OverflowBox(
@@ -323,8 +377,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             Positioned(
               left: 0,
               right: 0,
-              top: cardTop,
-              bottom: 0,
+              top: effectiveCardTop,
+              // Lift the panel above the keyboard so fields stay visible on
+              // compact devices (e.g. Galaxy S25) without changing closed layout.
+              bottom: keyboardInset,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _kPanel,
@@ -335,18 +391,29 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                   clipBehavior: Clip.hardEdge,
                   child: SafeArea(
                     top: false,
+                    // Bottom safe padding is already handled via keyboardInset /
+                    // scroll padding; avoid double insets when the IME is open.
+                    bottom: keyboardInset <= 0,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final squeeze = (constraints.maxHeight / 640).clamp(0.72, 1.0);
+                        // Scale from the closed-keyboard card height so opening
+                        // the IME does not collapse control sizes.
+                        final layoutCardHeight =
+                            (layoutHeight - cardTop - layoutMediaQuery.padding.bottom)
+                                .clamp(1.0, layoutHeight);
+                        final squeeze = (layoutCardHeight / 640).clamp(0.72, 1.0);
                         final horizontalPad = (constraints.maxWidth * 0.1).clamp(16.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.10 * squeeze).clamp(24.0, 72.0);
-                        final verticalGapXs = constraints.maxHeight * 0.012 * squeeze;
-                        final verticalGapSm = constraints.maxHeight * 0.02 * squeeze;
-                        final verticalGapMd = constraints.maxHeight * 0.032 * squeeze;
-                        // final verticalGapLg = constraints.maxHeight * 0.05 * squeeze;
-                        final controlHeight = constraints.maxHeight * 0.082 * squeeze;
+                        final topPad = (layoutCardHeight * 0.10 * squeeze).clamp(24.0, 72.0);
+                        final verticalGapXs = layoutCardHeight * 0.012 * squeeze;
+                        final verticalGapSm = layoutCardHeight * 0.02 * squeeze;
+                        final verticalGapMd = layoutCardHeight * 0.032 * squeeze;
+                        // final verticalGapLg = layoutCardHeight * 0.05 * squeeze;
+                        final controlHeight = layoutCardHeight * 0.082 * squeeze;
                         // final iconTileSize = constraints.maxWidth * 0.13;
-                        return Padding(
+                        return SingleChildScrollView(
+                          physics: const ClampingScrollPhysics(),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
                             topPad,
@@ -410,7 +477,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               final total = constraints.maxWidth - inputGap;
                               final codeWidth = total * 0.32;
                               final phoneWidth = total - codeWidth;
-                              return Row(
+                              return KeyedSubtree(
+                                key: _phoneFieldKey,
+                                child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   SizedBox(
@@ -500,7 +569,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                               focusNode: _phoneFocusNode,
                                               keyboardType: TextInputType.phone,
                                               textAlignVertical: TextAlignVertical.center,
-                                              scrollPadding: EdgeInsets.zero,
+                                              scrollPadding: const EdgeInsets.only(
+                                                bottom: 80,
+                                              ),
                                               maxLength: _maxNationalDigits,
                                               inputFormatters: [
                                                 FilteringTextInputFormatter.digitsOnly,
@@ -539,6 +610,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                     ),
                                   ),
                                 ],
+                              ),
                               );
                             },
                           ),
@@ -779,7 +851,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                           ),
                         ],
                       ),
-                    );
+                        );
                       },
                     ),
                   ),

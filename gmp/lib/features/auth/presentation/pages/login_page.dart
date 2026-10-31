@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -44,6 +46,13 @@ class _LoginPageState extends State<LoginPage> {
     _layoutViewportHeight = height;
   }
 
+  /// Keyboard height under both iOS (viewInsets) and Android `adjustResize`.
+  double _keyboardInset(MediaQueryData mediaQuery, double layoutHeight) {
+    final fromInsets = mediaQuery.viewInsets.bottom;
+    final fromShrink = (layoutHeight - mediaQuery.size.height).clamp(0.0, layoutHeight);
+    return math.max(fromInsets, fromShrink);
+  }
+
   @override
   void dispose() {
     _phoneController.dispose();
@@ -61,12 +70,23 @@ class _LoginPageState extends State<LoginPage> {
     final mediaQuery = MediaQuery.of(context);
     _syncLayoutViewportHeight(mediaQuery);
     final layoutHeight = _layoutViewportHeight ?? mediaQuery.size.height;
+    final keyboardInset = _keyboardInset(mediaQuery, layoutHeight);
     final layoutMediaQuery = mediaQuery.copyWith(
       size: Size(mediaQuery.size.width, layoutHeight),
       viewInsets: EdgeInsets.zero,
     );
     final topInset = layoutMediaQuery.padding.top;
     final cardTop = topInset + layoutHeight * 0.27;
+    const minFormViewport = 300.0;
+    final effectiveCardTop = keyboardInset > 0
+        ? math.min(
+            cardTop,
+            (layoutHeight - keyboardInset - minFormViewport).clamp(
+              topInset + 8.0,
+              cardTop,
+            ),
+          )
+        : cardTop;
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -127,8 +147,8 @@ class _LoginPageState extends State<LoginPage> {
           Positioned(
             left: 0,
             right: 0,
-            top: cardTop,
-            bottom: 0,
+            top: effectiveCardTop,
+            bottom: keyboardInset,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: _kPanel,
@@ -145,12 +165,19 @@ class _LoginPageState extends State<LoginPage> {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 child: SafeArea(
                   top: false,
+                  bottom: keyboardInset <= 0,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
+                      final layoutCardHeight =
+                          (layoutHeight - cardTop - layoutMediaQuery.padding.bottom)
+                              .clamp(1.0, layoutHeight);
                       final horizontalPad = (constraints.maxWidth * 0.1).clamp(20.0, 44.0);
-                      final topPad = (constraints.maxHeight * 0.09).clamp(34.0, 62.0);
+                      final topPad = (layoutCardHeight * 0.09).clamp(34.0, 62.0);
                       final countryWidth = (constraints.maxWidth * 0.26).clamp(86.0, 110.0);
-                      return Padding(
+                      return SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: EdgeInsets.fromLTRB(
                           horizontalPad,
                           topPad,
@@ -247,7 +274,9 @@ class _LoginPageState extends State<LoginPage> {
                                       child: TextField(
                                         controller: _phoneController,
                                         keyboardType: TextInputType.phone,
-                                        scrollPadding: EdgeInsets.zero,
+                                        scrollPadding: const EdgeInsets.only(
+                                          bottom: 80,
+                                        ),
                                         decoration: InputDecoration(
                                           hintText: 'Phone',
                                           hintStyle: GoogleFonts.montserrat(
