@@ -830,17 +830,18 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Payment required',
-                              style: TextStyle(
+                              style: GoogleFonts.montserrat(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 15,
+                                color: AppColors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'Your cost has been approved. Complete payment to schedule pickup.',
-                              style: TextStyle(
+                              style: GoogleFonts.montserrat(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
                                 height: 1.35,
@@ -848,6 +849,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                             ),
                             const SizedBox(height: 14),
                             PayNowButton(
+                              label: 'Continue to payment',
                               onPressed: () => _openPaymentFlow(_request!),
                             ),
                           ],

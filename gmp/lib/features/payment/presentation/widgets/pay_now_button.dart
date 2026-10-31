@@ -9,7 +9,6 @@ class PayNowButton extends StatelessWidget {
   final bool loading;
   final String label;
   final bool showIcon;
-
   const PayNowButton({
     super.key,
     required this.onPressed,

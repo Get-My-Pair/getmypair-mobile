@@ -129,7 +129,7 @@ class PaymentPageShell extends StatelessWidget {
                                   title,
                                   style: GoogleFonts.boldonse(
                                     color: PaymentPageTheme.titleColor,
-                                    fontSize: 22,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
