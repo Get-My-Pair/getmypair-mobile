@@ -33,8 +33,14 @@ import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
+import '../../../service/presentation/pages/donate_my_pair_page.dart';
+import '../../../service/presentation/pages/maintain_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
+import '../../../service/presentation/pages/repair_my_pair_page.dart';
 import '../../../service/presentation/pages/save_my_pair_page.dart';
+import '../../../service/presentation/pages/wash_my_pair_page.dart';
+import '../../../sell/presentation/pages/sell_my_pair_page.dart';
+import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
 import 'chatbot_page.dart';
@@ -91,6 +97,112 @@ const String _kStyleMeIconAsset = 'assets/images/Group.svg';
 const String _kCarbonCreditsLeafAsset = 'assets/images/Vector.svg';
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
+
+enum _HomeServiceKind {
+  careHub,
+  rehomeHub,
+  saveHub,
+  styleHub,
+  wash,
+  maintain,
+  repair,
+  sell,
+  rent,
+  donate,
+  recycle,
+}
+
+class _HomeServiceItem {
+  final String label;
+  final List<String> keywords;
+  final String iconAsset;
+  final _HomeServiceKind kind;
+  final bool highlight;
+  final bool hubOnly;
+
+  const _HomeServiceItem({
+    required this.label,
+    required this.keywords,
+    required this.iconAsset,
+    required this.kind,
+    this.highlight = false,
+    this.hubOnly = false,
+  });
+}
+
+const List<_HomeServiceItem> _kHomeServiceCatalog = [
+  _HomeServiceItem(
+    label: 'Care\nMyPair',
+    keywords: ['care', 'caremypair', 'service'],
+    iconAsset: _kCareMyPairIconAsset,
+    kind: _HomeServiceKind.careHub,
+    highlight: true,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Rehome\nMyPair',
+    keywords: ['rehome', 'rehomemypair'],
+    iconAsset: _kRehomeMyPairIconAsset,
+    kind: _HomeServiceKind.rehomeHub,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Save\nMyPair',
+    keywords: ['save', 'savemypair', 'storage'],
+    iconAsset: _kRentMyPairIconAsset,
+    kind: _HomeServiceKind.saveHub,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Style Me\nMyPair',
+    keywords: ['style', 'styleme', 'kix', 'chat'],
+    iconAsset: _kStyleMeIconAsset,
+    kind: _HomeServiceKind.styleHub,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Wash\nMyPair',
+    keywords: ['wash', 'washmypair', 'clean', 'cleaning', 'care'],
+    iconAsset: 'assets/images/icons/caremypair/wmp.svg',
+    kind: _HomeServiceKind.wash,
+  ),
+  _HomeServiceItem(
+    label: 'Maintain\nMyPair',
+    keywords: ['maintain', 'maintainmypair', 'maintenance', 'care'],
+    iconAsset: 'assets/images/icons/caremypair/mmp.svg',
+    kind: _HomeServiceKind.maintain,
+  ),
+  _HomeServiceItem(
+    label: 'Repair\nMyPair',
+    keywords: ['repair', 'repairmypair', 'fix', 'cobbler', 'care'],
+    iconAsset: 'assets/images/icons/caremypair/rmp.svg',
+    kind: _HomeServiceKind.repair,
+  ),
+  _HomeServiceItem(
+    label: 'Sell\nMyPair',
+    keywords: ['sell', 'sellmypair', 'listing', 'marketplace', 'rehome'],
+    iconAsset: 'assets/images/icons/rehomemypair/sellmypair.png',
+    kind: _HomeServiceKind.sell,
+  ),
+  _HomeServiceItem(
+    label: 'Rent\nMyPair',
+    keywords: ['rent', 'rentmypair', 'rental', 'rehome'],
+    iconAsset: 'assets/images/icons/rehomemypair/rent.svg',
+    kind: _HomeServiceKind.rent,
+  ),
+  _HomeServiceItem(
+    label: 'Donate\nMyPair',
+    keywords: ['donate', 'donatemypair', 'charity', 'save'],
+    iconAsset: _kRentMyPairIconAsset,
+    kind: _HomeServiceKind.donate,
+  ),
+  _HomeServiceItem(
+    label: 'Recycle\nMyPair',
+    keywords: ['recycle', 'recyclemypair', 'save'],
+    iconAsset: _kRentMyPairIconAsset,
+    kind: _HomeServiceKind.recycle,
+  ),
+];
 
 /// Vertical gaps inside the hero (location → search → stats → bottom).
 const double _kHomeHeaderSearchToStats = 30;
@@ -198,6 +310,8 @@ class _HomePageState extends State<HomePage> {
   String? _rackError;
   AddressParts? _detectedLocationParts;
   bool _locationSavePromptHandled = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   /// Home header stats — filled only from API (articles + service requests).
   bool _statsLoading = true;
@@ -230,6 +344,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onHomeSearchChanged);
     _loadRackPreview();
     _loadHomeStats();
     _getCurrentLocation();
@@ -241,6 +356,73 @@ class _HomePageState extends State<HomePage> {
         }
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onHomeSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onHomeSearchChanged() {
+    final next = _searchController.text.trim();
+    if (next == _searchQuery) return;
+    setState(() => _searchQuery = next);
+  }
+
+  List<Article> get _filteredRackArticles {
+    final list = _rackArticles ?? const <Article>[];
+    final q = _searchQuery.toLowerCase();
+    if (q.isEmpty) return list;
+    return list.where((a) {
+      return a.brand.toLowerCase().contains(q) ||
+          a.model.toLowerCase().contains(q) ||
+          a.color.toLowerCase().contains(q) ||
+          a.category.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  bool _serviceMatches(_HomeServiceItem item, String q) {
+    if (q.isEmpty) return item.hubOnly;
+    final hay = item.label.toLowerCase().replaceAll('\n', ' ');
+    if (hay.contains(q)) return true;
+    return item.keywords.any((k) => k.contains(q) || q.contains(k));
+  }
+
+  List<_HomeServiceItem> get _filteredHomeServices {
+    final q = _searchQuery.toLowerCase();
+    return _kHomeServiceCatalog.where((item) => _serviceMatches(item, q)).toList();
+  }
+
+  Future<void> _openHomeService(_HomeServiceKind kind) async {
+    if (kind == _HomeServiceKind.rent) {
+      showComingSoon(context, feature: 'RentMyPair');
+      return;
+    }
+    if (kind == _HomeServiceKind.recycle) {
+      showComingSoon(context, feature: 'RecycleMyPair');
+      return;
+    }
+
+    final Widget page = switch (kind) {
+      _HomeServiceKind.careHub => const CareMyPairPage(),
+      _HomeServiceKind.rehomeHub => const RehomeMyPairPage(),
+      _HomeServiceKind.saveHub => const SaveMyPairPage(),
+      _HomeServiceKind.styleHub => const ChatbotPage(),
+      _HomeServiceKind.wash => const WashMyPairPage(),
+      _HomeServiceKind.maintain => const MaintainMyPairPage(),
+      _HomeServiceKind.repair => const RepairMyPairPage(),
+      _HomeServiceKind.sell => const SellMyPairPage(),
+      _HomeServiceKind.donate => const DonateMyPairPage(),
+      _HomeServiceKind.rent || _HomeServiceKind.recycle =>
+        const SizedBox.shrink(),
+    };
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+    if (mounted) _loadHomeStats();
   }
 
   /// Returns true if [text] looks like "lat, long" (e.g. "13.13210, 80.24567").
@@ -712,6 +894,7 @@ class _HomePageState extends State<HomePage> {
                                   contentLoading: _profileDataLoading,
                                   layoutScale: layoutScale,
                                   onLocationTap: _openSavedLocationPage,
+                                  searchController: _searchController,
                                 );
                               },
                             ),
@@ -970,11 +1153,14 @@ class _HomePageState extends State<HomePage> {
                                                                         ),
                                                                       ),
                                                                     )
-                                                                  : _rackArticles ==
-                                                                              null ||
-                                                                          _rackArticles!
-                                                                              .isEmpty
-                                                                      ? Center(
+                                                                  : () {
+                                                                      final filtered =
+                                                                          _filteredRackArticles;
+                                                                      if ((_rackArticles ==
+                                                  null ||
+                                              _rackArticles!.isEmpty) &&
+                                          _searchQuery.isEmpty) {
+                                                                        return Center(
                                                                           child:
                                                                               Text(
                                                                             'No pairs yet — tap ↗ to open your rack',
@@ -990,22 +1176,44 @@ class _HomePageState extends State<HomePage> {
                                                                                   _kRackMutedText,
                                                                             ),
                                                                           ),
-                                                                        )
-                                                                      : Center(
+                                                                        );
+                                                                      }
+                                                                      if (filtered
+                                                                          .isEmpty) {
+                                                                        return Center(
                                                                           child:
-                                                                              _RackThumbStrip(
-                                                                            articles: _rackArticles!
-                                                                                .take(3)
-                                                                                .toList(),
-                                                                            gap: rackThumbStripGap,
-                                                                            onOpen:
-                                                                                _openArticleDetails,
-                                                                            articleImageUrl:
-                                                                                _articleImageUrl,
-                                                                            articleThumb:
-                                                                                _articleThumb,
+                                                                              Text(
+                                                                            'No pairs match "$_searchQuery"',
+                                                                            textAlign:
+                                                                                TextAlign.center,
+                                                                            style:
+                                                                                TextStyle(
+                                                                              fontSize:
+                                                                                  rackMutedFontSize,
+                                                                              fontWeight:
+                                                                                  FontWeight.w500,
+                                                                              color:
+                                                                                  _kRackMutedText,
+                                                                            ),
                                                                           ),
+                                                                        );
+                                                                      }
+                                                                      return Center(
+                                                                        child:
+                                                                            _RackThumbStrip(
+                                                                          articles: filtered
+                                                                              .take(3)
+                                                                              .toList(),
+                                                                          gap: rackThumbStripGap,
+                                                                          onOpen:
+                                                                              _openArticleDetails,
+                                                                          articleImageUrl:
+                                                                              _articleImageUrl,
+                                                                          articleThumb:
+                                                                              _articleThumb,
                                                                         ),
+                                                                      );
+                                                                    }(),
                                                           ),
                                                         ],
                                                       ),
@@ -1017,99 +1225,81 @@ class _HomePageState extends State<HomePage> {
                                             ),
                                           ),
                                           SizedBox(height: gridGap + 6),
-                                          SizedBox(
-                                            height: equalBlockH,
-                                            width: double.infinity,
-                                            child: _HomeActionPairRow(
-                                              gap: sectionGap,
-                                              left: _QuickActionCard(
-                                                label: 'Care\nMyPair',
-                                                highlight: true,
-                                                iconAssetUrl:
-                                                    _kCareMyPairIconAsset,
-                                                layoutScale: layoutScale,
-                                                iconWidth: actionIconW,
-                                                iconHeight: actionIconH,
-                                                cellHeight: equalBlockH,
-                                                onTap: () =>
-                                                    Navigator.of(context)
-                                                        .push(
-                                                  MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        const CareMyPairPage(),
+                                          Builder(
+                                            builder: (context) {
+                                              final matched =
+                                                  _filteredHomeServices;
+                                              final actionCards = matched
+                                                  .map(
+                                                    (item) => _QuickActionCard(
+                                                      label: item.label,
+                                                      highlight: item.highlight,
+                                                      iconAssetUrl:
+                                                          item.iconAsset,
+                                                      layoutScale: layoutScale,
+                                                      iconWidth: actionIconW,
+                                                      iconHeight: actionIconH,
+                                                      cellHeight: equalBlockH,
+                                                      onTap: () =>
+                                                          _openHomeService(
+                                                        item.kind,
+                                                      ),
+                                                    ),
+                                                  )
+                                                  .toList();
+
+                                              if (actionCards.isEmpty) {
+                                                return Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical:
+                                                        (12 * layoutScale)
+                                                            .clamp(8.0, 16.0),
                                                   ),
-                                                )
-                                                        .then((_) {
-                                                  if (mounted) _loadHomeStats();
-                                                }),
-                                              ),
-                                              right: _QuickActionCard(
-                                                label: 'Rehome\nMyPair',
-                                                iconAssetUrl:
-                                                    _kRehomeMyPairIconAsset,
-                                                iconWidth: actionIconW,
-                                                iconHeight: actionIconH,
-                                                cellHeight: equalBlockH,
-                                                layoutScale: layoutScale,
-                                                onTap: () =>
-                                                    Navigator.of(context)
-                                                        .push(
-                                                  MaterialPageRoute<void>(
-                                                    builder: (_) =>
-                                                        const RehomeMyPairPage(),
+                                                  child: Text(
+                                                    'No services match "$_searchQuery"',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          rackMutedFontSize,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: _kRackMutedText,
+                                                    ),
                                                   ),
-                                                )
-                                                        .then((_) {
-                                                  if (mounted) {
-                                                    _loadHomeStats();
-                                                  }
-                                                }),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(height: gridGap + 12),
-                                          SizedBox(
-                                            height: equalBlockH,
-                                            width: double.infinity,
-                                            child: _HomeActionPairRow(
-                                              gap: sectionGap,
-                                              left: _QuickActionCard(
-                                                label: 'Save\nMyPair',
-                                                iconAssetUrl:
-                                                    _kRentMyPairIconAsset,
-                                                iconWidth: actionIconW,
-                                                iconHeight: actionIconH,
-                                                cellHeight: equalBlockH,
-                                                layoutScale: layoutScale,
-                                                onTap: () =>
-                                                    Navigator.of(context)
-                                                        .push(
-                                                  MaterialPageRoute<void>(
-                                                    builder: (_) =>
-                                                        const SaveMyPairPage(),
+                                                );
+                                              }
+
+                                              final rows = <Widget>[];
+                                              for (var i = 0;
+                                                  i < actionCards.length;
+                                                  i += 2) {
+                                                if (rows.isNotEmpty) {
+                                                  rows.add(
+                                                    SizedBox(
+                                                      height: gridGap + 12,
+                                                    ),
+                                                  );
+                                                }
+                                                final left = actionCards[i];
+                                                final right =
+                                                    i + 1 < actionCards.length
+                                                        ? actionCards[i + 1]
+                                                        : const SizedBox
+                                                            .shrink();
+                                                rows.add(
+                                                  SizedBox(
+                                                    height: equalBlockH,
+                                                    width: double.infinity,
+                                                    child: _HomeActionPairRow(
+                                                      gap: sectionGap,
+                                                      left: left,
+                                                      right: right,
+                                                    ),
                                                   ),
-                                                )
-                                                        .then((_) {
-                                                  if (mounted) _loadHomeStats();
-                                                }),
-                                              ),
-                                              right: _QuickActionCard(
-                                                label: 'Style Me\nMyPair',
-                                                iconAssetUrl:
-                                                    _kStyleMeIconAsset,
-                                                iconWidth: actionIconW,
-                                                iconHeight: actionIconH,
-                                                cellHeight: equalBlockH,
-                                                layoutScale: layoutScale,
-                                                onTap: () =>
-                                                    Navigator.of(context).push(
-                                                  MaterialPageRoute<void>(
-                                                    builder: (_) =>
-                                                        const ChatbotPage(),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
+                                                );
+                                              }
+                                              return Column(children: rows);
+                                            },
                                           ),
                                         ],
                                       );
@@ -1838,6 +2028,7 @@ class _HomeTopCard extends StatelessWidget {
   final bool pairsInRackLoading;
   final bool contentLoading;
   final Future<void> Function() onLocationTap;
+  final TextEditingController searchController;
   final double layoutScale;
 
   const _HomeTopCard({
@@ -1851,6 +2042,7 @@ class _HomeTopCard extends StatelessWidget {
     required this.pairsInRackLoading,
     required this.contentLoading,
     required this.onLocationTap,
+    required this.searchController,
     this.layoutScale = 1.0,
   });
 
@@ -2150,13 +2342,6 @@ class _HomeTopCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(searchBarH / 2),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: Colors.black.withValues(alpha: 0.06),
-                          //     blurRadius: 8,
-                          //     offset: const Offset(0, 2),
-                          //   ),
-                          // ],
                         ),
                         alignment: Alignment.centerLeft,
                         child: Row(
@@ -2169,14 +2354,44 @@ class _HomeTopCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
-                                'Search',
+                              child: TextField(
+                                controller: searchController,
+                                textInputAction: TextInputAction.search,
+                                textAlignVertical: TextAlignVertical.center,
                                 style: GoogleFonts.montserrat(
                                   fontSize: (16 * s).clamp(10.0, 16.0),
                                   fontWeight: FontWeight.w400,
-                                  color: _kSearchHintColor,
+                                  color: Colors.black87,
+                                ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  hintText: 'Search',
+                                  hintStyle: GoogleFonts.montserrat(
+                                    fontSize: (16 * s).clamp(10.0, 16.0),
+                                    fontWeight: FontWeight.w400,
+                                    color: _kSearchHintColor,
+                                  ),
                                 ),
                               ),
+                            ),
+                            ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: searchController,
+                              builder: (_, value, _) {
+                                if (value.text.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+                                return GestureDetector(
+                                  onTap: searchController.clear,
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                    color: _kSearchHintColor,
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -2797,6 +3012,21 @@ class _QuickActionCard extends StatelessWidget {
 
     if (source.startsWith('http://') || source.startsWith('https://')) {
       return Image.network(
+        source,
+        fit: BoxFit.contain,
+        color: textColor,
+        colorBlendMode: BlendMode.srcIn,
+        errorBuilder: (_, _, _) =>
+            Icon(Icons.widgets_outlined, size: 24, color: textColor),
+      );
+    }
+
+    final lower = source.toLowerCase();
+    if (lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.webp')) {
+      return Image.asset(
         source,
         fit: BoxFit.contain,
         color: textColor,
