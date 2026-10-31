@@ -511,7 +511,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
               return _FilterChipPill(
                 label: label,
                 selected: _filterCategory == value,
-                onTap: () => setState(() => _filterCategory = value),
+                onTap: () => setState(() {
+                  _filterCategory =
+                      _filterCategory == value ? null : value;
+                }),
               );
             },
           ),
@@ -1678,7 +1681,15 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 return _FilterChipPill(
                   label: label,
                   selected: isSelected,
-                  onTap: () => setState(() => _filterCategory = value.isEmpty ? null : value),
+                  onTap: () => setState(() {
+                    if (value.isEmpty) {
+                      _filterCategory = null;
+                    } else if (_filterCategory == value) {
+                      _filterCategory = null;
+                    } else {
+                      _filterCategory = value;
+                    }
+                  }),
                 );
               },
             ),
