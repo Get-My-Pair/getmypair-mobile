@@ -349,7 +349,6 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 _field(
                   _modelController,
                   'Name your footwear',
-                  placeholder: 'Nike Shoes',
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 20),

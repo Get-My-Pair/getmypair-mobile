@@ -537,7 +537,6 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
               _field(
                 _modelController,
                 'Name your footwear',
-                placeholder: 'Nike Shoes',
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 20),
