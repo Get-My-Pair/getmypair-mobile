@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -119,8 +120,26 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   static const int _minNationalDigits = 10;
   static const int _maxNationalDigits = 10;
 
-  int get _nationalDigitCount =>
-      _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '').length;
+  /// Strip a pasted country code so `+91` + `918682851249` does not become
+  /// `+91918682851249`.
+  String _normalizeLocalPhoneDigits(String raw, String dialCode) {
+    var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    final cc = dialCode.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cc.isNotEmpty &&
+        digits.length == cc.length + _maxNationalDigits &&
+        digits.startsWith(cc)) {
+      digits = digits.substring(cc.length);
+    }
+    if (digits.length > _maxNationalDigits) {
+      digits = digits.substring(digits.length - _maxNationalDigits);
+    }
+    return digits;
+  }
+
+  int get _nationalDigitCount => _normalizeLocalPhoneDigits(
+        _phoneController.text,
+        _selectedCountry.dialCode,
+      ).length;
 
   bool get _isPhoneValid {
     final n = _nationalDigitCount;
@@ -128,7 +147,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   }
 
   void _validatePhone(String value) {
-    final clean = value.replaceAll(RegExp(r'[^0-9]'), '');
+    final clean = _normalizeLocalPhoneDigits(value, _selectedCountry.dialCode);
     setState(() {
       if (clean.isEmpty) {
         _phoneError = null;
@@ -143,9 +162,19 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   }
 
   void _onPhoneChanged(String value) {
-    _validatePhone(value);
-    final clean = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (clean.length >= _maxNationalDigits && _phoneFocusNode.hasFocus) {
+    final normalized = _normalizeLocalPhoneDigits(
+      value,
+      _selectedCountry.dialCode,
+    );
+    if (normalized != value.replaceAll(RegExp(r'[^0-9]'), '') ||
+        value != normalized) {
+      _phoneController.value = TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    }
+    _validatePhone(normalized);
+    if (normalized.length >= _maxNationalDigits && _phoneFocusNode.hasFocus) {
       _phoneFocusNode.unfocus();
     }
   }
@@ -181,7 +210,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
       return;
     }
 
-    final clean = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final clean = _normalizeLocalPhoneDigits(
+      _phoneController.text,
+      _selectedCountry.dialCode,
+    );
     final fullMobile = '${_selectedCountry.dialCode}$clean';
     setState(() => _isSendingOtp = true);
     _startSendingProgress();
@@ -310,8 +342,8 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
             if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-            // Dev/dummy API returns OTP in the response; SMS mode omits it.
-            if (state.otp != null && state.otp!.isNotEmpty) {
+            // Dev OTP popup is Chrome/web only. APK waits for production SMS.
+            if (kIsWeb && state.otp != null && state.otp!.isNotEmpty) {
               _showOtpDialog(state.otp!, state.mobile);
             } else {
               _openOtpPage(state.mobile);

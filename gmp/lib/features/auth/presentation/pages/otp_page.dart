@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -58,9 +59,12 @@ class _OTPPageState extends State<OTPPage> {
   void initState() {
     super.initState();
     _startResendTimer();
-    final prefilled = _cleanOtp(widget.prefilledOtp);
-    if (prefilled.length == 6) {
-      _otp = prefilled;
+    // Prefill only on web (dev OTP). APK must type the SMS code.
+    if (kIsWeb) {
+      final prefilled = _cleanOtp(widget.prefilledOtp);
+      if (prefilled.length == 6) {
+        _otp = prefilled;
+      }
     }
   }
 
@@ -74,6 +78,7 @@ class _OTPPageState extends State<OTPPage> {
   String _cleanOtp(String? value) => (value ?? '').trim().replaceAll(RegExp(r'[^0-9]'), '');
 
   String? get _initialOtpValue {
+    if (!kIsWeb) return null;
     final value = _cleanOtp(widget.prefilledOtp);
     return value.length == 6 ? value : null;
   }
@@ -207,8 +212,8 @@ class _OTPPageState extends State<OTPPage> {
               (route) => false,
             );
           } else if (state is AuthOTPSent) {
-            // Dev/dummy API returns OTP in the response; SMS mode omits it.
-            if (state.otp != null && state.otp!.isNotEmpty) {
+            // Dev OTP popup is Chrome/web only. APK uses production SMS.
+            if (kIsWeb && state.otp != null && state.otp!.isNotEmpty) {
               _showOtpDialog(context, state.otp!);
             } else {
               await showAppFeedbackAlert(

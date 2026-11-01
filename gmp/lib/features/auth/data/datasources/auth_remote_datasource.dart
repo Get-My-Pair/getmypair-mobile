@@ -89,27 +89,38 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return value[0].toUpperCase() + value.substring(1);
   }
 
+  /// `8682851249` / `918682851249` / `+918682851249` → `+918682851249`.
+  String _normalizeMobile(String mobile) {
+    final raw = mobile.trim();
+    if (raw.isEmpty) return raw;
+    if (raw.startsWith('+')) return raw;
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length == 10) return '+91$digits';
+    if (digits.length == 12 && digits.startsWith('91')) return '+$digits';
+    return '+91$digits';
+  }
+
   @override
   Future<Map<String, dynamic>> sendOTP(String mobile) async {
     try {
-      // Ensure mobile has + prefix if it doesn't
-      String normalizedMobile = mobile.trim();
-      if (normalizedMobile.isNotEmpty && !normalizedMobile.startsWith('+')) {
-        // Add country code if missing (assuming India +91)
-        normalizedMobile = '+91$normalizedMobile';
-      }
+      final normalizedMobile = _normalizeMobile(mobile);
 
       final response = await client.post(
         ApiEndpoints.sendOtp,
         body: {'mobile': normalizedMobile},
       );
 
-      // May include OTP in dummy mode (USE_MSG91_SMS=false on the API).
-      final data = response['data'] as Map<String, dynamic>? ?? {};
+      // Dummy APIs may include OTP. Only surface it on Chrome/web for the
+      // development popup — APK / release builds must use SMS OTP only.
+      final data = Map<String, dynamic>.from(
+        response['data'] as Map<String, dynamic>? ?? {},
+      );
 
-      if (kDebugMode && data.containsKey('otp')) {
+      if (!kIsWeb) {
+        data.remove('otp');
+      } else if (kDebugMode && data['otp'] != null) {
         // ignore: avoid_print
-        print('DEBUG: OTP received from backend: ${data['otp']}');
+        print('DEBUG: Dev OTP (web only): ${data['otp']}');
       }
 
       return data;
@@ -124,11 +135,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<LoginResponseModel> verifyOTP(String mobile, String otp) async {
     try {
-      // Ensure mobile has + prefix if it doesn't (must match the format used in sendOTP)
-      String normalizedMobile = mobile.trim();
-      if (normalizedMobile.isNotEmpty && !normalizedMobile.startsWith('+')) {
-        normalizedMobile = '+91$normalizedMobile';
-      }
+      final normalizedMobile = _normalizeMobile(mobile);
 
       // Ensure OTP is a clean 6-digit string (remove any spaces or non-numeric chars)
       final cleanOtp = otp.trim().replaceAll(RegExp(r'[^0-9]'), '');
@@ -178,11 +185,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     Map<String, dynamic>? location,
   }) async {
     try {
-      // Ensure mobile has + prefix if it doesn't
-      String normalizedMobile = mobile;
-      if (mobile.isNotEmpty && !mobile.startsWith('+')) {
-        normalizedMobile = '+91$mobile';
-      }
+      final normalizedMobile = _normalizeMobile(mobile);
 
       final body = <String, dynamic>{
         'mobile': normalizedMobile,

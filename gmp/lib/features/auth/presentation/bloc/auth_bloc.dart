@@ -89,10 +89,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
       (data) {
+        // Datasource already strips OTP off non-web platforms.
         final otpValue = data['otp'];
         String? otp;
         if (otpValue != null) {
           otp = otpValue is String ? otpValue : otpValue.toString();
+          if (otp.trim().isEmpty) otp = null;
         }
         emit(AuthOTPSent(event.mobile, otp: otp));
       },
