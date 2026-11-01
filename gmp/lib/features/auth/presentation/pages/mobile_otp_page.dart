@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -342,8 +341,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
             if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-            // Dev OTP popup is Chrome/web only. APK waits for production SMS.
-            if (kIsWeb && state.otp != null && state.otp!.isNotEmpty) {
+            // Dev OTP popup in debug/profile (mobile + web). Release = SMS only.
+            if (isDevOtpEnabled &&
+                state.otp != null &&
+                state.otp!.isNotEmpty) {
               _showOtpDialog(state.otp!, state.mobile);
             } else {
               _openOtpPage(state.mobile);

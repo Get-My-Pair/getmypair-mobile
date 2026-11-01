@@ -89,7 +89,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
       (data) {
-        // Datasource already strips OTP off non-web platforms.
+        // Datasource strips OTP in production release builds.
         final otpValue = data['otp'];
         String? otp;
         if (otpValue != null) {
