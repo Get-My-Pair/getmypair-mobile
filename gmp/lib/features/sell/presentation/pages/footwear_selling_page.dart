@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
@@ -72,7 +75,7 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
   }
 
   Future<void> _pickProof(String proofType) async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -81,12 +84,17 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Take picture'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              onTap: () => Navigator.pop(ctx, 'camera'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Upload photo'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              onTap: () => Navigator.pop(ctx, 'gallery'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Upload PDF'),
+              onTap: () => Navigator.pop(ctx, 'pdf'),
             ),
           ],
         ),
@@ -94,8 +102,36 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
     );
     if (source == null || !mounted) return;
 
-    final file = await _picker.pickImage(source: source, imageQuality: 82);
-    if (file == null || !mounted) return;
+    Uint8List? bytes;
+    var fileName = 'proof_$proofType.jpg';
+    if (source == 'pdf') {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+        withData: true,
+      );
+      if (picked == null || picked.files.isEmpty || !mounted) return;
+      final file = picked.files.single;
+      final name = file.name.trim();
+      if (!name.toLowerCase().endsWith('.pdf')) {
+        setState(() => _error = 'Only image and PDF files are accepted.');
+        return;
+      }
+      bytes = file.bytes;
+      fileName = name;
+    } else {
+      final file = await _picker.pickImage(
+        source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
+        imageQuality: 82,
+      );
+      if (file == null || !mounted) return;
+      bytes = await file.readAsBytes();
+    }
+    final payload = bytes;
+    if (payload == null || payload.isEmpty || !mounted) {
+      setState(() => _error = 'Could not read that file. Choose an image or PDF.');
+      return;
+    }
 
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
@@ -109,12 +145,11 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
           _error = null;
         });
         try {
-          final bytes = await file.readAsBytes();
           final url = await sl<SellRemoteDataSource>().uploadProof(
             token,
             proofType: proofType,
-            imageBytes: bytes,
-            fileName: 'proof_$proofType.jpg',
+            imageBytes: payload,
+            fileName: fileName,
           );
           if (!mounted) return;
           setState(() {
@@ -148,7 +183,7 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
       return;
     }
     if (!_proofsComplete) {
-      setState(() => _error = 'Please upload images.');
+      setState(() => _error = 'Please upload an image or PDF.');
       return;
     }
     _baseController.text = formatInr(price);
@@ -345,7 +380,7 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
             const Icon(Icons.error, color: Color(0xFFE53935), size: 16),
             const SizedBox(width: 6),
             Text(
-              'Please upload images.',
+              'Please upload an image or PDF.',
               style: GoogleFonts.montserrat(color: const Color(0xFFE53935), fontSize: 13),
             ),
           ],
@@ -353,7 +388,7 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
       ],
       const SizedBox(height: 14),
       _outlineButton(
-        label: 'Upload Photos or Take Pictures',
+        label: 'Upload Photo, PDF, or Take Picture',
         onPressed: _busy ? null : _uploadNext,
       ),
       if (_proofsComplete) ...[

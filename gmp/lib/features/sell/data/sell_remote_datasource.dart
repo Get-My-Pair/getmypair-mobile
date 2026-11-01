@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 import '../../../../core/constants/active_profile_header.dart';
 import '../../../../core/constants/api_endpoints.dart';
@@ -146,8 +148,19 @@ class SellRemoteDataSource {
       request.headers['Accept'] = 'application/json';
       ActiveProfileHeader.applyTo(request.headers);
       request.fields['proofType'] = proofType;
+      final mimeStr = lookupMimeType(fileName);
+      MediaType? contentType;
+      if (mimeStr != null && mimeStr.contains('/')) {
+        final parts = mimeStr.split('/');
+        contentType = MediaType(parts.first, parts.last);
+      }
       request.files.add(
-        http.MultipartFile.fromBytes('file', imageBytes, filename: fileName),
+        http.MultipartFile.fromBytes(
+          'file',
+          imageBytes,
+          filename: fileName,
+          contentType: contentType,
+        ),
       );
       final streamed = await request.send().timeout(_timeout);
       final response = await http.Response.fromStream(streamed);
@@ -159,7 +172,7 @@ class SellRemoteDataSource {
       throw const ServerException('Invalid upload response');
     } catch (e) {
       if (e is ServerException) rethrow;
-      throw ServerException('Failed to upload image: $e');
+      throw ServerException('Failed to upload file: $e');
     }
   }
 
