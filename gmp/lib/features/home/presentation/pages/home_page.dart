@@ -43,7 +43,6 @@ import '../../../sell/presentation/pages/sell_my_pair_page.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
-import '../../../shop/presentation/pages/product_list_page.dart';
 
 /// Header copy on teal gradient — white for legibility (avoid washed-out light gray).
 const Color _kOnHeaderText = Color(0xFFFFFFFF);
@@ -277,7 +276,7 @@ double _homeHeaderScaleXForWidth(double width) {
 double _homeViewportBottomReserve(BuildContext context) {
   final full = dashboardLinkedBottomNavStackHeight(context);
   return math.max(
-    FloatingGradientBottomNav.barHeight + 10,
+    FloatingGradientBottomNav.totalHeight + 10,
     full - 10,
   );
 }
@@ -405,12 +404,16 @@ class _HomePageState extends State<HomePage> {
       showComingSoon(context, feature: 'RecycleMyPair');
       return;
     }
+    if (kind == _HomeServiceKind.thriftHub) {
+      showComingSoon(context, feature: 'Thrift Store');
+      return;
+    }
 
     final Widget page = switch (kind) {
       _HomeServiceKind.careHub => const CareMyPairPage(),
       _HomeServiceKind.rehomeHub => const RehomeMyPairPage(),
       _HomeServiceKind.saveHub => const SaveMyPairPage(),
-      _HomeServiceKind.thriftHub => const ProductListPage(),
+      _HomeServiceKind.thriftHub => const SizedBox.shrink(),
       _HomeServiceKind.wash => const WashMyPairPage(),
       _HomeServiceKind.maintain => const MaintainMyPairPage(),
       _HomeServiceKind.repair => const RepairMyPairPage(),

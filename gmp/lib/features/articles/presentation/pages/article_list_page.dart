@@ -1414,7 +1414,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 ),
                 SizedBox(
                   height: widget.showBottomBar
-                      ? (FloatingGradientBottomNav.barHeight + 12 + bottomSafe)
+                      ? (FloatingGradientBottomNav.totalHeight + 12 + bottomSafe)
                       : bottomSafe,
                 ),
               ],

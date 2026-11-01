@@ -606,7 +606,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   Widget build(BuildContext context) {
     final hPad = Responsive.horizontalPaddingOf(context).clamp(12.0, 20.0);
     final bottomSafe = Responsive.bottomInsetOf(context);
-    final bottomNavReserve = FloatingGradientBottomNav.barHeight + 12 + bottomSafe;
+    final bottomNavReserve = FloatingGradientBottomNav.totalHeight + 12 + bottomSafe;
     final isCompact = MediaQuery.sizeOf(context).width < 360;
     // Map / Sat toggle and zoom controls: one square size, one icon size (matches filter button).
     final mapControlTile = isCompact ? 44.0 : 48.0;

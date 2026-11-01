@@ -289,7 +289,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ArticleStyleHeaderInsets.topTitleGapOf(context);
                             final embeddedBottomNavReserve = widget.showBottomNav
                                 ? 0.0
-                                : (FloatingGradientBottomNav.barHeight +
+                                : (FloatingGradientBottomNav.totalHeight +
                                         dashboardBottomNavOuterInsets(context)
                                             .bottom +
                                         8)

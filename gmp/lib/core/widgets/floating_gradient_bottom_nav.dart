@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -16,6 +18,9 @@ import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
 /// white icons, selected tab on a solid white circle (icon in dark teal).
 /// Visual tabs: Home · Favorites · Rack · Cart · Profile.
 ///
+/// A pixel shoe (Figma `3042:4603`) walks slowly left↔right along the top of
+/// the pill (Figma `3042:4601`).
+///
 /// [currentIndex] stays semantic: `0` home, `1` rack, `2` profile.
 /// Favorites and Cart show coming-soon until those screens ship.
 ///
@@ -32,8 +37,16 @@ class FloatingGradientBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onChanged;
 
-  /// Inner pill from Figma: `rect … height="58" rx="29"`.
+  /// Inner pill from Figma: `rect … height="58" rx="29"` (`3042:4601`).
   static const double barHeight = 58;
+
+  /// Walking shoe from Figma `3042:4603` (82 × 39).
+  static const double walkingShoeWidth = 82;
+  static const double walkingShoeHeight = 39;
+
+  /// Pill + shoe stacked height used for content bottom reserves.
+  static const double totalHeight = barHeight + walkingShoeHeight;
+
   static const double _pillRadius = barHeight / 2;
   static const double hitSize = 44;
   static const Color selectedIconColor = Color(0xFF08343A);
@@ -42,6 +55,8 @@ class FloatingGradientBottomNav extends StatelessWidget {
   static const String _middleShoeIcon = 'assets/images/icons/shoe.svg';
   static const String _cartIcon = 'assets/images/shopping-cart.svg';
   static const String _profileIcon = 'assets/images/icons/profile.svg';
+  static const String _walkingShoeAsset =
+      'assets/images/home/Gemini_Generated_Image_dzm88udzm88udzm8 1.png';
 
   static const _tabs = <_NavTab>[
     _NavTab(svgAsset: _homeIcon, semanticIndex: 0),
@@ -69,128 +84,231 @@ class FloatingGradientBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedVisual = _visualIndexFor(currentIndex);
 
-    return Material(
-      color: Colors.transparent,
-      elevation: 0,
-      child: Container(
-        height: barHeight,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(_pillRadius),
-          gradient: AppColors.figma825AngularSweep,
-          // Matches SVG filter: `feOffset dy="4"` + `feGaussianBlur stdDeviation="6"`.
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFABABAB).withValues(alpha: 0.55),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: (barHeight - hitSize) / 2,
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final tabCount = _tabs.length;
-              final slotWidth = constraints.maxWidth / tabCount;
-              final dynamicHitSize = slotWidth.clamp(28.0, hitSize).toDouble();
-              final iconBase = (dynamicHitSize * 0.50).clamp(14.0, 22.0).toDouble();
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(tabCount, (i) {
-                  final tab = _tabs[i];
-                  final selected = i == selectedVisual;
-                  final iconColor =
-                      selected ? selectedIconColor : Colors.white;
-                  final iconSize =
-                      tab.semanticIndex == 2 ? iconBase + 1 : iconBase;
-                  final avatarSize = (dynamicHitSize * (selected ? 0.82 : 0.74))
-                      .clamp(22.0, 36.0);
-                  return SizedBox(
-                    width: dynamicHitSize,
-                    height: hitSize,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          final semantic = tab.semanticIndex;
-                          if (semantic == null) {
-                            showComingSoon(
-                              context,
-                              feature: tab.comingSoonFeature ?? 'This',
-                            );
-                            return;
-                          }
-                          onChanged(semantic);
-                        },
-                        customBorder: const CircleBorder(),
-                        splashColor: Colors.white24,
-                        highlightColor: Colors.white10,
-                        child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOutCubic,
-                            width: dynamicHitSize,
-                            height: dynamicHitSize,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: selected
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              boxShadow: selected
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.12),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: tab.semanticIndex == 2
-                                ? _BottomNavProfileAvatar(
-                                    size: avatarSize,
-                                    selected: selected,
-                                    fallback: SvgPicture.asset(
-                                      _profileIcon,
-                                      width: iconSize,
-                                      height: iconSize,
-                                      colorFilter: ColorFilter.mode(
-                                        iconColor,
-                                        BlendMode.srcIn,
-                                      ),
-                                    ),
-                                  )
-                                : tab.svgAsset != null
-                                ? SvgPicture.asset(
-                                    tab.svgAsset!,
-                                    width: iconSize,
-                                    height: iconSize,
-                                    colorFilter: ColorFilter.mode(
-                                      iconColor,
-                                      BlendMode.srcIn,
-                                    ),
-                                  )
-                                : Icon(
-                                    tab.materialIcon,
-                                    size: iconSize,
-                                    color: iconColor,
-                                  ),
-                          ),
-                        ),
-                      ),
+    return SizedBox(
+      height: totalHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: barHeight,
+            child: Material(
+              color: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                height: barHeight,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(_pillRadius),
+                  gradient: AppColors.figma825AngularSweep,
+                  // Matches SVG filter: `feOffset dy="4"` + `feGaussianBlur stdDeviation="6"`.
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFABABAB).withValues(alpha: 0.55),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
-                  );
-                }),
-              );
-            },
+                  ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: (barHeight - hitSize) / 2,
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final tabCount = _tabs.length;
+                      final slotWidth = constraints.maxWidth / tabCount;
+                      final dynamicHitSize =
+                          slotWidth.clamp(28.0, hitSize).toDouble();
+                      final iconBase =
+                          (dynamicHitSize * 0.50).clamp(14.0, 22.0).toDouble();
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(tabCount, (i) {
+                          final tab = _tabs[i];
+                          final selected = i == selectedVisual;
+                          final iconColor =
+                              selected ? selectedIconColor : Colors.white;
+                          final iconSize =
+                              tab.semanticIndex == 2 ? iconBase + 1 : iconBase;
+                          final avatarSize =
+                              (dynamicHitSize * (selected ? 0.82 : 0.74))
+                                  .clamp(22.0, 36.0);
+                          return SizedBox(
+                            width: dynamicHitSize,
+                            height: hitSize,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  final semantic = tab.semanticIndex;
+                                  if (semantic == null) {
+                                    showComingSoon(
+                                      context,
+                                      feature: tab.comingSoonFeature ?? 'This',
+                                    );
+                                    return;
+                                  }
+                                  onChanged(semantic);
+                                },
+                                customBorder: const CircleBorder(),
+                                splashColor: Colors.white24,
+                                highlightColor: Colors.white10,
+                                child: Center(
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    curve: Curves.easeOutCubic,
+                                    width: dynamicHitSize,
+                                    height: dynamicHitSize,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: selected
+                                          ? Colors.white
+                                          : Colors.transparent,
+                                      boxShadow: selected
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withValues(alpha: 0.12),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: tab.semanticIndex == 2
+                                        ? _BottomNavProfileAvatar(
+                                            size: avatarSize,
+                                            selected: selected,
+                                            fallback: SvgPicture.asset(
+                                              _profileIcon,
+                                              width: iconSize,
+                                              height: iconSize,
+                                              colorFilter: ColorFilter.mode(
+                                                iconColor,
+                                                BlendMode.srcIn,
+                                              ),
+                                            ),
+                                          )
+                                        : tab.svgAsset != null
+                                        ? SvgPicture.asset(
+                                            tab.svgAsset!,
+                                            width: iconSize,
+                                            height: iconSize,
+                                            colorFilter: ColorFilter.mode(
+                                              iconColor,
+                                              BlendMode.srcIn,
+                                            ),
+                                          )
+                                        : Icon(
+                                            tab.materialIcon,
+                                            size: iconSize,
+                                            color: iconColor,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+          // Figma: shoe rests on the top edge of the pill and walks the width.
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: walkingShoeHeight,
+            child: IgnorePointer(
+              child: _WalkingNavShoe(
+                asset: _walkingShoeAsset,
+                width: walkingShoeWidth,
+                height: walkingShoeHeight,
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+/// Pixel shoe that slowly travels forward then back along the nav top edge.
+class _WalkingNavShoe extends StatefulWidget {
+  const _WalkingNavShoe({
+    required this.asset,
+    required this.width,
+    required this.height,
+  });
+
+  final String asset;
+  final double width;
+  final double height;
+
+  @override
+  State<_WalkingNavShoe> createState() => _WalkingNavShoeState();
+}
+
+class _WalkingNavShoeState extends State<_WalkingNavShoe>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4800),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final travel = math.max(0.0, constraints.maxWidth - widget.width);
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final t = Curves.easeInOut.transform(_controller.value);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: t * travel,
+                  bottom: 0,
+                  width: widget.width,
+                  height: widget.height,
+                  child: child!,
+                ),
+              ],
+            );
+          },
+          child: Image.asset(
+            widget.asset,
+            width: widget.width,
+            height: widget.height,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
+            gaplessPlayback: true,
+          ),
+        );
+      },
     );
   }
 }
@@ -351,7 +469,7 @@ EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
 /// when [Scaffold.extendBody] is true.
 double dashboardLinkedBottomNavStackHeight(BuildContext context) {
   final e = dashboardBottomNavOuterInsets(context);
-  return e.top + FloatingGradientBottomNav.barHeight + e.bottom;
+  return e.top + FloatingGradientBottomNav.totalHeight + e.bottom;
 }
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.
