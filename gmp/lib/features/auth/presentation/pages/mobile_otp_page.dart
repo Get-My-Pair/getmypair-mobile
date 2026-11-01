@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -311,11 +310,8 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
             if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-            // Dev/dummy API may return OTP; production SMS mode never does.
-            // Never show the OTP popup in release builds.
-            if (kDebugMode &&
-                state.otp != null &&
-                state.otp!.isNotEmpty) {
+            // Dev/dummy API returns OTP in the response; SMS mode omits it.
+            if (state.otp != null && state.otp!.isNotEmpty) {
               _showOtpDialog(state.otp!, state.mobile);
             } else {
               _openOtpPage(state.mobile);
