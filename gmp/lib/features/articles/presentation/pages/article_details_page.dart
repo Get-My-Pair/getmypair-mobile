@@ -16,6 +16,7 @@ import 'package:gmp/features/articles/domain/usecases/delete_article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_colour_picker.dart';
 import 'package:gmp/features/service/presentation/pages/care_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/pages/rehome_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/pages/save_my_pair_page.dart';
@@ -185,18 +186,12 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     final s = a.color.trim();
     if (s.isEmpty) return _randomColorPair(a.id);
 
-    final hexOnly = RegExp(r'^#?[0-9A-Fa-f]{6}$').hasMatch(s.replaceAll(' ', ''));
-    final parsedHex = _parseColorHex(s);
-    if (hexOnly && parsedHex != null) {
-      final label = _randomColorPair(a.id).$1;
-      return (label, parsedHex);
-    }
-
-    final lower = s.toLowerCase();
-    final named = _namedColorSwatches[lower];
-    if (named != null) return (s, named);
-
-    return (s, parsedHex ?? _randomColorPair(a.id).$2);
+    final label = footwearColourDisplayName(s);
+    final swatch = parseFootwearColour(s) ??
+        _namedColorSwatches[s.toLowerCase()] ??
+        _parseColorHex(s) ??
+        _randomColorPair(a.id).$2;
+    return (label, swatch);
   }
 
   static String _shortDetailDate(DateTime d) {

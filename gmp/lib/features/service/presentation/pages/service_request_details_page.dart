@@ -264,14 +264,25 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   String _paymentStateStr(Map<String, dynamic> r) =>
       _str(r['paymentState']).trim().toUpperCase();
 
-  bool _needsPayment(Map<String, dynamic> r) {
-    if (!_acceptedUserCost(r)) return false;
+  bool _isPaymentComplete(Map<String, dynamic> r) {
     final state = _paymentStateStr(r);
-    return state != 'PAYMENT_SUCCESS';
+    if (state == 'PAYMENT_SUCCESS' ||
+        state == 'PAID' ||
+        state == 'SUCCESS' ||
+        state == 'COMPLETED') {
+      return true;
+    }
+    // Fallback fields some payloads use after Zoho confirm.
+    final status = _str(r['paymentStatus']).trim().toUpperCase();
+    if (status == 'PAYMENT_SUCCESS' || status == 'PAID') return true;
+    final paid = r['isPaid'] == true || r['paymentCompleted'] == true;
+    return paid;
   }
 
-  bool _isPaymentComplete(Map<String, dynamic> r) =>
-      _paymentStateStr(r) == 'PAYMENT_SUCCESS';
+  bool _needsPayment(Map<String, dynamic> r) {
+    if (!_acceptedUserCost(r)) return false;
+    return !_isPaymentComplete(r);
+  }
 
   double _payableAmount(Map<String, dynamic> r) {
     final v = r['actualCost'];
@@ -280,6 +291,14 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   }
 
   void _openPaymentFlow(Map<String, dynamic> r) {
+    if (_isPaymentComplete(r)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This service request has already been paid.'),
+        ),
+      );
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(

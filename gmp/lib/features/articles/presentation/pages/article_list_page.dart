@@ -13,6 +13,7 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
 import '../../../service/presentation/pages/service_selection_page.dart';
+import '../../../service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'article_create_page.dart';
 import 'article_details_page.dart';
 
@@ -306,7 +307,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
     final topTitleGap = (20.0 * uiScale).clamp(18.0, 28.0);
     final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
     const plusSize = 42.0;
-    const searchHeight = 42.0;
     final filtersHeight = (28.0 * uiScale).clamp(26.0, 32.0);
     final sectionGap = (10.0 * uiScale).clamp(8.0, 14.0);
 
@@ -429,74 +429,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
         SizedBox(height: (14.0 * uiScale).clamp(12.0, 18.0)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: headerHInset),
-          child: Container(
-            height: searchHeight,
-            padding: const EdgeInsets.all(1.2),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
-              ),
-              borderRadius: BorderRadius.circular(100),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x22000000),
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Row(
-                  children: [
-                    SvgPicture.asset(
-                      'assets/images/search.svg',
-                      width: 22,
-                      height: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                        textAlignVertical: TextAlignVertical.center,
-                        style: GoogleFonts.montserrat(
-                          fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          isCollapsed: false,
-                          filled: false,
-                          fillColor: Colors.transparent,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          focusedErrorBorder: InputBorder.none,
-                          hintText: 'Search',
-                          hintStyle: GoogleFonts.montserrat(
-                            color: Colors.black.withValues(alpha: 0.34),
-                            fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                ),
-              ),
-            ),
+          child: HubGradientSearchBar(
+            hintText: 'Search',
+            showClear: true,
+            onChanged: (value) => setState(() => _searchQuery = value),
           ),
         ),
         SizedBox(height: sectionGap),
@@ -1627,56 +1563,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
           const SizedBox(height: 14),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: hPad),
-            child: Container(
-              height: 42,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: ShapeDecoration(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  side: const BorderSide(width: 1, color: Color(0xFF09E0FF)),
-                  borderRadius: BorderRadius.circular(100),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.search_rounded,
-                    color: Colors.black.withValues(alpha: 0.34),
-                    size: 22,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      onChanged: (v) => setState(() => _searchQuery = v),
-                      textAlignVertical: TextAlignVertical.center,
-                      style: GoogleFonts.montserrat(
-                        fontSize: Responsive.fontSize(context, 16),
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        isCollapsed: false,
-                        filled: false,
-                        fillColor: Colors.transparent,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        hintText: 'Search',
-                        hintStyle: GoogleFonts.montserrat(
-                          color: Colors.black.withValues(alpha: 0.34),
-                          fontSize: Responsive.fontSize(context, 16),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: HubGradientSearchBar(
+              hintText: 'Search',
+              showClear: true,
+              onChanged: (v) => setState(() => _searchQuery = v),
             ),
           ),
           const SizedBox(height: 14),

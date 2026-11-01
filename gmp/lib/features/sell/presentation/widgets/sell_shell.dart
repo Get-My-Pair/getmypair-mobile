@@ -80,13 +80,50 @@ int? parseInr(String value) {
   return int.tryParse(digits);
 }
 
+/// Live panel metrics for hub screens that pack without vertical scroll.
+class SellFlowViewport {
+  final double width;
+  final double height;
+  final double uiScale;
+  final double hScale;
+  final bool isTall;
+
+  const SellFlowViewport({
+    required this.width,
+    required this.height,
+    required this.uiScale,
+    required this.hScale,
+    required this.isTall,
+  });
+}
+
+typedef SellFlowViewportBuilder = Widget Function(
+  BuildContext context,
+  SellFlowViewport viewport,
+);
+
 class SellFlowScaffold extends StatelessWidget {
-  final List<Widget> children;
+  final List<Widget>? children;
+
+  /// When set, body is built from the real panel size (dynamic gaps/heights).
+  /// Prefer this for hub pages that must not scroll.
+  final SellFlowViewportBuilder? viewportBuilder;
+
+  /// Design height used when packing short phones (FittedBox scale-down).
+  final double fitDesignHeight;
 
   /// Optional max width for the grey panel on tablets / desktop.
   static const double panelMaxWidth = 720;
 
-  const SellFlowScaffold({super.key, required this.children});
+  const SellFlowScaffold({
+    super.key,
+    this.children,
+    this.viewportBuilder,
+    this.fitDesignHeight = 620,
+  }) : assert(
+          children != null || viewportBuilder != null,
+          'Provide children or viewportBuilder',
+        );
 
   @override
   Widget build(BuildContext context) {
@@ -140,28 +177,77 @@ class SellFlowScaffold extends StatelessWidget {
                         borderRadius: SellColors.panelRadius,
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            final minBodyH = (constraints.maxHeight -
+                            final available = (constraints.maxHeight -
                                     contentPadTop -
                                     contentPadBottom)
                                 .clamp(0.0, double.infinity);
-                            // ClampingScrollPhysics: no bounce when content
-                            // fits; scrolls only when the body overflows.
+                            final contentW = (constraints.maxWidth -
+                                    contentPadH * 2)
+                                .clamp(0.0, double.infinity);
+                            final pad = EdgeInsets.fromLTRB(
+                              contentPadH,
+                              contentPadTop,
+                              contentPadH,
+                              contentPadBottom,
+                            );
+
+                            final builder = viewportBuilder;
+                            if (builder != null) {
+                              // Dynamic hub pack — same approach as Rehome:
+                              // measure real panel, scale gaps/blocks, no scroll.
+                              const designH = 560.0;
+                              final hScale =
+                                  (available / 640).clamp(0.68, 1.0);
+                              final isTall = available > designH + 24;
+                              final viewport = SellFlowViewport(
+                                width: contentW,
+                                height: available,
+                                uiScale: uiScale,
+                                hScale: hScale,
+                                isTall: isTall,
+                              );
+                              final body = builder(context, viewport);
+                              return Padding(
+                                padding: pad,
+                                child: SizedBox(
+                                  height: available,
+                                  width: double.infinity,
+                                  child: isTall
+                                      ? body
+                                      : FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.topCenter,
+                                          child: SizedBox(
+                                            width: contentW,
+                                            height: fitDesignHeight,
+                                            child: builder(
+                                              context,
+                                              SellFlowViewport(
+                                                width: contentW,
+                                                height: fitDesignHeight,
+                                                uiScale: uiScale,
+                                                hScale: hScale,
+                                                isTall: false,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                              );
+                            }
+
+                            // Form steps: scroll only when body overflows.
                             return SingleChildScrollView(
                               physics: const ClampingScrollPhysics(),
-                              padding: EdgeInsets.fromLTRB(
-                                contentPadH,
-                                contentPadTop,
-                                contentPadH,
-                                contentPadBottom,
-                              ),
+                              padding: pad,
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
-                                  minHeight: minBodyH,
+                                  minHeight: available,
                                 ),
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
-                                  children: children,
+                                  children: children!,
                                 ),
                               ),
                             );
@@ -264,10 +350,14 @@ class SellRackShelf extends StatelessWidget {
   final List<Widget> children;
   final double height;
 
+  /// When set, used as the final shelf height (already screen-scaled).
+  final double? resolvedHeight;
+
   const SellRackShelf({
     super.key,
     required this.children,
     this.height = 104,
+    this.resolvedHeight,
   });
 
   static const Color shelfBg = Color(0xFFF0F0F0);
@@ -281,7 +371,8 @@ class SellRackShelf extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
-    final shelfH = (height * uiScale).clamp(88.0, 128.0);
+    final shelfH =
+        resolvedHeight ?? (height * uiScale).clamp(88.0, 128.0);
     final hPad = (8.0 * uiScale).clamp(6.0, 12.0);
     final vPad = (10.0 * uiScale).clamp(8.0, 12.0);
     final gap = (2.0 * uiScale).clamp(1.0, 4.0);

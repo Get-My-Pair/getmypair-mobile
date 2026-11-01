@@ -387,11 +387,13 @@ class PaymentResultIcon extends StatelessWidget {
 class PaymentSecondaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
+  final bool loading;
 
   const PaymentSecondaryButton({
     super.key,
     required this.label,
     this.onPressed,
+    this.loading = false,
   });
 
   @override
@@ -400,7 +402,7 @@ class PaymentSecondaryButton extends StatelessWidget {
       width: double.infinity,
       height: 48,
       child: OutlinedButton(
-        onPressed: onPressed,
+        onPressed: loading ? null : onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: PaymentPageTheme.titleColor,
           side: BorderSide(
@@ -410,10 +412,19 @@ class PaymentSecondaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(100),
           ),
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
-        ),
+        child: loading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: PaymentPageTheme.loaderColor,
+                ),
+              )
+            : Text(
+                label,
+                style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+              ),
       ),
     );
   }

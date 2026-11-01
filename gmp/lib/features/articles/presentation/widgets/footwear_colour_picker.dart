@@ -1,8 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Add/Edit footwear Colour field: pill + Material-style swatch grid.
-/// Stores a `#RRGGBB` string (or empty when nothing selected).
+/// Stores a colour **name** (e.g. `Navy`), not a hex code.
 class FootwearColourPicker extends StatefulWidget {
   const FootwearColourPicker({
     super.key,
@@ -12,7 +14,7 @@ class FootwearColourPicker extends StatefulWidget {
     this.glassShell,
   });
 
-  /// Current colour as `#RRGGBB` or a named colour; null/empty = none.
+  /// Current colour as a name or legacy `#RRGGBB`; null/empty = none.
   final String? value;
   final ValueChanged<String?> onChanged;
   final bool enabled;
@@ -30,9 +32,9 @@ class _FootwearColourPickerState extends State<FootwearColourPicker> {
   Color? get _selectedColor => parseFootwearColour(widget.value);
 
   String get _displayLabel {
-    final c = _selectedColor;
-    if (c == null) return 'Select colour';
-    return colourToHex(c);
+    final raw = widget.value?.trim() ?? '';
+    if (raw.isEmpty) return 'Select colour';
+    return footwearColourDisplayName(raw);
   }
 
   void _toggle() {
@@ -42,7 +44,8 @@ class _FootwearColourPickerState extends State<FootwearColourPicker> {
 
   void _pick(Color color) {
     if (!widget.enabled) return;
-    widget.onChanged(colourToHex(color));
+    // Persist the human name, not #RRGGBB.
+    widget.onChanged(nearestFootwearColourName(color));
     setState(() => _expanded = false);
   }
 
@@ -221,6 +224,34 @@ class _ColourSwatchGrid extends StatelessWidget {
   }
 }
 
+/// Canonical footwear colour names → swatch.
+const Map<String, Color> kFootwearNamedColours = {
+  'Black': Color(0xFF1A1A1A),
+  'White': Color(0xFFF5F5F5),
+  'Grey': Color(0xFF6B7280),
+  'Charcoal': Color(0xFF36454F),
+  'Silver': Color(0xFFC0C0C0),
+  'Brown': Color(0xFF5C4033),
+  'Tan': Color(0xFFC4A77D),
+  'Beige': Color(0xFFD8C3A5),
+  'Cream': Color(0xFFFFFDD0),
+  'Navy': Color(0xFF0F2540),
+  'Denim': Color(0xFF11253F),
+  'Blue': Color(0xFF1E4A7A),
+  'Sky Blue': Color(0xFF5BA3D9),
+  'Teal': Color(0xFF15808D),
+  'Green': Color(0xFF2E6B3C),
+  'Olive': Color(0xFF556B2F),
+  'Red': Color(0xFFB83232),
+  'Maroon': Color(0xFF800000),
+  'Burgundy': Color(0xFF6D1A2A),
+  'Pink': Color(0xFFC97B9A),
+  'Orange': Color(0xFFD97736),
+  'Yellow': Color(0xFFE6C84A),
+  'Gold': Color(0xFFD4AF37),
+  'Purple': Color(0xFF6B3FA0),
+};
+
 String colourToHex(Color color) {
   final r = (color.r * 255).round().clamp(0, 255);
   final g = (color.g * 255).round().clamp(0, 255);
@@ -229,6 +260,50 @@ String colourToHex(Color color) {
           '${g.toRadixString(16).padLeft(2, '0')}'
           '${b.toRadixString(16).padLeft(2, '0')}'
       .toUpperCase();
+}
+
+double _colourDistance(Color a, Color b) {
+  final dr = (a.r - b.r) * 255;
+  final dg = (a.g - b.g) * 255;
+  final db = (a.b - b.b) * 255;
+  return math.sqrt(dr * dr + dg * dg + db * db);
+}
+
+/// Closest canonical name for [color] (Title Case).
+String nearestFootwearColourName(Color color) {
+  var bestName = 'Black';
+  var bestDist = double.infinity;
+  for (final entry in kFootwearNamedColours.entries) {
+    final d = _colourDistance(color, entry.value);
+    if (d < bestDist) {
+      bestDist = d;
+      bestName = entry.key;
+    }
+  }
+  return bestName;
+}
+
+/// Label for UI: name if known / nearest name for hex — never a raw `#RRGGBB`.
+String footwearColourDisplayName(String? raw) {
+  if (raw == null) return 'Select colour';
+  final s = raw.trim();
+  if (s.isEmpty) return 'Select colour';
+
+  final lower = s.toLowerCase();
+  for (final entry in kFootwearNamedColours.entries) {
+    if (entry.key.toLowerCase() == lower) return entry.key;
+  }
+  if (lower == 'gray') return 'Grey';
+
+  final parsed = parseFootwearColour(s);
+  if (parsed != null) return nearestFootwearColourName(parsed);
+
+  // Unknown free-text name from API — show as typed, not as hex.
+  if (!RegExp(r'^#?[0-9A-Fa-f]{6,8}$').hasMatch(s.replaceAll(' ', ''))) {
+    if (s.length == 1) return s.toUpperCase();
+    return s[0].toUpperCase() + s.substring(1);
+  }
+  return nearestFootwearColourName(parsed ?? const Color(0xFF1A1A1A));
 }
 
 Color? parseFootwearColour(String? raw) {
@@ -244,21 +319,10 @@ Color? parseFootwearColour(String? raw) {
     return Color(int.parse(hex, radix: 16));
   }
 
-  const named = <String, Color>{
-    'black': Color(0xFF1A1A1A),
-    'white': Color(0xFFF5F5F5),
-    'brown': Color(0xFF5C4033),
-    'navy': Color(0xFF0F2540),
-    'denim': Color(0xFF11253F),
-    'grey': Color(0xFF6B7280),
-    'gray': Color(0xFF6B7280),
-    'green': Color(0xFF2E6B3C),
-    'red': Color(0xFFB83232),
-    'blue': Color(0xFF1E4A7A),
-    'tan': Color(0xFFC4A77D),
-    'pink': Color(0xFFC97B9A),
-    'yellow': Color(0xFFE6C84A),
-    'orange': Color(0xFFD97736),
-  };
-  return named[s.toLowerCase()];
+  final lower = s.toLowerCase();
+  for (final entry in kFootwearNamedColours.entries) {
+    if (entry.key.toLowerCase() == lower) return entry.value;
+  }
+  if (lower == 'gray') return kFootwearNamedColours['Grey'];
+  return null;
 }

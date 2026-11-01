@@ -1,13 +1,14 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../service/presentation/pages/service_request_details_page.dart';
+import '../../../../core/bgtheme.dart';
 import '../services/payment_analytics.dart';
 
-/// Full-screen Zoho payment success celebration (Figma success popup).
+/// Full-screen Zoho payment success celebration.
 class PaymentSuccessPage extends StatefulWidget {
   final String orderId;
   final double amount;
@@ -28,26 +29,16 @@ class PaymentSuccessPage extends StatefulWidget {
 
 class _PaymentSuccessPageState extends State<PaymentSuccessPage>
     with TickerProviderStateMixin {
-  static const _sweep = SweepGradient(
-    center: Alignment(0.22, -1.07),
-    startAngle: -0.55,
-    endAngle: 5.73,
-    colors: [
-      Color(0xFF09E0FF),
-      Color(0xFF0F6876),
-      Color(0xFF062F35),
-      Color(0xFF062F35),
-    ],
-    stops: [0.05, 0.44, 0.57, 1],
-    transform: GradientRotation(-0.55),
-  );
+  static const _checkAsset =
+      'assets/images/payment/payment_success_check.png';
+  static const _homeDelay = Duration(seconds: 6);
 
   late final AnimationController _popupController;
   late final AnimationController _confettiController;
-  late final AnimationController _actionsController;
   late final Animation<double> _popupScale;
   late final Animation<double> _popupFade;
   late final Animation<double> _checkScale;
+  Timer? _homeTimer;
 
   @override
   void initState() {
@@ -62,10 +53,6 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
       vsync: this,
       duration: const Duration(milliseconds: 4200),
     )..repeat();
-    _actionsController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 420),
-    );
 
     _popupScale = CurvedAnimation(
       parent: _popupController,
@@ -86,48 +73,38 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
     );
 
     _popupController.forward();
-    Future<void>.delayed(const Duration(milliseconds: 1100), () {
-      if (mounted) _actionsController.forward();
-    });
+    _homeTimer = Timer(_homeDelay, _goHome);
   }
 
   @override
   void dispose() {
+    _homeTimer?.cancel();
     _popupController.dispose();
     _confettiController.dispose();
-    _actionsController.dispose();
     super.dispose();
   }
 
-  void _viewRequest() {
-    Navigator.of(context).popUntil((route) => route.isFirst);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ServiceRequestDetailsPage(
-          requestId: widget.serviceRequestId,
-        ),
-      ),
-    );
-  }
-
   void _goHome() {
+    if (!mounted) return;
     Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final contentWidth = (width * 0.78).clamp(260.0, 340.0);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: BgTheme.scaffoldBackgroundColor,
         body: Stack(
           fit: StackFit.expand,
           children: [
-            const DecoratedBox(decoration: BoxDecoration(gradient: _sweep)),
+            ...BgTheme.background(),
             AnimatedBuilder(
               animation: _confettiController,
               builder: (context, _) {
@@ -138,137 +115,58 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
               },
             ),
             SafeArea(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: FadeTransition(
-                        opacity: _popupFade,
-                        child: ScaleTransition(
-                          scale: _popupScale,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 48),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ScaleTransition(
-                                  scale: _checkScale,
-                                  child: Container(
-                                    width: 72,
-                                    height: 72,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Color(0x33000000),
-                                          blurRadius: 16,
-                                          offset: Offset(0, 6),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.check_rounded,
-                                      size: 40,
-                                      color: Color(0xFF062F35),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                Text(
-                                  'Payment Successful!',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.boldonse(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                Text(
-                                  'Your transaction was completed successfully. Order is confirmed!',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w400,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ],
+              child: Center(
+                child: FadeTransition(
+                  opacity: _popupFade,
+                  child: ScaleTransition(
+                    scale: _popupScale,
+                    child: SizedBox(
+                      width: contentWidth,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ScaleTransition(
+                            scale: _checkScale,
+                            child: Image.asset(
+                              _checkAsset,
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 22),
+                          Text(
+                            'Payment Successful!',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
+                            style: GoogleFonts.boldonse(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w400,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            'Your transaction was\n'
+                            'completed successfully. Order\n'
+                            'is confirmed!',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.montserrat(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w400,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  FadeTransition(
-                    opacity: _actionsController,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.25),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: _actionsController,
-                          curve: Curves.easeOutCubic,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(100),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x19000000),
-                                      blurRadius: 4,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: TextButton(
-                                  onPressed: _viewRequest,
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: const Color(0xFF062F35),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(100),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'View service request',
-                                    style: GoogleFonts.boldonse(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            TextButton(
-                              onPressed: _goHome,
-                              child: Text(
-                                'Back to home',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white.withValues(alpha: 0.92),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -352,7 +250,6 @@ class _ConfettiPainter extends CustomPainter {
       if (piece.rect) {
         final w = piece.size * (1.2 + (piece.spin.abs() % 1) * 1.6);
         final h = piece.size * 0.45;
-        // Motion-blur streak for some pieces.
         if (piece.size > 9) {
           paint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2);
         }

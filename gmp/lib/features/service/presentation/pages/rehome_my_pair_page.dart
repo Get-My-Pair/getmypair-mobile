@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
@@ -9,6 +8,7 @@ import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/sell/presentation/pages/sell_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/injection_container.dart';
@@ -217,6 +217,14 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
     );
   }
 
+  TextStyle _sectionTitle(BuildContext context) {
+    return GoogleFonts.boldonse(
+      color: const Color(0xFF062F35),
+      fontSize: 16,
+      fontWeight: FontWeight.w400,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -224,11 +232,15 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
     const topInset = 52.0;
     final searching = _searchQuery.trim().isNotEmpty;
-    final navH = dashboardLinkedBottomNavStackHeight(context);
+    // Same ListView pattern as Care/Save — never put TextField in FittedBox
+    // (that clipped "Search RehomeMyPair" and broke keyboard focus).
+    const brandH = 105.0;
+    const stylesH = 96.0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -258,257 +270,113 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                   ),
                   child: ClipRRect(
                     borderRadius: _panelRadius,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final available = math.max(
-                          0.0,
-                          constraints.maxHeight - navH,
-                        );
-                        // Comfortable design height for this hub; compress on
-                        // short phones so everything fits without vertical scroll.
-                        final hScale = (available / 640).clamp(0.68, 1.0);
-                        final padTop = (12.0 * hScale).clamp(6.0, 12.0);
-                        final padBottom = (10.0 * hScale).clamp(6.0, 12.0);
-                        final gapAfterHeader = (20.0 * hScale).clamp(10.0, 24.0);
-                        final gapAfterSearch = (18.0 * hScale).clamp(10.0, 28.0);
-                        final gapSection = (12.0 * hScale).clamp(8.0, 14.0);
-                        final gapBeforeDemand =
-                            (18.0 * hScale).clamp(10.0, 32.0);
-                        final gapBeforeStyles =
-                            (14.0 * hScale).clamp(8.0, 22.0);
-                        final brandH = (105.0 * hScale).clamp(72.0, 105.0);
-                        final stylesH = (96.0 * hScale).clamp(68.0, 100.0);
-                        final titleSize = (16.0 * hScale).clamp(13.0, 16.0);
-                        final subTitleSize = (15.0 * hScale).clamp(12.0, 15.0);
-
-                        if (searching) {
-                          return ListView(
-                            padding: EdgeInsets.fromLTRB(
-                              8,
-                              padTop,
-                              6,
-                              navH + 12,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      children: [
+                        _Header(onBack: () => Navigator.maybePop(context)),
+                        const SizedBox(height: 24),
+                        HubGradientSearchBar(
+                          hintText: 'Search RehomeMyPair',
+                          showClear: true,
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
+                        ),
+                        const SizedBox(height: 28),
+                        if (searching)
+                          HubScopedSearchResults(
+                            query: _searchQuery,
+                            hubName: 'RehomeMyPair',
+                            hits: _rehomeSearchHits(context),
+                          )
+                        else ...[
+                          Text('Our Services', style: _sectionTitle(context)),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _PrimaryDonateCard(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const SellMyPairPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _SecondaryServiceCard(
+                                  onTap: () => showComingSoon(
+                                    context,
+                                    feature: 'RentMyPair',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_showStaticMedia) ...[
+                            const SizedBox(height: 18),
+                            Text(
+                              'In Demand Right Now',
+                              style: _sectionTitle(context),
                             ),
-                            children: [
-                              _Header(
-                                onBack: () => Navigator.maybePop(context),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Top Bidded Brands',
+                              style: GoogleFonts.montserrat(
+                                color: Colors.black,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
                               ),
-                              SizedBox(height: gapAfterHeader),
-                              _SearchBar(
-                                onChanged: (value) =>
-                                    setState(() => _searchQuery = value),
-                              ),
-                              SizedBox(height: gapAfterSearch),
-                              HubScopedSearchResults(
-                                query: _searchQuery,
-                                hubName: 'RehomeMyPair',
-                                hits: _rehomeSearchHits(context),
-                              ),
-                            ],
-                          );
-                        }
-
-                        final contentH = math.max(
-                          0.0,
-                          available - padTop - padBottom,
-                        );
-                        // Short phones: shrink to fit (no vertical scroll).
-                        // Tall phones: grow media + distribute space evenly.
-                        const designH = 560.0;
-                        final isTall = contentH > designH + 24;
-                        final tallExtra = isTall
-                            ? (contentH - designH).clamp(0.0, 220.0)
-                            : 0.0;
-                        final tallGrow = isTall
-                            ? (tallExtra / 180).clamp(0.0, 1.0)
-                            : 0.0;
-                        final brandHTall =
-                            (brandH + tallGrow * 36).clamp(brandH, 140.0);
-                        final stylesHTall =
-                            (stylesH + tallGrow * 28).clamp(stylesH, 128.0);
-
-                        Widget hubBody({
-                          required double brandHeight,
-                          required double stylesHeight,
-                          required bool distribute,
-                        }) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _Header(
-                                onBack: () => Navigator.maybePop(context),
-                              ),
-                              SizedBox(height: gapAfterHeader),
-                              _SearchBar(
-                                onChanged: (value) =>
-                                    setState(() => _searchQuery = value),
-                              ),
-                              SizedBox(height: gapAfterSearch),
-                              Text(
-                                'Our Services',
-                                style: GoogleFonts.boldonse(
-                                  color: const Color(0xFF062F35),
-                                  fontSize: titleSize,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              SizedBox(height: gapSection),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _PrimaryDonateCard(
-                                      onTap: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                const SellMyPairPage(),
-                                          ),
-                                        );
-                                      },
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: brandH,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    _DemandBrandImage(
+                                      asset: 'assets/images/rehome1 (2).png',
+                                      width: 184,
+                                      height: brandH * 0.98,
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: _SecondaryServiceCard(
-                                      onTap: () => showComingSoon(
-                                        context,
-                                        feature: 'RentMyPair',
-                                      ),
+                                    SizedBox(width: 14),
+                                    _DemandBrandImage(
+                                      asset: 'assets/images/rehome1 (1).png',
+                                      width: 129,
+                                      height: brandH,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 14),
+                                    _DemandBrandImage(
+                                      asset: 'assets/images/rehome1 (3).png',
+                                      width: 187,
+                                      height: brandH,
+                                    ),
+                                  ],
+                                ),
                               ),
-                              if (_showStaticMedia) ...[
-                                if (distribute)
-                                  const Spacer(flex: 2)
-                                else
-                                  SizedBox(height: gapBeforeDemand),
-                                Text(
-                                  'In Demand Right Now',
-                                  style: GoogleFonts.boldonse(
-                                    color: const Color(0xFF062F35),
-                                    fontSize: titleSize,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                                SizedBox(height: gapSection),
-                                Text(
-                                  'Top Bidded Brands',
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.black,
-                                    fontSize: subTitleSize,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                SizedBox(
-                                  height: (10.0 * hScale).clamp(6.0, 12.0),
-                                ),
-                                SizedBox(
-                                  height: brandHeight,
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        _DemandBrandImage(
-                                          asset:
-                                              'assets/images/rehome1 (2).png',
-                                          width: 184 *
-                                              (brandHeight / 105)
-                                                  .clamp(0.85, 1.25),
-                                          height: brandHeight * 0.98,
-                                        ),
-                                        SizedBox(
-                                          width: 14 *
-                                              (brandHeight / 105)
-                                                  .clamp(0.85, 1.25),
-                                        ),
-                                        _DemandBrandImage(
-                                          asset:
-                                              'assets/images/rehome1 (1).png',
-                                          width: 129 *
-                                              (brandHeight / 105)
-                                                  .clamp(0.85, 1.25),
-                                          height: brandHeight,
-                                        ),
-                                        SizedBox(
-                                          width: 14 *
-                                              (brandHeight / 105)
-                                                  .clamp(0.85, 1.25),
-                                        ),
-                                        _DemandBrandImage(
-                                          asset:
-                                              'assets/images/rehome1 (3).png',
-                                          width: 187 *
-                                              (brandHeight / 105)
-                                                  .clamp(0.85, 1.25),
-                                          height: brandHeight,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (distribute)
-                                  const Spacer(flex: 2)
-                                else
-                                  SizedBox(height: gapBeforeStyles),
-                                Text(
-                                  'Most Requested Rental Styles',
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.black,
-                                    fontSize: subTitleSize,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                SizedBox(
-                                  height: (8.0 * hScale).clamp(6.0, 12.0),
-                                ),
-                                _buildRentalStylesRow(height: stylesHeight),
-                                if (distribute) const Spacer(flex: 1),
-                              ],
-                            ],
-                          );
-                        }
-
-                        return Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            8,
-                            padTop,
-                            6,
-                            navH + padBottom,
-                          ),
-                          child: SizedBox(
-                            height: contentH,
-                            width: double.infinity,
-                            child: isTall
-                                ? hubBody(
-                                    brandHeight: brandHTall,
-                                    stylesHeight: stylesHTall,
-                                    distribute: true,
-                                  )
-                                : FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.topCenter,
-                                    child: SizedBox(
-                                      width: math.max(
-                                        0.0,
-                                        constraints.maxWidth - 14,
-                                      ),
-                                      height: designH,
-                                      child: hubBody(
-                                        brandHeight: brandH,
-                                        stylesHeight: stylesH,
-                                        distribute: false,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        );
-                      },
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Most Requested Rental Styles',
+                              style: GoogleFonts.montserrat(
+                                color: Colors.black,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildRentalStylesRow(height: stylesH),
+                          ],
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -576,88 +444,6 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SearchBar extends StatelessWidget {
-  final ValueChanged<String>? onChanged;
-
-  const _SearchBar({this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    const searchHeight = 42.0;
-    final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-
-    return Container(
-      height: searchHeight,
-      padding: const EdgeInsets.all(1.2),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
-        ),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(100),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Row(
-            children: [
-              SvgPicture.asset(
-                'assets/images/search.svg',
-                width: 22,
-                height: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  onChanged: onChanged,
-                  textAlignVertical: TextAlignVertical.center,
-                  style: GoogleFonts.montserrat(
-                    fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    isCollapsed: false,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search RehomeMyPair',
-                    hintStyle: GoogleFonts.montserrat(
-                      color: Colors.black.withValues(alpha: 0.34),
-                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

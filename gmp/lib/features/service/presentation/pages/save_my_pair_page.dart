@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -126,6 +126,7 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -160,7 +161,9 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
                       children: [
                         _Header(onBack: () => Navigator.maybePop(context)),
                         const SizedBox(height: 24),
-                        _SearchBar(
+                        HubGradientSearchBar(
+                          hintText: 'Search SaveMyPair',
+                          showClear: true,
                           onChanged: (value) =>
                               setState(() => _searchQuery = value),
                         ),
@@ -282,88 +285,6 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SearchBar extends StatelessWidget {
-  final ValueChanged<String>? onChanged;
-
-  const _SearchBar({this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    const searchHeight = 42.0;
-    final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-
-    return Container(
-      height: searchHeight,
-      padding: const EdgeInsets.all(1.2),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
-        ),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(100),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Row(
-            children: [
-              SvgPicture.asset(
-                'assets/images/search.svg',
-                width: 22,
-                height: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  onChanged: onChanged,
-                  textAlignVertical: TextAlignVertical.center,
-                  style: GoogleFonts.montserrat(
-                    fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    isCollapsed: false,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search SaveMyPair',
-                    hintStyle: GoogleFonts.montserrat(
-                      color: Colors.black.withValues(alpha: 0.34),
-                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

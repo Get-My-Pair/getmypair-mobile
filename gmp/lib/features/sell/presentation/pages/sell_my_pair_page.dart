@@ -54,104 +54,119 @@ class _SellMyPairPageState extends State<SellMyPairPage> {
 
   void _openSelection(String type) {
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => FootwearSelectionPage(footwearType: type)))
+        .push(MaterialPageRoute(
+            builder: (_) => FootwearSelectionPage(footwearType: type)))
         .then((_) => _load());
   }
 
   void _openRack(String type) {
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => MyFootwearRackPage(footwearType: type)))
+        .push(MaterialPageRoute(
+            builder: (_) => MyFootwearRackPage(footwearType: type)))
         .then((_) => _load());
   }
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
-    final bodySize = (14.0 * uiScale).clamp(12.5, 16.0);
-    final sectionSize = (16.0 * uiScale).clamp(14.0, 18.0);
-    final gapSm = (12.0 * uiScale).clamp(8.0, 14.0);
-    final gapMd = (16.0 * uiScale).clamp(12.0, 20.0);
-    final gapLg = (18.0 * uiScale).clamp(14.0, 22.0);
-    final cardGap = (8.0 * uiScale).clamp(6.0, 12.0);
-
     return SellFlowScaffold(
-      children: [
-        const SellPageHeader(title: 'SellMyPair'),
-        SizedBox(height: gapMd),
-        Text(
-          'SellMyPair lets you sell any footwear, from daily wear to high-end luxury, directly to the GetMyPair community.',
-          style: GoogleFonts.montserrat(
-            color: Colors.black87,
-            fontSize: bodySize,
-            height: 1.35,
-          ),
-        ),
-        SizedBox(height: (14.0 * uiScale).clamp(10.0, 16.0)),
-        Text(
-          'Select the type of footwear you’d like to sell:',
-          style: GoogleFonts.montserrat(
-            color: Colors.black87,
-            fontSize: bodySize,
-            height: 1.35,
-          ),
-        ),
-        SizedBox(height: gapLg),
-        Text(
-          'Our Services',
-          style: GoogleFonts.boldonse(
-            color: SellColors.ink,
-            fontSize: sectionSize,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        SizedBox(height: gapSm),
-        Row(
+      fitDesignHeight: 620,
+      viewportBuilder: (context, vp) {
+        final s = vp.uiScale * vp.hScale;
+        final bodySize = (14.0 * s).clamp(11.5, 16.0);
+        final sectionSize = (16.0 * s).clamp(13.0, 18.0);
+        final gapSm = (12.0 * s).clamp(6.0, 14.0);
+        final gapMd = (16.0 * s).clamp(8.0, 20.0);
+        final gapLg = (18.0 * s).clamp(10.0, 22.0);
+        final cardGap = (8.0 * vp.uiScale).clamp(6.0, 12.0);
+        // Shelf grows on tall panels, shrinks on short — from live height.
+        final shelfH = (vp.height * 0.14).clamp(72.0, 128.0);
+        final distribute = vp.isTall;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: _ServiceCard(
-                label: 'Luxury',
-                iconAsset: 'assets/images/Vector (5).svg',
-                filled: true,
-                onTap: () => _openSelection('luxury'),
+            const SellPageHeader(title: 'SellMyPair'),
+            SizedBox(height: gapMd),
+            Text(
+              'SellMyPair lets you sell any footwear, from daily wear to high-end luxury, directly to the GetMyPair community.',
+              style: GoogleFonts.montserrat(
+                color: Colors.black87,
+                fontSize: bodySize,
+                height: 1.3,
               ),
             ),
-            SizedBox(width: cardGap),
-            Expanded(
-              child: _ServiceCard(
-                label: 'Everyday',
-                iconAsset: 'assets/images/Group 144.svg',
-                filled: false,
-                onTap: () => _openSelection('everyday'),
+            SizedBox(height: (14.0 * s).clamp(8.0, 16.0)),
+            Text(
+              'Select the type of footwear you’d like to sell:',
+              style: GoogleFonts.montserrat(
+                color: Colors.black87,
+                fontSize: bodySize,
+                height: 1.3,
               ),
             ),
+            SizedBox(height: gapLg),
+            Text(
+              'Our Services',
+              style: GoogleFonts.boldonse(
+                color: SellColors.ink,
+                fontSize: sectionSize,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            SizedBox(height: gapSm),
+            Row(
+              children: [
+                Expanded(
+                  child: _ServiceCard(
+                    label: 'Luxury',
+                    iconAsset: 'assets/images/Vector (5).svg',
+                    filled: true,
+                    onTap: () => _openSelection('luxury'),
+                  ),
+                ),
+                SizedBox(width: cardGap),
+                Expanded(
+                  child: _ServiceCard(
+                    label: 'Everyday',
+                    iconAsset: 'assets/images/Group 144.svg',
+                    filled: false,
+                    onTap: () => _openSelection('everyday'),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: gapLg),
+            Wrap(
+              spacing: (14.0 * vp.uiScale).clamp(10.0, 18.0),
+              runSpacing: (8.0 * s).clamp(4.0, 12.0),
+              children: [
+                _HubLegend(asset: SellColors.reviewIcon, label: 'In review'),
+                _HubLegend(asset: SellColors.approvedIcon, label: 'Approved'),
+                _HubLegend(asset: SellColors.rejectedIcon, label: 'Rejected'),
+              ],
+            ),
+            if (distribute) const Spacer(flex: 2) else SizedBox(height: gapLg),
+            _RackPreview(
+              title: 'My Luxury Rack',
+              listings: _of('luxury'),
+              loading: _loading,
+              shelfHeight: shelfH,
+              titleSize: sectionSize,
+              onExpand: () => _openRack('luxury'),
+            ),
+            if (distribute) const Spacer(flex: 2) else SizedBox(height: gapLg),
+            _RackPreview(
+              title: 'My Everyday Rack',
+              listings: _of('everyday'),
+              loading: _loading,
+              shelfHeight: shelfH,
+              titleSize: sectionSize,
+              onExpand: () => _openRack('everyday'),
+            ),
+            if (distribute) const Spacer(flex: 1),
           ],
-        ),
-        SizedBox(height: gapLg),
-        Wrap(
-          spacing: (14.0 * uiScale).clamp(10.0, 18.0),
-          runSpacing: (8.0 * uiScale).clamp(6.0, 12.0),
-          children: [
-            _HubLegend(asset: SellColors.reviewIcon, label: 'In review'),
-            _HubLegend(asset: SellColors.approvedIcon, label: 'Approved'),
-            _HubLegend(asset: SellColors.rejectedIcon, label: 'Rejected'),
-          ],
-        ),
-        SizedBox(height: gapLg),
-        _RackPreview(
-          title: 'My Luxury Rack',
-          listings: _of('luxury'),
-          loading: _loading,
-          onExpand: () => _openRack('luxury'),
-        ),
-        SizedBox(height: gapLg),
-        _RackPreview(
-          title: 'My Everyday Rack',
-          listings: _of('everyday'),
-          loading: _loading,
-          onExpand: () => _openRack('everyday'),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -287,12 +302,16 @@ class _RackPreview extends StatelessWidget {
   final List<SellListing> listings;
   final bool loading;
   final VoidCallback onExpand;
+  final double shelfHeight;
+  final double titleSize;
 
   const _RackPreview({
     required this.title,
     required this.listings,
     required this.loading,
     required this.onExpand,
+    required this.shelfHeight,
+    required this.titleSize,
   });
 
   String _label(SellListing listing) {
@@ -305,10 +324,8 @@ class _RackPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
-    final titleSize = (16.0 * uiScale).clamp(14.0, 18.0);
     final emptySize = (13.0 * uiScale).clamp(11.5, 14.5);
-    // Match [SellRackShelf] height math (base 104 × uiScale).
-    final shelfH = (104.0 * uiScale).clamp(88.0, 128.0);
+    final shelfH = shelfHeight;
     final iconBtn = (18.0 * uiScale).clamp(16.0, 22.0);
 
     return Column(
@@ -417,6 +434,7 @@ class _RackPreview extends StatelessWidget {
           )
         else
           SellRackShelf(
+            resolvedHeight: shelfH,
             children: [
               for (final item in listings)
                 SellRackShoeCell(
