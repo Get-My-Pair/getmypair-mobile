@@ -45,7 +45,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
   /// Inner pill from Figma: `rect … height="58" rx="29"` (`3042:4601`).
   static const double barHeight = 58;
 
-  /// Walking shoe from Figma `3042:4603` (82 × 39).
+  /// Walking shoe from Figma `3042:4603` (82 × 39) — base, never shrink below.
   static const double walkingShoeWidth = 82;
   static const double walkingShoeHeight = 39;
 
@@ -57,8 +57,32 @@ class FloatingGradientBottomNav extends StatelessWidget {
   /// Pill + walking unit height (home). Other screens use [barHeight].
   static const double totalHeight = barHeight + walkingUnitHeight;
 
-  static double heightFor({required bool showWalkingShoe}) =>
-      showWalkingShoe ? totalHeight : barHeight;
+  /// Tall phones: grow the shoe with available bottom space (never below 1.0).
+  static double walkingShoeScaleOf(BuildContext context) {
+    final h = MediaQuery.sizeOf(context).height;
+    if (h <= 850) return 1.0;
+    return (1.0 + (h - 850) / 420).clamp(1.0, 1.38);
+  }
+
+  static double walkingShoeWidthOf(BuildContext context) =>
+      walkingShoeWidth * walkingShoeScaleOf(context);
+
+  static double walkingShoeHeightOf(BuildContext context) =>
+      walkingShoeHeight * walkingShoeScaleOf(context);
+
+  static double walkingUnitHeightOf(BuildContext context) {
+    final s = walkingShoeScaleOf(context);
+    return walkingShoeHeight * s + walkingBubbleHeight * s - 6;
+  }
+
+  static double heightFor({
+    required bool showWalkingShoe,
+    BuildContext? context,
+  }) {
+    if (!showWalkingShoe) return barHeight;
+    if (context == null) return totalHeight;
+    return barHeight + walkingUnitHeightOf(context);
+  }
 
   static const double _pillRadius = barHeight / 2;
   static const double hitSize = 44;
@@ -96,7 +120,15 @@ class FloatingGradientBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedVisual = _visualIndexFor(currentIndex);
-    final stackHeight = heightFor(showWalkingShoe: showWalkingShoe);
+    final shoeW = showWalkingShoe ? walkingShoeWidthOf(context) : walkingShoeWidth;
+    final shoeH =
+        showWalkingShoe ? walkingShoeHeightOf(context) : walkingShoeHeight;
+    final unitH =
+        showWalkingShoe ? walkingUnitHeightOf(context) : walkingUnitHeight;
+    final stackHeight = heightFor(
+      showWalkingShoe: showWalkingShoe,
+      context: context,
+    );
 
     return SizedBox(
       height: stackHeight,
@@ -237,18 +269,19 @@ class FloatingGradientBottomNav extends StatelessWidget {
             ),
           ),
           // Home only: shoe + bubble walk along the top of the pill.
+          // Size grows with tall viewports — never below Figma base.
           if (showWalkingShoe)
-            const Positioned(
+            Positioned(
               left: 0,
               right: 0,
               top: 0,
-              height: walkingUnitHeight,
+              height: unitH,
               child: IgnorePointer(
                 child: _WalkingNavShoe(
                   asset: _walkingShoeAsset,
-                  shoeWidth: walkingShoeWidth,
-                  shoeHeight: walkingShoeHeight,
-                  unitHeight: walkingUnitHeight,
+                  shoeWidth: shoeW,
+                  shoeHeight: shoeH,
+                  unitHeight: unitH,
                 ),
               ),
             ),
@@ -316,7 +349,11 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
   @override
   Widget build(BuildContext context) {
     // Bubble sits left of the shoe (Figma); lead gives starting overhang.
-    const bubbleLead = 56.0;
+    // Scale with shoe so tall phones keep full proportions (never shrink).
+    final shoeScale =
+        (widget.shoeWidth / FloatingGradientBottomNav.walkingShoeWidth)
+            .clamp(1.0, 1.38);
+    final bubbleLead = 56.0 * shoeScale;
     final unitWidth = widget.shoeWidth + bubbleLead;
 
     return LayoutBuilder(
@@ -351,17 +388,23 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
                   widget.asset,
                   width: widget.shoeWidth,
                   height: widget.shoeHeight,
-                  fit: BoxFit.contain,
+                  // Fill the reserved box — never shrink in leftover space.
+                  fit: BoxFit.fill,
                   filterQuality: FilterQuality.none,
                   gaplessPlayback: true,
+                  alignment: Alignment.bottomCenter,
                 ),
               ),
               Positioned(
                 left: 0,
                 top: 0,
-                child: _WalkingShoeBubble(
-                  message: _kWalkingShoeMessages[_messageIndex],
-                  messageKey: ValueKey<int>(_messageIndex),
+                child: Transform.scale(
+                  scale: shoeScale,
+                  alignment: Alignment.topLeft,
+                  child: _WalkingShoeBubble(
+                    message: _kWalkingShoeMessages[_messageIndex],
+                    messageKey: ValueKey<int>(_messageIndex),
+                  ),
                 ),
               ),
             ],
@@ -584,7 +627,10 @@ double dashboardLinkedBottomNavStackHeight(
 }) {
   final e = dashboardBottomNavOuterInsets(context);
   return e.top +
-      FloatingGradientBottomNav.heightFor(showWalkingShoe: showWalkingShoe) +
+      FloatingGradientBottomNav.heightFor(
+        showWalkingShoe: showWalkingShoe,
+        context: context,
+      ) +
       e.bottom;
 }
 

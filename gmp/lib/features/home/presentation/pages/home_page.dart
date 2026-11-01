@@ -225,15 +225,19 @@ double _homeWidthScale(BuildContext context) {
   return (w / _kHomeDesignWidth).clamp(0.72, 1.0);
 }
 
-/// Height scale from reference device.
+/// Height scale from reference device (slightly >1 on tall phones).
 double _homeHeightScale(BuildContext context) {
   final h = MediaQuery.sizeOf(context).height;
-  return (h / _kHomeDesignHeight).clamp(0.55, 1.0);
+  return (h / _kHomeDesignHeight).clamp(0.55, 1.18);
 }
 
-/// Unified scale: same proportions as Edge 60 Pro, scaled down on smaller screens.
+/// Unified scale: Edge 60 Pro proportions; can grow a bit on taller phones.
 double _homeLayoutScale(BuildContext context) {
-  return math.min(_homeWidthScale(context), _homeHeightScale(context));
+  final w = _homeWidthScale(context);
+  final h = _homeHeightScale(context);
+  // Prefer width for horizontal density, but let tall devices scale up via height.
+  if (h > 1.0 && w >= 0.95) return h.clamp(1.0, 1.12);
+  return math.min(w, h);
 }
 
 /// Design px at Edge 60 Pro → scaled for current screen.
@@ -273,15 +277,16 @@ double _homeHeaderScaleXForWidth(double width) {
 }
 
 /// Space above the floating bottom nav so action cards are not covered.
+/// Tall phones get a little extra air so the walking shoe keeps full size.
 double _homeViewportBottomReserve(BuildContext context) {
   final full = dashboardLinkedBottomNavStackHeight(
     context,
     showWalkingShoe: true,
   );
-  return math.max(
-    FloatingGradientBottomNav.totalHeight + 10,
-    full - 10,
-  );
+  final h = MediaQuery.sizeOf(context).height;
+  // Extra clearance above shoe on taller viewports (iPhone 16 Pro / Edge 60+).
+  final tallBreath = ((h - 850) / 200).clamp(0.0, 1.0) * 18.0;
+  return full + 6 + tallBreath;
 }
 
 /// Horizontal gap between the two cards in each action row.
@@ -291,11 +296,11 @@ double _homeSectionGap(double layoutScale) =>
 /// Scales icons/text inside action cards vs Edge reference cell height.
 double _homeActionContentScale(double actionBlockH, double layoutScale) =>
     (actionBlockH / (_kQuickActionCellHeight * layoutScale))
-        .clamp(0.72, 1.38);
+        .clamp(0.72, 1.72);
 
 /// Scales My Rack inner content (title, thumbs, icons) vs Edge reference.
 double _homeRackContentScale(double rackHeight, double layoutScale) =>
-    (rackHeight / (_kHomeDesignRackContentH * layoutScale)).clamp(0.72, 1.38);
+    (rackHeight / (_kHomeDesignRackContentH * layoutScale)).clamp(0.72, 1.72);
 
 /// Home Page — Figma `335:1687`; icons from [FigmaHomeAssets].
 /// This is the landing tab shown to authenticated users on the main dashboard.
@@ -966,10 +971,17 @@ class _HomePageState extends State<HomePage> {
                                       );
                                       final minEqualBlockH =
                                           _homeScaled(56, layoutScale);
+                                      // Tall phones may grow cards past the
+                                      // width-based rectangle so empty space
+                                      // above the nav is covered.
+                                      final maxEqualBlockH = math.min(
+                                        availableBody * 0.38,
+                                        _homeScaled(128, layoutScale),
+                                      );
                                       var equalBlockH = math.min(
                                         rectangleH,
                                         availableBody * 0.275,
-                                      );
+                                      ).clamp(minEqualBlockH, maxEqualBlockH).toDouble();
                                       final rackHeaderH =
                                           _homeScaled(22, layoutScale).clamp(
                                         20.0,
@@ -985,6 +997,16 @@ class _HomePageState extends State<HomePage> {
                                           rackThumbGap +
                                           rackThumbRowH +
                                           rackCardBottomPadding;
+                                      final minRackH = math.max(
+                                        48.0,
+                                        rackHeaderH +
+                                            rackCardTopPadding +
+                                            rackCardBottomPadding,
+                                      );
+                                      final maxRackH = math.min(
+                                        availableBody * 0.55,
+                                        rackContentH + _homeScaled(96, layoutScale),
+                                      );
                                       final rackMaxFit = math.max(
                                         0.0,
                                         availableBody - equalBlockH * 2,
@@ -992,15 +1014,21 @@ class _HomePageState extends State<HomePage> {
                                       var rackHeight = math.min(
                                         rackContentH,
                                         rackMaxFit,
-                                      );
-                                      var packedH = headerToRackGap +
+                                      ).clamp(minRackH, maxRackH).toDouble();
+                                      // Slightly stretch gaps on tall bodies so
+                                      // spacing grows with the phone, not a void.
+                                      var liveHeaderToRack = headerToRackGap;
+                                      var liveRackToGrid = rackToGridGap;
+                                      var liveActionRowGap = actionRowGap;
+                                      double packedHeight() =>
+                                          liveHeaderToRack +
                                           rackHeight +
-                                          rackToGridGap +
-                                          actionRowGap +
+                                          liveRackToGrid +
+                                          liveActionRowGap +
                                           equalBlockH * 2;
-                                      // Final fit: never let the packed column
-                                      // exceed the Expanded height (sub-pixel +
-                                      // short viewports).
+                                      var packedH = packedHeight();
+                                      // Short phones: shrink so content fits
+                                      // without vertical scroll.
                                       var overflow = packedH - bodyH;
                                       if (overflow > 0) {
                                         final shrinkBlocks = math.min(
@@ -1013,32 +1041,63 @@ class _HomePageState extends State<HomePage> {
                                         equalBlockH -= shrinkBlocks / 2;
                                         overflow -= shrinkBlocks;
                                         if (overflow > 0) {
-                                          final minRack = math.max(
-                                            48.0,
-                                            rackHeaderH +
-                                                rackCardTopPadding +
-                                                rackCardBottomPadding,
-                                          );
                                           rackHeight = math.max(
-                                            minRack,
+                                            minRackH,
                                             rackHeight - overflow,
                                           );
                                         }
-                                        packedH = headerToRackGap +
-                                            rackHeight +
-                                            rackToGridGap +
-                                            actionRowGap +
-                                            equalBlockH * 2;
+                                        packedH = packedHeight();
                                       }
-                                      final leftover = math.max(
+                                      // Tall phones: grow cards/rack/gaps, but
+                                      // leave a small bottom breath so the nav
+                                      // walking shoe is not crowded / shrunk.
+                                      final bottomBreath =
+                                          (bodyH * 0.018).clamp(10.0, 20.0);
+                                      var leftover = math.max(
                                         0.0,
-                                        bodyH - packedH,
+                                        bodyH - packedH - bottomBreath,
                                       );
-                                      // Only a little leftover on My Rack so it
-                                      // stays compact.
-                                      final grow = math.max(0.0, leftover - 12);
-                                      if (grow > 0) {
-                                        rackHeight += grow * 0.28;
+                                      if (leftover > 6) {
+                                        final grow = leftover;
+                                        final roomBlocks = math.max(
+                                          0.0,
+                                          (maxEqualBlockH - equalBlockH) * 2,
+                                        );
+                                        final roomRack = math.max(
+                                          0.0,
+                                          maxRackH - rackHeight,
+                                        );
+                                        // Prefer content growth (same UI, bigger).
+                                        final toBlocks = math.min(
+                                          grow * 0.52,
+                                          roomBlocks,
+                                        );
+                                        equalBlockH += toBlocks / 2;
+                                        final toRack = math.min(
+                                          grow * 0.38,
+                                          roomRack,
+                                        );
+                                        rackHeight += toRack;
+                                        var rem = grow - toBlocks - toRack;
+                                        // Leftover after size caps → section gaps.
+                                        if (rem > 0) {
+                                          liveHeaderToRack += rem * 0.22;
+                                          liveRackToGrid += rem * 0.28;
+                                          liveActionRowGap += rem * 0.50;
+                                          rem = 0;
+                                        }
+                                        packedH = packedHeight();
+                                        leftover = math.max(
+                                          0.0,
+                                          bodyH - packedH - bottomBreath,
+                                        );
+                                        // Fill most remaining space, keep breath.
+                                        if (leftover > 4) {
+                                          equalBlockH += leftover * 0.30;
+                                          rackHeight += leftover * 0.40;
+                                          liveActionRowGap += leftover * 0.30;
+                                          packedH = packedHeight();
+                                        }
                                       }
                                       final actionContentScale =
                                           _homeActionContentScale(
@@ -1048,12 +1107,12 @@ class _HomePageState extends State<HomePage> {
                                       final actionIconW =
                                           (44 * actionContentScale).clamp(
                                         _homeScaled(28, layoutScale),
-                                        _homeScaled(50, layoutScale),
+                                        _homeScaled(62, layoutScale),
                                       );
                                       final actionIconH =
                                           (42 * actionContentScale).clamp(
                                         _homeScaled(26, layoutScale),
-                                        _homeScaled(48, layoutScale),
+                                        _homeScaled(58, layoutScale),
                                       );
                                       final rackContentScale =
                                           _homeRackContentScale(
@@ -1091,7 +1150,7 @@ class _HomePageState extends State<HomePage> {
                                         mainAxisAlignment: MainAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          SizedBox(height: headerToRackGap),
+                                          SizedBox(height: liveHeaderToRack),
                                           SizedBox(
                                             height: rackHeight,
                                             width: double.infinity,
@@ -1286,7 +1345,7 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ),
-                                          SizedBox(height: rackToGridGap),
+                                          SizedBox(height: liveRackToGrid),
                                           Builder(
                                             builder: (context) {
                                               final matched =
@@ -1338,7 +1397,7 @@ class _HomePageState extends State<HomePage> {
                                                 if (rows.isNotEmpty) {
                                                   rows.add(
                                                     SizedBox(
-                                                      height: actionRowGap,
+                                                      height: liveActionRowGap,
                                                     ),
                                                   );
                                                 }
@@ -1369,9 +1428,25 @@ class _HomePageState extends State<HomePage> {
                                         ],
                                       );
                                       if (!searching) {
-                                        // Clip sub-pixel / rounding leftovers on
-                                        // short phones instead of yellow/black bars.
-                                        return ClipRect(child: bodyColumn);
+                                        // Short: scale down if still slightly over.
+                                        // Tall: packed heights already ate leftover.
+                                        final stillOver = packedHeight() > bodyH + 0.5;
+                                        if (stillOver) {
+                                          return FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.topCenter,
+                                            child: SizedBox(
+                                              width: bodyConstraints.maxWidth,
+                                              height: packedHeight(),
+                                              child: bodyColumn,
+                                            ),
+                                          );
+                                        }
+                                        return SizedBox(
+                                          height: bodyH,
+                                          width: double.infinity,
+                                          child: bodyColumn,
+                                        );
                                       }
                                       return SingleChildScrollView(
                                         physics: const ClampingScrollPhysics(),
