@@ -534,6 +534,9 @@ class _OtpCard extends StatelessWidget {
                       initialValue: initialOtpValue,
                       onChanged: onChanged,
                       onCompleted: onCompleted,
+                      // Android/iOS SMS OTP suggestion when the message arrives.
+                      enableAutofill: true,
+                      autofillHints: const [AutofillHints.oneTimeCode],
                       theme: MaterialPinTheme(
                       shape: MaterialPinShape.outlined,
                       cellSize: Size(pinW, pinH),
