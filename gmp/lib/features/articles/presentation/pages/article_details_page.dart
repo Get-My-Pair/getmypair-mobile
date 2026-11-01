@@ -373,7 +373,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   Widget build(BuildContext context) {
     final bottomSafe = Responsive.bottomInsetOf(context);
     final bottomNavReserve =
-        FloatingGradientBottomNav.totalHeight + 12 + bottomSafe;
+        FloatingGradientBottomNav.barHeight + 12 + bottomSafe;
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);

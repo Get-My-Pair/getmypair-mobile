@@ -104,6 +104,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
       padding: dashboardBottomNavOuterInsets(context),
       child: FloatingGradientBottomNav(
         currentIndex: index,
+        showWalkingShoe: index == 0,
         onChanged: (i) {
           final c = i.clamp(0, _pages.length - 1);
           if (c == 2) {

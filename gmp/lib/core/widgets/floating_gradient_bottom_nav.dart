@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -31,11 +32,15 @@ class FloatingGradientBottomNav extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onChanged,
+    this.showWalkingShoe = false,
   });
 
   /// Semantic dashboard tab: `0` home, `1` rack, `2` profile.
   final int currentIndex;
   final ValueChanged<int> onChanged;
+
+  /// Pixel shoe + chat bubble — home screen only.
+  final bool showWalkingShoe;
 
   /// Inner pill from Figma: `rect … height="58" rx="29"` (`3042:4601`).
   static const double barHeight = 58;
@@ -44,8 +49,16 @@ class FloatingGradientBottomNav extends StatelessWidget {
   static const double walkingShoeWidth = 82;
   static const double walkingShoeHeight = 39;
 
-  /// Pill + shoe stacked height used for content bottom reserves.
-  static const double totalHeight = barHeight + walkingShoeHeight;
+  /// Chat bubble from Figma `3042:4605` (~62 × 25), stacked above the shoe.
+  static const double walkingBubbleHeight = 26;
+  static const double walkingUnitHeight =
+      walkingShoeHeight + walkingBubbleHeight - 6;
+
+  /// Pill + walking unit height (home). Other screens use [barHeight].
+  static const double totalHeight = barHeight + walkingUnitHeight;
+
+  static double heightFor({required bool showWalkingShoe}) =>
+      showWalkingShoe ? totalHeight : barHeight;
 
   static const double _pillRadius = barHeight / 2;
   static const double hitSize = 44;
@@ -83,9 +96,10 @@ class FloatingGradientBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedVisual = _visualIndexFor(currentIndex);
+    final stackHeight = heightFor(showWalkingShoe: showWalkingShoe);
 
     return SizedBox(
-      height: totalHeight,
+      height: stackHeight,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
@@ -222,45 +236,60 @@ class FloatingGradientBottomNav extends StatelessWidget {
               ),
             ),
           ),
-          // Figma: shoe rests on the top edge of the pill and walks the width.
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: walkingShoeHeight,
-            child: IgnorePointer(
-              child: _WalkingNavShoe(
-                asset: _walkingShoeAsset,
-                width: walkingShoeWidth,
-                height: walkingShoeHeight,
+          // Home only: shoe + bubble walk along the top of the pill.
+          if (showWalkingShoe)
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: walkingUnitHeight,
+              child: IgnorePointer(
+                child: _WalkingNavShoe(
+                  asset: _walkingShoeAsset,
+                  shoeWidth: walkingShoeWidth,
+                  shoeHeight: walkingShoeHeight,
+                  unitHeight: walkingUnitHeight,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// Pixel shoe that slowly travels forward then back along the nav top edge.
+/// Pixel shoe + Figma bubble that slowly travel forward then back.
+/// Bubble text cycles through [_kWalkingShoeMessages] every few seconds.
 class _WalkingNavShoe extends StatefulWidget {
   const _WalkingNavShoe({
     required this.asset,
-    required this.width,
-    required this.height,
+    required this.shoeWidth,
+    required this.shoeHeight,
+    required this.unitHeight,
   });
 
   final String asset;
-  final double width;
-  final double height;
+  final double shoeWidth;
+  final double shoeHeight;
+  final double unitHeight;
 
   @override
   State<_WalkingNavShoe> createState() => _WalkingNavShoeState();
 }
 
+const List<String> _kWalkingShoeMessages = [
+  "Let's Style...",
+  'Fresh kicks?',
+  'Care MyPair',
+  'Rehome Pair',
+  'Thrift finds',
+];
+
 class _WalkingNavShoeState extends State<_WalkingNavShoe>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  int _messageIndex = 0;
+  Timer? _messageTimer;
 
   @override
   void initState() {
@@ -269,19 +298,30 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
       vsync: this,
       duration: const Duration(milliseconds: 4800),
     )..repeat(reverse: true);
+    _messageTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      setState(() {
+        _messageIndex = (_messageIndex + 1) % _kWalkingShoeMessages.length;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _messageTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Bubble sits slightly left of the shoe (Figma composition).
+    const bubbleLead = 10.0;
+    final unitWidth = widget.shoeWidth + bubbleLead;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final travel = math.max(0.0, constraints.maxWidth - widget.width);
+        final travel = math.max(0.0, constraints.maxWidth - unitWidth);
         return AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
@@ -292,23 +332,94 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
                 Positioned(
                   left: t * travel,
                   bottom: 0,
-                  width: widget.width,
-                  height: widget.height,
+                  width: unitWidth,
+                  height: widget.unitHeight,
                   child: child!,
                 ),
               ],
             );
           },
-          child: Image.asset(
-            widget.asset,
-            width: widget.width,
-            height: widget.height,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.none,
-            gaplessPlayback: true,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: bubbleLead,
+                bottom: 0,
+                width: widget.shoeWidth,
+                height: widget.shoeHeight,
+                child: Image.asset(
+                  widget.asset,
+                  width: widget.shoeWidth,
+                  height: widget.shoeHeight,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.none,
+                  gaplessPlayback: true,
+                ),
+              ),
+              Positioned(
+                left: 0,
+                top: 0,
+                child: _WalkingShoeBubble(
+                  message: _kWalkingShoeMessages[_messageIndex],
+                  messageKey: ValueKey<int>(_messageIndex),
+                ),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Figma `3042:4605` Bubble Chat — white chip with asymmetric radii.
+class _WalkingShoeBubble extends StatelessWidget {
+  const _WalkingShoeBubble({
+    required this.message,
+    required this.messageKey,
+  });
+
+  final String message;
+  final Key messageKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 62, minHeight: 25),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE0E0E0), width: 0.8),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(13),
+          topRight: Radius.circular(10),
+          bottomLeft: Radius.circular(13),
+          bottomRight: Radius.circular(1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE0E0E0).withValues(alpha: 0.25),
+            blurRadius: 6.5,
+            offset: const Offset(0, 3.3),
+          ),
+        ],
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 450),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        child: Text(
+          message,
+          key: messageKey,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserrat(
+            color: Colors.black,
+            fontSize: 10,
+            fontWeight: FontWeight.w400,
+            height: 1.1,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -467,9 +578,14 @@ EdgeInsets dashboardBottomNavOuterInsets(BuildContext context) {
 ///
 /// Use with [LayoutBuilder] / [Column] so panel content stays above the floating bar
 /// when [Scaffold.extendBody] is true.
-double dashboardLinkedBottomNavStackHeight(BuildContext context) {
+double dashboardLinkedBottomNavStackHeight(
+  BuildContext context, {
+  bool showWalkingShoe = false,
+}) {
   final e = dashboardBottomNavOuterInsets(context);
-  return e.top + FloatingGradientBottomNav.totalHeight + e.bottom;
+  return e.top +
+      FloatingGradientBottomNav.heightFor(showWalkingShoe: showWalkingShoe) +
+      e.bottom;
 }
 
 /// Same bar as the dashboard, wired to [customerDashboardTabIndex] and root pop.

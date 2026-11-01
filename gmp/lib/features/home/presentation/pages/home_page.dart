@@ -274,7 +274,10 @@ double _homeHeaderScaleXForWidth(double width) {
 
 /// Space above the floating bottom nav so action cards are not covered.
 double _homeViewportBottomReserve(BuildContext context) {
-  final full = dashboardLinkedBottomNavStackHeight(context);
+  final full = dashboardLinkedBottomNavStackHeight(
+    context,
+    showWalkingShoe: true,
+  );
   return math.max(
     FloatingGradientBottomNav.totalHeight + 10,
     full - 10,
@@ -2345,70 +2348,87 @@ class _HomeTopCard extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: _homeLocationToSearchGap(context, s)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: (1 * s).clamp(0.0, 3.0),
-                      ),
-                      child: Container(
-                        height: searchBarH,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: (16 * s).clamp(12.0, 20.0),
+                    // Match CareMyPair search chrome (gradient ring + soft
+                    // drop shadow) so the flat white top edge doesn't read as
+                    // a dark inset line on the teal header.
+                    Container(
+                      height: searchBarH,
+                      padding: const EdgeInsets.all(1.2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
                         ),
+                        borderRadius: BorderRadius.circular(searchBarH / 2),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x22000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(searchBarH / 2),
                         ),
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/images/search.svg',
-                              width: 22,
-                              height: 22,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextField(
-                                controller: searchController,
-                                textInputAction: TextInputAction.search,
-                                textAlignVertical: TextAlignVertical.center,
-                                style: GoogleFonts.montserrat(
-                                  fontSize: (16 * s).clamp(10.0, 16.0),
-                                  fontWeight: FontWeight.w400,
-                                  color: Colors.black87,
-                                ),
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  hintText: 'Search',
-                                  hintStyle: GoogleFonts.montserrat(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: (16 * s).clamp(12.0, 20.0),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/images/search.svg',
+                                width: 22,
+                                height: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: searchController,
+                                  textInputAction: TextInputAction.search,
+                                  textAlignVertical: TextAlignVertical.center,
+                                  style: GoogleFonts.montserrat(
                                     fontSize: (16 * s).clamp(10.0, 16.0),
                                     fontWeight: FontWeight.w400,
-                                    color: _kSearchHintColor,
+                                    color: Colors.black87,
+                                  ),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    hintText: 'Search',
+                                    hintStyle: GoogleFonts.montserrat(
+                                      fontSize: (16 * s).clamp(10.0, 16.0),
+                                      fontWeight: FontWeight.w400,
+                                      color: _kSearchHintColor,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: searchController,
-                              builder: (_, value, _) {
-                                if (value.text.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-                                return GestureDetector(
-                                  onTap: searchController.clear,
-                                  child: const Icon(
-                                    Icons.close_rounded,
-                                    size: 18,
-                                    color: _kSearchHintColor,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: searchController,
+                                builder: (_, value, _) {
+                                  if (value.text.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return GestureDetector(
+                                    onTap: searchController.clear,
+                                    child: const Icon(
+                                      Icons.close_rounded,
+                                      size: 18,
+                                      color: _kSearchHintColor,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
