@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
@@ -171,11 +173,11 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
     );
   }
 
-  Widget _buildRentalStylesRow() {
+  Widget _buildRentalStylesRow({required double height}) {
     if (_loadingStyles) {
-      return const SizedBox(
-        height: 96,
-        child: Center(
+      return SizedBox(
+        height: height,
+        child: const Center(
           child: SizedBox(
             width: 22,
             height: 22,
@@ -189,16 +191,20 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
     }
 
     if (_rentalStyles.length <= 3) {
-      return Row(
-        children: [
-          for (final style in _rentalStyles)
-            Expanded(child: _RentalStyle(data: style)),
-        ],
+      return SizedBox(
+        height: height,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final style in _rentalStyles)
+              Expanded(child: _RentalStyle(data: style)),
+          ],
+        ),
       );
     }
 
     return SizedBox(
-      height: 100,
+      height: height,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _rentalStyles.length,
@@ -217,6 +223,8 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
     const topInset = 52.0;
+    final searching = _searchQuery.trim().isNotEmpty;
+    final navH = dashboardLinkedBottomNavStackHeight(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -250,119 +258,257 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                   ),
                   child: ClipRRect(
                     borderRadius: _panelRadius,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
-                      children: [
-                        _Header(onBack: () => Navigator.maybePop(context)),
-                        const SizedBox(height: 24),
-                        _SearchBar(
-                          onChanged: (value) =>
-                              setState(() => _searchQuery = value),
-                        ),
-                        const SizedBox(height: 28),
-                        if (_searchQuery.trim().isNotEmpty)
-                          HubScopedSearchResults(
-                            query: _searchQuery,
-                            hubName: 'RehomeMyPair',
-                            hits: _rehomeSearchHits(context),
-                          )
-                        else ...[
-                        Text(
-                          'Our Services',
-                          style: GoogleFonts.boldonse(
-                            color: const Color(0xFF062F35),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _PrimaryDonateCard(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const SellMyPairPage(),
-                                    ),
-                                  );
-                                },
-                              ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final available = math.max(
+                          0.0,
+                          constraints.maxHeight - navH,
+                        );
+                        // Comfortable design height for this hub; compress on
+                        // short phones so everything fits without vertical scroll.
+                        final hScale = (available / 640).clamp(0.68, 1.0);
+                        final padTop = (12.0 * hScale).clamp(6.0, 12.0);
+                        final padBottom = (10.0 * hScale).clamp(6.0, 12.0);
+                        final gapAfterHeader = (20.0 * hScale).clamp(10.0, 24.0);
+                        final gapAfterSearch = (18.0 * hScale).clamp(10.0, 28.0);
+                        final gapSection = (12.0 * hScale).clamp(8.0, 14.0);
+                        final gapBeforeDemand =
+                            (18.0 * hScale).clamp(10.0, 32.0);
+                        final gapBeforeStyles =
+                            (14.0 * hScale).clamp(8.0, 22.0);
+                        final brandH = (105.0 * hScale).clamp(72.0, 105.0);
+                        final stylesH = (96.0 * hScale).clamp(68.0, 100.0);
+                        final titleSize = (16.0 * hScale).clamp(13.0, 16.0);
+                        final subTitleSize = (15.0 * hScale).clamp(12.0, 15.0);
+
+                        if (searching) {
+                          return ListView(
+                            padding: EdgeInsets.fromLTRB(
+                              8,
+                              padTop,
+                              6,
+                              navH + 12,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _SecondaryServiceCard(
-                                onTap: () => showComingSoon(
-                                  context,
-                                  feature: 'RentMyPair',
+                            children: [
+                              _Header(
+                                onBack: () => Navigator.maybePop(context),
+                              ),
+                              SizedBox(height: gapAfterHeader),
+                              _SearchBar(
+                                onChanged: (value) =>
+                                    setState(() => _searchQuery = value),
+                              ),
+                              SizedBox(height: gapAfterSearch),
+                              HubScopedSearchResults(
+                                query: _searchQuery,
+                                hubName: 'RehomeMyPair',
+                                hits: _rehomeSearchHits(context),
+                              ),
+                            ],
+                          );
+                        }
+
+                        final contentH = math.max(
+                          0.0,
+                          available - padTop - padBottom,
+                        );
+                        // Short phones: shrink to fit (no vertical scroll).
+                        // Tall phones: grow media + distribute space evenly.
+                        const designH = 560.0;
+                        final isTall = contentH > designH + 24;
+                        final tallExtra = isTall
+                            ? (contentH - designH).clamp(0.0, 220.0)
+                            : 0.0;
+                        final tallGrow = isTall
+                            ? (tallExtra / 180).clamp(0.0, 1.0)
+                            : 0.0;
+                        final brandHTall =
+                            (brandH + tallGrow * 36).clamp(brandH, 140.0);
+                        final stylesHTall =
+                            (stylesH + tallGrow * 28).clamp(stylesH, 128.0);
+
+                        Widget hubBody({
+                          required double brandHeight,
+                          required double stylesHeight,
+                          required bool distribute,
+                        }) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _Header(
+                                onBack: () => Navigator.maybePop(context),
+                              ),
+                              SizedBox(height: gapAfterHeader),
+                              _SearchBar(
+                                onChanged: (value) =>
+                                    setState(() => _searchQuery = value),
+                              ),
+                              SizedBox(height: gapAfterSearch),
+                              Text(
+                                'Our Services',
+                                style: GoogleFonts.boldonse(
+                                  color: const Color(0xFF062F35),
+                                  fontSize: titleSize,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        if (_showStaticMedia) ...[
-                          const SizedBox(height: 32),
-                          Text(
-                            'In Demand Right Now',
-                            style: GoogleFonts.boldonse(
-                              color: const Color(0xFF062F35),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Top Bidded Brands',
-                            style: GoogleFonts.montserrat(
-                              color: Colors.black,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const SizedBox(
-                            height: 105,
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              padding: EdgeInsets.symmetric(horizontal: 14),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              SizedBox(height: gapSection),
+                              Row(
                                 children: [
-                                  _DemandBrandImage(
-                                    asset: 'assets/images/rehome1 (2).png',
-                                    width: 184,
-                                    height: 103,
+                                  Expanded(
+                                    child: _PrimaryDonateCard(
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const SellMyPairPage(),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
-                                  SizedBox(width: 14),
-                                  _DemandBrandImage(
-                                    asset: 'assets/images/rehome1 (1).png',
-                                    width: 129,
-                                    height: 105,
-                                  ),
-                                  SizedBox(width: 14),
-                                  _DemandBrandImage(
-                                    asset: 'assets/images/rehome1 (3).png',
-                                    width: 187,
-                                    height: 105,
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _SecondaryServiceCard(
+                                      onTap: () => showComingSoon(
+                                        context,
+                                        feature: 'RentMyPair',
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
+                              if (_showStaticMedia) ...[
+                                if (distribute)
+                                  const Spacer(flex: 2)
+                                else
+                                  SizedBox(height: gapBeforeDemand),
+                                Text(
+                                  'In Demand Right Now',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize: titleSize,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                SizedBox(height: gapSection),
+                                Text(
+                                  'Top Bidded Brands',
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.black,
+                                    fontSize: subTitleSize,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: (10.0 * hScale).clamp(6.0, 12.0),
+                                ),
+                                SizedBox(
+                                  height: brandHeight,
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _DemandBrandImage(
+                                          asset:
+                                              'assets/images/rehome1 (2).png',
+                                          width: 184 *
+                                              (brandHeight / 105)
+                                                  .clamp(0.85, 1.25),
+                                          height: brandHeight * 0.98,
+                                        ),
+                                        SizedBox(
+                                          width: 14 *
+                                              (brandHeight / 105)
+                                                  .clamp(0.85, 1.25),
+                                        ),
+                                        _DemandBrandImage(
+                                          asset:
+                                              'assets/images/rehome1 (1).png',
+                                          width: 129 *
+                                              (brandHeight / 105)
+                                                  .clamp(0.85, 1.25),
+                                          height: brandHeight,
+                                        ),
+                                        SizedBox(
+                                          width: 14 *
+                                              (brandHeight / 105)
+                                                  .clamp(0.85, 1.25),
+                                        ),
+                                        _DemandBrandImage(
+                                          asset:
+                                              'assets/images/rehome1 (3).png',
+                                          width: 187 *
+                                              (brandHeight / 105)
+                                                  .clamp(0.85, 1.25),
+                                          height: brandHeight,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (distribute)
+                                  const Spacer(flex: 2)
+                                else
+                                  SizedBox(height: gapBeforeStyles),
+                                Text(
+                                  'Most Requested Rental Styles',
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.black,
+                                    fontSize: subTitleSize,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: (8.0 * hScale).clamp(6.0, 12.0),
+                                ),
+                                _buildRentalStylesRow(height: stylesHeight),
+                                if (distribute) const Spacer(flex: 1),
+                              ],
+                            ],
+                          );
+                        }
+
+                        return Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            8,
+                            padTop,
+                            6,
+                            navH + padBottom,
                           ),
-                          const SizedBox(height: 22),
-                          Text(
-                            'Most Requested Rental Styles',
-                            style: GoogleFonts.montserrat(
-                              color: Colors.black,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          child: SizedBox(
+                            height: contentH,
+                            width: double.infinity,
+                            child: isTall
+                                ? hubBody(
+                                    brandHeight: brandHTall,
+                                    stylesHeight: stylesHTall,
+                                    distribute: true,
+                                  )
+                                : FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.topCenter,
+                                    child: SizedBox(
+                                      width: math.max(
+                                        0.0,
+                                        constraints.maxWidth - 14,
+                                      ),
+                                      height: designH,
+                                      child: hubBody(
+                                        brandHeight: brandH,
+                                        stylesHeight: stylesH,
+                                        distribute: false,
+                                      ),
+                                    ),
+                                  ),
                           ),
-                          const SizedBox(height: 12),
-                          _buildRentalStylesRow(),
-                        ],
-                        ],
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -858,46 +1004,66 @@ class _RentalStyle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 72,
-          child: data.imageUrl.isNotEmpty
-              ? Image.network(
-                  data.imageUrl,
-                  height: 72,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => Image.asset(
-                    'assets/images/icons/myrack/shoe.png',
-                    height: 72,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.ice_skating,
-                      size: 48,
-                      color: Color(0xFF0E7C8A),
-                    ),
-                  ),
-                )
-              : Image.asset(
-                  'assets/images/icons/myrack/shoe.png',
-                  height: 72,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.ice_skating,
-                    size: 48,
-                    color: Color(0xFF0E7C8A),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxH = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 96.0;
+        final labelH = math.min(28.0, maxH * 0.28);
+        final gap = math.min(6.0, maxH * 0.06);
+        final imageH = math.max(36.0, maxH - labelH - gap);
+
+        Widget shoeImage({required double height}) {
+          if (data.imageUrl.isNotEmpty) {
+            return Image.network(
+              data.imageUrl,
+              height: height,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Image.asset(
+                'assets/images/icons/myrack/shoe.png',
+                height: height,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.ice_skating,
+                  size: height * 0.66,
+                  color: const Color(0xFF0E7C8A),
                 ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          data.label,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.montserrat(fontSize: 12, color: Colors.black87),
-        ),
-      ],
+              ),
+            );
+          }
+          return Image.asset(
+            'assets/images/icons/myrack/shoe.png',
+            height: height,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Icon(
+              Icons.ice_skating,
+              size: height * 0.66,
+              color: const Color(0xFF0E7C8A),
+            ),
+          );
+        }
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(height: imageH, child: shoeImage(height: imageH)),
+            SizedBox(height: gap),
+            SizedBox(
+              height: labelH,
+              child: Text(
+                data.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.montserrat(
+                  fontSize: (12.0 * (imageH / 72)).clamp(9.0, 12.0),
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
