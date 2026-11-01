@@ -25,6 +25,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   int _currentIndex = 0;
   bool _profileLoadScheduled = false;
 
+  /// Full viewport height while the keyboard is closed. Android `adjustResize`
+  /// shrinks [MediaQuery.size] and was painting a light slab over home content
+  /// / walking-shoe tips when the search field focused.
+  double? _layoutViewportHeight;
+
   void _onExternalTabIndexChanged() {
     final v = customerDashboardTabIndex.value.clamp(0, _pages.length - 1);
     if (v == _currentIndex) return;
@@ -49,6 +54,25 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     _ProfilePageWrapper(),
   ];
 
+  bool _isKeyboardVisible(MediaQueryData mediaQuery) =>
+      mediaQuery.viewInsets.bottom > 0;
+
+  bool _isViewportShrunkByKeyboard(MediaQueryData mediaQuery) {
+    final cached = _layoutViewportHeight;
+    if (cached == null) return false;
+    return mediaQuery.size.height < cached * 0.9;
+  }
+
+  void _syncLayoutViewportHeight(MediaQueryData mediaQuery) {
+    final height = mediaQuery.size.height;
+    if (_isKeyboardVisible(mediaQuery) ||
+        _isViewportShrunkByKeyboard(mediaQuery)) {
+      _layoutViewportHeight ??= height;
+      return;
+    }
+    _layoutViewportHeight = height;
+  }
+
   /// Must use a [BuildContext] that sits *below* [BlocProvider<ProfileBloc>],
   /// not [State.context] (which is above the provider created in [build]).
   Future<void> _loadProfile(BuildContext context) async {
@@ -62,6 +86,14 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    _syncLayoutViewportHeight(mediaQuery);
+    final layoutHeight = _layoutViewportHeight ?? mediaQuery.size.height;
+    final layoutMediaQuery = mediaQuery.copyWith(
+      size: Size(mediaQuery.size.width, layoutHeight),
+      viewInsets: EdgeInsets.zero,
+    );
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -74,25 +106,42 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         }
       },
       child: _DashboardProfileHost(
-        child: Builder(
-          builder: (innerContext) {
-            if (!_profileLoadScheduled) {
-              _profileLoadScheduled = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!innerContext.mounted) return;
-                _loadProfile(innerContext);
-              });
-            }
-            return Scaffold(
-              backgroundColor: AppColors.background,
-              extendBody: true,
-              body: IndexedStack(
-                index: _currentIndex.clamp(0, _pages.length - 1),
-                children: _pages,
-              ),
-              bottomNavigationBar: _buildBottomNav(innerContext),
-            );
-          },
+        child: MediaQuery(
+          data: layoutMediaQuery,
+          child: Builder(
+            builder: (innerContext) {
+              if (!_profileLoadScheduled) {
+                _profileLoadScheduled = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!innerContext.mounted) return;
+                  _loadProfile(innerContext);
+                });
+              }
+              // Keep home / tips laid out at the closed-keyboard height so the
+              // IME overlays content instead of replacing it with a light slab.
+              return ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.topCenter,
+                  minHeight: layoutHeight,
+                  maxHeight: layoutHeight,
+                  child: SizedBox(
+                    height: layoutHeight,
+                    width: layoutMediaQuery.size.width,
+                    child: Scaffold(
+                      resizeToAvoidBottomInset: false,
+                      backgroundColor: AppColors.background,
+                      extendBody: true,
+                      body: IndexedStack(
+                        index: _currentIndex.clamp(0, _pages.length - 1),
+                        children: _pages,
+                      ),
+                      bottomNavigationBar: _buildBottomNav(innerContext),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

@@ -83,7 +83,6 @@ BorderRadius _rackCardClipRadius() => BorderRadius.only(
 const Color _kRackCardBg = Color(0xFFE6E6E6);
 /// Secondary copy on light rack panel — darker than [AppColors.textTertiary].
 const Color _kRackMutedText = Color(0xFF4E7F8A);
-const Color _kSearchHintColor = Color(0xFF5C6E73);
 const Color _kHeaderIconTint = Color(0xFFFFFFFF);
 const String _kNotificationBellSvgAsset =
     'assets/images/allicons/bell icon.svg';
@@ -254,10 +253,9 @@ double _homeLocationToSearchGap(BuildContext context, double s) {
   return ((16 * s) + (h * 0.01)).clamp(16.0, 28.0);
 }
 
-/// Search bar height: scales with [s] and grows slightly on taller viewports.
+/// Search bar height — matches CareMyPair `_SearchBar` (42) with light scale.
 double _homeSearchBarHeight(BuildContext context, double s) {
-  final h = MediaQuery.sizeOf(context).height;
-  return ((48 * s) + (h * 0.006)).clamp(36.0, 58.0);
+  return (42 * s).clamp(36.0, 48.0);
 }
 
 /// Responsive horizontal crop for header image to avoid side seams/gaps.
@@ -319,6 +317,7 @@ class _HomePageState extends State<HomePage> {
   AddressParts? _detectedLocationParts;
   bool _locationSavePromptHandled = false;
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
 
   /// Home header stats — filled only from API (articles + service requests).
@@ -370,7 +369,13 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _searchController.removeListener(_onHomeSearchChanged);
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _dismissHomeSearchKeyboard() {
+    if (!_searchFocusNode.hasFocus) return;
+    _searchFocusNode.unfocus();
   }
 
   void _onHomeSearchChanged() {
@@ -404,6 +409,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openHomeService(_HomeServiceKind kind) async {
+    _dismissHomeSearchKeyboard();
     if (kind == _HomeServiceKind.rent) {
       showComingSoon(context, feature: 'RentMyPair');
       return;
@@ -774,6 +780,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openArticleList() {
+    _dismissHomeSearchKeyboard();
     Navigator.of(context)
         .push<void>(
           MaterialPageRoute<void>(builder: (_) => const ArticleListPage()),
@@ -787,6 +794,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openArticleDetails(Article article) {
+    _dismissHomeSearchKeyboard();
     Navigator.of(context)
         .push<void>(
           MaterialPageRoute<void>(
@@ -871,8 +879,14 @@ class _HomePageState extends State<HomePage> {
               statusBarIconBrightness: Brightness.light,
             ),
             child: Scaffold(
-              backgroundColor: AppColors.background,
-              body: Stack(
+              // Dashboard locks viewport height; don't resize again here or a
+              // light slab covers My Rack / tips when search focuses.
+              resizeToAvoidBottomInset: false,
+              backgroundColor: Colors.transparent,
+              body: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _dismissHomeSearchKeyboard,
+                child: Stack(
                 fit: StackFit.expand,
                 children: [
                   LayoutBuilder(
@@ -910,8 +924,14 @@ class _HomePageState extends State<HomePage> {
                                       _profileDataLoading,
                                   contentLoading: _profileDataLoading,
                                   layoutScale: layoutScale,
-                                  onLocationTap: _openSavedLocationPage,
+                                  onLocationTap: () async {
+                                    _dismissHomeSearchKeyboard();
+                                    await _openSavedLocationPage();
+                                  },
                                   searchController: _searchController,
+                                  searchFocusNode: _searchFocusNode,
+                                  onSearchDismissKeyboard:
+                                      _dismissHomeSearchKeyboard,
                                 );
                               },
                             ),
@@ -1512,6 +1532,7 @@ class _HomePageState extends State<HomePage> {
                   //   ),
                   // ),
                 ],
+              ),
               ),
             ),
           );
@@ -2178,6 +2199,8 @@ class _HomeTopCard extends StatelessWidget {
   final bool contentLoading;
   final Future<void> Function() onLocationTap;
   final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final VoidCallback onSearchDismissKeyboard;
   final double layoutScale;
 
   const _HomeTopCard({
@@ -2192,6 +2215,8 @@ class _HomeTopCard extends StatelessWidget {
     required this.contentLoading,
     required this.onLocationTap,
     required this.searchController,
+    required this.searchFocusNode,
+    required this.onSearchDismissKeyboard,
     this.layoutScale = 1.0,
   });
 
@@ -2471,9 +2496,8 @@ class _HomeTopCard extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: _homeLocationToSearchGap(context, s)),
-                    // Match CareMyPair search chrome (gradient ring + soft
-                    // drop shadow) so the flat white top edge doesn't read as
-                    // a dark inset line on the teal header.
+                    // Same chrome as CareMyPair `_SearchBar` (gradient ring +
+                    // soft shadow + white pill) — home keeps clear + filter only.
                     Container(
                       height: searchBarH,
                       padding: const EdgeInsets.all(1.2),
@@ -2483,7 +2507,7 @@ class _HomeTopCard extends StatelessWidget {
                           end: Alignment.centerRight,
                           colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
                         ),
-                        borderRadius: BorderRadius.circular(searchBarH / 2),
+                        borderRadius: BorderRadius.circular(100),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x22000000),
@@ -2495,14 +2519,11 @@ class _HomeTopCard extends StatelessWidget {
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(searchBarH / 2),
+                          borderRadius: BorderRadius.circular(100),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: (16 * s).clamp(12.0, 20.0),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               SvgPicture.asset(
                                 'assets/images/search.svg',
@@ -2513,23 +2534,43 @@ class _HomeTopCard extends StatelessWidget {
                               Expanded(
                                 child: TextField(
                                   controller: searchController,
+                                  focusNode: searchFocusNode,
+                                  autofocus: false,
                                   textInputAction: TextInputAction.search,
                                   textAlignVertical: TextAlignVertical.center,
+                                  // Don't scroll the hero away when IME opens.
+                                  scrollPadding: EdgeInsets.zero,
+                                  // Keyboard only while this field is focused;
+                                  // Enter / outside tap closes it.
+                                  onSubmitted: (_) => onSearchDismissKeyboard(),
+                                  onTapOutside: (_) =>
+                                      onSearchDismissKeyboard(),
                                   style: GoogleFonts.montserrat(
-                                    fontSize: (16 * s).clamp(10.0, 16.0),
-                                    fontWeight: FontWeight.w400,
+                                    fontSize: (16.0 * s).clamp(13.0, 17.0),
                                     color: Colors.black87,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                   decoration: InputDecoration(
                                     isDense: true,
+                                    isCollapsed: false,
+                                    filled: false,
+                                    fillColor: Colors.transparent,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 9,
+                                    ),
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
                                     hintText: 'Search',
                                     hintStyle: GoogleFonts.montserrat(
-                                      fontSize: (16 * s).clamp(10.0, 16.0),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.34,
+                                      ),
+                                      fontSize: (16.0 * s).clamp(13.0, 17.0),
                                       fontWeight: FontWeight.w400,
-                                      color: _kSearchHintColor,
                                     ),
                                   ),
                                 ),
@@ -2541,11 +2582,16 @@ class _HomeTopCard extends StatelessWidget {
                                     return const SizedBox.shrink();
                                   }
                                   return GestureDetector(
-                                    onTap: searchController.clear,
-                                    child: const Icon(
+                                    onTap: () {
+                                      searchController.clear();
+                                      onSearchDismissKeyboard();
+                                    },
+                                    child: Icon(
                                       Icons.close_rounded,
                                       size: 18,
-                                      color: _kSearchHintColor,
+                                      color: Colors.black.withValues(
+                                        alpha: 0.34,
+                                      ),
                                     ),
                                   );
                                 },
