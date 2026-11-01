@@ -78,6 +78,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   );
 
   static const int kMaxProofImages = 5;
+  /// Max photos per RepairMyPair option (camera badge shows n/3).
+  static const int kMaxOptionProofImages = 3;
   static const int kMaxProofVideos = 3;
   static const int kRepairEstimateRupees = 1000;
   static const int kWashEstimateRupees = 300;
@@ -137,6 +139,38 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     ),
   ];
 
+  /// RepairMyPair multi-select options — Figma node 3079-7627.
+  static const List<MaintenancePlanData> _repairPlans = [
+    MaintenancePlanData(
+      id: 'sole_bottom_construction',
+      label: 'Sole & Bottom Construction Repairs',
+      description:
+          'Complete bottom-up sole restoration, from re-gluing delaminated outsoles and replacing worn heels to full resoles and midsole rebuilds.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'upper_seam_restoration',
+      label: 'Upper Material & Seam Restoration',
+      description:
+          'Full upper and interior restoration to patch tears, fix split seams, rebuild heel linings, and replace damaged panels.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'hardware_fastener',
+      label: 'Hardware & Fastener Repairs',
+      description:
+          'Complete hardware and fastener replacement for eyelets, zippers, straps, buckles, velcro, and snaps.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'fit_structural',
+      label: 'Fit & Structural Adjustments',
+      description:
+          'Fixes squeaks, shaky support inside your shoes, and stretches tight spots for a comfortable fit.',
+      priceRupees: 236,
+    ),
+  ];
+
   bool _careOptionsScrollbarNeeded = false;
 
   bool _loading = true;
@@ -149,6 +183,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   ServiceOptionData? _selectedService;
   MaintenancePlanData? _selectedMaintenancePlan;
   final Set<String> _selectedCareOptionIds = {};
+  late List<ServiceFlowArticle> _flowArticles;
+  int _focusedArticleIndex = 0;
   int _repairStep = 0;
   bool _homePickup = true;
   bool _pickupModeChosen = false;
@@ -164,6 +200,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   final List<XFile> _proofImages = [];
   final List<XFile> _proofVideos = [];
+  /// RepairMyPair: selected option ids per shoe article.
+  final Map<String, Set<String>> _repairArticleOptionIds = {};
+  /// RepairMyPair: photos per shoe article → option id.
+  final Map<String, Map<String, List<XFile>>> _repairArticleOptionImages = {};
   final ImagePicker _picker = ImagePicker();
 
   String get _singleFlowType {
@@ -296,15 +336,33 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   bool get _isWashFlow => _singleFlowType == 'wash';
 
-  /// MaintainMyPair / WashMyPair share the checkbox options UI; content differs.
-  bool get _isCareOptionsFlow => _isMaintenanceFlow || _isWashFlow;
+  bool get _isRepairFlow => _singleFlowType == 'repair';
+
+  /// RepairMyPair / MaintainMyPair / WashMyPair share the checkbox options UI.
+  bool get _isCareOptionsFlow =>
+      _isMaintenanceFlow || _isWashFlow || _isRepairFlow;
 
   bool get _repairStep0ProblemValid =>
       _problemController.text.trim().isNotEmpty;
 
   bool get _repairStep0PhotosValid => _proofImages.isNotEmpty;
 
-  bool get _repairStep0CareOptionsValid => _selectedCareOptionIds.isNotEmpty;
+  bool get _repairStep0CareOptionsValid {
+    if (_isRepairFlow) {
+      if (_flowArticles.isEmpty) return false;
+      // Every shoe must have ≥1 service, and each selected service needs a photo.
+      for (final article in _flowArticles) {
+        final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+        if (opts.isEmpty) return false;
+        final byOption = _repairArticleOptionImages[article.id] ?? const {};
+        for (final optionId in opts) {
+          if (byOption[optionId]?.isNotEmpty != true) return false;
+        }
+      }
+      return true;
+    }
+    return _selectedCareOptionIds.isNotEmpty;
+  }
 
   // Kept for pickup UI (commented out below); re-enable in `_repairStep0Complete`.
   // ignore: unused_element
@@ -312,18 +370,107 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   // Pickup mode UI is temporarily commented out (future); do not require it yet.
   // MaintainMyPair / WashMyPair step 0: select care options (Figma 2851-4014).
+  // RepairMyPair: per-shoe options + upload image for each selected option.
   bool get _repairStep0Complete => _isCareOptionsFlow
       ? _repairStep0CareOptionsValid
       : (_repairStep0ProblemValid && _repairStep0PhotosValid);
 
-  List<MaintenancePlanData> get _activeCarePlans =>
-      _isWashFlow ? _washPlans : _maintenancePlans;
+  String? get _focusedArticleId {
+    if (_flowArticles.isEmpty) return null;
+    final i = _focusedArticleIndex.clamp(0, _flowArticles.length - 1);
+    return _flowArticles[i].id;
+  }
+
+  Set<String> _optionIdsForFocusedArticle() {
+    final articleId = _focusedArticleId;
+    if (articleId == null) return <String>{};
+    return _repairArticleOptionIds.putIfAbsent(articleId, () => <String>{});
+  }
+
+  /// Options shown as selected in the current UI (focused shoe for repair).
+  Set<String> get _uiSelectedOptionIds =>
+      _isRepairFlow ? _optionIdsForFocusedArticle() : _selectedCareOptionIds;
+
+  List<XFile> _imagesForOption(String optionId) {
+    if (!_isRepairFlow) return const <XFile>[];
+    final articleId = _focusedArticleId;
+    if (articleId == null) return const <XFile>[];
+    return _repairArticleOptionImages[articleId]?[optionId] ?? const <XFile>[];
+  }
+
+  List<XFile> _mutableImagesForOption(String optionId) {
+    final articleId = _focusedArticleId;
+    if (articleId == null) return <XFile>[];
+    final byOption = _repairArticleOptionImages.putIfAbsent(
+      articleId,
+      () => <String, List<XFile>>{},
+    );
+    return byOption.putIfAbsent(optionId, () => <XFile>[]);
+  }
+
+  List<XFile> get _allOptionProofImages {
+    final out = <XFile>[];
+    for (final article in _flowArticles) {
+      final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+      final byOption = _repairArticleOptionImages[article.id] ?? const {};
+      for (final optionId in opts) {
+        final list = byOption[optionId];
+        if (list != null) out.addAll(list);
+      }
+    }
+    return out;
+  }
+
+  String? get _repairSelectionsDescription {
+    final lines = <String>[];
+    for (final article in _flowArticles) {
+      final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+      if (opts.isEmpty) continue;
+      final labels = _repairPlans
+          .where((p) => opts.contains(p.id))
+          .map((p) => p.label)
+          .join(', ');
+      if (labels.isEmpty) continue;
+      final name = article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
+      lines.add('$name: $labels');
+    }
+    if (lines.isEmpty) return null;
+    return lines.join('\n');
+  }
+
+  int get _repairSelectionsTotalRupees {
+    var sum = 0;
+    for (final article in _flowArticles) {
+      final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+      for (final plan in _repairPlans) {
+        if (opts.contains(plan.id)) sum += plan.priceRupees;
+      }
+    }
+    return sum;
+  }
+
+  List<MaintenancePlanData> get _activeCarePlans {
+    if (_isWashFlow) return _washPlans;
+    if (_isRepairFlow) return _repairPlans;
+    return _maintenancePlans;
+  }
 
   List<MaintenancePlanData> get _selectedCareOptions => _activeCarePlans
-      .where((p) => _selectedCareOptionIds.contains(p.id))
+      .where((p) => _uiSelectedOptionIds.contains(p.id))
       .toList(growable: false);
 
   MaintenancePlanData? get _resolvedCarePlan {
+    if (_isRepairFlow) {
+      final total = _repairSelectionsTotalRupees;
+      final desc = _repairSelectionsDescription;
+      if (total <= 0 || desc == null) return _selectedMaintenancePlan;
+      return MaintenancePlanData(
+        id: 'repair_multi',
+        label: desc,
+        description: desc,
+        priceRupees: total,
+      );
+    }
     final selected = _selectedCareOptions;
     if (selected.isEmpty) return _selectedMaintenancePlan;
     if (selected.length == 1) return selected.first;
@@ -338,21 +485,32 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   void _toggleCareOption(String id) {
     if (_submitting) return;
     setState(() {
-      if (_selectedCareOptionIds.contains(id)) {
-        _selectedCareOptionIds.remove(id);
+      final selected = _uiSelectedOptionIds;
+      if (selected.contains(id)) {
+        selected.remove(id);
       } else {
-        _selectedCareOptionIds.add(id);
+        selected.add(id);
       }
       _selectedMaintenancePlan =
-          _isMaintenanceFlow ? _resolvedCarePlan : null;
+          _isMaintenanceFlow || _isRepairFlow ? _resolvedCarePlan : null;
       _showRepairStep0FieldErrors = true;
     });
+  }
+
+  void _ensureOptionSelected(String optionId) {
+    final selected = _uiSelectedOptionIds;
+    if (!selected.contains(optionId)) {
+      selected.add(optionId);
+      _selectedMaintenancePlan =
+          _isMaintenanceFlow || _isRepairFlow ? _resolvedCarePlan : null;
+    }
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _flowArticles = List<ServiceFlowArticle>.of(widget.selectedArticles);
     if (_isSingleServiceFlow) {
       _selectedService = _visibleOptions.first;
     }
@@ -360,6 +518,33 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     _problemFocusNode.addListener(_onProblemFocusChanged);
     _repairStep0ScrollController.addListener(_updateCareOptionsScrollbarNeeded);
     _load();
+  }
+
+  void _focusArticle(int index) {
+    if (_submitting || index < 0 || index >= _flowArticles.length) return;
+    setState(() => _focusedArticleIndex = index);
+  }
+
+  void _removeFlowArticle(int index) {
+    if (_submitting || index < 0 || index >= _flowArticles.length) return;
+    setState(() {
+      final removedId = _flowArticles[index].id;
+      _flowArticles.removeAt(index);
+      _repairArticleOptionIds.remove(removedId);
+      _repairArticleOptionImages.remove(removedId);
+      if (_flowArticles.isEmpty) {
+        _focusedArticleIndex = 0;
+      } else if (_focusedArticleIndex >= _flowArticles.length) {
+        _focusedArticleIndex = _flowArticles.length - 1;
+      } else if (_focusedArticleIndex > index) {
+        _focusedArticleIndex -= 1;
+      }
+      _selectedMaintenancePlan =
+          _isRepairFlow ? _resolvedCarePlan : _selectedMaintenancePlan;
+    });
+    if (_flowArticles.isEmpty && mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -560,8 +745,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     if (picked != null && mounted) setState(() => _selectedAddress = picked);
   }
 
-  Future<void> _pickImages() async {
-    if (_proofImages.length >= kMaxProofImages) return;
+  int _maxImagesForTarget({String? optionId}) =>
+      optionId == null ? kMaxProofImages : kMaxOptionProofImages;
+
+  Future<void> _pickImages({String? optionId}) async {
+    final target = optionId == null
+        ? _proofImages
+        : _mutableImagesForOption(optionId);
+    final maxImages = _maxImagesForTarget(optionId: optionId);
+    if (target.length >= maxImages) return;
     try {
       final list = await _picker.pickMultiImage(imageQuality: 85);
       if (!mounted) return;
@@ -571,9 +763,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       }
       setState(() {
         for (final f in list) {
-          if (_proofImages.length >= kMaxProofImages) break;
-          _proofImages.add(f);
+          if (target.length >= maxImages) break;
+          target.add(f);
         }
+        if (optionId != null) _ensureOptionSelected(optionId);
+        _showRepairStep0FieldErrors = true;
       });
     } catch (_) {
       final single = await _picker.pickImage(
@@ -581,8 +775,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         imageQuality: 85,
       );
       if (!mounted) return;
-      if (single != null && _proofImages.length < kMaxProofImages) {
-        setState(() => _proofImages.add(single));
+      if (single != null && target.length < maxImages) {
+        setState(() {
+          target.add(single);
+          if (optionId != null) _ensureOptionSelected(optionId);
+          _showRepairStep0FieldErrors = true;
+        });
       } else if (single == null) {
         setState(() => _showRepairStep0FieldErrors = true);
       }
@@ -604,8 +802,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     }
   }
 
-  Future<void> _takePicture() async {
-    if (_proofImages.length >= kMaxProofImages) return;
+  Future<void> _takePicture({String? optionId}) async {
+    final target = optionId == null
+        ? _proofImages
+        : _mutableImagesForOption(optionId);
+    final maxImages = _maxImagesForTarget(optionId: optionId);
+    if (target.length >= maxImages) return;
     final photo = await _picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 85,
@@ -613,17 +815,30 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     if (!mounted) return;
     if (photo != null) {
       setState(() {
-        if (_proofImages.length < kMaxProofImages) {
-          _proofImages.add(photo);
+        if (target.length < maxImages) {
+          target.add(photo);
         }
+        if (optionId != null) _ensureOptionSelected(optionId);
+        _showRepairStep0FieldErrors = true;
       });
     } else {
       setState(() => _showRepairStep0FieldErrors = true);
     }
   }
 
-  Future<void> _showPhotoSourceSheet() async {
-    if (_submitting || _proofImages.length >= kMaxProofImages) return;
+  Future<void> _showPhotoSourceSheet({String? optionId}) async {
+    if (_submitting) return;
+    final existing =
+        optionId == null ? _proofImages : _imagesForOption(optionId);
+    final maxImages = _maxImagesForTarget(optionId: optionId);
+    if (existing.length >= maxImages && existing.isEmpty) return;
+
+    if (optionId != null && existing.isNotEmpty) {
+      await _showOptionPhotosSheet(optionId);
+      return;
+    }
+
+    if (existing.length >= maxImages) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: const Color(0xFFF0F0F0),
@@ -669,10 +884,155 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
     if (!mounted || choice == null) return;
     if (choice == 'camera') {
-      await _takePicture();
+      await _takePicture(optionId: optionId);
     } else {
-      await _pickImages();
+      await _pickImages(optionId: optionId);
     }
+  }
+
+  Future<void> _showOptionPhotosSheet(String optionId) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFFF0F0F0),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (ctx, setModalState) {
+              final images = _imagesForOption(optionId);
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Uploaded photos (${images.length}/$kMaxOptionProofImages)',
+                      style: GoogleFonts.boldonse(
+                        color: const Color(0xFF062F35),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (images.isEmpty)
+                      Text(
+                        'No photos yet.',
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF062F35),
+                          fontSize: 13,
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 88,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: images.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 10),
+                          itemBuilder: (_, i) {
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: FutureBuilder(
+                                    future: images[i].readAsBytes(),
+                                    builder: (context, snap) {
+                                      if (!snap.hasData) {
+                                        return Container(
+                                          width: 80,
+                                          height: 80,
+                                          color: const Color(0xFFE8E8E8),
+                                        );
+                                      }
+                                      return Image.memory(
+                                        snap.data!,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  ),
+                                ),
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _mutableImagesForOption(optionId)
+                                            .removeAt(i);
+                                      });
+                                      setModalState(() {});
+                                    },
+                                    child: Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE53935),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    if (images.length < kMaxOptionProofImages) ...[
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.photo_library_outlined,
+                            color: Color(0xFF11899B)),
+                        title: Text(
+                          'Upload more',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF062F35),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await _pickImages(optionId: optionId);
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.photo_camera_outlined,
+                            color: Color(0xFF11899B)),
+                        title: Text(
+                          'Take another',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF062F35),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await _takePicture(optionId: optionId);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   void _removeImage(int index) {
@@ -687,6 +1047,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     setState(() {
       _selectedService = opt;
       _repairStep = 0;
+      _repairArticleOptionIds.clear();
+      _repairArticleOptionImages.clear();
       if (opt.value != 'maintenance' && opt.value != 'wash') {
         _selectedMaintenancePlan = null;
         _selectedCareOptionIds.clear();
@@ -748,9 +1110,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final s = _selectedService?.value;
     switch (s) {
       case 'repair':
-        return kRepairEstimateRupees;
+        final total = _repairSelectionsTotalRupees;
+        return total > 0 ? total : kRepairEstimateRupees;
       case 'wash':
-        // Flat wash estimate; selected options are captured in problemDescription.
+        if (_selectedCareOptions.isNotEmpty) {
+          return _selectedCareOptions.fold<int>(
+            0,
+            (sum, p) => sum + p.priceRupees,
+          );
+        }
         return kWashEstimateRupees;
       case 'maintenance':
         return (_resolvedCarePlan ?? _maintenancePlans.first).priceRupees;
@@ -776,12 +1144,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       return;
     }
     if ((_selectedService!.value == 'maintenance' ||
-            _selectedService!.value == 'wash') &&
-        _selectedCareOptionIds.isEmpty &&
+            _selectedService!.value == 'wash' ||
+            _selectedService!.value == 'repair') &&
+        !_repairStep0CareOptionsValid &&
         !_isSingleServiceFlow) {
       await showAppFeedbackAlert(
         context,
-        message: 'Please select at least one option',
+        message: _selectedService!.value == 'repair'
+            ? 'Please select services and upload photos for each shoe'
+            : 'Please select at least one option',
         type: AppFeedbackType.warning,
       );
       return;
@@ -812,13 +1183,20 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       MaterialPageRoute(
         builder: (_) => RequestSummaryPage(
           articleIds:
-              widget.selectedArticles.map((a) => a.id).toList(growable: false),
+              _flowArticles.map((a) => a.id).toList(growable: false),
           service: _selectedService!,
           address: _selectedAddress!,
-          proofImages: List<XFile>.from(_proofImages),
+          proofImages: List<XFile>.from(
+            _isRepairFlow && _allOptionProofImages.isNotEmpty
+                ? _allOptionProofImages
+                : _proofImages,
+          ),
           proofVideos: List<XFile>.from(_proofVideos),
           estimatedCostRupees: est,
           problemDescription: () {
+            if (_selectedService!.value == 'repair') {
+              return _repairSelectionsDescription;
+            }
             if (_selectedService!.value == 'maintenance' ||
                 _selectedService!.value == 'wash') {
               final labels =
@@ -834,8 +1212,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               : _selectedPickupSlot < 0
                   ? null
                   : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
-          maintenancePlan: _selectedService!.value == 'maintenance'
-              ? (_resolvedCarePlan ?? _maintenancePlans.first)
+          maintenancePlan: (_selectedService!.value == 'maintenance' ||
+                  _selectedService!.value == 'repair')
+              ? (_resolvedCarePlan ??
+                  (_isRepairFlow ? _repairPlans.first : _maintenancePlans.first))
               : null,
           homePickup: _homePickup,
           requestedPickupAt: _homePickup &&
@@ -1204,7 +1584,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final contentHPadRight = (20 * layoutScale).clamp(16.0, 22.0);
 
     final title = widget.flowPageTitle ?? 'RepairMyPair';
-    final selectedArticles = widget.selectedArticles;
+    final selectedArticles = _flowArticles;
 
     // Next dock is rendered full-bleed in [_buildRepairOnlyPage] Stack.
     return Padding(
@@ -1272,8 +1652,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                     trackRadius: const Radius.circular(4),
                     padding: EdgeInsets.only(
                       right: 2,
+                      // Start near article/shoe image center — not from the top.
                       top: _isCareOptionsFlow
-                          ? (36 * layoutScale).clamp(28.0, 44.0)
+                          ? (_isRepairFlow
+                              ? (168 * layoutScale).clamp(140.0, 200.0)
+                              : (36 * layoutScale).clamp(28.0, 44.0))
                           : (8 * layoutScale).clamp(4.0, 10.0),
                       // Keep thumb clear of the Next dock / card bottom (Figma).
                       bottom: _isCareOptionsFlow
@@ -1286,7 +1669,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       physics: const ClampingScrollPhysics(),
                       padding: EdgeInsets.only(
-                        bottom: 16,
+                        // Extra room so the last options clear the Next dock.
+                        bottom: _isCareOptionsFlow
+                            ? (120 * layoutScale).clamp(96.0, 140.0)
+                            : 16,
                         right: _isCareOptionsFlow &&
                                 _careOptionsScrollbarNeeded
                             ? 14
@@ -1321,7 +1707,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                               layoutScale: layoutScale,
                               fontSize: fs,
                               iconSize: iconSz,
-                              compact: _isCareOptionsFlow,
+                              compact: _isCareOptionsFlow && !_isRepairFlow,
+                              carousel: _isRepairFlow ||
+                                  (_isCareOptionsFlow &&
+                                      selectedArticles.length > 1),
                             ),
                             SizedBox(
                               height: _isCareOptionsFlow
@@ -1342,7 +1731,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           if (_showRepairStep0FieldErrors &&
                               !_repairStep0CareOptionsValid)
                             _repairStep0InlineError(
-                              'Please select at least one option.',
+                              _isRepairFlow
+                                  ? 'Each shoe needs its own services + photos (tap a pair above to switch).'
+                                  : 'Please select at least one option.',
                               layoutScale,
                             ),
                           SizedBox(
@@ -1937,14 +2328,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
-  /// MaintainMyPair / WashMyPair care options — Figma node 2851-4014.
+  /// Care / repair multi-select options — Figma nodes 2851-4014 / 3079-7627.
   Widget _buildCareOptionsList(double layoutScale) {
     final plans = _activeCarePlans;
     final titleFs = (14 * layoutScale).clamp(12.0, 14.0);
-    final bodyFs = (16 * layoutScale).clamp(13.0, 16.0);
-    final box = (22 * layoutScale).clamp(20.0, 24.0);
-    final gap = (26 * layoutScale).clamp(16.0, 26.0);
-    final itemGap = (27 * layoutScale).clamp(18.0, 28.0);
+    final bodyFs = (14 * layoutScale).clamp(12.0, 14.0);
+    // Slightly smaller than Figma 38 so rows feel tighter.
+    final box = (28 * layoutScale).clamp(24.0, 30.0);
+    final gap = (22 * layoutScale).clamp(14.0, 22.0);
+    final itemGap = (10 * layoutScale).clamp(8.0, 12.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1953,12 +2345,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           if (i > 0) SizedBox(height: itemGap),
           _buildCareOptionRow(
             plan: plans[i],
-            selected: _selectedCareOptionIds.contains(plans[i].id),
+            selected: _uiSelectedOptionIds.contains(plans[i].id),
             layoutScale: layoutScale,
             titleFs: titleFs,
             bodyFs: bodyFs,
             checkboxSize: box,
             gap: gap,
+            showCamera: _isRepairFlow,
+            photoCount: _imagesForOption(plans[i].id).length,
           ),
         ],
       ],
@@ -1973,64 +2367,179 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     required double bodyFs,
     required double checkboxSize,
     required double gap,
+    bool showCamera = false,
+    int photoCount = 0,
   }) {
-    return InkWell(
-      onTap: _submitting ? null : () => _toggleCareOption(plan.id),
-      borderRadius: BorderRadius.circular(8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: checkboxSize,
-            height: checkboxSize,
-            decoration: BoxDecoration(
-              color: selected
-                  ? const Color(0xFF12899B)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: const Color(0xFF12899B),
-                width: 1.5,
+    final cameraSize = (24 * layoutScale).clamp(20.0, 24.0);
+    final priceAmount = plan.priceRupees.toString();
+    final textGap = (6 * layoutScale).clamp(4.0, 8.0);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _submitting ? null : () => _toggleCareOption(plan.id),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.only(bottom: (8 * layoutScale).clamp(6.0, 10.0)),
+          decoration: const BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                width: 1,
+                color: Color(0xFF09E0FF),
               ),
             ),
-            alignment: Alignment.center,
-            child: selected
-                ? Icon(
-                    Icons.check,
-                    size: (checkboxSize * 0.55).clamp(14.0, 22.0),
-                    color: Colors.white,
-                  )
-                : null,
           ),
-          SizedBox(width: gap),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  plan.label,
-                  style: GoogleFonts.boldonse(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: checkboxSize,
+                height: checkboxSize,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF12899B)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
                     color: const Color(0xFF12899B),
-                    fontSize: titleFs,
-                    fontWeight: FontWeight.w400,
-                    height: 1.55,
+                    width: 1.5,
                   ),
                 ),
-                SizedBox(height: (10 * layoutScale).clamp(8.0, 12.0)),
-                Text(
-                  plan.description,
-                  style: GoogleFonts.montserrat(
-                    color: const Color(0xFF062F35),
-                    fontSize: bodyFs,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w300,
-                    height: 1.45,
-                  ),
+                alignment: Alignment.center,
+                child: selected
+                    ? Icon(
+                        Icons.check,
+                        size: (checkboxSize * 0.55).clamp(12.0, 16.0),
+                        color: Colors.white,
+                      )
+                    : null,
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                        right: showCamera ? cameraSize + 10 : 0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '₹',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize:
+                                        (22 * layoutScale).clamp(18.0, 22.0),
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.25,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: priceAmount,
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize: titleFs,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: textGap),
+                          Text(
+                            plan.label,
+                            style: GoogleFonts.boldonse(
+                              color: const Color(0xFF12899B),
+                              fontSize: titleFs,
+                              fontWeight: FontWeight.w400,
+                              height: 1.55,
+                            ),
+                          ),
+                          SizedBox(height: textGap),
+                          Text(
+                            plan.description,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF062F35),
+                              fontSize: bodyFs,
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.w300,
+                              height: 1.55,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (showCamera)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _submitting
+                              ? null
+                              : () => _showPhotoSourceSheet(optionId: plan.id),
+                          child: SizedBox(
+                            width: cameraSize + 6,
+                            height: cameraSize + 6,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/images/icons/repairmypair/camera.svg',
+                                  width: cameraSize,
+                                  height: cameraSize,
+                                  fit: BoxFit.contain,
+                                ),
+                                // Count lives on the camera; tap again to add/remove.
+                                if (photoCount > 0)
+                                  Positioned(
+                                    top: -2,
+                                    right: -4,
+                                    child: Container(
+                                      constraints:
+                                          const BoxConstraints(minWidth: 22),
+                                      height: 15,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF22C55E),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '$photoCount/$kMaxOptionProofImages',
+                                        style: GoogleFonts.montserrat(
+                                          color: Colors.white,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w700,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2080,7 +2589,20 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     required double fontSize,
     required double iconSize,
     bool compact = false,
+    bool carousel = false,
   }) {
+    if (articles.isEmpty) return const SizedBox.shrink();
+
+    // RepairMyPair Figma 3079-7627: horizontal selected-shoe cards + focus label.
+    if (carousel) {
+      return _buildFootwearCarouselHeader(
+        articles,
+        layoutScale: layoutScale,
+        fontSize: fontSize,
+        iconSize: iconSize,
+      );
+    }
+
     if (articles.length == 1) {
       final article = articles.first;
       final name = article.name.trim();
@@ -2238,7 +2760,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             separatorBuilder: (_, _) => SizedBox(width: 10 * layoutScale),
             itemBuilder: (_, i) {
               final article = articles[i];
-              final label = article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
+              final label =
+                  article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
               return SizedBox(
                 width: thumb,
                 child: Column(
@@ -2291,6 +2814,128 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
+  Widget _buildFootwearCarouselHeader(
+    List<ServiceFlowArticle> articles, {
+    required double layoutScale,
+    required double fontSize,
+    required double iconSize,
+  }) {
+    final cardW = (144 * layoutScale).clamp(120.0, 144.0);
+    final cardPad = (10 * layoutScale).clamp(8.0, 10.0);
+    final imgH = (66 * layoutScale).clamp(54.0, 72.0);
+    final closeSize = (22 * layoutScale).clamp(18.0, 24.0);
+    final gap = (24 * layoutScale).clamp(16.0, 24.0);
+    final focused = articles[_focusedArticleIndex.clamp(0, articles.length - 1)];
+    final focusedName = focused.name.trim();
+    final focusedSubtitle = focused.subtitle?.trim() ?? '';
+    final nameFs = (16 * layoutScale).clamp(13.0, 16.0);
+    final subtitleFs = (16 * layoutScale).clamp(13.0, 16.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: imgH + (cardPad * 2) + 6,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: articles.length,
+            separatorBuilder: (_, _) => SizedBox(width: gap),
+            itemBuilder: (_, i) {
+              final article = articles[i];
+              final isFocused = i == _focusedArticleIndex;
+              return GestureDetector(
+                onTap: () => _focusArticle(i),
+                child: SizedBox(
+                  width: cardW,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: cardW,
+                        padding: EdgeInsets.all(cardPad),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isFocused
+                                ? const Color(0xFF12899B)
+                                : const Color(0xFFABABAB),
+                            width: isFocused ? 3 : 1,
+                          ),
+                        ),
+                        // Same presentation as My Rack row (no extra tilt).
+                        child: SizedBox(
+                          height: imgH,
+                          width: double.infinity,
+                          child: article.imageUrl.isEmpty
+                              ? Icon(
+                                  Icons.checkroom_outlined,
+                                  color: const Color(0xFF8D8D8D),
+                                  size: iconSize * 0.7,
+                                )
+                              : Image.network(
+                                  article.imageUrl,
+                                  fit: BoxFit.contain,
+                                  alignment: Alignment.center,
+                                  errorBuilder: (_, _, _) => Icon(
+                                    Icons.checkroom_outlined,
+                                    color: const Color(0xFF8D8D8D),
+                                    size: iconSize * 0.7,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      Positioned(
+                        top: -closeSize * 0.35,
+                        right: -closeSize * 0.2,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _removeFlowArticle(i),
+                          child: SvgPicture.asset(
+                            isFocused
+                                ? 'assets/images/icons/repairmypair/close_selected.svg'
+                                : 'assets/images/icons/repairmypair/close_unselected.svg',
+                            width: closeSize,
+                            height: closeSize,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: (12 * layoutScale).clamp(8.0, 14.0)),
+        if (focusedName.isNotEmpty)
+          Text(
+            focusedName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFF11899B),
+              fontSize: nameFs,
+              fontWeight: FontWeight.w400,
+              height: 1.1,
+            ),
+          ),
+        if (focusedSubtitle.isNotEmpty)
+          Text(
+            focusedSubtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.montserrat(
+              color: Colors.black,
+              fontSize: subtitleFs,
+              fontWeight: FontWeight.w400,
+              height: 1.15,
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildRepairFlowBody(double horizontal) {
     return ListView(
       padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
@@ -2310,14 +2955,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             ),
           ),
         ],
-        if (widget.selectedArticles.isNotEmpty) ...[
+        if (_flowArticles.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: _buildSelectedFootwearHeader(
-              widget.selectedArticles,
+              _flowArticles,
               layoutScale: 1,
               fontSize: 16,
               iconSize: 52,
+              carousel: _isRepairFlow || _flowArticles.length > 1,
             ),
           ),
         ],

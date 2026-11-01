@@ -156,6 +156,10 @@ flutter:
     - assets/images/icons/caremypair/rmp.svg
     - assets/images/icons/caremypair/mmp.svg
     - assets/images/icons/caremypair/wmp.svg
+    - assets/images/icons/repairmypair/
+    - assets/images/icons/repairmypair/camera.svg
+    - assets/images/icons/repairmypair/close_selected.svg
+    - assets/images/icons/repairmypair/close_unselected.svg
     - assets/images/icons/rehomemypair/
     - assets/images/icons/rehomemypair/sellmypair.png
     - assets/images/icons/rehomemypair/rentmypair_shoe.png
