@@ -8,20 +8,19 @@ import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
-import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
-import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/delete_article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:gmp/features/service/presentation/pages/care_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/pages/rehome_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/pages/save_my_pair_page.dart';
 
-import '../../../service/presentation/pages/rehome_my_pair_page.dart';
 import 'article_edit_page.dart';
-import 'shoe_care_history_page.dart';
 
 /// Module 3 – Article details. Figma rack-detail layout: gradient shell, panel, stats, actions.
 class ArticleDetailsPage extends StatefulWidget {
@@ -212,12 +211,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     return _shortDetailDate(DateTime.now().subtract(Duration(days: days)));
   }
 
-  static String _randomCareDate(Article a) {
-    final r = _rng(a.id, 'care');
-    final days = r.nextInt(520) + 40;
-    return _shortDetailDate(DateTime.now().subtract(Duration(days: days)));
-  }
-
   /// API `shoeSize` / `size` / `usSize`; otherwise seeded US size.
   static String _sizeLine(Article a) {
     final raw = a.shoeSize?.trim();
@@ -235,13 +228,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     final d = a.lastWornAt;
     if (d != null) return _shortDetailDate(d);
     return _randomWearDate(a);
-  }
-
-  /// API `lastShoeCareAt`; otherwise seeded date string.
-  static String _shoeCareDateLine(Article a) {
-    final d = a.lastShoeCareAt;
-    if (d != null) return _shortDetailDate(d);
-    return _randomCareDate(a);
   }
 
   /// API `purchaseYear`; otherwise seeded year in a plausible range.
@@ -372,8 +358,8 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final bottomSafe = Responsive.bottomInsetOf(context);
-    final bottomNavReserve =
-        FloatingGradientBottomNav.barHeight + 12 + bottomSafe;
+    // No floating bottom nav on this page — only safe-area inset.
+    final bottomContentInset = math.max(16.0, bottomSafe + 12);
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
@@ -419,12 +405,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ),
                 ),
               ),
-            ),
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
             ),
           ],
         ),
@@ -513,12 +493,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                 ),
               ),
             ),
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
-            ),
           ],
         ),
       );
@@ -567,18 +541,12 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       imageUrl: imageUrl,
                       swatchColor: colorRow.$2,
                       colorDisplayName: colorRow.$1,
-                      bottomContentInset: bottomNavReserve,
+                      bottomContentInset: bottomContentInset,
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
           ),
         ],
       ),
@@ -603,7 +571,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         final padTop = (22.0 * scale).clamp(18.0, 34.0);
         final padBottom = bottomContentInset + (12.0 * scale);
         final titleGap = (10.0 * scale).clamp(8.0, 16.0);
-        final buttonGap = (14.0 * scale).clamp(10.0, 18.0);
 
         var panelH = constraints.maxHeight;
         if (!panelH.isFinite || panelH <= 0) {
@@ -617,24 +584,20 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
         final gapHeaderToImage = math.max(12.0, gap * 1.25);
         final gapImageToStats = math.max(9.0, gap * 1.1);
         final gapStatsToCare = math.max(12.0, gap * 1.3);
-        final gapCareToButtons = math.max(14.0, gap * 1.45);
         final gapButtonsToBottom = math.max(14.0, gap * 1.65);
         final tightVertical = innerH < 460;
 
         var hGrid = math.min(math.max(innerH * 0.098, 56.0), 102.0);
-        var hCare = math.min(math.max(innerH * 0.084, 54.0), 90.0);
-        var hButtons = math.min(math.max(innerH * 0.088, 46.0), 54.0);
+        const managePairH = 48.0;
 
         final fixedTail =
-            gap + hGrid + gap * 0.65 + hGrid + gap + hCare + gap + hButtons;
+            gap + hGrid + gap * 0.65 + hGrid + gap + managePairH;
         const minImageBand = 64.0;
         const headerReserve = 168.0;
         if (headerReserve + gap + fixedTail + minImageBand > innerH) {
           final over =
               headerReserve + gap + fixedTail + minImageBand - innerH + 16;
-          hGrid = math.max(52.0, hGrid - over * 0.18);
-          hCare = math.max(48.0, hCare - over * 0.12);
-          hButtons = math.max(42.0, hButtons - over * 0.12);
+          hGrid = math.max(52.0, hGrid - over * 0.22);
         }
 
         final imageWidth = (width - padX * 2).clamp(160.0, 320.0);
@@ -654,9 +617,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
           fontSize: labelSize,
           color: AppColors.textSecondary,
         );
-
-        Widget vDivider(double rowHeight) =>
-            Container(width: 1, height: rowHeight * 0.72, color: dividerColor);
 
         return Padding(
           padding: EdgeInsets.fromLTRB(padX, padTop, padX, padBottom),
@@ -830,7 +790,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         labelStyle: labelMontserrat(),
                       ),
                     ),
-                    vDivider(hGrid),
                     Expanded(
                       child: _statColorColumn(
                         context,
@@ -840,7 +799,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         swatchSize: swatchSize,
                       ),
                     ),
-                    vDivider(hGrid),
                     Expanded(
                       child: _statPair(
                         context,
@@ -868,7 +826,6 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                         labelStyle: labelMontserrat(),
                       ),
                     ),
-                    vDivider(hGrid),
                     Expanded(
                       child: _statPair(
                         context,
@@ -881,122 +838,30 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                   ],
                 ),
               ),
-              SizedBox(height: gapStatsToCare),
-              SizedBox(
-                height: 81,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => ShoeCareHistoryPage(
-                          articleId: article.id,
-                          article: article,
-                        ),
-                      ),
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    child: Ink(
-                      height: 81,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x22000000),
-                            blurRadius: 6,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(1.2),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8.8),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Shoe care\nhistory',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.montserrat(
-                                fontWeight: FontWeight.w400,
-                                fontSize: 16,
-                                height: 1.05,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: (8 * scale).clamp(4.0, 10.0)),
-                          Text(
-                            _shoeCareDateLine(article),
-                            textAlign: TextAlign.right,
-                            style: GoogleFonts.boldonse(
-                              fontWeight: FontWeight.w400,
-                              fontSize: 16,
-                              color: Colors.black,
-                            ),
-                          ),
-                          SizedBox(width: (10 * scale).clamp(6.0, 14.0)),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: (24 * scale).clamp(20.0, 26.0),
-                            color: _rackTealAccent,
-                          ),
-                        ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+              // Shoe care history — temporarily hidden.
+              // SizedBox(height: gapStatsToCare),
+              // ... shoe care history tile ...
+              SizedBox(height: math.max(12.0, gapStatsToCare * 0.35)),
+              // Rehome / Rent — temporarily hidden; Manage Pair replaces them.
+              // SizedBox(
+              //   height: hButtons,
+              //   child: Row(
+              //     children: [
+              //       Expanded(child: _gradientPillButton(label: 'Rehome', ...)),
+              //       Expanded(child: _outlinedPillButton(label: 'Rent', ...)),
+              //     ],
+              //   ),
+              // ),
+              Center(
+                child: SizedBox(
+                  width: 241,
+                  height: 48,
+                  child: _gradientPillButton(
+                    label: 'Manage Pair',
+                    height: 48,
+                    fontSize: 14,
+                    onTap: () => _showManagePairSheet(context),
                   ),
-                ),
-              ),
-              SizedBox(height: gapCareToButtons),
-              SizedBox(
-                height: hButtons,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: _gradientPillButton(
-                        label: 'Rehome',
-                        height: hButtons,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const RehomeMyPairPage(),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: buttonGap),
-                    Expanded(
-                      child: _outlinedPillButton(
-                        label: 'Rent',
-                        height: hButtons,
-                        onTap: () => showComingSoon(
-                          context,
-                          feature: 'Rent',
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
               SizedBox(height: gapButtonsToBottom),
@@ -1004,6 +869,129 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showManagePairSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.70),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            width: double.infinity,
+            decoration: const ShapeDecoration(
+              color: Color(0xFFF6F6F6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(29, 28, 29, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'What does this pair need today?',
+                    style: GoogleFonts.boldonse(
+                      color: const Color(0xFF12899B),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w400,
+                      height: 1.63,
+                    ),
+                  ),
+                  const SizedBox(height: 19),
+                  _managePairOption(
+                    label: 'CareMyPair',
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const CareMyPairPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _managePairOption(
+                    label: 'RehomeMyPair',
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const RehomeMyPairPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _managePairOption(
+                    label: 'SaveMyPair',
+                    showBottomBorder: false,
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SaveMyPairPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _managePairOption({
+    required String label,
+    required VoidCallback onTap,
+    bool showBottomBorder = true,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                width: showBottomBorder ? 1 : 0,
+                color: const Color(0xFFD9D9D9),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF0F6876),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 24,
+                color: Color(0xFF0F6876),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1074,8 +1062,9 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     required String label,
     required VoidCallback onTap,
     required double height,
+    double fontSize = 16,
   }) {
-    const radius = BorderRadius.all(Radius.circular(10));
+    const radius = BorderRadius.all(Radius.circular(100));
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1104,50 +1093,7 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
               label,
               style: GoogleFonts.boldonse(
                 color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _outlinedPillButton({
-    required String label,
-    required VoidCallback onTap,
-    required double height,
-  }) {
-    const radius = BorderRadius.all(Radius.circular(10));
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: radius,
-        child: Ink(
-          height: height,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-          decoration: const ShapeDecoration(
-            color: Color(0xFFDFE7E9),
-            shape: RoundedRectangleBorder(
-              borderRadius: radius,
-              side: BorderSide(color: Color(0xFF0F6876)),
-            ),
-            shadows: [
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 4,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.boldonse(
-                color: Color(0xFF062F35),
-                fontSize: 16,
+                fontSize: fontSize,
                 fontWeight: FontWeight.w400,
               ),
             ),

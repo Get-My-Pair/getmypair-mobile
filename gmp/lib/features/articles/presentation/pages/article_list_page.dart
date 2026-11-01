@@ -35,7 +35,7 @@ class ArticleListPage extends StatefulWidget {
     super.key,
     this.serviceFlowAllowedTypes,
     this.serviceFlowTitle,
-    this.showBottomBar = true,
+    this.showBottomBar = false,
   });
 
   @override
@@ -1244,7 +1244,7 @@ class ArticleListPage extends StatefulWidget {
     super.key,
     this.serviceFlowAllowedTypes,
     this.serviceFlowTitle,
-    this.showBottomBar = true,
+    this.showBottomBar = false,
   });
 
   @override
