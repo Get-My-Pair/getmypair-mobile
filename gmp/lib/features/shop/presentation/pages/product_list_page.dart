@@ -13,7 +13,7 @@ class ProductListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = mockProducts;
     return GradientPageShell(
-      appBar: buildGradientAppBar(title: 'Shop', centerTitle: false),
+      appBar: buildGradientAppBar(title: 'Thrift Store', centerTitle: false),
       body: SafeArea(
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),

@@ -43,7 +43,7 @@ import '../../../sell/presentation/pages/sell_my_pair_page.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
-import 'chatbot_page.dart';
+import '../../../shop/presentation/pages/product_list_page.dart';
 
 /// Header copy on teal gradient — white for legibility (avoid washed-out light gray).
 const Color _kOnHeaderText = Color(0xFFFFFFFF);
@@ -93,7 +93,8 @@ const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
 const String _kRehomeMyPairIconAsset =
     'assets/images/icons/home/rehomemypair.svg';
-const String _kStyleMeIconAsset = 'assets/images/Group.svg';
+const String _kThriftStoreIconAsset =
+    'assets/images/icons/home/thriftstore.png';
 const String _kCarbonCreditsLeafAsset = 'assets/images/Vector.svg';
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
@@ -102,7 +103,7 @@ enum _HomeServiceKind {
   careHub,
   rehomeHub,
   saveHub,
-  styleHub,
+  thriftHub,
   wash,
   maintain,
   repair,
@@ -154,10 +155,10 @@ const List<_HomeServiceItem> _kHomeServiceCatalog = [
     hubOnly: true,
   ),
   _HomeServiceItem(
-    label: 'Style Me\nMyPair',
-    keywords: ['style', 'styleme', 'kix', 'chat'],
-    iconAsset: _kStyleMeIconAsset,
-    kind: _HomeServiceKind.styleHub,
+    label: 'Thrift\nStore',
+    keywords: ['thrift', 'thriftstore', 'store', 'shop', 'marketplace'],
+    iconAsset: _kThriftStoreIconAsset,
+    kind: _HomeServiceKind.thriftHub,
     hubOnly: true,
   ),
   _HomeServiceItem(
@@ -409,7 +410,7 @@ class _HomePageState extends State<HomePage> {
       _HomeServiceKind.careHub => const CareMyPairPage(),
       _HomeServiceKind.rehomeHub => const RehomeMyPairPage(),
       _HomeServiceKind.saveHub => const SaveMyPairPage(),
-      _HomeServiceKind.styleHub => const ChatbotPage(),
+      _HomeServiceKind.thriftHub => const ProductListPage(),
       _HomeServiceKind.wash => const WashMyPairPage(),
       _HomeServiceKind.maintain => const MaintainMyPairPage(),
       _HomeServiceKind.repair => const RepairMyPairPage(),
