@@ -753,13 +753,15 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           ),
           const SizedBox(height: 16),
           Text(
-            'Please upload a clear image showing the side profile\n'
+            'Please upload a clear image showing the side profile '
             'of your footwear for accurate detection.',
+            softWrap: true,
+            textAlign: TextAlign.start,
             style: GoogleFonts.montserrat(
               color: Colors.white,
               fontSize: subtitleSize,
               fontWeight: FontWeight.w400,
-              height: 1.3,
+              height: 1.35,
             ),
           ),
         ],
