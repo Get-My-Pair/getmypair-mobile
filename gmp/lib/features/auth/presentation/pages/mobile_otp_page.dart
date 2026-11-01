@@ -341,7 +341,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
             if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-            // Dev OTP popup in debug/profile (mobile + web). Release = SMS only.
+            // Dev OTP popup only on Chrome/web. Mobile & release use SMS only.
             if (isDevOtpEnabled &&
                 state.otp != null &&
                 state.otp!.isNotEmpty) {

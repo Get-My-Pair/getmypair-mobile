@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,9 +7,9 @@ import 'package:gmp/core/widgets/app_feedback_alert.dart';
 
 const Color _kOtpDevPrimary = Color(0xFF062F35);
 
-/// Dev OTP UI (popup / prefill) for debug & profile builds only.
-/// Production release APK/IPA never shows it — SMS OTP only.
-bool get isDevOtpEnabled => !kReleaseMode;
+/// Dev OTP UI (popup / prefill) only in Chrome/web debug & profile runs.
+/// Android/iOS (including test APKs) and production release never show it.
+bool get isDevOtpEnabled => kIsWeb && !kReleaseMode;
 
 /// Development OTP popup shown when the API returns the code in the response.
 Future<void> showDevOtpDialog({

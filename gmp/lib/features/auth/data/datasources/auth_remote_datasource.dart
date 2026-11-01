@@ -110,13 +110,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         body: {'mobile': normalizedMobile},
       );
 
-      // Dummy APIs may include OTP. Keep it for debug/profile (web + mobile)
-      // so the development popup can show. Strip it in production release.
+      // Keep OTP in the payload only for Chrome/web non-release so the
+      // development popup can show. Mobile + release strip it (SMS only).
       final data = Map<String, dynamic>.from(
         response['data'] as Map<String, dynamic>? ?? {},
       );
 
-      if (kReleaseMode) {
+      if (!(kIsWeb && !kReleaseMode)) {
         data.remove('otp');
       } else if (data['otp'] != null) {
         // ignore: avoid_print

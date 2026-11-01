@@ -938,12 +938,21 @@ class _HomePageState extends State<HomePage> {
                                         6.0,
                                         10.0,
                                       );
+                                      // Must match the SizedBox heights below —
+                                      // packing used plain gridGap before and
+                                      // short phones overflowed (~17px).
+                                      final rackToGridGap = gridGap + 6;
+                                      final actionRowGap = gridGap + 12;
                                       final rackThumbGap = showRackThumbs
                                           ? (10 * layoutScale).clamp(8.0, 12.0)
                                           : (8 * layoutScale).clamp(6.0, 10.0);
                                       final availableBody = math.max(
                                         0.0,
-                                        bodyH - headerToRackGap - gridGap * 2 - 1,
+                                        bodyH -
+                                            headerToRackGap -
+                                            rackToGridGap -
+                                            actionRowGap -
+                                            2,
                                       );
                                       final cardWidth =
                                           (bodyConstraints.maxWidth -
@@ -955,6 +964,8 @@ class _HomePageState extends State<HomePage> {
                                         _homeScaled(68, layoutScale),
                                         _homeScaled(84, layoutScale),
                                       );
+                                      final minEqualBlockH =
+                                          _homeScaled(56, layoutScale);
                                       var equalBlockH = math.min(
                                         rectangleH,
                                         availableBody * 0.275,
@@ -982,10 +993,43 @@ class _HomePageState extends State<HomePage> {
                                         rackContentH,
                                         rackMaxFit,
                                       );
-                                      final packedH = headerToRackGap +
+                                      var packedH = headerToRackGap +
                                           rackHeight +
-                                          gridGap * 2 +
+                                          rackToGridGap +
+                                          actionRowGap +
                                           equalBlockH * 2;
+                                      // Final fit: never let the packed column
+                                      // exceed the Expanded height (sub-pixel +
+                                      // short viewports).
+                                      var overflow = packedH - bodyH;
+                                      if (overflow > 0) {
+                                        final shrinkBlocks = math.min(
+                                          overflow,
+                                          math.max(
+                                            0.0,
+                                            (equalBlockH - minEqualBlockH) * 2,
+                                          ),
+                                        );
+                                        equalBlockH -= shrinkBlocks / 2;
+                                        overflow -= shrinkBlocks;
+                                        if (overflow > 0) {
+                                          final minRack = math.max(
+                                            48.0,
+                                            rackHeaderH +
+                                                rackCardTopPadding +
+                                                rackCardBottomPadding,
+                                          );
+                                          rackHeight = math.max(
+                                            minRack,
+                                            rackHeight - overflow,
+                                          );
+                                        }
+                                        packedH = headerToRackGap +
+                                            rackHeight +
+                                            rackToGridGap +
+                                            actionRowGap +
+                                            equalBlockH * 2;
+                                      }
                                       final leftover = math.max(
                                         0.0,
                                         bodyH - packedH,
@@ -1242,7 +1286,7 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ),
-                                          SizedBox(height: gridGap + 6),
+                                          SizedBox(height: rackToGridGap),
                                           Builder(
                                             builder: (context) {
                                               final matched =
@@ -1294,7 +1338,7 @@ class _HomePageState extends State<HomePage> {
                                                 if (rows.isNotEmpty) {
                                                   rows.add(
                                                     SizedBox(
-                                                      height: gridGap + 12,
+                                                      height: actionRowGap,
                                                     ),
                                                   );
                                                 }
@@ -1324,7 +1368,11 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                         ],
                                       );
-                                      if (!searching) return bodyColumn;
+                                      if (!searching) {
+                                        // Clip sub-pixel / rounding leftovers on
+                                        // short phones instead of yellow/black bars.
+                                        return ClipRect(child: bodyColumn);
+                                      }
                                       return SingleChildScrollView(
                                         physics: const ClampingScrollPhysics(),
                                         child: bodyColumn,

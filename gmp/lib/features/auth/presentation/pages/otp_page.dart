@@ -211,7 +211,7 @@ class _OTPPageState extends State<OTPPage> {
               (route) => false,
             );
           } else if (state is AuthOTPSent) {
-            // Dev OTP popup in debug/profile only. Production release uses SMS.
+            // Dev OTP popup only on Chrome/web. Mobile & release use SMS only.
             if (isDevOtpEnabled &&
                 state.otp != null &&
                 state.otp!.isNotEmpty) {

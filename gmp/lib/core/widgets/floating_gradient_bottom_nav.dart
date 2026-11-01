@@ -315,8 +315,8 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
 
   @override
   Widget build(BuildContext context) {
-    // Bubble sits slightly left of the shoe (Figma composition).
-    const bubbleLead = 10.0;
+    // Bubble sits left of the shoe (Figma); lead gives starting overhang.
+    const bubbleLead = 56.0;
     final unitWidth = widget.shoeWidth + bubbleLead;
 
     return LayoutBuilder(
