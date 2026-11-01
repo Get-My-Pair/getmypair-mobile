@@ -8,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
+import '../../data/dev_otp_settings.dart';
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -58,6 +59,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   void initState() {
     super.initState();
     _phoneFocusNode.addListener(_onPhoneFocusChanged);
+    DevOtpSettings.ensureLoaded().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -341,7 +345,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
             if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-            // Dev OTP popup only on Chrome/web. Mobile & release use SMS only.
+            // Dev OTP toggle ON → popup; OFF → MSG91/SMS path (no popup).
             if (isDevOtpEnabled &&
                 state.otp != null &&
                 state.otp!.isNotEmpty) {
@@ -401,6 +405,60 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                     ),
                   ),
                 ),
+              ),
+            ),
+            // Testing only: Dev OTP popup vs MSG91/SMS.
+            Positioned(
+              top: topInset + 6,
+              right: 10,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: DevOtpSettings.enabled,
+                builder: (context, isOn, _) {
+                  return Material(
+                    color: Colors.black.withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(18),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 2, 2, 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isOn ? 'Dev OTP' : 'MSG91',
+                            style: GoogleFonts.montserrat(
+                              color: _kOnGradient,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              height: 1.1,
+                            ),
+                          ),
+                          Transform.scale(
+                            scale: 0.72,
+                            child: Switch.adaptive(
+                              value: isOn,
+                              activeThumbColor: _kOnGradient,
+                              activeTrackColor: _kAccent,
+                              inactiveThumbColor: _kOnGradient,
+                              inactiveTrackColor: Colors.white24,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              onChanged: (value) async {
+                                await DevOtpSettings.setEnabled(value);
+                                if (!context.mounted) return;
+                                await showAppFeedbackAlert(
+                                  context,
+                                  message: value
+                                      ? 'Dev OTP popup enabled'
+                                      : 'MSG91 / SMS mode enabled',
+                                  type: AppFeedbackType.success,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             Positioned(
