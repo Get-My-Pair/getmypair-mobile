@@ -127,12 +127,14 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                         children: [
                           ScaleTransition(
                             scale: _checkScale,
-                            child: Image.asset(
-                              _checkAsset,
-                              width: 72,
-                              height: 72,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
+                            child: ClipOval(
+                              child: Image.asset(
+                                _checkAsset,
+                                width: 72,
+                                height: 72,
+                                fit: BoxFit.cover,
+                                filterQuality: FilterQuality.high,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 22),

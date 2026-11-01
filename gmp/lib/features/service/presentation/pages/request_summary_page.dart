@@ -636,16 +636,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                     value: problemText,
                                     multiline: true,
                                   ),
-                                  if (widget.service.value != 'maintenance' &&
-                                      widget.service.value != 'wash')
-                                    _detailRow(
-                                      iconAsset:
-                                          'assets/images/icons/camera.svg',
-                                      label: 'Problem Area Photos',
-                                      value: '',
-                                      trailing:
-                                          _buildProofPreviewStripCompact(),
-                                    ),
                                   if (_error != null) ...[
                                     const SizedBox(height: 12),
                                     Text(
@@ -782,46 +772,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         ),
         const Divider(height: 1, thickness: 1, color: Color(0xFFD8D8D8)),
       ],
-    );
-  }
-
-  Widget _buildProofPreviewStripCompact() {
-    final images = widget.proofImages;
-    if (images.isEmpty) {
-      return Text(
-        'No photos attached',
-        style: GoogleFonts.montserrat(
-          color: const Color(0xFF8D8D8D),
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-        ),
-      );
-    }
-    return SizedBox(
-      height: 72,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: images.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, index) {
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              width: 96,
-              height: 72,
-              child: FutureBuilder(
-                future: images[index].readAsBytes(),
-                builder: (context, snap) {
-                  if (!snap.hasData) {
-                    return Container(color: const Color(0xFFDFE7E9));
-                  }
-                  return Image.memory(snap.data!, fit: BoxFit.cover);
-                },
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 
