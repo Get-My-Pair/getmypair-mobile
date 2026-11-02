@@ -160,7 +160,6 @@ const List<_HomeServiceItem> _kHomeServiceCatalog = [
     iconAsset: _kThriftStoreIconAsset,
     kind: _HomeServiceKind.thriftHub,
     hubOnly: true,
-    disabled: true,
   ),
   _HomeServiceItem(
     label: 'Wash\nMyPair',

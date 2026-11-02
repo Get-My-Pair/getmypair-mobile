@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:smart_auth/smart_auth.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
@@ -46,6 +49,12 @@ class _OTPPageState extends State<OTPPage> {
       'https://www.figma.com/api/mcp/asset/cc06893c-2fe8-4c01-9422-ece708223602';
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final PinInputController _pinController = PinInputController();
+  final SmartAuth _smartAuth = SmartAuth.instance;
+
+  /// 6-digit OTP matcher for Android SMS Retriever / User Consent.
+  static const String _kOtpSmsMatcher = r'(\d{6})';
+
   String _otp = '';
   int _resendCountdown = 60;
   Timer? _timer;
@@ -53,34 +62,42 @@ class _OTPPageState extends State<OTPPage> {
   bool _canResend = false;
   bool _isVerifyingOtp = false;
   double _verifyingProgress = 0.0;
+  bool _smsListenInFlight = false;
+
+  bool get _isAndroidSmsAutofillSupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   @override
   void initState() {
     super.initState();
     _startResendTimer();
-    // Prefill only in non-release builds when API returned a dummy OTP.
+    // Prefill only when Dev OTP toggle is ON (API returned a dummy OTP).
     if (isDevOtpEnabled) {
       final prefilled = _cleanOtp(widget.prefilledOtp);
       if (prefilled.length == 6) {
         _otp = prefilled;
+        _pinController.text = prefilled;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _applyOtpAndVerify(prefilled);
+        });
       }
     }
+    // Production: listen for SMS and autofill as soon as the page opens.
+    _startSmsAutofillListen();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _verifyingProgressTimer?.cancel();
+    _stopSmsAutofillListen();
+    _pinController.dispose();
     super.dispose();
   }
 
-  String _cleanOtp(String? value) => (value ?? '').trim().replaceAll(RegExp(r'[^0-9]'), '');
-
-  String? get _initialOtpValue {
-    if (!isDevOtpEnabled) return null;
-    final value = _cleanOtp(widget.prefilledOtp);
-    return value.length == 6 ? value : null;
-  }
+  String _cleanOtp(String? value) =>
+      (value ?? '').trim().replaceAll(RegExp(r'[^0-9]'), '');
 
   String get _displayPhoneNumber {
     if (widget.countryCode != null && widget.phoneNumber != null) {
@@ -146,10 +163,70 @@ class _OTPPageState extends State<OTPPage> {
     context.read<AuthBloc>().add(AuthVerifyOTP(mobile: widget.mobile, otp: _otp));
   }
 
+  /// Fills the PIN UI and immediately verifies (SMS autofill / completed entry).
+  void _applyOtpAndVerify(String raw) {
+    final code = _cleanOtp(raw);
+    if (code.length != 6 || _isVerifyingOtp) return;
+    if (_pinController.text != code) {
+      _pinController.text = code;
+    }
+    if (_otp != code) {
+      setState(() => _otp = code);
+    }
+    _verifyOtp();
+  }
+
+  void _onOtpChanged(String value) {
+    final code = _cleanOtp(value);
+    setState(() => _otp = code);
+  }
+
+  void _onOtpCompleted(String value) {
+    _applyOtpAndVerify(value);
+  }
+
+  Future<void> _startSmsAutofillListen() async {
+    if (!_isAndroidSmsAutofillSupported || _smsListenInFlight || _isVerifyingOtp) {
+      return;
+    }
+    _smsListenInFlight = true;
+    try {
+      // Android SMS User Consent: system one-tap "Allow" when OTP SMS arrives,
+      // then we autofill + autoverify. Works with MSG91 without an app hash.
+      // (Silent Retriever needs the 11-char app hash appended to the SMS body.)
+      final res = await _smartAuth.getSmsWithUserConsentApi(
+        matcher: _kOtpSmsMatcher,
+      );
+      if (!mounted) return;
+      if (res.hasData) {
+        final code = _cleanOtp(res.requireData.code);
+        if (code.length == 6) {
+          _applyOtpAndVerify(code);
+        }
+      }
+    } catch (_) {
+      // Autofill is best-effort; user can still type the OTP.
+    } finally {
+      _smsListenInFlight = false;
+    }
+  }
+
+  Future<void> _stopSmsAutofillListen() async {
+    if (!_isAndroidSmsAutofillSupported) return;
+    try {
+      await _smartAuth.removeUserConsentApiListener();
+      await _smartAuth.removeSmsRetrieverApiListener();
+    } catch (_) {}
+  }
+
   void _resendOtp() {
     if (!_canResend) return;
     context.read<AuthBloc>().add(AuthSendOTP(widget.mobile));
     _startResendTimer();
+    // Restart SMS listen for the new message.
+    _stopSmsAutofillListen().then((_) {
+      if (mounted) _startSmsAutofillListen();
+    });
   }
 
   void _showOtpDialog(BuildContext hostContext, String otp) {
@@ -332,16 +409,18 @@ class _OTPPageState extends State<OTPPage> {
                               ),
                             ),
                             SizedBox(height: verticalGapSm.clamp(10.0, 20.0)),
-                            _OtpCard(
-                              initialOtpValue: _initialOtpValue,
-                              countdownText: _resendCountdown > 0
-                                  ? 'Code expires in ${_formatTime(_resendCountdown)}'
-                                  : 'Code expired - Tap to resend',
-                              canResend: _canResend,
-                              clockIconUrl: _kClockIconUrl,
-                              onTapTimer: _resendOtp,
-                              onChanged: (value) => setState(() => _otp = value),
-                              onCompleted: (value) => setState(() => _otp = value),
+                            AutofillGroup(
+                              child: _OtpCard(
+                                pinController: _pinController,
+                                countdownText: _resendCountdown > 0
+                                    ? 'Code expires in ${_formatTime(_resendCountdown)}'
+                                    : 'Code expired - Tap to resend',
+                                canResend: _canResend,
+                                clockIconUrl: _kClockIconUrl,
+                                onTapTimer: _resendOtp,
+                                onChanged: _onOtpChanged,
+                                onCompleted: _onOtpCompleted,
+                              ),
                             ),
                             SizedBox(height: verticalGapMd.clamp(12.0, 28.0)),
                             BlocBuilder<AuthBloc, AuthState>(
@@ -468,7 +547,7 @@ class _VerifyOtpProgress extends StatelessWidget {
 
 class _OtpCard extends StatelessWidget {
   const _OtpCard({
-    required this.initialOtpValue,
+    required this.pinController,
     required this.countdownText,
     required this.canResend,
     required this.clockIconUrl,
@@ -477,7 +556,7 @@ class _OtpCard extends StatelessWidget {
     required this.onCompleted,
   });
 
-  final String? initialOtpValue;
+  final PinInputController pinController;
   final String countdownText;
   final bool canResend;
   final String clockIconUrl;
@@ -531,10 +610,11 @@ class _OtpCard extends StatelessWidget {
                   Center(
                     child: MaterialPinField(
                       length: 6,
-                      initialValue: initialOtpValue,
+                      pinController: pinController,
+                      autoFocus: true,
                       onChanged: onChanged,
                       onCompleted: onCompleted,
-                      // Android/iOS SMS OTP suggestion when the message arrives.
+                      // iOS / Android keyboard OTP suggestion when SMS arrives.
                       enableAutofill: true,
                       autofillHints: const [AutofillHints.oneTimeCode],
                       theme: MaterialPinTheme(
