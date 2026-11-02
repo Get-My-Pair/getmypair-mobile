@@ -78,13 +78,24 @@ class _ArticleListPageState extends State<ArticleListPage> {
   @override
   void initState() {
     super.initState();
+    _rackScrollController.addListener(_syncHomeSwipeGate);
+    myRackAllowsHomeSwipe.value = true;
     _loadArticles();
   }
 
   @override
   void dispose() {
+    _rackScrollController.removeListener(_syncHomeSwipeGate);
     _rackScrollController.dispose();
     super.dispose();
+  }
+
+  void _syncHomeSwipeGate() {
+    final atTop = !_rackScrollController.hasClients ||
+        _rackScrollController.offset <= 0.5;
+    if (myRackAllowsHomeSwipe.value != atTop) {
+      myRackAllowsHomeSwipe.value = atTop;
+    }
   }
 
   Future<void> _loadArticles() async {
@@ -103,6 +114,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
           _error = 'Please sign in again';
           _loading = false;
         });
+        myRackAllowsHomeSwipe.value = true;
       },
       (token) async {
         try {
@@ -113,6 +125,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
             _loading = false;
             _error = null;
           });
+          myRackAllowsHomeSwipe.value = true;
+          _syncHomeSwipeGate();
         } catch (e) {
           if (!mounted) return;
           setState(() {
@@ -120,6 +134,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
             _articles = null;
             _loading = false;
           });
+          myRackAllowsHomeSwipe.value = true;
         }
       },
     );
@@ -151,6 +166,19 @@ class _ArticleListPageState extends State<ArticleListPage> {
     }
 
     return out.toList();
+  }
+
+  void _navigateHomeFromRack() {
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+      return;
+    }
+    // Dashboard PageView animates My Rack → Home (Reels-style slide).
+    if (customerDashboardTabIndex.value != 0) {
+      customerDashboardTabIndex.value = 0;
+    }
+    nav.popUntil((route) => route.isFirst);
   }
 
   @override
@@ -327,17 +355,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   children: [
                     IconButton(
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                      onPressed: () {
-                        final nav = Navigator.of(context);
-                        if (nav.canPop()) {
-                          nav.pop();
-                          return;
-                        }
-                        customerDashboardTabIndex.value = 0;
-                        nav.popUntil((route) => route.isFirst);
-                      },
+                      constraints:
+                          const BoxConstraints.tightFor(width: 26, height: 26),
+                      visualDensity:
+                          const VisualDensity(horizontal: -4, vertical: -4),
+                      onPressed: _navigateHomeFromRack,
                       icon: SvgPicture.asset(
                         'assets/images/chevron-left.svg',
                         width: 26,

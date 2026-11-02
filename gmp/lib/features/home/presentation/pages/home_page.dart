@@ -12,6 +12,7 @@ import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/mobile_otp_page.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/figma_home_assets.dart';
+import '../../../../core/navigation/customer_dashboard_tab_index.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -31,7 +32,6 @@ import 'package:geocoding/geocoding.dart';
 import '../../../articles/domain/entities/article.dart';
 import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
-import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
 import '../../../service/presentation/pages/donate_my_pair_page.dart';
 import '../../../service/presentation/pages/maintain_my_pair_page.dart';
@@ -335,6 +335,9 @@ class _HomePageState extends State<HomePage> {
   /// for that profile have both finished loading.
   bool _profileDataLoading = false;
 
+  /// Tracks leaving Home so returning from My Rack can refresh preview/stats.
+  bool _leftHomeTab = false;
+
   static String _formatPlacemarkForHomeHeader(Placemark p) {
     final parts = [
       p.subThoroughfare,
@@ -355,6 +358,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _searchController.addListener(_onHomeSearchChanged);
+    customerDashboardTabIndex.addListener(_onDashboardTabChanged);
     _loadRackPreview();
     _loadHomeStats();
     _getCurrentLocation();
@@ -370,10 +374,23 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    customerDashboardTabIndex.removeListener(_onDashboardTabChanged);
     _searchController.removeListener(_onHomeSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onDashboardTabChanged() {
+    final onHome = customerDashboardTabIndex.value == 0;
+    if (!onHome) {
+      _leftHomeTab = true;
+      return;
+    }
+    if (!_leftHomeTab || !mounted) return;
+    _leftHomeTab = false;
+    _loadRackPreview();
+    _loadHomeStats();
   }
 
   void _dismissHomeSearchKeyboard() {
@@ -785,16 +802,10 @@ class _HomePageState extends State<HomePage> {
 
   void _openArticleList() {
     _dismissHomeSearchKeyboard();
-    Navigator.of(context)
-        .push<void>(
-          MaterialPageRoute<void>(builder: (_) => const ArticleListPage()),
-        )
-        .then((_) {
-          if (mounted) {
-            _loadRackPreview();
-            _loadHomeStats();
-          }
-        });
+    // Dashboard PageView animates Home → My Rack (Reels-style slide).
+    if (customerDashboardTabIndex.value != 1) {
+      customerDashboardTabIndex.value = 1;
+    }
   }
 
   void _openArticleDetails(Article article) {
