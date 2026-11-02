@@ -6,7 +6,11 @@ class PaymentErrorHandler {
   static String messageFrom(Object error) {
     if (error is Failure) return error.message;
     final raw = error.toString().replaceFirst('Exception: ', '');
-    if (raw.contains('already paid')) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('already paid') ||
+        lower.contains('already been paid') ||
+        lower.contains('payment already completed') ||
+        lower.contains('duplicate payment')) {
       return 'This service request has already been paid.';
     }
     if (raw.contains('accept the final service cost')) {

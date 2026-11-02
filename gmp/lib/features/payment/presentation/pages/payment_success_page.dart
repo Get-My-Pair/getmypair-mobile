@@ -73,7 +73,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
     );
 
     _popupController.forward();
-    _homeTimer = Timer(_homeDelay, _goHome);
+    _homeTimer = Timer(_homeDelay, _finishPaidFlow);
   }
 
   @override
@@ -84,9 +84,16 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
     super.dispose();
   }
 
-  void _goHome() {
+  /// Leave the payment stack so request details (underneath) can refresh and
+  /// hide Pay / show "Paid successfully". Falls back to app root if alone.
+  void _finishPaidFlow() {
     if (!mounted) return;
-    Navigator.of(context).popUntil((r) => r.isFirst);
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop(true);
+      return;
+    }
+    nav.popUntil((r) => r.isFirst);
   }
 
   @override
@@ -127,15 +134,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                         children: [
                           ScaleTransition(
                             scale: _checkScale,
-                            child: ClipOval(
-                              child: Image.asset(
-                                _checkAsset,
-                                width: 72,
-                                height: 72,
-                                fit: BoxFit.cover,
-                                filterQuality: FilterQuality.high,
-                              ),
-                            ),
+                            child: _SuccessCheckBadge(assetPath: _checkAsset),
                           ),
                           const SizedBox(height: 22),
                           Text(
@@ -172,6 +171,51 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// White circle + check. Prefers [assetPath]; falls back to an Icon so the
+/// badge is never blank if the PNG fails to decode.
+class _SuccessCheckBadge extends StatelessWidget {
+  const _SuccessCheckBadge({required this.assetPath});
+
+  final String assetPath;
+
+  static const double _size = 96;
+  static const Color _checkColor = Color(0xFF062F35);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _size,
+      height: _size,
+      child: Image.asset(
+        assetPath,
+        width: _size,
+        height: _size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => const DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.check_rounded,
+            size: 56,
+            color: _checkColor,
+          ),
         ),
       ),
     );

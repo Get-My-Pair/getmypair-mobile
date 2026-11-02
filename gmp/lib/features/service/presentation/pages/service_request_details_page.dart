@@ -269,13 +269,21 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
     if (state == 'PAYMENT_SUCCESS' ||
         state == 'PAID' ||
         state == 'SUCCESS' ||
-        state == 'COMPLETED') {
+        state == 'COMPLETED' ||
+        state == 'PAYMENT_COMPLETED') {
       return true;
     }
     // Fallback fields some payloads use after Zoho confirm.
     final status = _str(r['paymentStatus']).trim().toUpperCase();
-    if (status == 'PAYMENT_SUCCESS' || status == 'PAID') return true;
-    final paid = r['isPaid'] == true || r['paymentCompleted'] == true;
+    if (status == 'PAYMENT_SUCCESS' ||
+        status == 'PAID' ||
+        status == 'SUCCESS' ||
+        status == 'COMPLETED') {
+      return true;
+    }
+    final paid = r['isPaid'] == true ||
+        r['paymentCompleted'] == true ||
+        r['paid'] == true;
     return paid;
   }
 
@@ -782,11 +790,15 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                           if (_acceptedUserCost(_request!)) ...[
                             const SizedBox(height: 10),
                             Text(
-                              'Final Service Cost: ${_fmtAmount(_request!['actualCost'])} (accepted)',
-                              style: const TextStyle(
+                              _isPaymentComplete(_request!)
+                                  ? 'Final Service Cost: ${_fmtAmount(_request!['actualCost'])} (paid)'
+                                  : 'Final Service Cost: ${_fmtAmount(_request!['actualCost'])} (accepted)',
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
+                                color: _isPaymentComplete(_request!)
+                                    ? AppColors.success
+                                    : AppColors.primary,
                               ),
                             ),
                             if (_request!['actualCostAcceptedAt'] != null)
@@ -870,6 +882,56 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                             PayNowButton(
                               label: 'Continue to payment',
                               onPressed: () => _openPaymentFlow(_request!),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (_acceptedUserCost(_request!) &&
+                        _isPaymentComplete(_request!)) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.success.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.success,
+                              size: 28,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Paid successfully',
+                                    style: GoogleFonts.montserrat(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Amount: ₹${_fmtAmount(_request!['actualCost'])}\n'
+                                    'You don’t need to pay again for this request.',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),

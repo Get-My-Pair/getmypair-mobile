@@ -10,6 +10,7 @@ import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
 import '../../config/payment_config.dart';
 import '../../domain/entities/payment.dart';
+import '../../domain/usecases/payment_usecases.dart';
 import '../bloc/payment_bloc.dart';
 import '../bloc/payment_event.dart';
 import '../bloc/payment_state.dart';
@@ -105,15 +106,43 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
   Future<void> _loadToken() async {
     final result = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
-    result.fold(
-      (f) => setState(() {
-        _loadingToken = false;
-        _accessToken = null;
-      }),
-      (token) => setState(() {
-        _loadingToken = false;
-        _accessToken = token;
-      }),
+    await result.fold(
+      (f) async {
+        setState(() {
+          _loadingToken = false;
+          _accessToken = null;
+        });
+      },
+      (token) async {
+        // Block re-pay if this request already has a successful payment.
+        try {
+          final existing = await sl<GetPaymentByServiceRequest>().call(
+            accessToken: token,
+            serviceRequestId: widget.serviceRequestId,
+          );
+          if (!mounted) return;
+          if (existing != null && existing.isSuccess) {
+            setState(() {
+              _loadingToken = false;
+              _accessToken = token;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('This service request has already been paid.'),
+              ),
+            );
+            Navigator.of(context).pop(true);
+            return;
+          }
+        } catch (_) {
+          // Ignore lookup failures — checkout can still proceed.
+        }
+        if (!mounted) return;
+        setState(() {
+          _loadingToken = false;
+          _accessToken = token;
+        });
+      },
     );
   }
 
@@ -211,9 +240,15 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
           }
           _openCheckout(state);
         } else if (state is PaymentError) {
+          final msg = state.message;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
+            SnackBar(content: Text(msg)),
           );
+          // Backend rejected a second charge — leave the pay screen.
+          if (msg.toLowerCase().contains('already been paid') ||
+              msg.toLowerCase().contains('already paid')) {
+            Navigator.of(context).pop(true);
+          }
         }
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
