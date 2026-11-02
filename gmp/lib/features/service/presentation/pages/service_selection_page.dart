@@ -90,7 +90,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   static const int kRepairEstimateRupees = 1000;
   static const int kWashEstimateRupees = 236;
 
-  static const List<MaintenancePlanData> _maintenancePlans = [
+  /// Fallback tiles when API is offline — Masteradmin CareMyPair DB is source of truth.
+  static const List<MaintenancePlanData> _defaultMaintenancePlans = [
     MaintenancePlanData(
       id: 'protection_conditioning',
       label: 'Protection & Conditioning',
@@ -121,8 +122,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     ),
   ];
 
-  /// WashMyPair options — Figma node 3079-8761.
-  static const List<MaintenancePlanData> _washPlans = [
+  static const List<MaintenancePlanData> _defaultWashPlans = [
     MaintenancePlanData(
       id: 'exterior_surface_deep_clean',
       label: 'Exterior & Surface Deep Cleaning',
@@ -146,8 +146,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     ),
   ];
 
-  /// RepairMyPair multi-select options — Figma node 3079-7627.
-  static const List<MaintenancePlanData> _repairPlans = [
+  static const List<MaintenancePlanData> _defaultRepairPlans = [
     MaintenancePlanData(
       id: 'sole_bottom_construction',
       label: 'Sole & Bottom Construction Repairs',
@@ -178,6 +177,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     ),
   ];
 
+  List<MaintenancePlanData> _maintenancePlans = List.unmodifiable(
+    _defaultMaintenancePlans,
+  );
+  List<MaintenancePlanData> _washPlans = List.unmodifiable(_defaultWashPlans);
+  List<MaintenancePlanData> _repairPlans = List.unmodifiable(_defaultRepairPlans);
+
   bool _careOptionsScrollbarNeeded = false;
 
   bool _loading = true;
@@ -202,6 +207,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   int _selectedPickupDay = 0;
   int _selectedPickupSlot = -1;
   int _selectedDropOffIndex = -1;
+  int _expandedDropOffIndex = -1;
   bool _showDropOffSchedule = false;
   int _selectedDropOffTimeWindow = -1; // 0 Morning, 1 Afternoon, 2 Evening
   static const List<String> _dropOffTimeWindows = [
@@ -772,6 +778,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         try {
           final profile = await sl<GetUserProfile>().call(token);
           if (!mounted) return;
+          if (_isCareOptionsFlow) {
+            await _loadCareOptions(token);
+          }
+          if (!mounted) return;
           setState(() {
             _addresses = profile.addresses;
             _selectedAddress = profile.addresses.isNotEmpty
@@ -791,6 +801,56 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         }
       },
     );
+  }
+
+  /// Loads CareMyPair tiles from Masteradmin DB; keeps local defaults on failure.
+  Future<void> _loadCareOptions(String token) async {
+    final type = _isWashFlow
+        ? 'wash'
+        : _isRepairFlow
+            ? 'repair'
+            : 'maintenance';
+    try {
+      final json = await sl<DioClient>().get(
+        ApiEndpoints.serviceCareOptions(type),
+        accessToken: token,
+      );
+      final data = (json['data'] is Map<String, dynamic>)
+          ? json['data'] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final list =
+          (data['items'] ?? json['items']) as List<dynamic>? ?? const [];
+      final plans = <MaintenancePlanData>[];
+      for (final raw in list.whereType<Map>()) {
+        final map = Map<String, dynamic>.from(raw);
+        final id =
+            (map['code'] ?? map['_id'] ?? map['id'] ?? '').toString().trim();
+        final label = (map['name'] ?? map['label'] ?? '').toString().trim();
+        if (id.isEmpty || label.isEmpty) continue;
+        if (map['isActive'] == false) continue;
+        final price = (map['priceRupees'] as num?)?.round() ?? 0;
+        plans.add(
+          MaintenancePlanData(
+            id: id,
+            label: label,
+            description: (map['description'] ?? '').toString().trim(),
+            priceRupees: price < 0 ? 0 : price,
+          ),
+        );
+      }
+      if (plans.isEmpty || !mounted) return;
+      setState(() {
+        if (_isWashFlow) {
+          _washPlans = List.unmodifiable(plans);
+        } else if (_isRepairFlow) {
+          _repairPlans = List.unmodifiable(plans);
+        } else {
+          _maintenancePlans = List.unmodifiable(plans);
+        }
+      });
+    } catch (_) {
+      // Keep hardcoded defaults when API is unavailable.
+    }
   }
 
   Future<void> _pickAddress() async {
@@ -1250,6 +1310,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       _pickupModeChosen = true;
       if (homePickup) {
         _selectedDropOffIndex = -1;
+        _expandedDropOffIndex = -1;
         _showDropOffSchedule = false;
         _selectedDropOffTimeWindow = -1;
       } else {
@@ -1264,6 +1325,118 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   String _formatDropOffDistance(double meters) {
     if (meters < 1000) return '${meters.round()} m';
     return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  static const List<String> _weekDayKeys = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+
+  static const Map<String, String> _weekDayLabels = {
+    'monday': 'Monday',
+    'tuesday': 'Tuesday',
+    'wednesday': 'Wednesday',
+    'thursday': 'Thursday',
+    'friday': 'Friday',
+    'saturday': 'Saturday',
+    'sunday': 'Sunday',
+  };
+
+  List<_DayHours> _defaultWeeklyHours() {
+    return _weekDayKeys
+        .map(
+          (d) => _DayHours(
+            day: d,
+            openTime: '09:00',
+            closeTime: '18:00',
+            isClosed: false,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<_DayHours> _parseWeeklyHours(dynamic raw) {
+    final defaults = _defaultWeeklyHours();
+    if (raw is! List) return defaults;
+    final byDay = <String, _DayHours>{};
+    for (final item in raw.whereType<Map>()) {
+      final map = Map<String, dynamic>.from(item);
+      final day = (map['day'] ?? '').toString().trim().toLowerCase();
+      if (!_weekDayKeys.contains(day)) continue;
+      byDay[day] = _DayHours(
+        day: day,
+        openTime: _normalizeHhMm(map['openTime'], '09:00'),
+        closeTime: _normalizeHhMm(map['closeTime'], '18:00'),
+        isClosed: map['isClosed'] == true,
+      );
+    }
+    return _weekDayKeys
+        .map((d) => byDay[d] ?? defaults.firstWhere((e) => e.day == d))
+        .toList(growable: false);
+  }
+
+  String _normalizeHhMm(dynamic raw, String fallback) {
+    final s = (raw ?? '').toString().trim().toUpperCase();
+    if (s.isEmpty) return fallback;
+    final ampm = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$').firstMatch(s);
+    if (ampm == null) return fallback;
+    var h = int.tryParse(ampm.group(1)!) ?? 9;
+    final m = int.tryParse(ampm.group(2)!) ?? 0;
+    final mer = (ampm.group(3) ?? '').toUpperCase();
+    if (mer == 'PM' && h < 12) h += 12;
+    if (mer == 'AM' && h == 12) h = 0;
+    if (h > 23 || m > 59) return fallback;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  }
+
+  String _formatAmPm(String hhmm) {
+    final parts = hhmm.split(':');
+    if (parts.length < 2) return hhmm;
+    var h = int.tryParse(parts[0]) ?? 0;
+    final m = parts[1];
+    final mer = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h == 0) h = 12;
+    return '${h.toString().padLeft(2, '0')}:$m$mer';
+  }
+
+  _DayHours _todayHours(List<_DayHours> hours) {
+    // Dart weekday: Mon=1 … Sun=7 → map to our monday-first keys.
+    final idx = DateTime.now().weekday - 1;
+    final key = _weekDayKeys[idx.clamp(0, 6)];
+    return hours.firstWhere(
+      (h) => h.day == key,
+      orElse: () => hours.first,
+    );
+  }
+
+  String _todayCloseLabel(List<_DayHours> hours) {
+    final today = _todayHours(hours);
+    if (today.isClosed) return 'Closed today';
+    return _formatAmPm(today.closeTime);
+  }
+
+  bool _isOpenFromHours(List<_DayHours> hours) {
+    final today = _todayHours(hours);
+    if (today.isClosed) return false;
+    final now = DateTime.now();
+    final nowMins = now.hour * 60 + now.minute;
+    final openParts = today.openTime.split(':');
+    final closeParts = today.closeTime.split(':');
+    if (openParts.length < 2 || closeParts.length < 2) return true;
+    final openMins =
+        (int.tryParse(openParts[0]) ?? 9) * 60 + (int.tryParse(openParts[1]) ?? 0);
+    final closeMins = (int.tryParse(closeParts[0]) ?? 18) * 60 +
+        (int.tryParse(closeParts[1]) ?? 0);
+    if (closeMins <= openMins) {
+      return nowMins >= openMins || nowMins < closeMins;
+    }
+    return nowMins >= openMins && nowMins < closeMins;
   }
 
   Future<Position?> _resolveUserPosition() async {
@@ -1356,6 +1529,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               );
               distanceLabel = _formatDropOffDistance(sortMeters);
             }
+            final weeklyHours = _parseWeeklyHours(map['weeklyHours']);
+            final closesAt = (map['closesAt'] ?? '').toString().trim();
+            final isOpenApi = map['isOpen'];
             locations.add(
               _DropOffLocation(
                 id: id.isEmpty ? 'hub-${locations.length}' : id,
@@ -1363,10 +1539,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 address: address,
                 distanceLabel: distanceLabel,
                 phone: '',
-                closesAt: '6:30 PM',
-                isOpen: true,
+                closesAt: closesAt.isNotEmpty
+                    ? closesAt
+                    : _todayCloseLabel(weeklyHours),
+                isOpen: isOpenApi is bool
+                    ? isOpenApi
+                    : _isOpenFromHours(weeklyHours),
                 kind: _DropOffKind.hub,
                 sortMeters: sortMeters,
+                weeklyHours: weeklyHours,
               ),
             );
           }
@@ -1429,6 +1610,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               final isOnline = map['isOnline'] == true;
               // Only show active/online cobblers.
               if (!isOnline) continue;
+              final cobblerHours = _defaultWeeklyHours();
               locations.add(
                 _DropOffLocation(
                   id: id.isEmpty ? 'cobbler-${locations.length}' : id,
@@ -1438,10 +1620,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                       ? _formatDropOffDistance(sortMeters)
                       : '—',
                   phone: phone,
-                  closesAt: '6:30 PM',
+                  closesAt: _todayCloseLabel(cobblerHours),
                   isOpen: true,
                   kind: _DropOffKind.cobbler,
                   sortMeters: sortMeters,
+                  weeklyHours: cobblerHours,
                 ),
               );
             }
@@ -3274,6 +3457,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           ...List.generate(_dropOffLocations.length, (index) {
             final loc = _dropOffLocations[index];
             final selected = _selectedDropOffIndex == index;
+            final hoursExpanded = _expandedDropOffIndex == index;
             return Padding(
               padding: EdgeInsets.only(
                 bottom: index == _dropOffLocations.length - 1 ? 0 : cardGap,
@@ -3282,6 +3466,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 layoutScale: layoutScale,
                 location: loc,
                 selected: selected,
+                hoursExpanded: hoursExpanded,
+                onToggleHours: () {
+                  if (_submitting) return;
+                  setState(() {
+                    _expandedDropOffIndex =
+                        _expandedDropOffIndex == index ? -1 : index;
+                  });
+                },
                 onBook: () => _openDropOffSchedule(index),
               ),
             );
@@ -3294,6 +3486,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     required double layoutScale,
     required _DropOffLocation location,
     required bool selected,
+    required bool hoursExpanded,
+    required VoidCallback onToggleHours,
     required VoidCallback onBook,
   }) {
     final nameFs = (14 * layoutScale).clamp(12.0, 15.0);
@@ -3427,58 +3621,105 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             ],
           ),
           SizedBox(height: (15 * layoutScale).clamp(12.0, 18.0)),
-          Row(
-            children: [
-              Image.asset(
-                'assets/images/icons/repairmypair/clock.png',
-                width: (12 * layoutScale).clamp(11.0, 14.0),
-                height: (12 * layoutScale).clamp(11.0, 14.0),
-                color: location.isOpen
-                    ? const Color(0xFF0FB700)
-                    : const Color(0xFFABABAB),
-              ),
-              SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
-              Text(
-                location.isOpen ? 'Open' : 'Closed',
-                style: GoogleFonts.montserrat(
-                  color: location.isOpen
-                      ? const Color(0xFF0FB700)
-                      : const Color(0xFFABABAB),
-                  fontSize: metaFs,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
-              Container(
-                width: 5,
-                height: 5,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF062F35),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
-              Flexible(
-                child: Text(
-                  'Closes ${location.closesAt}',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.black,
-                    fontSize: metaFs,
-                    fontWeight: FontWeight.w400,
+          InkWell(
+            onTap: onToggleHours,
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/images/icons/repairmypair/clock.png',
+                    width: (12 * layoutScale).clamp(11.0, 14.0),
+                    height: (12 * layoutScale).clamp(11.0, 14.0),
+                    color: location.isOpen
+                        ? const Color(0xFF0FB700)
+                        : const Color(0xFFABABAB),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                  Text(
+                    location.isOpen ? 'Open' : 'Closed',
+                    style: GoogleFonts.montserrat(
+                      color: location.isOpen
+                          ? const Color(0xFF0FB700)
+                          : const Color(0xFFABABAB),
+                      fontSize: metaFs,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF062F35),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                  Flexible(
+                    child: Text(
+                      location.isOpen
+                          ? 'Closes ${location.closesAt}'
+                          : location.closesAt,
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black,
+                        fontSize: metaFs,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: hoursExpanded ? 0 : -0.25,
+                    duration: const Duration(milliseconds: 180),
+                    child: Image.asset(
+                      'assets/images/icons/repairmypair/chevron_down.png',
+                      width: (16 * layoutScale).clamp(14.0, 18.0),
+                      height: (16 * layoutScale).clamp(14.0, 18.0),
+                      color: const Color(0xFF062F35),
+                    ),
+                  ),
+                ],
               ),
-              Transform.rotate(
-                angle: -1.5708,
-                child: Image.asset(
-                  'assets/images/icons/repairmypair/chevron_down.png',
-                  width: (16 * layoutScale).clamp(14.0, 18.0),
-                  height: (16 * layoutScale).clamp(14.0, 18.0),
-                  color: const Color(0xFF062F35),
-                ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: EdgeInsets.only(
+                top: (10 * layoutScale).clamp(8.0, 14.0),
+                left: (4 * layoutScale).clamp(2.0, 8.0),
+                right: (4 * layoutScale).clamp(2.0, 8.0),
               ),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final day in location.weeklyHours) ...[
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: (6 * layoutScale).clamp(4.0, 8.0),
+                      ),
+                      child: Text(
+                        day.isClosed
+                            ? '${_weekDayLabels[day.day] ?? day.day} - Closed'
+                            : '${_weekDayLabels[day.day] ?? day.day} - ${_formatAmPm(day.openTime)} to ${_formatAmPm(day.closeTime)}',
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF062F35),
+                          fontSize: (12 * layoutScale).clamp(11.0, 13.0),
+                          fontWeight: FontWeight.w400,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            crossFadeState: hoursExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
           ),
           if (location.phone.trim().isNotEmpty) ...[
             SizedBox(height: (6 * layoutScale).clamp(4.0, 8.0)),
@@ -5065,6 +5306,20 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
 enum _DropOffKind { hub, cobbler }
 
+class _DayHours {
+  final String day;
+  final String openTime;
+  final String closeTime;
+  final bool isClosed;
+
+  const _DayHours({
+    required this.day,
+    required this.openTime,
+    required this.closeTime,
+    this.isClosed = false,
+  });
+}
+
 class _DropOffLocation {
   final String id;
   final String name;
@@ -5075,6 +5330,7 @@ class _DropOffLocation {
   final bool isOpen;
   final _DropOffKind kind;
   final double sortMeters;
+  final List<_DayHours> weeklyHours;
 
   const _DropOffLocation({
     required this.id,
@@ -5086,6 +5342,7 @@ class _DropOffLocation {
     required this.isOpen,
     this.kind = _DropOffKind.hub,
     this.sortMeters = double.infinity,
+    this.weeklyHours = const [],
   });
 
   String get kindLabel => kind == _DropOffKind.cobbler ? 'Cobbler' : 'Hub';
