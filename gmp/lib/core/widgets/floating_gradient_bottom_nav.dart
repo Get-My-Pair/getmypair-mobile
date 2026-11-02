@@ -19,8 +19,8 @@ import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
 /// white icons, selected tab on a solid white circle (icon in dark teal).
 /// Visual tabs: Home · Favorites · Rack · Cart · Profile.
 ///
-/// A pixel shoe (Figma `3042:4603`) walks slowly left↔right along the top of
-/// the pill (Figma `3042:4601`).
+/// A pixel shoe (Figma `3042:4603`) walks right→left along the top of the pill
+/// (Figma `3042:4601`), flips at the left end, then walks back right.
 ///
 /// [currentIndex] stays semantic: `0` home, `1` rack, `2` profile.
 /// Favorites and Cart show coming-soon until those screens ship.
@@ -291,7 +291,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
   }
 }
 
-/// Pixel shoe + Figma bubble that slowly travel forward then back.
+/// Pixel shoe + Figma bubble that walk right→left, flip, then left→right.
 /// Bubble text cycles through [_kWalkingShoeMessages] every few seconds.
 class _WalkingNavShoe extends StatefulWidget {
   const _WalkingNavShoe({
@@ -324,13 +324,19 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
   int _messageIndex = 0;
   Timer? _messageTimer;
 
+  /// `true` while walking right→left; `false` while walking left→right.
+  /// Flips at each end so the shoe always faces the travel direction.
+  bool _movingLeft = true;
+  double _lastValue = 0;
+
   @override
   void initState() {
     super.initState();
+    // value 0 = right edge, value 1 = left edge; reverse walks back right.
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 4800),
-    )..repeat(reverse: true);
+    )..addListener(_onTick)..repeat(reverse: true);
     _messageTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
       setState(() {
@@ -339,17 +345,35 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
     });
   }
 
+  void _onTick() {
+    final v = _controller.value;
+    // Detect direction from value delta so flip happens at both ends.
+    var nextMovingLeft = _movingLeft;
+    if (v > _lastValue + 0.0001) {
+      // Forward: toward left.
+      nextMovingLeft = true;
+    } else if (v < _lastValue - 0.0001) {
+      // Reverse: toward right.
+      nextMovingLeft = false;
+    }
+    _lastValue = v;
+    if (nextMovingLeft != _movingLeft && mounted) {
+      setState(() => _movingLeft = nextMovingLeft);
+    }
+  }
+
   @override
   void dispose() {
     _messageTimer?.cancel();
-    _controller.dispose();
+    _controller
+      ..removeListener(_onTick)
+      ..dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Bubble sits left of the shoe (Figma); lead gives starting overhang.
-    // Scale with shoe so tall phones keep full proportions (never shrink).
+    // Bubble leads in the travel direction; scale with shoe on tall phones.
     final shoeScale =
         (widget.shoeWidth / FloatingGradientBottomNav.walkingShoeWidth)
             .clamp(1.0, 1.38);
@@ -361,54 +385,68 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
         final travel = math.max(0.0, constraints.maxWidth - unitWidth);
         return AnimatedBuilder(
           animation: _controller,
-          builder: (context, child) {
+          builder: (context, _) {
             final t = Curves.easeInOut.transform(_controller.value);
+            // Start at the right and move left; reverse returns to the right.
+            final left = (1.0 - t) * travel;
+            final movingLeft = _movingLeft;
+            // Left→right: mirrored shoe, bubble leads on the left.
+            // Right→left: natural shoe, bubble leads on the right.
+            final shoeScaleX = movingLeft ? 1.0 : -1.0;
+            final shoeLeft = movingLeft ? 0.0 : bubbleLead;
+            final bubbleLeft = movingLeft ? widget.shoeWidth : 0.0;
             return Stack(
               clipBehavior: Clip.none,
               children: [
                 Positioned(
-                  left: t * travel,
+                  left: left,
                   bottom: 0,
                   width: unitWidth,
                   height: widget.unitHeight,
-                  child: child!,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: shoeLeft,
+                        bottom: 0,
+                        width: widget.shoeWidth,
+                        height: widget.shoeHeight,
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.diagonal3Values(shoeScaleX, 1, 1),
+                          child: Image.asset(
+                            widget.asset,
+                            width: widget.shoeWidth,
+                            height: widget.shoeHeight,
+                            // Fill the reserved box — never shrink in leftover space.
+                            fit: BoxFit.fill,
+                            filterQuality: FilterQuality.none,
+                            gaplessPlayback: true,
+                            alignment: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: bubbleLeft,
+                        top: 0,
+                        child: Transform.scale(
+                          scale: shoeScale,
+                          alignment: movingLeft
+                              ? Alignment.topRight
+                              : Alignment.topLeft,
+                          child: _WalkingShoeBubble(
+                            message: _kWalkingShoeMessages[_messageIndex],
+                            messageKey: ValueKey<int>(_messageIndex),
+                            mirrorTail: movingLeft,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
           },
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: bubbleLead,
-                bottom: 0,
-                width: widget.shoeWidth,
-                height: widget.shoeHeight,
-                child: Image.asset(
-                  widget.asset,
-                  width: widget.shoeWidth,
-                  height: widget.shoeHeight,
-                  // Fill the reserved box — never shrink in leftover space.
-                  fit: BoxFit.fill,
-                  filterQuality: FilterQuality.none,
-                  gaplessPlayback: true,
-                  alignment: Alignment.bottomCenter,
-                ),
-              ),
-              Positioned(
-                left: 0,
-                top: 0,
-                child: Transform.scale(
-                  scale: shoeScale,
-                  alignment: Alignment.topLeft,
-                  child: _WalkingShoeBubble(
-                    message: _kWalkingShoeMessages[_messageIndex],
-                    messageKey: ValueKey<int>(_messageIndex),
-                  ),
-                ),
-              ),
-            ],
-          ),
         );
       },
     );
@@ -420,25 +458,37 @@ class _WalkingShoeBubble extends StatelessWidget {
   const _WalkingShoeBubble({
     required this.message,
     required this.messageKey,
+    this.mirrorTail = false,
   });
 
   final String message;
   final Key messageKey;
 
+  /// When walking right, mirror the pointed corner onto the left side.
+  final bool mirrorTail;
+
   @override
   Widget build(BuildContext context) {
+    final radius = mirrorTail
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(10),
+            topRight: Radius.circular(13),
+            bottomLeft: Radius.circular(1),
+            bottomRight: Radius.circular(13),
+          )
+        : const BorderRadius.only(
+            topLeft: Radius.circular(13),
+            topRight: Radius.circular(10),
+            bottomLeft: Radius.circular(13),
+            bottomRight: Radius.circular(1),
+          );
     return Container(
       constraints: const BoxConstraints(minWidth: 62, minHeight: 25),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xFFE0E0E0), width: 0.8),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(13),
-          topRight: Radius.circular(10),
-          bottomLeft: Radius.circular(13),
-          bottomRight: Radius.circular(1),
-        ),
+        borderRadius: radius,
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFE0E0E0).withValues(alpha: 0.25),
