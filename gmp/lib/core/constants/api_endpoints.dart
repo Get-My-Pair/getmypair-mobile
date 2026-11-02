@@ -95,6 +95,8 @@ class ApiEndpoints {
   static String get serviceCreate => '$baseUrl$servicePrefix/create';
   static String get serviceMy => '$baseUrl$servicePrefix/my';
   static String get serviceEstimationDefaults => '$baseUrl$servicePrefix/estimation-defaults';
+  /// Active Masteradmin hub addresses for CareMyPair Self Drop off.
+  static String get serviceHubLocations => '$baseUrl$servicePrefix/hub-locations';
   static String serviceById(String requestId) =>
       '$baseUrl$servicePrefix/$requestId';
   static String get serviceUpdateStatus =>

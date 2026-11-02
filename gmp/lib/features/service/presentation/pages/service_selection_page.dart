@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/constants/api_endpoints.dart';
+import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
@@ -209,18 +212,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   /// When user picks a place on the map for [cobbler_nearby], shown on the summary.
   String? _cobblerNearbyLocationSummary;
 
-  /// Self Drop off locations (UI reference — replace with API later).
-  static const List<_DropOffLocation> _dropOffLocations = [
-    _DropOffLocation(
-      name: 'Bellandur',
-      address:
-          '996, 1 Floor, 20 Main, 2 Cross, Sec 5, HSR Layout, Bangalore, Karnataka',
-      distanceLabel: '4.3 km',
-      phone: '+91 9333999339',
-      closesAt: '6:30 PM',
-      isOpen: true,
-    ),
-  ];
+  /// Self Drop off locations: active nearby cobblers + Masteradmin hubs.
+  List<_DropOffLocation> _dropOffLocations = const [];
+  bool _dropOffLoading = false;
+  String? _dropOffError;
+  bool _dropOffLoadAttempted = false;
   final TextEditingController _problemController = TextEditingController();
 
   final List<XFile> _proofImages = [];
@@ -911,6 +907,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             }
           });
         } catch (_) {}
+        if (!_homePickup) {
+          await _loadDropOffLocations(force: true);
+        }
       },
     );
   }
@@ -1257,6 +1256,220 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         _selectedPickupSlot = -1;
       }
     });
+    if (!homePickup) {
+      _loadDropOffLocations();
+    }
+  }
+
+  String _formatDropOffDistance(double meters) {
+    if (meters < 1000) return '${meters.round()} m';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  Future<Position?> _resolveUserPosition() async {
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) return null;
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        return null;
+      }
+      return Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Loads Masteradmin hubs + online nearby cobblers for Self Drop off.
+  Future<void> _loadDropOffLocations({bool force = false}) async {
+    if (_dropOffLoading) return;
+    if (_dropOffLoadAttempted && !force && _dropOffLocations.isNotEmpty) return;
+
+    setState(() {
+      _dropOffLoading = true;
+      _dropOffError = null;
+      _dropOffLoadAttempted = true;
+    });
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+
+    await tokenResult.fold(
+      (_) async {
+        setState(() {
+          _dropOffLoading = false;
+          _dropOffError = 'Please sign in again to load drop-off locations.';
+          _dropOffLocations = const [];
+        });
+      },
+      (token) async {
+        final userPos = await _resolveUserPosition();
+        final locations = <_DropOffLocation>[];
+
+        // 1) Masteradmin-created hubs
+        try {
+          final json = await sl<DioClient>().get(
+            ApiEndpoints.serviceHubLocations,
+            accessToken: token,
+          );
+          final data = (json['data'] is Map<String, dynamic>)
+              ? json['data'] as Map<String, dynamic>
+              : <String, dynamic>{};
+          final list = (data['items'] ?? data['hubs'] ?? json['items'])
+                  as List<dynamic>? ??
+              const [];
+          for (final raw in list.whereType<Map>()) {
+            final map = Map<String, dynamic>.from(raw);
+            final id = (map['_id'] ?? map['id'] ?? '').toString();
+            final name = (map['name'] ?? 'GetMyPair Hub').toString().trim();
+            final line = (map['line'] ?? '').toString().trim();
+            final address = line.isNotEmpty
+                ? line
+                : [
+                    map['address'],
+                    map['city'],
+                    map['state'],
+                    map['pincode'],
+                  ]
+                    .map((e) => (e ?? '').toString().trim())
+                    .where((s) => s.isNotEmpty)
+                    .join(', ');
+            if (address.isEmpty) continue;
+            final lat = (map['lat'] as num?)?.toDouble();
+            final lng = (map['lng'] as num?)?.toDouble();
+            var distanceLabel = '—';
+            var sortMeters = double.infinity;
+            if (userPos != null && lat != null && lng != null) {
+              sortMeters = Geolocator.distanceBetween(
+                userPos.latitude,
+                userPos.longitude,
+                lat,
+                lng,
+              );
+              distanceLabel = _formatDropOffDistance(sortMeters);
+            }
+            locations.add(
+              _DropOffLocation(
+                id: id.isEmpty ? 'hub-${locations.length}' : id,
+                name: name.isEmpty ? 'GetMyPair Hub' : name,
+                address: address,
+                distanceLabel: distanceLabel,
+                phone: '',
+                closesAt: '6:30 PM',
+                isOpen: true,
+                kind: _DropOffKind.hub,
+                sortMeters: sortMeters,
+              ),
+            );
+          }
+        } catch (_) {
+          // Hubs optional if endpoint unavailable; cobblers may still load.
+        }
+
+        // 2) Active (online) nearby cobblers
+        if (userPos != null) {
+          try {
+            final endpoint = ApiEndpoints.cobblerNearby(
+              lat: userPos.latitude,
+              lng: userPos.longitude,
+              radiusKm: 15,
+            );
+            final json = await sl<DioClient>().get(
+              endpoint,
+              accessToken: token,
+            );
+            final data = (json['data'] is Map<String, dynamic>)
+                ? json['data'] as Map<String, dynamic>
+                : <String, dynamic>{};
+            final list = (data['cobblers'] ??
+                    data['profiles'] ??
+                    data['items'] ??
+                    json['cobblers']) as List<dynamic>? ??
+                const [];
+            for (final raw in list.whereType<Map>()) {
+              final map = Map<String, dynamic>.from(raw);
+              final id = (map['_id'] ?? map['id'] ?? '').toString();
+              final shopName =
+                  (map['shopName'] ?? map['name'] ?? '').toString().trim();
+              final address =
+                  (map['shopAddress'] ?? map['address'] ?? '').toString().trim();
+              if (shopName.isEmpty && address.isEmpty) continue;
+              final phone = (map['phone'] ?? '').toString().trim();
+              final distanceMeters =
+                  (map['distanceMeters'] as num?)?.toDouble();
+              final lastKnown = map['lastKnownLocation'];
+              double? lat;
+              double? lng;
+              if (lastKnown is Map) {
+                final coords = lastKnown['coordinates'];
+                if (coords is List && coords.length >= 2) {
+                  lng = (coords[0] as num?)?.toDouble();
+                  lat = (coords[1] as num?)?.toDouble();
+                }
+              }
+              var sortMeters = distanceMeters ?? double.infinity;
+              if (distanceMeters == null &&
+                  lat != null &&
+                  lng != null) {
+                sortMeters = Geolocator.distanceBetween(
+                  userPos.latitude,
+                  userPos.longitude,
+                  lat,
+                  lng,
+                );
+              }
+              final isOnline = map['isOnline'] == true;
+              // Only show active/online cobblers.
+              if (!isOnline) continue;
+              locations.add(
+                _DropOffLocation(
+                  id: id.isEmpty ? 'cobbler-${locations.length}' : id,
+                  name: shopName.isNotEmpty ? shopName : 'Cobbler',
+                  address: address.isNotEmpty ? address : 'Nearby cobbler',
+                  distanceLabel: sortMeters.isFinite
+                      ? _formatDropOffDistance(sortMeters)
+                      : '—',
+                  phone: phone,
+                  closesAt: '6:30 PM',
+                  isOpen: true,
+                  kind: _DropOffKind.cobbler,
+                  sortMeters: sortMeters,
+                ),
+              );
+            }
+          } catch (_) {
+            // Ignore cobbler fetch errors; hubs may still show.
+          }
+        }
+
+        locations.sort((a, b) => a.sortMeters.compareTo(b.sortMeters));
+
+        if (!mounted) return;
+        setState(() {
+          _dropOffLoading = false;
+          _dropOffLocations = List.unmodifiable(locations);
+          if (locations.isEmpty) {
+            _dropOffError = userPos == null
+                ? 'Enable location to see nearby cobblers. Hubs will appear when available.'
+                : 'No drop-off locations nearby right now.';
+          }
+          // Reset selection if index is out of range after refresh.
+          if (_selectedDropOffIndex >= _dropOffLocations.length) {
+            _selectedDropOffIndex = -1;
+            _showDropOffSchedule = false;
+            _selectedDropOffTimeWindow = -1;
+          }
+        });
+      },
+    );
   }
 
   void _openDropOffSchedule(int index) {
@@ -1319,6 +1532,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       });
     }
     setState(() => _repairStep = 2);
+    // Prefetch Self Drop locations so hubs/cobblers are ready if toggled.
+    _loadDropOffLocations();
   }
 
   /// One summary card per shoe × selected care/repair service.
@@ -2705,6 +2920,18 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   /// Figma 3079:8144 / 3076:7081 — schedule after Book on a drop-off.
   Widget _buildSelfDropOffSchedulePanel(double layoutScale, double fs) {
+    if (_dropOffLocations.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 24 * layoutScale),
+        child: Text(
+          'No drop-off location selected.',
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF5A5A5A),
+            fontSize: fs,
+          ),
+        ),
+      );
+    }
     final loc = (_selectedDropOffIndex >= 0 &&
             _selectedDropOffIndex < _dropOffLocations.length)
         ? _dropOffLocations[_selectedDropOffIndex]
@@ -2941,6 +3168,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 
   Widget _buildSelfDropOffPanel(double layoutScale) {
+    if (!_dropOffLoadAttempted && !_dropOffLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadDropOffLocations();
+      });
+    }
     final titleFs = (16 * layoutScale).clamp(14.0, 17.0);
     final editFs = (12 * layoutScale).clamp(11.0, 13.0);
     final cardGap = (28 * layoutScale).clamp(20.0, 32.0);
@@ -2994,21 +3226,66 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           ],
         ),
         SizedBox(height: (20 * layoutScale).clamp(16.0, 24.0)),
-        ...List.generate(_dropOffLocations.length, (index) {
-          final loc = _dropOffLocations[index];
-          final selected = _selectedDropOffIndex == index;
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: index == _dropOffLocations.length - 1 ? 0 : cardGap,
+        if (_dropOffLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Color(0xFF11899B),
+                ),
+              ),
             ),
-            child: _buildDropOffLocationCard(
-              layoutScale: layoutScale,
-              location: loc,
-              selected: selected,
-              onBook: () => _openDropOffSchedule(index),
+          )
+        else if (_dropOffLocations.isEmpty)
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 16 * layoutScale),
+            child: Column(
+              children: [
+                Text(
+                  _dropOffError ?? 'No drop-off locations available.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF5A5A5A),
+                    fontSize: (13 * layoutScale).clamp(12.0, 14.0),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                SizedBox(height: (12 * layoutScale).clamp(8.0, 16.0)),
+                TextButton(
+                  onPressed: _submitting
+                      ? null
+                      : () => _loadDropOffLocations(force: true),
+                  child: Text(
+                    'Retry',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF12899B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          );
-        }),
+          )
+        else
+          ...List.generate(_dropOffLocations.length, (index) {
+            final loc = _dropOffLocations[index];
+            final selected = _selectedDropOffIndex == index;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index == _dropOffLocations.length - 1 ? 0 : cardGap,
+              ),
+              child: _buildDropOffLocationCard(
+                layoutScale: layoutScale,
+                location: loc,
+                selected: selected,
+                onBook: () => _openDropOffSchedule(index),
+              ),
+            );
+          }),
       ],
     );
   }
@@ -3047,13 +3324,39 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      location.name,
-                      style: GoogleFonts.boldonse(
-                        color: const Color(0xFF062F35),
-                        fontSize: nameFs,
-                        fontWeight: FontWeight.w400,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            location.name,
+                            style: GoogleFonts.boldonse(
+                              color: const Color(0xFF062F35),
+                              fontSize: nameFs,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: location.kind == _DropOffKind.cobbler
+                                ? const Color(0xFFE8F7FA)
+                                : const Color(0xFFEEF2F3),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            location.kindLabel,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: (10 * layoutScale).clamp(9.0, 11.0),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: (5 * layoutScale).clamp(4.0, 8.0)),
                     Text(
@@ -3177,29 +3480,31 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               ),
             ],
           ),
-          SizedBox(height: (6 * layoutScale).clamp(4.0, 8.0)),
-          Row(
-            children: [
-              SvgPicture.asset(
-                'assets/images/phone.svg',
-                width: (12 * layoutScale).clamp(11.0, 14.0),
-                height: (12 * layoutScale).clamp(11.0, 14.0),
-                colorFilter: const ColorFilter.mode(
-                  Colors.black,
-                  BlendMode.srcIn,
+          if (location.phone.trim().isNotEmpty) ...[
+            SizedBox(height: (6 * layoutScale).clamp(4.0, 8.0)),
+            Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/images/phone.svg',
+                  width: (12 * layoutScale).clamp(11.0, 14.0),
+                  height: (12 * layoutScale).clamp(11.0, 14.0),
+                  colorFilter: const ColorFilter.mode(
+                    Colors.black,
+                    BlendMode.srcIn,
+                  ),
                 ),
-              ),
-              SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
-              Text(
-                location.phone,
-                style: GoogleFonts.montserrat(
-                  color: Colors.black,
-                  fontSize: metaFs,
-                  fontWeight: FontWeight.w400,
+                SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                Text(
+                  location.phone,
+                  style: GoogleFonts.montserrat(
+                    color: Colors.black,
+                    fontSize: metaFs,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           SizedBox(height: (17 * layoutScale).clamp(12.0, 20.0)),
           Material(
             color: Colors.transparent,
@@ -4758,22 +5063,32 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 }
 
+enum _DropOffKind { hub, cobbler }
+
 class _DropOffLocation {
+  final String id;
   final String name;
   final String address;
   final String distanceLabel;
   final String phone;
   final String closesAt;
   final bool isOpen;
+  final _DropOffKind kind;
+  final double sortMeters;
 
   const _DropOffLocation({
+    required this.id,
     required this.name,
     required this.address,
     required this.distanceLabel,
     required this.phone,
     required this.closesAt,
     required this.isOpen,
+    this.kind = _DropOffKind.hub,
+    this.sortMeters = double.infinity,
   });
+
+  String get kindLabel => kind == _DropOffKind.cobbler ? 'Cobbler' : 'Hub';
 }
 
 class ServiceOptionData {
