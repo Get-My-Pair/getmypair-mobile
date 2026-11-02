@@ -85,7 +85,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   static const int kMaxOptionProofImages = 3;
   static const int kMaxProofVideos = 3;
   static const int kRepairEstimateRupees = 1000;
-  static const int kWashEstimateRupees = 300;
+  static const int kWashEstimateRupees = 236;
 
   static const List<MaintenancePlanData> _maintenancePlans = [
     MaintenancePlanData(
@@ -93,52 +93,53 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       label: 'Protection & Conditioning',
       description:
           'Protect and revive your footwear with hydrophobic weatherproofing, UV shielding, and deep-leather conditioning to keep your shoes soft, vibrant, and dirt-resistant.',
-      priceRupees: 299,
+      priceRupees: 236,
     ),
     MaintenancePlanData(
       id: 'surface_care_polishing',
       label: 'Preventive Surface Care & Polishing',
       description:
           'Restore your footwear\'s original shine with material-specific brushing, premium polishing, and precise edge detailing to eliminate buildup and yellowing.',
-      priceRupees: 299,
+      priceRupees: 236,
     ),
     MaintenancePlanData(
       id: 'structural_shape',
       label: 'Structural & Shape Maintenance',
       description:
           'Refresh your shoes inside and out with professional steam reshaping, antimicrobial lining sanitization, and factory-fresh lace care.',
-      priceRupees: 299,
+      priceRupees: 236,
     ),
     MaintenancePlanData(
       id: 'storage_preservation',
       label: 'Storage & Preservation Prep',
       description:
           'Safeguard your footwear from long-term wear with custom sole protection and humidity-controlled seasonal storage prep.',
-      priceRupees: 299,
+      priceRupees: 236,
     ),
   ];
 
+  /// WashMyPair options — Figma node 3079-8761.
   static const List<MaintenancePlanData> _washPlans = [
     MaintenancePlanData(
       id: 'exterior_surface_deep_clean',
       label: 'Exterior & Surface Deep Cleaning',
       description:
           'Comprehensive deep cleaning that lifts dirt from uppers, scrubs soles clean, and restores yellowed midsoles across all materials.',
-      priceRupees: 300,
+      priceRupees: 236,
     ),
     MaintenancePlanData(
       id: 'interior_care_sanitization',
       label: 'Interior Care & Sanitization',
       description:
           'Deep interior extraction wash and antibacterial treatment to eliminate trapped sweat, dirt, and odor-causing bacteria.',
-      priceRupees: 300,
+      priceRupees: 236,
     ),
     MaintenancePlanData(
       id: 'detailing_finishing',
       label: 'Detailing & Finishing',
       description:
           'Targeted stain treatment, deep lace soaking, and controlled moisture extraction for a spot-free, safe finish.',
-      priceRupees: 300,
+      priceRupees: 236,
     ),
   ];
 
@@ -362,6 +363,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   bool get _isRepairFlow => _singleFlowType == 'repair';
 
+  /// Repair + Maintain + Wash: per-shoe options, camera upload, Finalizing Services.
+  bool get _isPerShoePhotoFlow =>
+      _isRepairFlow || _isMaintenanceFlow || _isWashFlow;
+
   /// RepairMyPair / MaintainMyPair / WashMyPair share the checkbox options UI.
   bool get _isCareOptionsFlow =>
       _isMaintenanceFlow || _isWashFlow || _isRepairFlow;
@@ -372,7 +377,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   bool get _repairStep0PhotosValid => _proofImages.isNotEmpty;
 
   bool get _repairStep0CareOptionsValid {
-    if (_isRepairFlow) {
+    if (_isPerShoePhotoFlow) {
       if (_flowArticles.isEmpty) return false;
       // Every shoe must have ≥1 service, and each selected service needs a photo.
       for (final article in _flowArticles) {
@@ -411,12 +416,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     return _repairArticleOptionIds.putIfAbsent(articleId, () => <String>{});
   }
 
-  /// Options shown as selected in the current UI (focused shoe for repair).
+  /// Options shown as selected in the current UI (focused shoe for repair/maintain).
   Set<String> get _uiSelectedOptionIds =>
-      _isRepairFlow ? _optionIdsForFocusedArticle() : _selectedCareOptionIds;
+      _isPerShoePhotoFlow ? _optionIdsForFocusedArticle() : _selectedCareOptionIds;
 
   List<XFile> _imagesForOption(String optionId) {
-    if (!_isRepairFlow) return const <XFile>[];
+    if (!_isPerShoePhotoFlow) return const <XFile>[];
     final articleId = _focusedArticleId;
     if (articleId == null) return const <XFile>[];
     return _repairArticleOptionImages[articleId]?[optionId] ?? const <XFile>[];
@@ -446,11 +451,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 
   String? get _repairSelectionsDescription {
+    final plans = _activeCarePlans;
     final lines = <String>[];
     for (final article in _flowArticles) {
       final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
       if (opts.isEmpty) continue;
-      final labels = _repairPlans
+      final labels = plans
           .where((p) => opts.contains(p.id))
           .map((p) => p.label)
           .join(', ');
@@ -463,10 +469,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 
   int get _repairSelectionsTotalRupees {
+    final plans = _activeCarePlans;
     var sum = 0;
     for (final article in _flowArticles) {
       final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
-      for (final plan in _repairPlans) {
+      for (final plan in plans) {
         if (opts.contains(plan.id)) sum += plan.priceRupees;
       }
     }
@@ -484,12 +491,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       .toList(growable: false);
 
   MaintenancePlanData? get _resolvedCarePlan {
-    if (_isRepairFlow) {
+    if (_isPerShoePhotoFlow) {
       final total = _repairSelectionsTotalRupees;
       final desc = _repairSelectionsDescription;
       if (total <= 0 || desc == null) return _selectedMaintenancePlan;
       return MaintenancePlanData(
-        id: 'repair_multi',
+        id: _isRepairFlow
+            ? 'repair_multi'
+            : _isWashFlow
+                ? 'wash_multi'
+                : 'maintenance_multi',
         label: desc,
         description: desc,
         priceRupees: total,
@@ -516,7 +527,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         selected.add(id);
       }
       _selectedMaintenancePlan =
-          _isMaintenanceFlow || _isRepairFlow ? _resolvedCarePlan : null;
+          _isPerShoePhotoFlow ? _resolvedCarePlan : null;
       _showRepairStep0FieldErrors = true;
     });
   }
@@ -526,7 +537,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     if (!selected.contains(optionId)) {
       selected.add(optionId);
       _selectedMaintenancePlan =
-          _isMaintenanceFlow || _isRepairFlow ? _resolvedCarePlan : null;
+          _isPerShoePhotoFlow ? _resolvedCarePlan : null;
     }
   }
 
@@ -564,7 +575,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         _focusedArticleIndex -= 1;
       }
       _selectedMaintenancePlan =
-          _isRepairFlow ? _resolvedCarePlan : _selectedMaintenancePlan;
+          _isPerShoePhotoFlow ? _resolvedCarePlan : _selectedMaintenancePlan;
     });
     if (_flowArticles.isEmpty && mounted) {
       Navigator.pop(context);
@@ -1294,8 +1305,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         _pickupModeChosen = true;
       });
     }
-    // RepairMyPair: review selections on Finalizing Services before pickup.
-    // Wash / Maintain: go to delivery / drop-off step.
+    // Repair / Maintain: review selections on Finalizing Services before pickup.
+    // Wash: go to delivery / drop-off step (step 1 is address).
     setState(() => _repairStep = 1);
   }
 
@@ -1310,9 +1321,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     setState(() => _repairStep = 2);
   }
 
-  /// One summary card per shoe × selected repair service.
+  /// One summary card per shoe × selected care/repair service.
   List<({ServiceFlowArticle article, MaintenancePlanData plan, List<XFile> photos})>
       get _finalizingCards {
+    final plans = _activeCarePlans;
     final cards = <({
       ServiceFlowArticle article,
       MaintenancePlanData plan,
@@ -1321,7 +1333,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     for (final article in _flowArticles) {
       final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
       final byOption = _repairArticleOptionImages[article.id] ?? const {};
-      for (final plan in _repairPlans) {
+      for (final plan in plans) {
         if (!opts.contains(plan.id)) continue;
         cards.add((
           article: article,
@@ -1340,6 +1352,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         final total = _repairSelectionsTotalRupees;
         return total > 0 ? total : kRepairEstimateRupees;
       case 'wash':
+        if (_isPerShoePhotoFlow) {
+          final total = _repairSelectionsTotalRupees;
+          if (total > 0) return total;
+        }
         if (_selectedCareOptions.isNotEmpty) {
           return _selectedCareOptions.fold<int>(
             0,
@@ -1348,6 +1364,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         }
         return kWashEstimateRupees;
       case 'maintenance':
+        if (_isPerShoePhotoFlow) {
+          final total = _repairSelectionsTotalRupees;
+          if (total > 0) return total;
+        }
         return (_resolvedCarePlan ?? _maintenancePlans.first).priceRupees;
       case 'donate':
       case 'dispose':
@@ -1359,7 +1379,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   Future<void> _submit() async {
     if (_submitting) return;
-    final addressStep = _isRepairFlow ? 2 : 1;
+    final addressStep = _isPerShoePhotoFlow ? 2 : 1;
     if (_isSingleServiceFlow && _repairStep == addressStep) {
       if (!await _validateRepairStep1()) return;
     }
@@ -1423,14 +1443,17 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           service: _selectedService!,
           address: _selectedAddress!,
           proofImages: List<XFile>.from(
-            _isRepairFlow && _allOptionProofImages.isNotEmpty
+            _isPerShoePhotoFlow && _allOptionProofImages.isNotEmpty
                 ? _allOptionProofImages
                 : _proofImages,
           ),
           proofVideos: List<XFile>.from(_proofVideos),
           estimatedCostRupees: est,
           problemDescription: () {
-            if (_selectedService!.value == 'repair') {
+            if (_isPerShoePhotoFlow &&
+                (_selectedService!.value == 'repair' ||
+                    _selectedService!.value == 'maintenance' ||
+                    _selectedService!.value == 'wash')) {
               return _repairSelectionsDescription;
             }
             if (_selectedService!.value == 'maintenance' ||
@@ -1465,9 +1488,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   ? null
                   : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
           maintenancePlan: (_selectedService!.value == 'maintenance' ||
-                  _selectedService!.value == 'repair')
+                  _selectedService!.value == 'repair' ||
+                  _selectedService!.value == 'wash')
               ? (_resolvedCarePlan ??
-                  (_isRepairFlow ? _repairPlans.first : _maintenancePlans.first))
+                  (_isRepairFlow
+                      ? _repairPlans.first
+                      : _isWashFlow
+                          ? _washPlans.first
+                          : _maintenancePlans.first))
               : null,
           homePickup: _homePickup,
           requestedPickupAt: _homePickup &&
@@ -1671,7 +1699,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     if (_repairStep == 0) {
       canNext = step0CanNext;
       onNext = _onRepairStepZeroNext;
-    } else if (_isRepairFlow && _repairStep == 1) {
+    } else if (_isPerShoePhotoFlow && _repairStep == 1) {
       canNext = finalizeCanNext;
       onNext = _onFinalizingNext;
     } else {
@@ -1851,11 +1879,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final contentHPadLeft = (16 * layoutScale).clamp(14.0, 18.0);
     final contentHPadRight = (20 * layoutScale).clamp(16.0, 22.0);
 
-    final title = _isRepairFlow && _repairStep == 1
+    final title = _isPerShoePhotoFlow && _repairStep == 1
         ? 'Finalizing Services'
         : (widget.flowPageTitle ?? 'RepairMyPair');
     final selectedArticles = _flowArticles;
-    final appBarTitleFs = _isRepairFlow && _repairStep == 1
+    final appBarTitleFs = _isPerShoePhotoFlow && _repairStep == 1
         ? (18 * layoutScale).clamp(16.0, 18.0)
         : titleFs;
 
@@ -1919,7 +1947,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                       right: 2,
                       // Start near article/shoe image center — not from the top.
                       top: _isCareOptionsFlow
-                          ? (_isRepairFlow
+                          ? (_isPerShoePhotoFlow
                               ? (168 * layoutScale).clamp(140.0, 200.0)
                               : (36 * layoutScale).clamp(28.0, 44.0))
                           : (8 * layoutScale).clamp(4.0, 10.0),
@@ -1964,8 +1992,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                               layoutScale: layoutScale,
                               fontSize: fs,
                               iconSize: iconSz,
-                              compact: _isCareOptionsFlow && !_isRepairFlow,
-                              carousel: _isRepairFlow ||
+                              compact: _isCareOptionsFlow && !_isPerShoePhotoFlow,
+                              carousel: _isPerShoePhotoFlow ||
                                   (_isCareOptionsFlow &&
                                       selectedArticles.length > 1),
                             ),
@@ -1988,7 +2016,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           if (_showRepairStep0FieldErrors &&
                               !_repairStep0CareOptionsValid)
                             _repairStep0InlineError(
-                              _isRepairFlow
+                              _isPerShoePhotoFlow
                                   ? 'Each shoe needs its own services + photos (tap a pair above to switch).'
                                   : 'Please select at least one option.',
                               layoutScale,
@@ -2285,7 +2313,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 ),
               ),
             ),
-          ] else if (_isRepairFlow && _repairStep == 1) ...[
+          ] else if (_isPerShoePhotoFlow && _repairStep == 1) ...[
             Expanded(
               child: _buildFinalizingServicesPanel(layoutScale),
             ),
@@ -3236,7 +3264,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             bodyFs: bodyFs,
             checkboxSize: box,
             gap: gap,
-            showCamera: _isRepairFlow,
+            showCamera: _isPerShoePhotoFlow,
             photoCount: _imagesForOption(plans[i].id).length,
           ),
         ],
@@ -4141,7 +4169,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               layoutScale: 1,
               fontSize: 16,
               iconSize: 52,
-              carousel: _isRepairFlow || _flowArticles.length > 1,
+              carousel: _isPerShoePhotoFlow || _flowArticles.length > 1,
             ),
           ),
         ],

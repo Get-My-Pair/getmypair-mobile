@@ -27,6 +27,14 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Kotlin incremental caches break when sources are on C: (Pub cache) and the
+// project/build dir is on D:. Force non-incremental compile for all modules.
+subprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        incremental = false
+    }
+}
+
 // Plugins like geocoding_android still pin compileSdk 33; AGP 9 rejects that with newer AndroidX.
 // finalizeDsl runs after each plugin's android {} block, so this sticks.
 subprojects {

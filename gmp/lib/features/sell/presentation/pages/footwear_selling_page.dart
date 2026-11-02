@@ -108,16 +108,15 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
       final picked = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['pdf'],
-        withData: true,
       );
-      if (picked == null || picked.files.isEmpty || !mounted) return;
-      final file = picked.files.single;
+      if (picked.isEmpty || !mounted) return;
+      final file = picked.single;
       final name = file.name.trim();
       if (!name.toLowerCase().endsWith('.pdf')) {
         setState(() => _error = 'Only image and PDF files are accepted.');
         return;
       }
-      bytes = file.bytes;
+      bytes = await file.readAsBytes();
       fileName = name;
     } else {
       final file = await _picker.pickImage(

@@ -298,7 +298,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
       _address = 'Loading address...';
     });
     try {
-      final placemarks = await placemarkFromCoordinates(
+      final placemarks = await Geocoding().placemarkFromCoordinates(
         latLng.latitude,
         latLng.longitude,
       );

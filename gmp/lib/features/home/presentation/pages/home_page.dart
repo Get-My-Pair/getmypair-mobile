@@ -118,6 +118,7 @@ class _HomeServiceItem {
   final _HomeServiceKind kind;
   final bool highlight;
   final bool hubOnly;
+  final bool disabled;
 
   const _HomeServiceItem({
     required this.label,
@@ -126,6 +127,7 @@ class _HomeServiceItem {
     required this.kind,
     this.highlight = false,
     this.hubOnly = false,
+    this.disabled = false,
   });
 }
 
@@ -158,6 +160,7 @@ const List<_HomeServiceItem> _kHomeServiceCatalog = [
     iconAsset: _kThriftStoreIconAsset,
     kind: _HomeServiceKind.thriftHub,
     hubOnly: true,
+    disabled: true,
   ),
   _HomeServiceItem(
     label: 'Wash\nMyPair',
@@ -468,7 +471,8 @@ class _HomePageState extends State<HomePage> {
     final lat = double.tryParse(parts[0])!;
     final lng = double.tryParse(parts[1])!;
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      List<Placemark> placemarks =
+          await Geocoding().placemarkFromCoordinates(lat, lng);
       if (placemarks.isEmpty) return _fallbackAddress;
       Placemark p = placemarks[0];
       return _formatPlacemarkForHomeHeader(p);
@@ -505,7 +509,7 @@ class _HomePageState extends State<HomePage> {
         ),
       );
 
-      List<Placemark> placemarks = await placemarkFromCoordinates(
+      List<Placemark> placemarks = await Geocoding().placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
@@ -1375,16 +1379,19 @@ class _HomePageState extends State<HomePage> {
                                                     (item) => _QuickActionCard(
                                                       label: item.label,
                                                       highlight: item.highlight,
+                                                      disabled: item.disabled,
                                                       iconAssetUrl:
                                                           item.iconAsset,
                                                       layoutScale: layoutScale,
                                                       iconWidth: actionIconW,
                                                       iconHeight: actionIconH,
                                                       cellHeight: equalBlockH,
-                                                      onTap: () =>
-                                                          _openHomeService(
-                                                        item.kind,
-                                                      ),
+                                                      onTap: item.disabled
+                                                          ? null
+                                                          : () =>
+                                                              _openHomeService(
+                                                            item.kind,
+                                                          ),
                                                     ),
                                                   )
                                                   .toList();
@@ -3196,6 +3203,7 @@ class _QuickActionCard extends StatelessWidget {
   final double? cellHeight;
   final double layoutScale;
   final bool highlight;
+  final bool disabled;
   final VoidCallback? onTap;
 
   const _QuickActionCard({
@@ -3206,13 +3214,18 @@ class _QuickActionCard extends StatelessWidget {
     this.cellHeight,
     this.layoutScale = 1.0,
     this.highlight = false,
+    this.disabled = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isTwoLine = label.contains('\n');
-    final textColor = highlight ? Colors.white : _kQuickActionMutedText;
+    final textColor = disabled
+        ? const Color(0xFF9AABB0)
+        : highlight
+            ? Colors.white
+            : _kQuickActionMutedText;
     final cardRadius = _homeScaled(12, layoutScale);
 
     return Material(

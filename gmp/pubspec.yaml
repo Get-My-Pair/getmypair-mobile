@@ -69,9 +69,9 @@ dependencies:
   reactive_forms: ^18.0.0
 
   # Location permission (for backend integration)
-  permission_handler: ^12.0.1
+  permission_handler: ^13.0.2
   geolocator: ^14.0.2
-  geocoding: ^3.0.0
+  geocoding: ^5.0.1
 
   # Google Maps:
   # - Android: GOOGLE_MAPS_API_KEY in android/local.properties
@@ -85,19 +85,19 @@ dependencies:
   image_picker_android: ^0.8.13
   image_picker_platform_interface: ^2.11.1
   # Image cropper replacement (pure Dart) for cropping camera/gallery images before upload
-  crop_your_image: ^0.7.0
+  crop_your_image: ^2.0.1
   flutter_tts: ^4.2.5
   camera: ^0.12.0+1
   path_provider: ^2.1.5
-  google_mlkit_image_labeling: ^0.15.0
-  device_info_plus: ^12.4.0 
+  google_mlkit_image_labeling: ^0.16.1
+  device_info_plus: ^13.3.0
   # Pixel-level decoding for footwear orientation detection
   image: ^4.3.0
   
   # Payment checkout
   url_launcher: ^6.3.1
   webview_flutter: ^4.10.0
-  file_picker: ^11.0.3
+  file_picker: ^13.3.0
 
 
 
@@ -223,6 +223,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# permission_handler_android 14.1.x needs Android SDK 37 (not installed here).
+dependency_overrides:
+  permission_handler_android: 13.0.1
 
 # App icon (Android & iOS)
 # After adding/updating icon file run: dart run flutter_launcher_icons

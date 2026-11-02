@@ -192,9 +192,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
               child: Crop(
                 image: originalBytes,
                 controller: controller,
-                onCropped: (bytes) {
-                  croppedBytes = bytes;
-                  Navigator.of(ctx).pop();
+                onCropped: (result) {
+                  if (result is CropSuccess) {
+                    croppedBytes = result.croppedImage;
+                    Navigator.of(ctx).pop();
+                  }
                 },
               ),
             ),

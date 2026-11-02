@@ -85,20 +85,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     }
   }
 
-  String get _footwearDetailsLabel {
-    if (!_articlesLoaded) return 'Loading...';
-    return _articles
-        .map((a) {
-          final color = a.color.trim();
-          final brand = a.brand.trim();
-          if (color.isNotEmpty && brand.isNotEmpty) return '$color, $brand';
-          if (brand.isNotEmpty) return brand;
-          if (a.model.trim().isNotEmpty) return a.model.trim();
-          return 'Footwear';
-        })
-        .join(' · ');
-  }
-
   String get _repairShopLabel {
     final city = widget.address.city.trim();
     if (city.isNotEmpty) return city;
@@ -518,7 +504,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       topRight: Radius.circular(20),
     );
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
-    const dockContentH = 58.0;
+    const dockContentH = 48.0;
     final dockH = 14 + dockContentH + 14 + bottomSafe;
 
     return Scaffold(
@@ -604,16 +590,14 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   const SizedBox(height: 8),
                                   _detailRow(
                                     iconAsset:
-                                        'assets/images/icons/profile/serv.svg',
+                                        'assets/images/noun-shoes-cleaning-7675732 1.svg',
                                     label: 'Service Type',
                                     value: _serviceDisplayTitle,
                                   ),
                                   _detailRow(
                                     iconAsset:
-                                        'assets/images/icons/Vector (3).svg',
-                                    label: widget.service.value == 'repair'
-                                        ? 'Repair Shop'
-                                        : 'Service Location',
+                                        'assets/images/icons/repairshop.png',
+                                    label: 'Repair Shop',
                                     value: _repairShopLabel,
                                   ),
                                   _detailRow(
@@ -626,8 +610,10 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                   _detailRow(
                                     iconAsset:
                                         'assets/images/icons/shoe.svg',
-                                    label: 'Footwear Details',
-                                    value: _footwearDetailsLabel,
+                                    label: 'Number of Footwear',
+                                    value: _articlesLoaded
+                                        ? '${_articles.length}'
+                                        : '${widget.articleIds.length}',
                                   ),
                                   _detailRow(
                                     iconAsset:
@@ -713,7 +699,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
               Container(
                 width: 46,
                 height: 46,
-                padding: const EdgeInsets.all(11),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: const Color(0x33D9D9D9),
                   borderRadius: BorderRadius.circular(5),
@@ -723,15 +709,23 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                   ),
                 ),
                 alignment: Alignment.center,
-                child: SvgPicture.asset(
-                  iconAsset,
-                  width: 22,
-                  height: 22,
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF12899B),
-                    BlendMode.srcIn,
-                  ),
-                ),
+                child: iconAsset.toLowerCase().endsWith('.png')
+                    ? Image.asset(
+                        iconAsset,
+                        width: 28,
+                        height: 28,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      )
+                    : SvgPicture.asset(
+                        iconAsset,
+                        width: 22,
+                        height: 22,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF12899B),
+                          BlendMode.srcIn,
+                        ),
+                      ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -851,8 +845,8 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
   double _dx = 0;
   bool _fired = false;
 
-  static const double _thumb = 52;
-  static const double _height = 58;
+  static const double _thumb = 40;
+  static const double _height = 48;
 
   @override
   void didUpdateWidget(covariant _SlideToConfirm oldWidget) {
@@ -889,12 +883,21 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxDx = (constraints.maxWidth - _thumb - 8).clamp(0.0, 400.0);
+        // Leave room for the 41px repairshop target icon on the right.
+        final maxDx =
+            (constraints.maxWidth - _thumb - 8 - 41 - 8).clamp(0.0, 400.0);
         return Container(
           height: _height,
           decoration: BoxDecoration(
-            color: const Color(0xFFE4E4E4),
+            color: const Color(0xFFF0F0F0),
             borderRadius: BorderRadius.circular(100),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -902,21 +905,19 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
               Text(
                 'Slide to confirm',
                 style: GoogleFonts.boldonse(
-                  color: const Color(0xFF9A9A9A),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF000000),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               Positioned(
-                right: 16,
-                child: SvgPicture.asset(
-                  'assets/images/icons/Vector (3).svg',
-                  width: 24,
-                  height: 24,
-                  colorFilter: ColorFilter.mode(
-                    const Color(0xFF12899B).withValues(alpha: 0.85),
-                    BlendMode.srcIn,
-                  ),
+                right: 8,
+                child: Image.asset(
+                  'assets/images/icons/repairshop.png',
+                  width: 41,
+                  height: 41,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
                 ),
               ),
               Positioned(
@@ -932,26 +933,15 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
                     height: _thumb,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: widget.enabled
-                            ? const [Color(0xFF09DFFF), Color(0xFF063035)]
-                            : const [Color(0xFF9BB5BA), Color(0xFF6A8186)],
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x33000000),
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
+                      color: widget.enabled
+                          ? const Color(0xFF12899B)
+                          : const Color(0xFF9BB5BA),
                     ),
                     alignment: Alignment.center,
                     child: SvgPicture.asset(
                       'assets/images/icons/shoe.svg',
-                      width: 26,
-                      height: 20,
+                      width: 22,
+                      height: 15,
                       colorFilter: const ColorFilter.mode(
                         Colors.white,
                         BlendMode.srcIn,
