@@ -229,9 +229,25 @@ class _OTPPageState extends State<OTPPage> {
     } catch (_) {}
   }
 
-  void _resendOtp() {
+  Future<void> _resendOtp() async {
     if (!_canResend) return;
-    context.read<AuthBloc>().add(AuthSendOTP(widget.mobile));
+    String? smsHash;
+    if (_isAndroidSmsAutofillSupported) {
+      try {
+        final sig = await _smartAuth.getAppSignature();
+        if (sig.hasData) {
+          final raw = sig.requireData.trim();
+          if (raw.length == 11) smsHash = raw;
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    // Resend must actually send SMS — do not attempt trusted-device login.
+    context.read<AuthBloc>().add(AuthSendOTP(
+          widget.mobile,
+          preferTrustedDevice: false,
+          androidSmsHash: smsHash,
+        ));
     _startResendTimer();
     // Restart SMS listen for the new message.
     _stopSmsAutofillListen().then((_) {

@@ -10,6 +10,12 @@ class AppConstants {
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userKey = 'user_data';
+  /// Stable install/device id — survives logout so trusted re-login works.
+  static const String deviceIdKey = 'device_id';
+  /// Trusted-device credential issued after first successful OTP on this phone.
+  static const String deviceAuthTokenKey = 'device_auth_token';
+  static const String deviceAuthMobileKey = 'device_auth_mobile';
+  static const String deviceAuthExpiresAtKey = 'device_auth_expires_at';
   
   // Validation
   static const int minNameLength = 2;

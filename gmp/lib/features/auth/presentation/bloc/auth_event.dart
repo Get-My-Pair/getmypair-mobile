@@ -13,11 +13,19 @@ class AuthCheckStatus extends AuthEvent {
 
 class AuthSendOTP extends AuthEvent {
   final String mobile;
+  /// When true (default), try trusted-device silent login before sending OTP.
+  final bool preferTrustedDevice;
+  /// Optional Android SMS Retriever app hash for silent autofill.
+  final String? androidSmsHash;
 
-  const AuthSendOTP(this.mobile);
+  const AuthSendOTP(
+    this.mobile, {
+    this.preferTrustedDevice = true,
+    this.androidSmsHash,
+  });
 
   @override
-  List<Object?> get props => [mobile];
+  List<Object?> get props => [mobile, preferTrustedDevice, androidSmsHash];
 }
 
 class AuthVerifyOTP extends AuthEvent {

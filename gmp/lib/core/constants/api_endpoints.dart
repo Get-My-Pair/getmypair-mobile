@@ -35,6 +35,7 @@ class ApiEndpoints {
   // Auth endpoints (getmypair-api: server/src/routes/auth.routes.js)
   static String get sendOtp => '$baseUrl$apiPrefix/send-otp';
   static String get verifyOtp => '$baseUrl$apiPrefix/verify-otp';
+  static String get loginTrustedDevice => '$baseUrl$apiPrefix/login-trusted-device';
   static String get completeProfile => '$baseUrl$apiPrefix/complete-profile';
   static String get refreshToken => '$baseUrl$apiPrefix/refresh-token';
   static String get logout => '$baseUrl$apiPrefix/logout';

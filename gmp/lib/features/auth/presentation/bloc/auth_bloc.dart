@@ -7,6 +7,7 @@ import '../../domain/usecases/clear_session_locally.dart';
 import '../../domain/usecases/complete_profile.dart';
 import '../../domain/usecases/get_current_user.dart';
 import '../../domain/usecases/login_with_email.dart';
+import '../../domain/usecases/login_with_trusted_device.dart';
 import '../../domain/usecases/logout.dart';
 import '../../domain/usecases/send_otp.dart';
 import '../../domain/usecases/verify_otp.dart';
@@ -16,6 +17,7 @@ import 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SendOTP sendOTP;
   final VerifyOTP verifyOTP;
+  final LoginWithTrustedDevice loginWithTrustedDevice;
   final LoginWithEmail loginWithEmail;
   final CompleteProfile completeProfile;
   final GetCurrentUser getCurrentUser;
@@ -26,6 +28,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({
     required this.sendOTP,
     required this.verifyOTP,
+    required this.loginWithTrustedDevice,
     required this.loginWithEmail,
     required this.completeProfile,
     required this.getCurrentUser,
@@ -86,7 +89,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
 
-    final result = await sendOTP(event.mobile);
+    // After first successful Google consent + OTP on this device, skip both.
+    if (event.preferTrustedDevice) {
+      final trusted = await loginWithTrustedDevice(event.mobile);
+      final loggedInSilently = trusted.fold(
+        (_) => false,
+        (data) {
+          final user = data['user'] as User?;
+          if (user == null) return false;
+          emit(AuthOTPVerified(
+            requiresProfileCompletion: false,
+            mobile: event.mobile,
+            user: user,
+          ));
+          emit(AuthAuthenticated(user));
+          return true;
+        },
+      );
+      if (loggedInSilently) return;
+    }
+
+    final result = await sendOTP(
+      event.mobile,
+      androidSmsHash: event.androidSmsHash,
+    );
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
       (data) {

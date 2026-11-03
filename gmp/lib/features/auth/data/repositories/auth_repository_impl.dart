@@ -7,6 +7,7 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../models/login_response_model.dart';
 
 /// Session: user stays logged in until they tap Logout or refresh token expires.
 /// Access token is refreshed automatically; only on refresh failure do we clear session and show login.
@@ -42,11 +43,32 @@ class AuthRepositoryImpl implements AuthRepository {
     return true;
   }
 
+  Future<void> _persistDeviceAuth(String mobile, LoginResponseModel response) async {
+    final auth = response.data?.deviceAuth;
+    if (auth == null ||
+        auth.deviceId.isEmpty ||
+        auth.deviceAuthToken.isEmpty) {
+      return;
+    }
+    await localDataSource.saveDeviceAuth(
+      mobile: mobile,
+      deviceId: auth.deviceId,
+      deviceAuthToken: auth.deviceAuthToken,
+      expiresAt: auth.expiresAt,
+    );
+  }
+
   @override
-  Future<Either<Failure, Map<String, dynamic>>> sendOTP(String mobile) async {
+  Future<Either<Failure, Map<String, dynamic>>> sendOTP(
+    String mobile, {
+    String? androidSmsHash,
+  }) async {
     if (await networkInfo.isConnected) {
       try {
-        final response = await remoteDataSource.sendOTP(mobile);
+        final response = await remoteDataSource.sendOTP(
+          mobile,
+          androidSmsHash: androidSmsHash,
+        );
         return Right(response);
       } on ServerException catch (e) {
         return Left(ServerFailure(e.message));
@@ -69,7 +91,12 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, Map<String, dynamic>>> verifyOTP(String mobile, String otp) async {
     if (await networkInfo.isConnected) {
       try {
-        final response = await remoteDataSource.verifyOTP(mobile, otp);
+        final deviceId = await localDataSource.getOrCreateDeviceId();
+        final response = await remoteDataSource.verifyOTP(
+          mobile,
+          otp,
+          deviceId: deviceId,
+        );
         
         // If existing user, save tokens and user data
         if (response.data?.tokens != null) {
@@ -77,6 +104,7 @@ class AuthRepositoryImpl implements AuthRepository {
           if (response.data?.user != null) {
             await localDataSource.saveUser(response.data!.user!);
           }
+          await _persistDeviceAuth(mobile, response);
         }
 
         return Right({
@@ -102,6 +130,61 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, Map<String, dynamic>>> loginWithTrustedDevice(
+    String mobile,
+  ) async {
+    try {
+      final cred = await localDataSource.getDeviceAuthForMobile(mobile);
+      if (cred == null) {
+        return const Left(AuthenticationFailure('DEVICE_REAUTH_REQUIRED'));
+      }
+
+      if (!await networkInfo.isConnected) {
+        return const Left(NetworkFailure(
+          'No internet connection. Please check:\n'
+          '1. Your device is connected to Wi-Fi or mobile data\n'
+          '2. Backend server is accessible\n'
+          '3. Firewall/VPN is not blocking connections',
+        ));
+      }
+
+      try {
+        final response = await remoteDataSource.loginWithTrustedDevice(
+          mobile: mobile,
+          deviceId: cred.deviceId,
+          deviceAuthToken: cred.deviceAuthToken,
+        );
+
+        if (response.data?.tokens == null || response.data?.user == null) {
+          await localDataSource.clearDeviceAuth();
+          return const Left(AuthenticationFailure('DEVICE_REAUTH_REQUIRED'));
+        }
+
+        await localDataSource.saveTokens(response.data!.tokens!);
+        await localDataSource.saveUser(response.data!.user!);
+        await _persistDeviceAuth(mobile, response);
+
+        return Right({
+          'requiresProfileCompletion': false,
+          'user': response.data!.user,
+          'tokens': response.data!.tokens,
+          'trustedLogin': true,
+        });
+      } on ServerException catch (e) {
+        // Credential rejected — clear and fall back to OTP.
+        await localDataSource.clearDeviceAuth();
+        return Left(AuthenticationFailure(e.message));
+      } on NetworkException catch (e) {
+        return Left(NetworkFailure(e.message));
+      } catch (e) {
+        return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      }
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
+    }
+  }
+
+  @override
   Future<Either<Failure, Map<String, dynamic>>> loginWithEmail({
     required String email,
     required String password,
@@ -122,6 +205,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     if (await networkInfo.isConnected) {
       try {
+        final deviceId = await localDataSource.getOrCreateDeviceId();
         final response = await remoteDataSource.completeProfile(
           mobile: mobile,
           name: name,
@@ -129,6 +213,7 @@ class AuthRepositoryImpl implements AuthRepository {
           gender: gender,
           householdType: householdType,
           location: location,
+          deviceId: deviceId,
         );
 
         // Save tokens if provided in response
@@ -139,6 +224,7 @@ class AuthRepositoryImpl implements AuthRepository {
         // Save user data
         if (response.data?.user != null) {
           await localDataSource.saveUser(response.data!.user!);
+          await _persistDeviceAuth(mobile, response);
           return Right(response.data!.user!);
         } else {
           return const Left(ServerFailure('User data not found in response'));

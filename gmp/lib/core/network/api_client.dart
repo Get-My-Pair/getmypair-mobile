@@ -140,6 +140,7 @@ class _AuthInterceptor extends Interceptor {
       ApiConfig.register,
       ApiConfig.sendOtp,
       ApiConfig.verifyOtp,
+      ApiConfig.loginTrustedDevice,
       ApiConfig.resendOtp,
     ];
 

@@ -26,6 +26,7 @@ class LoginData {
   final bool? requiresProfileCompletion;
   final String? mobile;
   final int? expiresIn;
+  final DeviceAuthPayload? deviceAuth;
 
   LoginData({
     this.user,
@@ -33,6 +34,7 @@ class LoginData {
     this.requiresProfileCompletion,
     this.mobile,
     this.expiresIn,
+    this.deviceAuth,
   });
 
   factory LoginData.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,36 @@ class LoginData {
       requiresProfileCompletion: json['requiresProfileCompletion'],
       mobile: json['mobile'],
       expiresIn: json['expiresIn'],
+      deviceAuth: json['deviceAuth'] != null
+          ? DeviceAuthPayload.fromJson(
+              Map<String, dynamic>.from(json['deviceAuth'] as Map),
+            )
+          : null,
+    );
+  }
+}
+
+class DeviceAuthPayload {
+  final String deviceId;
+  final String deviceAuthToken;
+  final DateTime? expiresAt;
+
+  DeviceAuthPayload({
+    required this.deviceId,
+    required this.deviceAuthToken,
+    this.expiresAt,
+  });
+
+  factory DeviceAuthPayload.fromJson(Map<String, dynamic> json) {
+    DateTime? expiresAt;
+    final raw = json['expiresAt'];
+    if (raw != null) {
+      expiresAt = DateTime.tryParse(raw.toString());
+    }
+    return DeviceAuthPayload(
+      deviceId: (json['deviceId'] as String?)?.trim() ?? '',
+      deviceAuthToken: (json['deviceAuthToken'] as String?)?.trim() ?? '',
+      expiresAt: expiresAt,
     );
   }
 }

@@ -9,8 +9,20 @@ import '../models/user_model.dart';
 
 
 abstract class AuthRemoteDataSource {
-  Future<Map<String, dynamic>> sendOTP(String mobile);
-  Future<LoginResponseModel> verifyOTP(String mobile, String otp);
+  Future<Map<String, dynamic>> sendOTP(
+    String mobile, {
+    String? androidSmsHash,
+  });
+  Future<LoginResponseModel> verifyOTP(
+    String mobile,
+    String otp, {
+    required String deviceId,
+  });
+  Future<LoginResponseModel> loginWithTrustedDevice({
+    required String mobile,
+    required String deviceId,
+    required String deviceAuthToken,
+  });
   Future<LoginResponseModel> loginWithEmail({
     required String email,
     required String password,
@@ -22,6 +34,7 @@ abstract class AuthRemoteDataSource {
     required String gender,
     required String householdType,
     Map<String, dynamic>? location,
+    String? deviceId,
   });
   Future<UserModel> getCurrentUser(String accessToken);
   Future<void> logout(String refreshToken, String? accessToken);
@@ -102,13 +115,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> sendOTP(String mobile) async {
+  Future<Map<String, dynamic>> sendOTP(
+    String mobile, {
+    String? androidSmsHash,
+  }) async {
     try {
       final normalizedMobile = _normalizeMobile(mobile);
+      final body = <String, dynamic>{'mobile': normalizedMobile};
+      final hash = (androidSmsHash ?? '').trim();
+      if (hash.length == 11) {
+        body['androidSmsHash'] = hash;
+      }
 
       final response = await client.post(
         ApiEndpoints.sendOtp,
-        body: {'mobile': normalizedMobile},
+        body: body,
       );
 
       // Web Dev OTP: keep `otp` for the popup. Android/iOS: strip it.
@@ -129,7 +150,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<LoginResponseModel> verifyOTP(String mobile, String otp) async {
+  Future<LoginResponseModel> verifyOTP(
+    String mobile,
+    String otp, {
+    required String deviceId,
+  }) async {
     try {
       final normalizedMobile = _normalizeMobile(mobile);
 
@@ -137,12 +162,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final cleanOtp = otp.trim().replaceAll(RegExp(r'[^0-9]'), '');
 
       final deviceInfo = await _deviceInfoHeaderValue();
+      final body = <String, dynamic>{
+        'mobile': normalizedMobile,
+        'otp': cleanOtp,
+      };
+      if (deviceId.trim().isNotEmpty) {
+        body['deviceId'] = deviceId.trim();
+      }
       final response = await client.post(
         ApiEndpoints.verifyOtp,
-        body: {
-          'mobile': normalizedMobile,
-          'otp': cleanOtp,
-        },
+        body: body,
         extraHeaders: {
           'device-info': deviceInfo,
         },
@@ -153,6 +182,40 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Extract the actual error message from the exception
       String errorMessage = 'Failed to verify OTP';
       if (e.toString().contains('ServerException')) {
+        errorMessage = e.toString().replaceFirst('ServerException: ', '');
+      } else {
+        errorMessage = e.toString();
+      }
+      throw ServerException(errorMessage);
+    }
+  }
+
+  @override
+  Future<LoginResponseModel> loginWithTrustedDevice({
+    required String mobile,
+    required String deviceId,
+    required String deviceAuthToken,
+  }) async {
+    try {
+      final normalizedMobile = _normalizeMobile(mobile);
+      final deviceInfo = await _deviceInfoHeaderValue();
+      final response = await client.post(
+        ApiEndpoints.loginTrustedDevice,
+        body: {
+          'mobile': normalizedMobile,
+          'deviceId': deviceId,
+          'deviceAuthToken': deviceAuthToken,
+        },
+        extraHeaders: {
+          'device-info': deviceInfo,
+        },
+      );
+      return LoginResponseModel.fromJson(response);
+    } catch (e) {
+      String errorMessage = 'Device authorization expired';
+      if (e is ServerException) {
+        errorMessage = e.message;
+      } else if (e.toString().contains('ServerException')) {
         errorMessage = e.toString().replaceFirst('ServerException: ', '');
       } else {
         errorMessage = e.toString();
@@ -179,6 +242,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String gender,
     required String householdType,
     Map<String, dynamic>? location,
+    String? deviceId,
   }) async {
     try {
       final normalizedMobile = _normalizeMobile(mobile);
@@ -190,6 +254,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'gender': gender.toLowerCase(),
         'householdType': householdType,
       };
+      if (deviceId != null && deviceId.trim().isNotEmpty) {
+        body['deviceId'] = deviceId.trim();
+      }
       // Backend auth.validation only allows location: { lat, lng, address }
       if (location != null && location.isNotEmpty) {
         final loc = <String, dynamic>{};

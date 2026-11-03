@@ -3,8 +3,14 @@ import '../../../../core/errors/failures.dart';
 import '../entities/user.dart';
 
 abstract class AuthRepository {
-  Future<Either<Failure, Map<String, dynamic>>> sendOTP(String mobile);
+  Future<Either<Failure, Map<String, dynamic>>> sendOTP(
+    String mobile, {
+    String? androidSmsHash,
+  });
   Future<Either<Failure, Map<String, dynamic>>> verifyOTP(String mobile, String otp);
+  /// Silent re-login when this device was previously authorized for [mobile].
+  /// Returns Left(AuthenticationFailure) when reauthorization / OTP is required.
+  Future<Either<Failure, Map<String, dynamic>>> loginWithTrustedDevice(String mobile);
   Future<Either<Failure, Map<String, dynamic>>> loginWithEmail({
     required String email,
     required String password,

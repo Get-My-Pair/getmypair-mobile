@@ -10,6 +10,7 @@ import 'features/auth/domain/usecases/complete_profile.dart';
 import 'features/auth/domain/usecases/get_current_user.dart';
 import 'features/auth/domain/usecases/get_valid_access_token.dart';
 import 'features/auth/domain/usecases/login_with_email.dart';
+import 'features/auth/domain/usecases/login_with_trusted_device.dart';
 import 'features/auth/domain/usecases/logout.dart';
 import 'features/auth/domain/usecases/send_otp.dart';
 import 'features/auth/domain/usecases/verify_otp.dart';
@@ -94,6 +95,9 @@ Future<void> init() async {
   if (!sl.isRegistered<VerifyOTP>()) {
     sl.registerLazySingleton(() => VerifyOTP(sl()));
   }
+  if (!sl.isRegistered<LoginWithTrustedDevice>()) {
+    sl.registerLazySingleton(() => LoginWithTrustedDevice(sl()));
+  }
   if (!sl.isRegistered<LoginWithEmail>()) {
     sl.registerLazySingleton(() => LoginWithEmail(sl()));
   }
@@ -123,6 +127,7 @@ Future<void> init() async {
       () => AuthBloc(
         sendOTP: sl(),
         verifyOTP: sl(),
+        loginWithTrustedDevice: sl(),
         loginWithEmail: sl(),
         completeProfile: sl(),
         getCurrentUser: sl(),

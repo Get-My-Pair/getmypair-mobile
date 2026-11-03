@@ -7,8 +7,11 @@ class SendOTP {
 
   SendOTP(this.repository);
 
-  Future<Either<Failure, Map<String, dynamic>>> call(String mobile) async {
-    return await repository.sendOTP(mobile);
+  Future<Either<Failure, Map<String, dynamic>>> call(
+    String mobile, {
+    String? androidSmsHash,
+  }) async {
+    return await repository.sendOTP(mobile, androidSmsHash: androidSmsHash);
   }
 }
 
