@@ -32,11 +32,12 @@ class FootwearImageValidationResult {
     );
   }
 
+  /// Used when on-device ML Kit cannot run. Callers should treat this as a
+  /// soft pass — never block the user from capturing/uploading.
   factory FootwearImageValidationResult.unavailable({String? message}) {
     return FootwearImageValidationResult._(
-      isFootwear: false,
-      message: message ??
-          'Could not verify this image. Try again on a physical device with a clear shoe photo.',
+      isFootwear: true,
+      message: message,
     );
   }
 }
@@ -351,24 +352,39 @@ class FootwearImageValidator {
       return FootwearImageValidationResult.accepted();
     }
 
-    final labeler = ImageLabeler(
-      options: ImageLabelerOptions(confidenceThreshold: _labelThreshold),
-    );
-
-    try {
-      final labels = await labeler.processImage(
-        InputImage.fromFilePath(file.path),
+    // One retry: live-scanner teardown can briefly leave the native detector busy.
+    Object? lastError;
+    StackTrace? lastStack;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
+      final labeler = ImageLabeler(
+        options: ImageLabelerOptions(confidenceThreshold: _labelThreshold),
       );
-      return classifyLabels(labels);
-    } catch (e, st) {
-      debugPrint('FootwearImageValidator: $e\n$st');
-      return FootwearImageValidationResult.unavailable();
-    } finally {
       try {
-        await labeler.close();
-      } catch (e) {
-        debugPrint('FootwearImageValidator: labeler.close failed: $e');
+        final labels = await labeler.processImage(
+          InputImage.fromFilePath(file.path),
+        );
+        return classifyLabels(labels);
+      } catch (e, st) {
+        lastError = e;
+        lastStack = st;
+        debugPrint('FootwearImageValidator (attempt ${attempt + 1}): $e\n$st');
+      } finally {
+        try {
+          await labeler.close();
+        } catch (e) {
+          debugPrint('FootwearImageValidator: labeler.close failed: $e');
+        }
       }
     }
+
+    // MissingPluginException, model download failures, emulator gaps, etc.
+    // must not block capture — same soft-pass behavior as web.
+    debugPrint(
+      'FootwearImageValidator: giving up after retries: $lastError\n$lastStack',
+    );
+    return FootwearImageValidationResult.unavailable();
   }
 }
