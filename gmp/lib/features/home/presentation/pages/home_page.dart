@@ -24,9 +24,6 @@ import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../profile/presentation/utils/user_notifications.dart';
-import '../../../profile/presentation/utils/saved_location_sync.dart';
-import '../../../profile/presentation/pages/saved_addresses_page.dart';
-import '../../../profile/domain/entities/address.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../articles/domain/entities/article.dart';
@@ -313,11 +310,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _currentAddress = '📍 Fetching location...';
+  bool _isFetchingLocation = false;
   List<Article>? _rackArticles;
   bool _rackLoading = true;
   String? _rackError;
-  AddressParts? _detectedLocationParts;
-  bool _locationSavePromptHandled = false;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
@@ -390,6 +386,7 @@ class _HomePageState extends State<HomePage> {
     _leftHomeTab = false;
     _loadRackPreview();
     _loadHomeStats();
+    _getCurrentLocation();
   }
 
   void _dismissHomeSearchKeyboard() {
@@ -497,83 +494,66 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Home header always shows device GPS location — never a saved address.
   Future<void> _getCurrentLocation() async {
+    if (_isFetchingLocation) return;
+    _isFetchingLocation = true;
+    if (mounted) {
+      setState(() => _currentAddress = '📍 Fetching location...');
+    }
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() => _currentAddress = '📍 Location services disabled');
+        if (mounted) {
+          setState(() => _currentAddress = '📍 Location services disabled');
+        }
         return;
       }
 
-      LocationPermission permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          setState(() => _currentAddress = '📍 Location permission denied');
+          if (mounted) {
+            setState(() => _currentAddress = '📍 Location permission denied');
+          }
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        setState(() => _currentAddress = '📍 Location permanently denied');
+        if (mounted) {
+          setState(() => _currentAddress = '📍 Location permanently denied');
+        }
         return;
       }
 
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
 
-      List<Placemark> placemarks = await Geocoding().placemarkFromCoordinates(
+      final placemarks = await Geocoding().placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
 
+      if (!mounted) return;
       if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        _detectedLocationParts = AddressParts.fromPlacemark(place);
         setState(() {
-          _currentAddress = _formatPlacemarkForHomeHeader(place);
+          _currentAddress = _formatPlacemarkForHomeHeader(placemarks.first);
         });
-        _maybePromptSaveDetectedLocation();
       } else {
         setState(() => _currentAddress = '📍 Location unavailable');
       }
-    } catch (e) {
-      setState(() => _currentAddress = '📍 Location unavailable');
+    } catch (_) {
+      if (mounted) {
+        setState(() => _currentAddress = '📍 Location unavailable');
+      }
+    } finally {
+      _isFetchingLocation = false;
     }
-  }
-
-  Future<void> _maybePromptSaveDetectedLocation() async {
-    if (_locationSavePromptHandled || _detectedLocationParts == null) return;
-
-    final profile =
-        userProfileFromProfileState(context.read<ProfileBloc>().state);
-    if (profile == null) return;
-
-    // Already have saved location data — use it and never prompt again on open.
-    if (profile.addresses.isNotEmpty) {
-      _locationSavePromptHandled = true;
-      _applySavedAddressToHeader();
-      return;
-    }
-
-    _locationSavePromptHandled = true;
-
-    final tokenResult = await sl<GetValidAccessToken>().call();
-    if (!mounted) return;
-    await tokenResult.fold(
-      (_) async {},
-      (token) => SavedLocationSync.maybePersist(
-        context: context,
-        profileBloc: context.read<ProfileBloc>(),
-        accessToken: token,
-        parts: _detectedLocationParts!,
-        addresses: profile.addresses,
-        promptOnlyWhenEmpty: true,
-      ),
-    );
   }
 
   static String _articleImageUrl(String? path) {
@@ -669,63 +649,6 @@ class _HomePageState extends State<HomePage> {
 
   String get _pairsInCareDisplay {
     return _pairsInCare.toString().padLeft(2, '0');
-  }
-
-  static String _formatAddressForHeader(Address address) {
-    final pieces = [
-      address.addressLine1.trim(),
-      address.city.trim(),
-      address.state.trim(),
-      address.pincode.trim(),
-    ].where((v) => v.isNotEmpty).toList();
-    if (pieces.isEmpty) return '';
-    return '📍 ${pieces.join(', ')}';
-  }
-
-  void _applySavedAddressToHeader() {
-    final profile =
-        userProfileFromProfileState(context.read<ProfileBloc>().state);
-    final addresses = profile?.addresses ?? const <Address>[];
-    if (addresses.isEmpty) return;
-    final text = _formatAddressForHeader(addresses.first);
-    if (text.isEmpty) return;
-    setState(() => _currentAddress = text);
-  }
-
-  Future<void> _openSavedLocationPage() async {
-    final profile =
-        userProfileFromProfileState(context.read<ProfileBloc>().state);
-    if (profile == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Loading profile… try again in a moment.')),
-      );
-      return;
-    }
-    final tokenResult = await sl<GetValidAccessToken>().call();
-    if (!mounted) return;
-    await tokenResult.fold(
-      (_) async {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please sign in again to edit location.')),
-        );
-      },
-      (token) async {
-        await Navigator.of(context).push<void>(
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<ProfileBloc>(),
-              child: SavedAddressesPage(
-                profile: profile,
-                accessToken: token,
-              ),
-            ),
-          ),
-        );
-        if (!mounted) return;
-        _applySavedAddressToHeader();
-      },
-    );
   }
 
   Future<void> _loadHomeStats() async {
@@ -848,9 +771,6 @@ class _HomePageState extends State<HomePage> {
           if (state is ProfileError && _profileDataLoading) {
             if (mounted) setState(() => _profileDataLoading = false);
           }
-          if (state is ProfileLoaded || state is AddressActionLoading) {
-            _maybePromptSaveDetectedLocation();
-          }
           if (state is ProfileLoaded) {
             final activeId = state.profile.isSelfActive
                 ? kSelfProfileId
@@ -940,7 +860,7 @@ class _HomePageState extends State<HomePage> {
                                   layoutScale: layoutScale,
                                   onLocationTap: () async {
                                     _dismissHomeSearchKeyboard();
-                                    await _openSavedLocationPage();
+                                    await _getCurrentLocation();
                                   },
                                   searchController: _searchController,
                                   searchFocusNode: _searchFocusNode,
