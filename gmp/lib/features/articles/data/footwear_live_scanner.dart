@@ -98,8 +98,17 @@ class FootwearLiveScanner {
     }
     _streamActive = false;
 
-    await _labeler?.close();
+    final labeler = _labeler;
     _labeler = null;
+    if (labeler != null) {
+      try {
+        await labeler.close();
+      } catch (e) {
+        // Some devices/builds throw MissingPluginException on close —
+        // never block capture because of labeler cleanup.
+        debugPrint('FootwearLiveScanner: labeler.close failed: $e');
+      }
+    }
     _emit(FootwearScanStatus.idle);
   }
 

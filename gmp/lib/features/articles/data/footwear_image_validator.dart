@@ -364,7 +364,11 @@ class FootwearImageValidator {
       debugPrint('FootwearImageValidator: $e\n$st');
       return FootwearImageValidationResult.unavailable();
     } finally {
-      await labeler.close();
+      try {
+        await labeler.close();
+      } catch (e) {
+        debugPrint('FootwearImageValidator: labeler.close failed: $e');
+      }
     }
   }
 }

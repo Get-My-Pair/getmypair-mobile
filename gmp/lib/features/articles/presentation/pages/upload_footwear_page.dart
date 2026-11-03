@@ -275,9 +275,14 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
       await _processNewImage(file);
     } catch (e) {
       if (mounted) {
+        final raw = e.toString();
+        final isPluginNoise = raw.contains('MissingPluginException') ||
+            raw.contains('closeImageLabelDetector');
         await _showMessageDialog(
           title: 'Capture failed',
-          message: e.toString().replaceFirst('Exception: ', ''),
+          message: isPluginNoise
+              ? 'Could not capture the photo. Please try again.'
+              : raw.replaceFirst('Exception: ', ''),
         );
       }
     } finally {
