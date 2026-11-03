@@ -242,10 +242,8 @@ class _OTPPageState extends State<OTPPage> {
       } catch (_) {}
     }
     if (!mounted) return;
-    // Resend must actually send SMS — do not attempt trusted-device login.
     context.read<AuthBloc>().add(AuthSendOTP(
           widget.mobile,
-          preferTrustedDevice: false,
           androidSmsHash: smsHash,
         ));
     _startResendTimer();

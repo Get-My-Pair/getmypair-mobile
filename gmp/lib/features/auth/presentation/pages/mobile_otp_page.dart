@@ -11,7 +11,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_auth/smart_auth.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
-import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -357,19 +356,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               width: layoutMediaQuery.size.width,
               child: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthOTPVerified &&
-              !state.requiresProfileCompletion &&
-              (ModalRoute.of(context)?.isCurrent ?? false)) {
-            // Trusted-device silent login — skip OTP screen entirely.
-            setState(() => _isSendingOtp = false);
-            _stopSendingProgress();
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (_) => const CustomerDashboardPage(),
-              ),
-              (route) => false,
-            );
-          } else if (state is AuthOTPSent) {
+          // Never navigate to home from the phone-entry screen.
+          // Home is only reachable after AuthOTPVerified on OTPPage.
+          if (state is AuthOTPSent) {
             setState(() => _isSendingOtp = false);
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
