@@ -15,12 +15,22 @@ import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
 import 'package:gmp/injection_container.dart';
 
 /// Soft Reels-like page snap — lower stiffness = slower settle after a swipe.
+/// Clamps the top edge so Home cannot overscroll upward (no white pull-down).
 class _ReelsPageScrollPhysics extends PageScrollPhysics {
   const _ReelsPageScrollPhysics({super.parent});
 
   @override
   _ReelsPageScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return _ReelsPageScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) {
+    // Block top → bottom pull past Home (min extent). Bottom → top to My Rack stays.
+    if (value < position.minScrollExtent) {
+      return value - position.minScrollExtent;
+    }
+    return super.applyBoundaryConditions(position, value);
   }
 
   @override
@@ -146,10 +156,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     // Home: PageView owns the upward swipe into My Rack.
     // My Rack: list owns vertical scroll; top overscroll is bridged into the
     // page controller so the return swipe still follows the finger slowly.
+    // Clamping (not bouncing) keeps Home fixed on top→bottom pull — no white gap.
     if (_currentIndex == 1) {
       return const NeverScrollableScrollPhysics();
     }
-    return const _ReelsPageScrollPhysics(parent: BouncingScrollPhysics());
+    return const _ReelsPageScrollPhysics(parent: ClampingScrollPhysics());
   }
 
   bool _onRackOverscrollBridge(ScrollNotification notification) {

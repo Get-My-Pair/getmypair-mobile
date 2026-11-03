@@ -24,6 +24,8 @@ import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../profile/presentation/utils/user_notifications.dart';
+import '../../../profile/presentation/utils/saved_location_sync.dart';
+import '../../../profile/presentation/pages/saved_addresses_page.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../articles/domain/entities/article.dart';
@@ -310,10 +312,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _currentAddress = '📍 Fetching location...';
-  bool _isFetchingLocation = false;
   List<Article>? _rackArticles;
   bool _rackLoading = true;
   String? _rackError;
+  AddressParts? _detectedLocationParts;
+  bool _locationSavePromptHandled = false;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
@@ -333,20 +336,29 @@ class _HomePageState extends State<HomePage> {
   /// Tracks leaving Home so returning from My Rack can refresh preview/stats.
   bool _leftHomeTab = false;
 
+  /// Short place label for the home header (one row). Prefer area / city.
   static String _formatPlacemarkForHomeHeader(Placemark p) {
-    final parts = [
-      p.subThoroughfare,
-      p.thoroughfare,
+    final area = [
       p.subLocality,
       p.locality,
+      p.subAdministrativeArea,
       p.administrativeArea,
-      p.postalCode,
     ]
         .where((e) => e != null && e.toString().trim().isNotEmpty)
         .map((e) => e!.trim())
         .toList();
-    if (parts.isEmpty) return _fallbackAddress;
-    return '📍 ${parts.join(', ')}';
+    if (area.isEmpty) {
+      final street = [
+        p.thoroughfare,
+        p.locality,
+      ]
+          .where((e) => e != null && e.toString().trim().isNotEmpty)
+          .map((e) => e!.trim())
+          .toList();
+      if (street.isEmpty) return _fallbackAddress;
+      return '📍 ${street.take(2).join(', ')}';
+    }
+    return '📍 ${area.take(2).join(', ')}';
   }
 
   @override
@@ -386,7 +398,6 @@ class _HomePageState extends State<HomePage> {
     _leftHomeTab = false;
     _loadRackPreview();
     _loadHomeStats();
-    _getCurrentLocation();
   }
 
   void _dismissHomeSearchKeyboard() {
@@ -494,66 +505,82 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Home header always shows device GPS location — never a saved address.
   Future<void> _getCurrentLocation() async {
-    if (_isFetchingLocation) return;
-    _isFetchingLocation = true;
-    if (mounted) {
-      setState(() => _currentAddress = '📍 Fetching location...');
-    }
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted) {
-          setState(() => _currentAddress = '📍 Location services disabled');
-        }
+        setState(() => _currentAddress = '📍 Location services disabled');
         return;
       }
 
-      var permission = await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          if (mounted) {
-            setState(() => _currentAddress = '📍 Location permission denied');
-          }
+          setState(() => _currentAddress = '📍 Location permission denied');
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          setState(() => _currentAddress = '📍 Location permanently denied');
-        }
+        setState(() => _currentAddress = '📍 Location permanently denied');
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
+      Position position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
 
-      final placemarks = await Geocoding().placemarkFromCoordinates(
+      List<Placemark> placemarks = await Geocoding().placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
 
-      if (!mounted) return;
       if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        _detectedLocationParts = AddressParts.fromPlacemark(place);
         setState(() {
-          _currentAddress = _formatPlacemarkForHomeHeader(placemarks.first);
+          _currentAddress = _formatPlacemarkForHomeHeader(place);
         });
+        _maybePromptSaveDetectedLocation();
       } else {
         setState(() => _currentAddress = '📍 Location unavailable');
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _currentAddress = '📍 Location unavailable');
-      }
-    } finally {
-      _isFetchingLocation = false;
+    } catch (e) {
+      setState(() => _currentAddress = '📍 Location unavailable');
     }
+  }
+
+  Future<void> _maybePromptSaveDetectedLocation() async {
+    if (_locationSavePromptHandled || _detectedLocationParts == null) return;
+
+    final profile =
+        userProfileFromProfileState(context.read<ProfileBloc>().state);
+    if (profile == null) return;
+
+    // Keep showing live GPS on home; saved addresses are edited via tap → page.
+    if (profile.addresses.isNotEmpty) {
+      _locationSavePromptHandled = true;
+      return;
+    }
+
+    _locationSavePromptHandled = true;
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {},
+      (token) => SavedLocationSync.maybePersist(
+        context: context,
+        profileBloc: context.read<ProfileBloc>(),
+        accessToken: token,
+        parts: _detectedLocationParts!,
+        addresses: profile.addresses,
+        promptOnlyWhenEmpty: true,
+      ),
+    );
   }
 
   static String _articleImageUrl(String? path) {
@@ -649,6 +676,43 @@ class _HomePageState extends State<HomePage> {
 
   String get _pairsInCareDisplay {
     return _pairsInCare.toString().padLeft(2, '0');
+  }
+
+  Future<void> _openSavedLocationPage() async {
+    final profile =
+        userProfileFromProfileState(context.read<ProfileBloc>().state);
+    if (profile == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading profile… try again in a moment.')),
+      );
+      return;
+    }
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in again to edit location.')),
+        );
+      },
+      (token) async {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider.value(
+              value: context.read<ProfileBloc>(),
+              child: SavedAddressesPage(
+                profile: profile,
+                accessToken: token,
+              ),
+            ),
+          ),
+        );
+        if (!mounted) return;
+        // Home always shows live GPS; refresh after returning from addresses.
+        await _getCurrentLocation();
+      },
+    );
   }
 
   Future<void> _loadHomeStats() async {
@@ -771,6 +835,9 @@ class _HomePageState extends State<HomePage> {
           if (state is ProfileError && _profileDataLoading) {
             if (mounted) setState(() => _profileDataLoading = false);
           }
+          if (state is ProfileLoaded || state is AddressActionLoading) {
+            _maybePromptSaveDetectedLocation();
+          }
           if (state is ProfileLoaded) {
             final activeId = state.profile.isSelfActive
                 ? kSelfProfileId
@@ -860,7 +927,7 @@ class _HomePageState extends State<HomePage> {
                                   layoutScale: layoutScale,
                                   onLocationTap: () async {
                                     _dismissHomeSearchKeyboard();
-                                    await _getCurrentLocation();
+                                    await _openSavedLocationPage();
                                   },
                                   searchController: _searchController,
                                   searchFocusNode: _searchFocusNode,
@@ -2157,6 +2224,7 @@ class _HomeTopCard extends StatelessWidget {
     this.layoutScale = 1.0,
   });
 
+  /// Single-line location for the home header (extra address parts hidden).
   static String _addressLineForHome(String raw) {
     final s = raw.replaceFirst(RegExp(r'^📍\s*'), '').trim();
     final cleanedSegments = s
@@ -2169,8 +2237,9 @@ class _HomeTopCard extends StatelessWidget {
               e.toLowerCase() != 'undefined',
         )
         .toList();
-    if (cleanedSegments.isEmpty) return 'Bangalore';
-    return cleanedSegments.join(', ');
+    if (cleanedSegments.isEmpty) return 'Fetching location…';
+    // One row: show at most the first two short parts; rest stay hidden.
+    return cleanedSegments.take(2).join(', ');
   }
 
   @override
@@ -2289,17 +2358,22 @@ class _HomeTopCard extends StatelessWidget {
                             onTap: onLocationTap,
                             behavior: HitTestBehavior.opaque,
                             child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SizedBox(
-                                  width: locationIconSize,
-                                  height: locationIconSize,
-                                  child: SvgPicture.asset(
-                                    _kHomeMapPinSvgAsset,
-                                    fit: BoxFit.contain,
-                                    colorFilter: const ColorFilter.mode(
-                                      _kHeaderIconTint,
-                                      BlendMode.srcIn,
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    top: (1.5 * s).clamp(1.0, 3.0),
+                                  ),
+                                  child: SizedBox(
+                                    width: locationIconSize,
+                                    height: locationIconSize,
+                                    child: SvgPicture.asset(
+                                      _kHomeMapPinSvgAsset,
+                                      fit: BoxFit.contain,
+                                      colorFilter: const ColorFilter.mode(
+                                        _kHeaderIconTint,
+                                        BlendMode.srcIn,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2310,8 +2384,11 @@ class _HomeTopCard extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      // Line 1: Home + arrow
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
                                         children: [
                                           Text(
                                             'Home',
@@ -2348,26 +2425,29 @@ class _HomeTopCard extends StatelessWidget {
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: (4 * s).clamp(2.0, 6.0)),
+                                      SizedBox(height: (3 * s).clamp(2.0, 5.0)),
+                                      // Line 2: location only (single row)
                                       contentLoading
                                           ? _HomeSkeletonBone(
-                                              width: 120,
-                                              height: ((compact ? 14.0 : 16.0) *
+                                              width: 140,
+                                              height: ((compact ? 13.0 : 14.0) *
                                                       s)
-                                                  .clamp(10.0, 16.0),
+                                                  .clamp(10.0, 15.0),
                                               radius: 6,
                                               color: Colors.white
                                                   .withValues(alpha: 0.28),
                                             )
                                           : Text(
                                               addressLine,
-                                              maxLines: 2,
+                                              maxLines: 1,
+                                              softWrap: false,
                                               overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.left,
                                               style: GoogleFonts.montserrat(
                                                 fontSize:
-                                                    ((compact ? 14.0 : 16.0) *
+                                                    ((compact ? 13.0 : 14.0) *
                                                             s)
-                                                        .clamp(10.0, 16.0),
+                                                        .clamp(10.0, 15.0),
                                                 fontWeight: FontWeight.w400,
                                                 color: _kOnHeaderTextMuted,
                                                 height: 1.2,
