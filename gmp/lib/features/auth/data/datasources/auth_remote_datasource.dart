@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
-import '../dev_otp_settings.dart';
 import '../models/login_response_model.dart';
 import '../models/user_model.dart';
 
@@ -111,19 +110,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         body: {'mobile': normalizedMobile},
       );
 
-      // Keep OTP in the payload only when the Dev OTP toggle is ON.
-      // OFF = MSG91/SMS path (strip code from the response).
+      // MSG91/SMS path only — never expose OTP from the API response.
       final data = Map<String, dynamic>.from(
         response['data'] as Map<String, dynamic>? ?? {},
       );
-
-      await DevOtpSettings.ensureLoaded();
-      if (!DevOtpSettings.isEnabled) {
-        data.remove('otp');
-      } else if (data['otp'] != null) {
-        // ignore: avoid_print
-        print('DEBUG: Dev OTP: ${data['otp']}');
-      }
+      data.remove('otp');
 
       return data;
     } catch (e) {

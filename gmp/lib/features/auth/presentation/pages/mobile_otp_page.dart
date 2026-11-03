@@ -8,12 +8,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
-// import '../../data/dev_otp_settings.dart'; // floating Dev OTP / MSG91 toggle commented out
 import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import '../widgets/otp_dev_dialog.dart';
 import 'otp_page.dart';
 import 'privacy_policy_page.dart';
 import 'terms_of_service_page.dart';
@@ -59,10 +57,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   void initState() {
     super.initState();
     _phoneFocusNode.addListener(_onPhoneFocusChanged);
-    // Floating Dev OTP / MSG91 toggle commented out — always MSG91/SMS.
-    // DevOtpSettings.ensureLoaded().then((_) {
-    //   if (mounted) setState(() {});
-    // });
   }
 
   @override
@@ -224,31 +218,14 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     context.read<AuthBloc>().add(AuthSendOTP(fullMobile));
   }
 
-  void _openOtpPage(String mobile, {String? otp}) {
+  void _openOtpPage(String mobile) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => OTPPage(
           mobile: mobile,
           countryCode: _selectedCountry.dialCode,
           phoneNumber: _phoneController.text,
-          prefilledOtp: otp,
         ),
-      ),
-    );
-  }
-
-  void _showOtpDialog(String otp, String mobile) {
-    showDevOtpDialog(
-      context: context,
-      otp: otp,
-      primaryActionLabel: 'Continue',
-      onPrimary: () => _openOtpPage(mobile, otp: otp),
-      secondaryActionLabel: 'Copy & Continue',
-      onSecondary: (dialogContext) => copyOtpAndCloseDialog(
-        dialogContext: dialogContext,
-        hostContext: context,
-        otp: otp,
-        onAfterCopy: () async => _openOtpPage(mobile, otp: otp),
       ),
     );
   }
@@ -346,14 +323,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
             if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-            // Dev OTP toggle ON → popup; OFF → MSG91/SMS path (no popup).
-            if (isDevOtpEnabled &&
-                state.otp != null &&
-                state.otp!.isNotEmpty) {
-              _showOtpDialog(state.otp!, state.mobile);
-            } else {
-              _openOtpPage(state.mobile);
-            }
+            _openOtpPage(state.mobile);
           } else if (state is AuthError) {
             setState(() => _isSendingOtp = false);
             _stopSendingProgress();
@@ -408,60 +378,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                 ),
               ),
             ),
-            // Testing only: floating Dev OTP / MSG91 toggle — commented out for release.
-            // Positioned(
-            //   top: topInset + 6,
-            //   right: 10,
-            //   child: ValueListenableBuilder<bool>(
-            //     valueListenable: DevOtpSettings.enabled,
-            //     builder: (context, isOn, _) {
-            //       return Material(
-            //         color: Colors.black.withValues(alpha: 0.28),
-            //         borderRadius: BorderRadius.circular(18),
-            //         child: Padding(
-            //           padding: const EdgeInsets.fromLTRB(8, 2, 2, 2),
-            //           child: Row(
-            //             mainAxisSize: MainAxisSize.min,
-            //             children: [
-            //               Text(
-            //                 isOn ? 'Dev OTP' : 'MSG91',
-            //                 style: GoogleFonts.montserrat(
-            //                   color: _kOnGradient,
-            //                   fontSize: 10,
-            //                   fontWeight: FontWeight.w600,
-            //                   height: 1.1,
-            //                 ),
-            //               ),
-            //               Transform.scale(
-            //                 scale: 0.72,
-            //                 child: Switch.adaptive(
-            //                   value: isOn,
-            //                   activeThumbColor: _kOnGradient,
-            //                   activeTrackColor: _kAccent,
-            //                   inactiveThumbColor: _kOnGradient,
-            //                   inactiveTrackColor: Colors.white24,
-            //                   materialTapTargetSize:
-            //                       MaterialTapTargetSize.shrinkWrap,
-            //                   onChanged: (value) async {
-            //                     await DevOtpSettings.setEnabled(value);
-            //                     if (!context.mounted) return;
-            //                     await showAppFeedbackAlert(
-            //                       context,
-            //                       message: value
-            //                           ? 'Dev OTP popup enabled'
-            //                           : 'MSG91 / SMS mode enabled',
-            //                       type: AppFeedbackType.success,
-            //                     );
-            //                   },
-            //                 ),
-            //               ),
-            //             ],
-            //           ),
-            //         ),
-            //       );
-            //     },
-            //   ),
-            // ),
             Positioned(
               left: 0,
               right: 0,

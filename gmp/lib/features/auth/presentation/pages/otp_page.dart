@@ -15,7 +15,6 @@ import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import '../widgets/otp_dev_dialog.dart';
 import 'ai_onboarding_page.dart';
 
 class OTPPage extends StatefulWidget {
@@ -24,13 +23,11 @@ class OTPPage extends StatefulWidget {
     required this.mobile,
     this.countryCode,
     this.phoneNumber,
-    this.prefilledOtp,
   });
 
   final String mobile;
   final String? countryCode;
   final String? phoneNumber;
-  final String? prefilledOtp;
 
   @override
   State<OTPPage> createState() => _OTPPageState();
@@ -71,19 +68,7 @@ class _OTPPageState extends State<OTPPage> {
   void initState() {
     super.initState();
     _startResendTimer();
-    // Prefill only when Dev OTP toggle is ON (API returned a dummy OTP).
-    if (isDevOtpEnabled) {
-      final prefilled = _cleanOtp(widget.prefilledOtp);
-      if (prefilled.length == 6) {
-        _otp = prefilled;
-        _pinController.text = prefilled;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _applyOtpAndVerify(prefilled);
-        });
-      }
-    }
-    // Production: listen for SMS and autofill as soon as the page opens.
+    // Listen for SMS and autofill as soon as the page opens.
     _startSmsAutofillListen();
   }
 
@@ -229,22 +214,6 @@ class _OTPPageState extends State<OTPPage> {
     });
   }
 
-  void _showOtpDialog(BuildContext hostContext, String otp) {
-    showDevOtpDialog(
-      context: hostContext,
-      otp: otp,
-      primaryActionLabel: 'Close',
-      onPrimary: () {},
-      secondaryActionLabel: 'Copy & Close',
-      onSecondary: (dialogContext) => copyOtpAndCloseDialog(
-        dialogContext: dialogContext,
-        hostContext: hostContext,
-        otp: otp,
-        onAfterCopy: () async {},
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -290,18 +259,11 @@ class _OTPPageState extends State<OTPPage> {
               (route) => false,
             );
           } else if (state is AuthOTPSent) {
-            // Dev OTP popup only on Chrome/web. Mobile & release use SMS only.
-            if (isDevOtpEnabled &&
-                state.otp != null &&
-                state.otp!.isNotEmpty) {
-              _showOtpDialog(context, state.otp!);
-            } else {
-              await showAppFeedbackAlert(
-                context,
-                message: 'OTP sent successfully',
-                type: AppFeedbackType.success,
-              );
-            }
+            await showAppFeedbackAlert(
+              context,
+              message: 'OTP sent successfully',
+              type: AppFeedbackType.success,
+            );
           } else if (state is AuthError) {
             setState(() => _isVerifyingOtp = false);
             _stopVerifyingProgress();
