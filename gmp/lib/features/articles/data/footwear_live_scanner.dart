@@ -75,17 +75,25 @@ class FootwearLiveScanner {
     _onStatusChanged = null;
     _detectStreak = 0;
     _rejectStreakCount = 0;
-    _processing = false;
     _lastProcessedAt = null;
 
-    if (_streamActive && controller != null) {
-      try {
-        if (controller.value.isInitialized &&
-            controller.value.isStreamingImages) {
-          await controller.stopImageStream();
+    // Wait for any in-flight ML frame so takePicture is not racing the stream.
+    final deadline = DateTime.now().add(const Duration(milliseconds: 1200));
+    while (_processing && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    _processing = false;
+
+    if (controller != null && controller.value.isInitialized) {
+      // Always stop if Dart thinks we are streaming OR CameraX still reports it.
+      if (_streamActive || controller.value.isStreamingImages) {
+        try {
+          if (controller.value.isStreamingImages) {
+            await controller.stopImageStream();
+          }
+        } catch (e) {
+          debugPrint('FootwearLiveScanner: stopImageStream failed: $e');
         }
-      } catch (e) {
-        debugPrint('FootwearLiveScanner: stopImageStream failed: $e');
       }
     }
     _streamActive = false;
@@ -93,6 +101,21 @@ class FootwearLiveScanner {
     await _labeler?.close();
     _labeler = null;
     _emit(FootwearScanStatus.idle);
+  }
+
+  /// Stops streaming and leaves the controller ready for [CameraController.takePicture].
+  Future<void> prepareForStillCapture(CameraController controller) async {
+    await stop();
+    // CameraX needs a short settle after unbinding ImageAnalysis.
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    if (controller.value.isInitialized && controller.value.isStreamingImages) {
+      try {
+        await controller.stopImageStream();
+      } catch (e) {
+        debugPrint('FootwearLiveScanner: prepareForStillCapture stop failed: $e');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+    }
   }
 
   void updateDeviceOrientation(DeviceOrientation orientation) {

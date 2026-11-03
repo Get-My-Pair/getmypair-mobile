@@ -1,28 +1,12 @@
 import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/user_facing_error.dart';
 
 class PaymentErrorHandler {
   PaymentErrorHandler._();
 
   static String messageFrom(Object error) {
-    if (error is Failure) return error.message;
-    final raw = error.toString().replaceFirst('Exception: ', '');
-    final lower = raw.toLowerCase();
-    if (lower.contains('already paid') ||
-        lower.contains('already been paid') ||
-        lower.contains('payment already completed') ||
-        lower.contains('duplicate payment')) {
-      return 'This service request has already been paid.';
-    }
-    if (raw.contains('accept the final service cost')) {
-      return 'Please accept the final service cost before paying.';
-    }
-    if (raw.contains('Connection timeout') || raw.contains('internet')) {
-      return 'Network issue. Check your connection and try again.';
-    }
-    if (raw.contains('Payment not found')) {
-      return 'Payment record not found. Try refreshing or contact support.';
-    }
-    return raw.isNotEmpty ? raw : 'Something went wrong with your payment.';
+    // Never surface raw backend/API payloads in payment UI.
+    return UserFacingError.sanitize(error is Failure ? error.message : error);
   }
 
   static bool isRetryable(Object error) {

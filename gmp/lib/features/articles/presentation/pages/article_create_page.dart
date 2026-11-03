@@ -160,13 +160,20 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
       _imageFiles.length >= _minFootwearPhotos &&
       _imageFiles.length <= _maxFootwearPhotos;
 
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   Future<void> _openUploadFootwear() async {
+    _dismissKeyboard();
     final files = await Navigator.of(context).push<List<File>>(
       MaterialPageRoute(
         builder: (_) => UploadFootwearPage(initialFiles: List<File>.from(_imageFiles)),
       ),
     );
     if (!mounted) return;
+    // Returning from camera/gallery often restores text focus — keep keyboard closed.
+    _dismissKeyboard();
     if (files == null || files.isEmpty) return;
     setState(() {
       _imageFiles
@@ -276,13 +283,17 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     final horizontal = Responsive.horizontalPaddingOf(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
+      body: GestureDetector(
+        onTap: _dismissKeyboard,
+        behavior: HitTestBehavior.deferToChild,
+        child: Stack(
         children: [
           ...BgTheme.background(),
           SafeArea(
             child: Form(
               key: _formKey,
               child: ListView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 28),
                 children: [
                 Row(
@@ -359,6 +370,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -400,6 +412,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   }
 
   Future<void> _openBrandPicker() async {
+    _dismissKeyboard();
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -409,7 +422,9 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
       ),
       builder: (ctx) => const _BrandPickerSheet(),
     );
-    if (selected != null && mounted) {
+    if (!mounted) return;
+    _dismissKeyboard();
+    if (selected != null) {
       _selectBrand(selected);
     }
   }
@@ -461,6 +476,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   }
 
   Future<void> _openPurchaseYearPicker() async {
+    _dismissKeyboard();
     final now = DateTime.now();
     final initial = _purchaseYear != null
         ? DateTime(_purchaseYear!, 6, 1)
@@ -1039,7 +1055,8 @@ class _BrandPickerSheetState extends State<_BrandPickerSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
                   controller: _searchController,
-                  autofocus: true,
+                  // Keyboard only when user taps search — don't open on sheet open.
+                  autofocus: false,
                   style: GoogleFonts.montserrat(color: Colors.white, fontSize: 15),
                   decoration: InputDecoration(
                     hintText: 'Search brands',
@@ -1079,7 +1096,10 @@ class _BrandPickerSheetState extends State<_BrandPickerSheet> {
                                 fontSize: 15,
                               ),
                             ),
-                            onTap: () => Navigator.of(context).pop(brand.name),
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              Navigator.of(context).pop(brand.name);
+                            },
                           );
                         },
                       ),

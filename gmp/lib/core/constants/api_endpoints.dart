@@ -153,6 +153,18 @@ class ApiEndpoints {
   static String get userProfileAddresses =>
       '$baseUrl$userProfilePrefix/addresses';
 
+  /// web | android | ios — backend uses this for Dev OTP vs MSG91 SMS.
+  static String get clientPlatformHeader {
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+        return 'ios';
+      case TargetPlatform.android:
+      default:
+        return 'android';
+    }
+  }
+
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
     final headers = <String, String>{
@@ -160,6 +172,7 @@ class ApiEndpoints {
       'Accept': 'application/json',
       'X-App-Source': AppConstants.appSourceForApi,
       'X-App-Version': AppConstants.appVersion,
+      'X-Client-Platform': clientPlatformHeader,
     };
 
     if (accessToken != null) {

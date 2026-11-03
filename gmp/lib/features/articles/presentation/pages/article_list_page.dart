@@ -5,8 +5,10 @@ import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/errors/user_facing_error.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/core/widgets/network_error_view.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -130,7 +132,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
         } catch (e) {
           if (!mounted) return;
           setState(() {
-            _error = e.toString().replaceFirst('Exception: ', '');
+            _error = UserFacingError.sanitize(e);
             _articles = null;
             _loading = false;
           });
@@ -253,32 +255,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(
-                fontSize: 15,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            AppGradientNextStyleButton(
-              label: 'Retry',
-              onPressed: _loadArticles,
-              leading: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-              showTrailingIcon: false,
-            ),
-          ],
-        ),
-      ),
+    return NetworkErrorView(
+      error: _error,
+      onRetry: _loadArticles,
     );
   }
 
@@ -1277,7 +1256,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
         } catch (e) {
           if (!mounted) return;
           setState(() {
-            _error = e.toString().replaceFirst('Exception: ', '');
+            _error = UserFacingError.sanitize(e);
             _articles = null;
             _loading = false;
           });
@@ -1395,36 +1374,9 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildError(BuildContext context) {
-    final h = Responsive.horizontalPaddingOf(context);
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: h),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(
-                fontSize: Responsive.fontSize(context, 15),
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _loadArticles,
-              icon: const Icon(Icons.refresh, size: 20),
-              label: const Text('Retry'),
-              style: FilledButton.styleFrom(
-                backgroundColor: _rackTeal,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return NetworkErrorView(
+      error: _error,
+      onRetry: _loadArticles,
     );
   }
 

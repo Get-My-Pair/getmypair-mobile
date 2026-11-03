@@ -12,6 +12,7 @@ import '../../data/models/country_code.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../widgets/otp_dev_dialog.dart';
 import 'otp_page.dart';
 import 'privacy_policy_page.dart';
 import 'terms_of_service_page.dart';
@@ -218,14 +219,33 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     context.read<AuthBloc>().add(AuthSendOTP(fullMobile));
   }
 
-  void _openOtpPage(String mobile) {
+  void _openOtpPage(String mobile, {String? otp}) {
+    _phoneFocusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => OTPPage(
           mobile: mobile,
           countryCode: _selectedCountry.dialCode,
           phoneNumber: _phoneController.text,
+          prefilledOtp: isWebDevOtpEnabled ? otp : null,
         ),
+      ),
+    );
+  }
+
+  void _showWebDevOtpDialog(String otp, String mobile) {
+    showDevOtpDialog(
+      context: context,
+      otp: otp,
+      primaryActionLabel: 'Continue',
+      onPrimary: () => _openOtpPage(mobile, otp: otp),
+      secondaryActionLabel: 'Copy & Continue',
+      onSecondary: (dialogContext) => copyOtpAndCloseDialog(
+        dialogContext: dialogContext,
+        hostContext: context,
+        otp: otp,
+        onAfterCopy: () async => _openOtpPage(mobile, otp: otp),
       ),
     );
   }
@@ -323,7 +343,14 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             _stopSendingProgress();
             // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
             if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
-            _openOtpPage(state.mobile);
+            // Flutter web → Dev OTP popup; Android/iOS → production SMS only.
+            if (isWebDevOtpEnabled &&
+                state.otp != null &&
+                state.otp!.isNotEmpty) {
+              _showWebDevOtpDialog(state.otp!, state.mobile);
+            } else {
+              _openOtpPage(state.mobile);
+            }
           } else if (state is AuthError) {
             setState(() => _isSendingOtp = false);
             _stopSendingProgress();
@@ -571,6 +598,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                             child: TextField(
                                               controller: _phoneController,
                                               focusNode: _phoneFocusNode,
+                                              autofocus: false,
                                               keyboardType: TextInputType.phone,
                                               textAlignVertical: TextAlignVertical.center,
                                               scrollPadding: const EdgeInsets.only(
@@ -1106,6 +1134,7 @@ class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: TextField(
                 controller: _search,
+                autofocus: false,
                 decoration: InputDecoration(
                   hintText: 'Search country or dial code',
                   hintStyle: GoogleFonts.montserrat(

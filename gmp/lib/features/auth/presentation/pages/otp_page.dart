@@ -15,6 +15,7 @@ import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../widgets/otp_dev_dialog.dart';
 import 'ai_onboarding_page.dart';
 
 class OTPPage extends StatefulWidget {
@@ -23,11 +24,14 @@ class OTPPage extends StatefulWidget {
     required this.mobile,
     this.countryCode,
     this.phoneNumber,
+    this.prefilledOtp,
   });
 
   final String mobile;
   final String? countryCode;
   final String? phoneNumber;
+  /// Web Dev OTP only — ignored on Android/iOS.
+  final String? prefilledOtp;
 
   @override
   State<OTPPage> createState() => _OTPPageState();
@@ -68,7 +72,23 @@ class _OTPPageState extends State<OTPPage> {
   void initState() {
     super.initState();
     _startResendTimer();
-    // Listen for SMS and autofill as soon as the page opens.
+    // Don't inherit keyboard focus from the phone entry page.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    });
+    // Web Dev OTP: prefill when API returned the code.
+    if (isWebDevOtpEnabled) {
+      final prefilled = _cleanOtp(widget.prefilledOtp);
+      if (prefilled.length == 6) {
+        _otp = prefilled;
+        _pinController.text = prefilled;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _applyOtpAndVerify(prefilled);
+        });
+      }
+    }
+    // Android/iOS: listen for SMS and autofill.
     _startSmsAutofillListen();
   }
 
@@ -259,11 +279,29 @@ class _OTPPageState extends State<OTPPage> {
               (route) => false,
             );
           } else if (state is AuthOTPSent) {
-            await showAppFeedbackAlert(
-              context,
-              message: 'OTP sent successfully',
-              type: AppFeedbackType.success,
-            );
+            if (isWebDevOtpEnabled &&
+                state.otp != null &&
+                state.otp!.isNotEmpty) {
+              await showDevOtpDialog(
+                context: context,
+                otp: state.otp!,
+                primaryActionLabel: 'Close',
+                onPrimary: () {},
+                secondaryActionLabel: 'Copy & Close',
+                onSecondary: (dialogContext) => copyOtpAndCloseDialog(
+                  dialogContext: dialogContext,
+                  hostContext: context,
+                  otp: state.otp!,
+                  onAfterCopy: () async {},
+                ),
+              );
+            } else {
+              await showAppFeedbackAlert(
+                context,
+                message: 'OTP sent successfully',
+                type: AppFeedbackType.success,
+              );
+            }
           } else if (state is AuthError) {
             setState(() => _isVerifyingOtp = false);
             _stopVerifyingProgress();
@@ -575,7 +613,8 @@ class _OtpCard extends StatelessWidget {
                     child: MaterialPinField(
                       length: 6,
                       pinController: pinController,
-                      autoFocus: true,
+                      // Keyboard only when user taps a pin cell — don't open on page load.
+                      autoFocus: false,
                       onChanged: onChanged,
                       onCompleted: onCompleted,
                       // iOS / Android keyboard OTP suggestion when SMS arrives.

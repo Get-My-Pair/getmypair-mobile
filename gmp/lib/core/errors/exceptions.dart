@@ -1,3 +1,5 @@
+import 'package:gmp/core/errors/user_facing_error.dart';
+
 class ServerException implements Exception {
   final String message;
   /// HTTP status code when exception is from an API response (e.g. 401, 403).
@@ -19,7 +21,8 @@ String userFacingFamilyProfileError(String message) {
   if (isUnregisteredRouteMessage(message)) {
     return 'Could not complete this family profile action. Please try again.';
   }
-  return message;
+  // Never return raw backend/API text to the UI.
+  return UserFacingError.sanitize(message);
 }
 
 class NetworkException implements Exception {

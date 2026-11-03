@@ -4,9 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/errors/user_facing_error.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/core/widgets/network_error_view.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/payment/presentation/bloc/payment_bloc.dart';
 import 'package:gmp/features/payment/presentation/pages/payment_request_page.dart';
@@ -84,7 +86,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
           if (!mounted) return;
           setState(() {
             _loading = false;
-            _error = e.toString().replaceFirst('Exception: ', '');
+            _error = UserFacingError.sanitize(e);
           });
         }
       },
@@ -385,7 +387,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
         } catch (e) {
           if (!mounted) return;
           setState(() {
-            _error = e.toString().replaceFirst('Exception: ', '');
+            _error = UserFacingError.sanitize(e);
           });
         } finally {
           if (mounted) setState(() => _responding = false);
@@ -442,7 +444,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
           );
         } catch (e) {
           if (!mounted) return;
-          setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+          setState(() => _error = UserFacingError.sanitize(e));
         } finally {
           if (mounted) setState(() => _cancelling = false);
         }
@@ -600,18 +602,9 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                         child: _loading
                             ? const AppSkeletonCards()
                             : _error != null
-                                ? Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(24),
-                                      child: Text(
-                                        _error!,
-                                        textAlign: TextAlign.center,
-                                        style: GoogleFonts.montserrat(
-                                          color: AppColors.error,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
+                                ? NetworkErrorView(
+                                    error: _error,
+                                    onRetry: _load,
                                   )
                                 : _request == null
                                     ? Center(
@@ -899,39 +892,32 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                             color: AppColors.success.withValues(alpha: 0.35),
                           ),
                         ),
-                        child: Row(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.check_circle_rounded,
-                              color: AppColors.success,
-                              size: 28,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Paid successfully',
-                                    style: GoogleFonts.montserrat(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Amount: ₹${_fmtAmount(_request!['actualCost'])}\n'
-                                    'You don’t need to pay again for this request.',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 13,
-                                      color: AppColors.textSecondary,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ],
+                            Text(
+                              'Payment completed',
+                              style: GoogleFonts.montserrat(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: AppColors.textPrimary,
                               ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Amount: ₹${_fmtAmount(_request!['actualCost'])}. '
+                              'You don’t need to pay again for this request.',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                                height: 1.35,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            const PayNowButton(
+                              label: 'Payment Paid',
+                              paid: true,
+                              onPressed: null,
                             ),
                           ],
                         ),

@@ -7,6 +7,7 @@ import '../../../../core/network/dio_client.dart';
 import '../models/login_response_model.dart';
 import '../models/user_model.dart';
 
+
 abstract class AuthRemoteDataSource {
   Future<Map<String, dynamic>> sendOTP(String mobile);
   Future<LoginResponseModel> verifyOTP(String mobile, String otp);
@@ -110,11 +111,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         body: {'mobile': normalizedMobile},
       );
 
-      // MSG91/SMS path only — never expose OTP from the API response.
+      // Web Dev OTP: keep `otp` for the popup. Android/iOS: strip it.
       final data = Map<String, dynamic>.from(
         response['data'] as Map<String, dynamic>? ?? {},
       );
-      data.remove('otp');
+      if (!kIsWeb) {
+        data.remove('otp');
+      }
 
       return data;
     } catch (e) {

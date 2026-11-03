@@ -57,13 +57,17 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _images = List<File>.from(widget.initialFiles.take(_maxPhotos));
+    // Don't inherit focus/keyboard from the previous form page.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    });
     _initCamera();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _liveScanner.stop();
+    // Fire-and-forget: stop stream then dispose controller.
     _disposeCamera();
     super.dispose();
   }
@@ -79,10 +83,11 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     );
   }
 
-  void _disposeCamera() {
-    _liveScanner.stop();
-    _cameraController?.dispose();
+  Future<void> _disposeCamera() async {
+    await _liveScanner.stop();
+    final controller = _cameraController;
     _cameraController = null;
+    await controller?.dispose();
   }
 
   void _onScanStatusChanged(FootwearScanStatus status) {
@@ -141,7 +146,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     }
 
     try {
-      _disposeCamera();
+      await _disposeCamera();
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         throw StateError('No camera found on this device.');
@@ -182,7 +187,10 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/footwear_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    return File(xFile.path).copy(path);
+    // Prefer bytes write — more reliable than File.copy across CameraX temp paths.
+    final bytes = await xFile.readAsBytes();
+    if (bytes.isEmpty) return null;
+    return File(path).writeAsBytes(bytes, flush: true);
   }
 
   Future<bool> _ensureGalleryPermission() async {
@@ -207,6 +215,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
 
   Future<void> _pickFromGallery() async {
     if (_remaining <= 0) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!await _ensureGalleryPermission()) return;
 
     final picker = ImagePicker();
@@ -238,16 +247,31 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     if (controller == null ||
         !controller.value.isInitialized ||
         _capturing ||
+        _validatingImage ||
         _remaining <= 0) {
       return;
     }
 
     setState(() => _capturing = true);
-    await _liveScanner.stop();
     try {
+      // Must fully stop the live ML image stream before takePicture (CameraX).
+      await _liveScanner.prepareForStillCapture(controller);
+      if (!mounted || _cameraController != controller) return;
+      if (!controller.value.isInitialized) {
+        throw StateError('Camera is not ready. Please retry.');
+      }
+
       final xFile = await controller.takePicture();
       final file = await _persistCapture(xFile);
-      if (file == null || !mounted) return;
+      if (file == null || !mounted) {
+        if (mounted) {
+          await _showMessageDialog(
+            title: 'Capture failed',
+            message: 'Could not save the photo. Please try again.',
+          );
+        }
+        return;
+      }
       await _processNewImage(file);
     } catch (e) {
       if (mounted) {
@@ -260,7 +284,10 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
       if (mounted) {
         setState(() => _capturing = false);
         final active = _cameraController;
-        if (active != null && active.value.isInitialized) {
+        if (active != null &&
+            active.value.isInitialized &&
+            !_validatingImage &&
+            _remaining > 0) {
           await _startLiveScan(active);
         }
       }
@@ -1013,7 +1040,10 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         children: [
           _actionButton(
             label: atMax ? 'Max $_maxPhotos photos' : 'Click Image',
-            onPressed: !atMax && cameraReady && !_validatingImage
+            onPressed: !atMax &&
+                    cameraReady &&
+                    !_validatingImage &&
+                    !_capturing
                 ? _captureFromPreview
                 : null,
           ),

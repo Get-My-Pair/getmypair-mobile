@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/user_facing_error.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/usecases/check_auth_status.dart';
 import '../../domain/usecases/clear_session_locally.dart';
@@ -213,20 +214,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   String _mapFailureToMessage(Failure failure) {
-    switch (failure.runtimeType) {
-      case ServerFailure:
-        return failure.message;
-      case NetworkFailure:
-        return failure.message;
-      case CacheFailure:
-        return failure.message;
-      case ValidationFailure:
-        return failure.message;
-      case AuthenticationFailure:
-        return failure.message;
-      default:
-        return 'Unexpected error occurred';
-    }
+    // UI never shows raw backend/API payloads.
+    return UserFacingError.sanitize(failure);
   }
 }
 

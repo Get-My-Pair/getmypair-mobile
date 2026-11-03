@@ -9,29 +9,36 @@ class PayNowButton extends StatelessWidget {
   final bool loading;
   final String label;
   final bool showIcon;
+
+  /// Green disabled “Payment Paid” style after successful payment.
+  final bool paid;
+
   const PayNowButton({
     super.key,
     required this.onPressed,
     this.loading = false,
     this.label = 'Pay now',
     this.showIcon = true,
+    this.paid = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final disabled = paid || (onPressed == null && !loading);
+    final Color? solidColor = paid
+        ? const Color(0xFF16A34A) // clear green for paid/disabled state
+        : (onPressed == null && !loading ? AppColors.disabled : null);
+    final useGradient = !paid && (onPressed != null || loading);
+
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: onPressed == null && !loading
-              ? null
-              : PaymentPageTheme.buttonGradient,
-          color: onPressed == null && !loading
-              ? AppColors.disabled
-              : null,
+          gradient: useGradient && !paid ? PaymentPageTheme.buttonGradient : null,
+          color: solidColor,
           borderRadius: BorderRadius.circular(100),
-          boxShadow: onPressed == null && !loading
+          boxShadow: disabled
               ? null
               : const [
                   BoxShadow(
@@ -44,7 +51,7 @@ class PayNowButton extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: loading ? null : onPressed,
+            onTap: (loading || paid) ? null : onPressed,
             borderRadius: BorderRadius.circular(100),
             child: Center(
               child: loading
@@ -60,8 +67,10 @@ class PayNowButton extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (showIcon) ...[
-                          const Icon(
-                            Icons.payment_rounded,
+                          Icon(
+                            paid
+                                ? Icons.check_circle_rounded
+                                : Icons.payment_rounded,
                             size: 20,
                             color: Colors.white,
                           ),
