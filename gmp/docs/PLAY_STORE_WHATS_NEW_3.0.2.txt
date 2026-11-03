@@ -1,0 +1,8 @@
+What's new in 3.0.2
+
+• Faster, more reliable footwear photo capture
+• Clearer network error screen when you are offline
+• Smoother OTP login with SMS autofill on Android
+• Payment Paid status shown after successful service payment
+• Keyboard opens only when you tap a text field
+• Stability and performance improvements

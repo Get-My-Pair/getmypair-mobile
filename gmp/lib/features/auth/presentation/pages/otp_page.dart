@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+    show TargetPlatform, defaultTargetPlatform, debugPrint, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -196,10 +196,15 @@ class _OTPPageState extends State<OTPPage> {
     }
     _smsListenInFlight = true;
     try {
-      // Android SMS User Consent: system one-tap "Allow" when OTP SMS arrives,
-      // then we autofill + autoverify. Works with MSG91 without an app hash.
-      // (Silent Retriever needs the 11-char app hash appended to the SMS body.)
-      final res = await _smartAuth.getSmsWithUserConsentApi(
+      // Silent SMS Retriever — no Google "Allow" dialog on every login.
+      // Requires the 11-char app hash in the MSG91 SMS body (ANDROID_SMS_APP_HASH).
+      if (kDebugMode) {
+        final sig = await _smartAuth.getAppSignature();
+        if (sig.hasData) {
+          debugPrint('SMS Retriever app hash: ${sig.requireData}');
+        }
+      }
+      final res = await _smartAuth.getSmsWithRetrieverApi(
         matcher: _kOtpSmsMatcher,
       );
       if (!mounted) return;
@@ -207,6 +212,7 @@ class _OTPPageState extends State<OTPPage> {
         final code = _cleanOtp(res.requireData.code);
         if (code.length == 6) {
           _applyOtpAndVerify(code);
+          return;
         }
       }
     } catch (_) {
@@ -219,7 +225,6 @@ class _OTPPageState extends State<OTPPage> {
   Future<void> _stopSmsAutofillListen() async {
     if (!_isAndroidSmsAutofillSupported) return;
     try {
-      await _smartAuth.removeUserConsentApiListener();
       await _smartAuth.removeSmsRetrieverApiListener();
     } catch (_) {}
   }
