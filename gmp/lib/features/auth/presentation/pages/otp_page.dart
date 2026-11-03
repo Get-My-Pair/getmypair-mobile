@@ -270,10 +270,12 @@ class _OTPPageState extends State<OTPPage> {
           if (state is AuthOTPVerified) {
             setState(() => _isVerifyingOtp = false);
             _stopVerifyingProgress();
+            // Success popup for 2s (no OK) then auto-navigate.
             await showAppFeedbackAlert(
               context,
               message: 'Phone verified successfully!',
               type: AppFeedbackType.success,
+              autoDismissAfter: const Duration(seconds: 2),
             );
             if (!context.mounted) return;
             Navigator.of(context).pushAndRemoveUntil(

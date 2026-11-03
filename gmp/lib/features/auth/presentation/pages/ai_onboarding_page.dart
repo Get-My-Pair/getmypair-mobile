@@ -650,7 +650,7 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
             'Hard to find the right fit!',
             'No strong support at heel.',
             'No extra room for toe',
-            'Insole cushioning',
+            'Insocks cushioning',
           ],
           selected: _troubles,
           onChanged: () => setState(() {}),
