@@ -256,6 +256,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     showDevOtpDialog(
       context: context,
       otp: otp,
+      mobile: mobile,
       primaryActionLabel: 'Continue',
       onPrimary: () => _openOtpPage(mobile, otp: otp),
       secondaryActionLabel: 'Copy & Continue',

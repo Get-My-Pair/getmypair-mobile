@@ -1,14 +1,14 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/features/auth/utils/web_dev_otp_log.dart';
+
+export 'package:gmp/features/auth/utils/web_dev_otp_log.dart'
+    show isWebDevOtpEnabled, logWebDevOtpToTerminal;
 
 const Color _kOtpDevPrimary = Color(0xFF062F35);
-
-/// Dev OTP is only for Flutter web. Android/iOS always use production SMS.
-bool get isWebDevOtpEnabled => kIsWeb;
 
 /// Development OTP popup for Flutter web when the API returns the code.
 Future<void> showDevOtpDialog({
@@ -18,7 +18,9 @@ Future<void> showDevOtpDialog({
   String primaryActionLabel = 'Continue',
   String? secondaryActionLabel,
   Future<void> Function(BuildContext dialogContext)? onSecondary,
+  String? mobile,
 }) {
+  logWebDevOtpToTerminal(otp, mobile: mobile);
   return showDialog<void>(
     context: context,
     barrierDismissible: false,

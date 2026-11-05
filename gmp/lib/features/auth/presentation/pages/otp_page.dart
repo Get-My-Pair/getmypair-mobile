@@ -304,6 +304,7 @@ class _OTPPageState extends State<OTPPage> {
               await showDevOtpDialog(
                 context: context,
                 otp: state.otp!,
+                mobile: widget.mobile,
                 primaryActionLabel: 'Close',
                 onPrimary: () {},
                 secondaryActionLabel: 'Copy & Close',

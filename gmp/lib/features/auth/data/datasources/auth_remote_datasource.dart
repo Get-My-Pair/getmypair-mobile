@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../utils/web_dev_otp_log.dart';
 import '../models/login_response_model.dart';
 import '../models/user_model.dart';
 
@@ -132,12 +133,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         body: body,
       );
 
-      // Web Dev OTP: keep `otp` for the popup. Android/iOS: strip it.
+      // Web Dev OTP: keep `otp` for the popup + print in flutter run terminal.
+      // Android/iOS: strip it (production SMS only).
       final data = Map<String, dynamic>.from(
         response['data'] as Map<String, dynamic>? ?? {},
       );
       if (!kIsWeb) {
         data.remove('otp');
+      } else {
+        final otpRaw = data['otp'];
+        final otp = otpRaw == null ? '' : otpRaw.toString().trim();
+        if (otp.isNotEmpty) {
+          logWebDevOtpToTerminal(otp, mobile: normalizedMobile);
+        }
       }
 
       return data;
