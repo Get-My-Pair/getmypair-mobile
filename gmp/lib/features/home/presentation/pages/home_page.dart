@@ -3245,16 +3245,23 @@ class _QuickActionCard extends StatelessWidget {
               final w = constraints.maxWidth;
               if (h <= 0 || w <= 0) return const SizedBox.shrink();
 
-              // Match home hub reference: padded, vertically centered row,
-              // large equal icons, tight two-line labels.
-              final padH = (w * 0.10).clamp(12.0, 18.0);
-              final padV = (h * 0.12).clamp(8.0, 12.0);
+              // Responsive to card/screen: icon & type scale with available space.
+              final padH = (w * 0.10).clamp(10.0, 20.0);
+              final padV = (h * 0.12).clamp(6.0, 14.0);
               final innerH = math.max(18.0, h - padV * 2);
               final innerW = math.max(18.0, w - padH * 2);
-              final iconSize = (innerH * 0.78).clamp(34.0, 44.0);
-              final gap = (innerW * 0.06).clamp(8.0, 12.0);
-              final fontSize = (innerH * 0.40).clamp(16.0, 20.0);
-              final lineGap = (innerH * 0.08).clamp(5.0, 10.0);
+              final iconMin = _homeScaled(28, layoutScale).clamp(26.0, 34.0);
+              final iconMax = _homeScaled(56, layoutScale).clamp(48.0, 64.0);
+              final iconSize = math
+                  .min(innerH * 0.82, innerW * 0.42)
+                  .clamp(iconMin, iconMax)
+                  .toDouble();
+              final gap = (innerW * 0.06).clamp(6.0, 14.0);
+              final fontMin = _homeScaled(11, layoutScale).clamp(10.0, 13.0);
+              final fontMax = _homeScaled(17, layoutScale).clamp(15.0, 18.0);
+              final fontSize =
+                  (innerH * 0.30).clamp(fontMin, fontMax).toDouble();
+              final lineGap = (innerH * 0.08).clamp(4.0, 12.0);
 
               return Padding(
                 padding: EdgeInsets.symmetric(

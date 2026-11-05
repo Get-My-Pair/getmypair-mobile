@@ -564,9 +564,7 @@ class _ServiceCardMetrics {
   final double height;
   final double padH;
   final double padV;
-  final double iconW;
-  final double iconH;
-  final double iconLeftInset;
+  final double iconSize;
   final double gap;
   final double fontSize;
   final double lineGap;
@@ -575,32 +573,32 @@ class _ServiceCardMetrics {
     required this.height,
     required this.padH,
     required this.padV,
-    required this.iconW,
-    required this.iconH,
-    required this.iconLeftInset,
+    required this.iconSize,
     required this.gap,
     required this.fontSize,
     required this.lineGap,
   });
 
+  /// Same content metrics as home hub action cards — scales with card/screen.
   static _ServiceCardMetrics fromWidth(double cardWidth) {
-    final height = (cardWidth / 2.25).clamp(68.0, 86.0);
-    final padH = (cardWidth * 0.06).clamp(8.0, 12.0);
-    final padV = (height * 0.12).clamp(8.0, 12.0);
+    final height = (cardWidth / 2.25).clamp(64.0, 100.0);
+    final padH = (cardWidth * 0.08).clamp(8.0, 16.0);
+    final padV = (height * 0.08).clamp(4.0, 10.0);
     final innerH = (height - padV * 2).clamp(18.0, height);
-    final iconH = (innerH * 0.78).clamp(30.0, 42.0);
-    final iconW = (iconH * 1.15).clamp(34.0, 48.0);
-    final iconLeftInset = (cardWidth * 0.04).clamp(6.0, 12.0);
-    final gap = (cardWidth * 0.05).clamp(8.0, 12.0);
-    final fontSize = (innerH * 0.28).clamp(12.0, 15.0);
-    final lineGap = (innerH * 0.14).clamp(4.0, 8.0);
+    final innerW = (cardWidth - padH * 2).clamp(18.0, cardWidth);
+    // Sell / Rent shoe icons — larger, still leave room for labels.
+    final iconSize = math
+        .min(innerH * 0.95, innerW * 0.48)
+        .clamp(36.0, 72.0)
+        .toDouble();
+    final gap = (innerW * 0.05).clamp(6.0, 12.0);
+    final fontSize = (innerH * 0.30).clamp(11.0, 17.0);
+    final lineGap = (innerH * 0.08).clamp(4.0, 12.0);
     return _ServiceCardMetrics(
       height: height,
       padH: padH,
       padV: padV,
-      iconW: iconW,
-      iconH: iconH,
-      iconLeftInset: iconLeftInset,
+      iconSize: iconSize,
       gap: gap,
       fontSize: fontSize,
       lineGap: lineGap,
@@ -626,11 +624,9 @@ class _PrimaryDonateCard extends StatelessWidget {
             child: Container(
               height: m.height,
               width: double.infinity,
-              padding: EdgeInsets.fromLTRB(
-                m.padH + m.iconLeftInset,
-                m.padV,
-                m.padH,
-                m.padV,
+              padding: EdgeInsets.symmetric(
+                horizontal: m.padH,
+                vertical: m.padV,
               ),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -647,31 +643,37 @@ class _PrimaryDonateCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: m.iconW * 1.18,
-                    height: m.iconH * 1.18,
-                    child: const Image(
-                      image: AssetImage(
-                        'assets/images/icons/rehomemypair/sellmypair.png',
+              child: Align(
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: m.iconSize * 1.12,
+                      height: m.iconSize * 1.12,
+                      child: const Image(
+                        image: AssetImage(
+                          'assets/images/icons/rehomemypair/sellmypair.png',
+                        ),
+                        fit: BoxFit.contain,
+                        color: Colors.white,
+                        colorBlendMode: BlendMode.srcIn,
                       ),
-                      fit: BoxFit.contain,
-                      color: Colors.white,
-                      colorBlendMode: BlendMode.srcIn,
                     ),
-                  ),
-                  SizedBox(width: m.gap),
-                  Flexible(
-                    child: _TwoLineLabel(
-                      first: 'Sell',
-                      second: 'MyPair',
-                      color: Colors.white,
-                      fontSize: m.fontSize,
-                      lineGap: m.lineGap,
+                    SizedBox(width: m.gap),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: _TwoLineLabel(
+                        first: 'Sell',
+                        second: 'MyPair',
+                        color: Colors.white,
+                        fontSize: m.fontSize,
+                        lineGap: m.lineGap,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -701,7 +703,7 @@ class _TwoLineLabel extends StatelessWidget {
     final style = GoogleFonts.boldonse(
       color: color,
       fontSize: fontSize,
-      height: 1,
+      height: 1.28,
       fontWeight: FontWeight.w400,
     );
 
@@ -726,38 +728,31 @@ class _TwoLineLabel extends StatelessWidget {
 }
 
 class _RentTaggedShoe extends StatelessWidget {
-  final double width;
-  final double height;
+  final double size;
 
-  const _RentTaggedShoe({required this.width, required this.height});
+  const _RentTaggedShoe({required this.size});
 
   @override
   Widget build(BuildContext context) {
-    final tagFont = (height * 0.22).clamp(6.0, 8.0);
+    final tagFont = (size * 0.20).clamp(7.0, 10.0);
     return SizedBox(
-      width: width,
-      height: height,
+      width: size,
+      height: size,
       child: Stack(
-        alignment: Alignment.topCenter,
+        alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            top: height * 0.12,
-            left: 0,
-            right: 0,
-            child: SizedBox(
-              height: height * 0.78,
-              child: const Image(
-                image: AssetImage(
-                  'assets/images/icons/rehomemypair/rentmypair_shoe.png',
-                ),
-                fit: BoxFit.contain,
+          Positioned.fill(
+            child: const Image(
+              image: AssetImage(
+                'assets/images/icons/rehomemypair/rentmypair_shoe.png',
               ),
+              fit: BoxFit.contain,
             ),
           ),
           Positioned(
             right: -2,
-            bottom: height * 0.12,
+            bottom: size * 0.06,
             child: Transform.rotate(
               angle: -0.27,
               child: DecoratedBox(
@@ -829,26 +824,30 @@ class _SecondaryServiceCard extends StatelessWidget {
                 height: m.height,
                 width: double.infinity,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    m.padH + m.iconLeftInset,
-                    m.padV,
-                    m.padH,
-                    m.padV,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: m.padH,
+                    vertical: m.padV,
                   ),
-                  child: Row(
-                    children: [
-                      _RentTaggedShoe(width: m.iconW, height: m.iconH),
-                      SizedBox(width: m.gap),
-                      Flexible(
-                        child: _TwoLineLabel(
-                          first: 'Rent',
-                          second: 'MyPair',
-                          color: const Color(0xFF062F35),
-                          fontSize: m.fontSize,
-                          lineGap: m.lineGap,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _RentTaggedShoe(size: m.iconSize),
+                        SizedBox(width: m.gap),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: _TwoLineLabel(
+                            first: 'Rent',
+                            second: 'MyPair',
+                            color: const Color(0xFF062F35),
+                            fontSize: m.fontSize,
+                            lineGap: m.lineGap,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

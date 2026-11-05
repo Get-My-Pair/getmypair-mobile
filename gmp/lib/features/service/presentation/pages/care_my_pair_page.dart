@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
@@ -284,7 +286,7 @@ class _CareMyPairPageState extends State<CareMyPairPage> {
                                   secondLine: 'MyPair',
                                   iconAsset:
                                       'assets/images/icons/caremypair/mmp.svg',
-                                  iconScale: 1.28,
+                                  iconScale: 1.12,
                                   onTap: () => _openMaintainPage(context),
                                 ),
                               ),
@@ -461,9 +463,7 @@ class _ServiceCardMetrics {
   final double height;
   final double padH;
   final double padV;
-  final double iconW;
-  final double iconH;
-  final double iconLeftInset;
+  final double iconSize;
   final double gap;
   final double fontSize;
   final double lineGap;
@@ -472,32 +472,32 @@ class _ServiceCardMetrics {
     required this.height,
     required this.padH,
     required this.padV,
-    required this.iconW,
-    required this.iconH,
-    required this.iconLeftInset,
+    required this.iconSize,
     required this.gap,
     required this.fontSize,
     required this.lineGap,
   });
 
+  /// Same content metrics as home hub action cards — scales with card/screen.
   static _ServiceCardMetrics fromWidth(double cardWidth) {
-    final height = (cardWidth / 2.25).clamp(68.0, 86.0);
-    final padH = (cardWidth * 0.06).clamp(8.0, 12.0);
-    final padV = (height * 0.12).clamp(8.0, 12.0);
+    final height = (cardWidth / 2.25).clamp(64.0, 100.0);
+    final padH = (cardWidth * 0.10).clamp(10.0, 20.0);
+    final padV = (height * 0.12).clamp(6.0, 14.0);
     final innerH = (height - padV * 2).clamp(18.0, height);
-    final iconH = (innerH * 0.78).clamp(30.0, 42.0);
-    final iconW = (iconH * 1.15).clamp(34.0, 48.0);
-    final iconLeftInset = (cardWidth * 0.04).clamp(6.0, 12.0);
-    final gap = (cardWidth * 0.05).clamp(8.0, 12.0);
-    final fontSize = (innerH * 0.28).clamp(12.0, 15.0);
-    final lineGap = (innerH * 0.14).clamp(4.0, 8.0);
+    final innerW = (cardWidth - padH * 2).clamp(18.0, cardWidth);
+    // Track card size; keep room for the two-line label.
+    final iconSize = math
+        .min(innerH * 0.82, innerW * 0.42)
+        .clamp(28.0, 64.0)
+        .toDouble();
+    final gap = (innerW * 0.06).clamp(6.0, 14.0);
+    final fontSize = (innerH * 0.30).clamp(11.0, 17.0);
+    final lineGap = (innerH * 0.08).clamp(4.0, 12.0);
     return _ServiceCardMetrics(
       height: height,
       padH: padH,
       padV: padV,
-      iconW: iconW,
-      iconH: iconH,
-      iconLeftInset: iconLeftInset,
+      iconSize: iconSize,
       gap: gap,
       fontSize: fontSize,
       lineGap: lineGap,
@@ -525,7 +525,7 @@ class _TwoLineLabel extends StatelessWidget {
     final style = GoogleFonts.boldonse(
       color: color,
       fontSize: fontSize,
-      height: 1,
+      height: 1.28,
       fontWeight: FontWeight.w400,
     );
 
@@ -561,8 +561,6 @@ class _PrimaryServiceCard extends StatelessWidget {
       builder: (context, constraints) {
         // Full-width card: use half-width metrics so height matches side tiles.
         final m = _ServiceCardMetrics.fromWidth(constraints.maxWidth / 2);
-        final iconSize = (m.iconH * 1.05).clamp(34.0, 44.0);
-        final fontSize = (m.fontSize * 1.15).clamp(14.0, 16.0);
 
         return Material(
           color: Colors.transparent,
@@ -572,7 +570,10 @@ class _PrimaryServiceCard extends StatelessWidget {
             child: Container(
               height: m.height,
               width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: m.padH + 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: m.padH,
+                vertical: m.padV,
+              ),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF09DFFF), Color(0xFF063035)],
@@ -588,32 +589,41 @@ class _PrimaryServiceCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/images/icons/caremypair/rmp.svg',
-                    width: iconSize,
-                    height: iconSize,
-                  ),
-                  SizedBox(width: m.gap),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        softWrap: false,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.boldonse(
-                          color: Colors.white,
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w400,
+              child: Align(
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: m.iconSize,
+                      height: m.iconSize,
+                      child: SvgPicture.asset(
+                        'assets/images/icons/caremypair/rmp.svg',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    SizedBox(width: m.gap),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          softWrap: false,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.boldonse(
+                            color: Colors.white,
+                            fontSize: m.fontSize,
+                            height: 1.28,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -645,8 +655,7 @@ class _SecondaryServiceCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final m = _ServiceCardMetrics.fromWidth(constraints.maxWidth);
-        final iconW = m.iconW * iconScale;
-        final iconH = m.iconH * iconScale;
+        final iconSize = m.iconSize * iconScale;
         return DecoratedBox(
           decoration: const BoxDecoration(
             borderRadius: radius,
@@ -675,33 +684,37 @@ class _SecondaryServiceCard extends StatelessWidget {
                 height: m.height,
                 width: double.infinity,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    m.padH + m.iconLeftInset,
-                    m.padV,
-                    m.padH,
-                    m.padV,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: m.padH,
+                    vertical: m.padV,
                   ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: iconW,
-                        height: iconH,
-                        child: SvgPicture.asset(
-                          iconAsset,
-                          fit: BoxFit.contain,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: iconSize,
+                          height: iconSize,
+                          child: SvgPicture.asset(
+                            iconAsset,
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: m.gap),
-                      Flexible(
-                        child: _TwoLineLabel(
-                          first: firstLine,
-                          second: secondLine,
-                          color: const Color(0xFF062F35),
-                          fontSize: m.fontSize,
-                          lineGap: m.lineGap,
+                        SizedBox(width: m.gap),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: _TwoLineLabel(
+                            first: firstLine,
+                            second: secondLine,
+                            color: const Color(0xFF062F35),
+                            fontSize: m.fontSize,
+                            lineGap: m.lineGap,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
