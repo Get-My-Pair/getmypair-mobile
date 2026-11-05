@@ -17,7 +17,6 @@ import 'package:gmp/features/service/presentation/pages/service_request_list_pag
 import 'package:gmp/features/service/presentation/pages/wash_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
-import 'package:intl/intl.dart';
 
 class CareMyPairPage extends StatefulWidget {
   const CareMyPairPage({super.key});
@@ -803,36 +802,6 @@ class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
     }
   }
 
-  static String _ordinalDay(int day) {
-    if (day >= 11 && day <= 13) return '${day}th';
-    switch (day % 10) {
-      case 1:
-        return '${day}st';
-      case 2:
-        return '${day}nd';
-      case 3:
-        return '${day}rd';
-      default:
-        return '${day}th';
-    }
-  }
-
-  /// Prefer requested pickup; otherwise estimate ~7 days from createdAt.
-  static String _estimatedDelivery(Map<String, dynamic> r) {
-    DateTime? dt = DateTime.tryParse(
-      (r['requestedPickupAt'] ?? '').toString(),
-    );
-    dt ??= DateTime.tryParse((r['createdAt'] ?? '').toString());
-    if (dt == null) return 'TBD';
-    // Use pickup window if present; else rough ETA from creation.
-    if (r['requestedPickupAt'] == null ||
-        (r['requestedPickupAt']?.toString() ?? '').trim().isEmpty) {
-      dt = dt.add(const Duration(days: 7));
-    }
-    final local = dt.toLocal();
-    return '${_ordinalDay(local.day)} ${DateFormat('MMM yyyy').format(local)}';
-  }
-
   static String _requestId(Map<String, dynamic> r) {
     return (r['_id'] ?? r['id'] ?? '').toString().trim();
   }
@@ -860,7 +829,6 @@ class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
 
     final serviceType = (_active!['serviceType'] ?? '').toString();
     final label = _serviceLabel(serviceType);
-    final eta = _estimatedDelivery(_active!);
 
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
@@ -900,11 +868,41 @@ class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
         const SizedBox(height: 12),
         _ActiveServiceCard(
           serviceLabel: label,
-          estimatedDelivery: eta,
           onTap: () => _openActive(context),
+          onMarkDroppedOff: () => _confirmDroppedOff(context),
         ),
       ],
     );
+  }
+
+  Future<void> _confirmDroppedOff(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm drop off'),
+        content: const Text(
+          'Have you dropped off your pair at the service location?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not yet'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes, dropped off'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+    await showAppFeedbackAlert(
+      context,
+      message: 'Drop off confirmed',
+      type: AppFeedbackType.success,
+    );
+    if (!context.mounted) return;
+    _openActive(context);
   }
 }
 
@@ -912,24 +910,28 @@ class _ActiveServiceCard extends StatelessWidget {
   static const String _servIcon = 'assets/images/icons/profile/serv.svg';
 
   final String serviceLabel;
-  final String estimatedDelivery;
   final VoidCallback onTap;
+  final VoidCallback onMarkDroppedOff;
 
   const _ActiveServiceCard({
     required this.serviceLabel,
-    required this.estimatedDelivery,
     required this.onTap,
+    required this.onMarkDroppedOff,
   });
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-    final iconBox = (52.0 * uiScale).clamp(46.0, 58.0);
-    final iconSize = (iconBox * 0.62).clamp(28.0, 36.0);
-    final labelSize = (11.0 * uiScale).clamp(10.0, 12.0);
-    final valueSize = (13.0 * uiScale).clamp(12.0, 14.0);
-    final gap = (12.0 * uiScale).clamp(8.0, 14.0);
+    // Figma 3208:10259 — 46px icon box, 14/16 type, 24px CTA.
+    final iconBox = (46.0 * uiScale).clamp(42.0, 52.0);
+    final iconPad = (11.0 * uiScale).clamp(9.0, 12.0);
+    final iconSize = (iconBox - iconPad * 2).clamp(20.0, 30.0);
+    final labelSize = (14.0 * uiScale).clamp(12.0, 14.0);
+    final valueSize = (16.0 * uiScale).clamp(14.0, 16.0);
+    final gap = (16.0 * uiScale).clamp(12.0, 16.0);
+    final btnH = (24.0 * uiScale).clamp(22.0, 28.0);
+    final btnFs = (10.0 * uiScale).clamp(9.0, 11.0);
 
     return Material(
       color: Colors.transparent,
@@ -937,21 +939,22 @@ class _ActiveServiceCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: EdgeInsets.symmetric(
-            vertical: (4.0 * uiScale).clamp(2.0, 6.0),
+          padding: EdgeInsets.only(
+            bottom: (14.0 * uiScale).clamp(10.0, 14.0),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: iconBox,
                 height: iconBox,
+                padding: EdgeInsets.all(iconPad),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDFE7E9),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0x33D9D9D9),
+                  borderRadius: BorderRadius.circular(5),
                   border: Border.all(
-                    color: const Color(0xFF0F6876),
-                    width: 1.2,
+                    color: const Color(0xFF12899B),
+                    width: 1,
                   ),
                 ),
                 alignment: Alignment.center,
@@ -967,23 +970,92 @@ class _ActiveServiceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 11,
-                      child: _LabeledValue(
-                        label: 'Service Type',
-                        value: serviceLabel,
-                        labelSize: labelSize,
-                        valueSize: valueSize,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Service Type',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: labelSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
+                          Text(
+                            serviceLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF5A5A5A),
+                              fontSize: valueSize,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(width: (8.0 * uiScale).clamp(4.0, 10.0)),
-                    Expanded(
-                      flex: 12,
-                      child: _LabeledValue(
-                        label: 'Estimated Delivery',
-                        value: estimatedDelivery,
-                        labelSize: labelSize,
-                        valueSize: valueSize,
-                      ),
+                    // Left breathing room before Confirm Drop off column.
+                    SizedBox(width: (16.0 * uiScale).clamp(12.0, 20.0)),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Confirm Drop off',
+                          maxLines: 1,
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF12899B),
+                            fontSize: labelSize,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: onMarkDroppedOff,
+                            borderRadius: BorderRadius.circular(50),
+                            child: Ink(
+                              height: btnH,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: (9.0 * uiScale).clamp(8.0, 12.0),
+                                vertical: (4.0 * uiScale).clamp(3.0, 5.0),
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.centerRight,
+                                  end: Alignment.centerLeft,
+                                  colors: [
+                                    Color(0xFF0CADC5),
+                                    Color(0xFF063239),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(50),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x19000000),
+                                    blurRadius: 2,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Mark as Dropped off',
+                                  maxLines: 1,
+                                  style: GoogleFonts.boldonse(
+                                    color: Colors.white,
+                                    fontSize: btnFs,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -992,54 +1064,6 @@ class _ActiveServiceCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LabeledValue extends StatelessWidget {
-  final String label;
-  final String value;
-  final double labelSize;
-  final double valueSize;
-
-  const _LabeledValue({
-    required this.label,
-    required this.value,
-    this.labelSize = 12,
-    this.valueSize = 13,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            label,
-            maxLines: 1,
-            softWrap: false,
-            style: GoogleFonts.montserrat(
-              color: const Color(0xFF11899B),
-              fontSize: labelSize,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.montserrat(
-            color: const Color(0xFF5A5A5A),
-            fontSize: valueSize,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }
