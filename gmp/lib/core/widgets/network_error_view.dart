@@ -149,7 +149,7 @@ class _NetworkErrorVisualState extends State<_NetworkErrorVisual>
   }
 }
 
-/// Dialog version of [NetworkErrorView] (no raw API text).
+/// Compact centered alert dialog (no raw API text).
 Future<void> showUserFacingErrorDialog(
   BuildContext context, {
   Object? error,
@@ -157,49 +157,124 @@ Future<void> showUserFacingErrorDialog(
 }) {
   if (!context.mounted) return Future.value();
   final isNetwork = UserFacingError.isNetwork(error);
+  final accent = isNetwork ? AppColors.primary : AppColors.error;
+  final title = UserFacingError.titleFor(error);
+  final message = UserFacingError.messageFor(error);
+
   return showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    barrierDismissible: true,
+    builder: (ctx) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      contentPadding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-      content: NetworkErrorView(
-        error: error,
-        compact: true,
-        onRetry: onRetry == null
-            ? null
-            : () {
-                Navigator.of(ctx).pop();
-                onRetry();
-              },
-      ),
-      actionsAlignment: MainAxisAlignment.center,
-      actions: [
-        if (onRetry == null)
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            style: FilledButton.styleFrom(
-              backgroundColor:
-                  isNetwork ? AppColors.primary : AppColors.error,
-              foregroundColor: AppColors.textOnPrimary,
-              minimumSize: const Size(120, 44),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 300),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent.withValues(alpha: 0.12),
+                ),
+                child: Icon(
+                  isNetwork
+                      ? Icons.wifi_off_rounded
+                      : Icons.cloud_off_rounded,
+                  size: 28,
+                  color: accent,
+                ),
               ),
-            ),
-            child: const Text('OK'),
-          )
-        else
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Close',
-              style: GoogleFonts.montserrat(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  height: 1.35,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (onRetry != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      onRetry();
+                    },
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(
+                      'Try again',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: AppColors.textOnPrimary,
+                      minimumSize: const Size(0, 40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    'Close',
+                    style: GoogleFonts.montserrat(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ] else
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: AppColors.textOnPrimary,
+                      minimumSize: const Size(0, 40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      'OK',
+                      style: GoogleFonts.montserrat(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-      ],
+        ),
+      ),
     ),
   );
 }

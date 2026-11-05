@@ -77,44 +77,59 @@ Future<void> showAppFeedbackAlert(
           if (ctx.mounted) Navigator.of(ctx).pop();
         });
       }
-      return AlertDialog(
+      return Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: Icon(icon, color: accent, size: 36),
-        title: Text(
-          resolvedTitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-            fontSize: 18,
-          ),
-        ),
-        content: Text(
-          safeMessage,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 15,
-            height: 1.35,
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: autoDismiss
-            ? const <Widget>[]
-            : [
-                FilledButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: _labelOnAccent(type),
-                    minimumSize: const Size(120, 44),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 300),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: accent, size: 32),
+                const SizedBox(height: 12),
+                Text(
+                  resolvedTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  safeMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+                if (!autoDismiss) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: accent,
+                        foregroundColor: _labelOnAccent(type),
+                        minimumSize: const Size(0, 40),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('OK'),
                     ),
                   ),
-                  child: const Text('OK'),
-                ),
+                ],
               ],
+            ),
+          ),
+        ),
       );
     },
   );
