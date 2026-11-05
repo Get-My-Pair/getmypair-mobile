@@ -385,6 +385,10 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                       value: PaymentAmountFormatter.formatGrouped(_tax),
                     ),
                     _amountRow(
+                      label: 'Delivery Charges',
+                      value: '100% Free',
+                    ),
+                    _amountRow(
                       label: 'Total Payable Amount',
                       value:
                           PaymentAmountFormatter.formatGrouped(_totalPayable),
