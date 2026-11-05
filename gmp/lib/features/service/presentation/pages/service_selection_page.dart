@@ -2441,7 +2441,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                               !_repairStep0CareOptionsValid)
                             _repairStep0InlineError(
                               _isPerShoePhotoFlow
-                                  ? 'Each shoe needs its own services + photos (tap a pair above to switch).'
+                                  ? 'Please upload at least one proof image'
                                   : 'Please select at least one option.',
                               layoutScale,
                             ),
@@ -2877,7 +2877,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           ),
                         ],
                       ),
-                      SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
+                      SizedBox(height: (8 * layoutScale).clamp(6.0, 10.0)),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2905,38 +2905,42 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                           ),
                           SizedBox(width: (14 * layoutScale).clamp(12.0, 16.0)),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Home',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.montserrat(
-                                    color: const Color(0xFF12899B),
-                                    fontSize:
-                                        (14 * layoutScale).clamp(12.0, 15.0),
-                                    fontWeight: FontWeight.w600,
+                            child: Transform.translate(
+                              offset: Offset(0, (-3 * layoutScale).clamp(-4.0, -2.0)),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Home',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.montserrat(
+                                      color: const Color(0xFF12899B),
+                                      fontSize:
+                                          (14 * layoutScale).clamp(12.0, 15.0),
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.15,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(
-                                  height: (8 * layoutScale).clamp(6.0, 10.0),
-                                ),
-                                Text(
-                                  _selectedAddress == null
-                                      ? 'No address selected'
-                                      : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.montserrat(
-                                    color: const Color(0xFF4E7F8A),
-                                    fontSize:
-                                        (13 * layoutScale).clamp(11.0, 14.0),
-                                    fontWeight: FontWeight.w400,
-                                    height: 1.35,
+                                  SizedBox(
+                                    height: (4 * layoutScale).clamp(3.0, 6.0),
                                   ),
-                                ),
-                              ],
+                                  Text(
+                                    _selectedAddress == null
+                                        ? 'No address selected'
+                                        : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.montserrat(
+                                      color: const Color(0xFF4E7F8A),
+                                      fontSize:
+                                          (13 * layoutScale).clamp(11.0, 14.0),
+                                      fontWeight: FontWeight.w400,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -2952,7 +2956,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                       ),
                       SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
                       SizedBox(
-                        height: (82 * layoutScale).clamp(72.0, 92.0),
+                        height: (88 * layoutScale).clamp(78.0, 98.0),
                         child: Row(
                           // Flush with section titles: first/last at edges.
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2960,7 +2964,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                             final selected = _selectedPickupDay == index;
                             final day = _pickupDays[index];
                             final box =
-                                (42 * layoutScale).clamp(36.0, 48.0);
+                                (44 * layoutScale).clamp(38.0, 50.0);
                             return InkWell(
                               onTap: _submitting
                                   ? null
@@ -2979,8 +2983,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.montserrat(
                                         color: const Color(0xFF12899B),
-                                        fontSize: (11 * layoutScale)
-                                            .clamp(10.0, 12.0),
+                                        fontSize: (14 * layoutScale)
+                                            .clamp(13.0, 15.0),
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -3005,8 +3009,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                           color: selected
                                               ? Colors.white
                                               : const Color(0xFF12899B),
-                                          fontSize: (14 * layoutScale)
-                                              .clamp(12.0, 15.0),
+                                          fontSize: (17 * layoutScale)
+                                              .clamp(15.0, 18.0),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -3032,7 +3036,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                         builder: (context, constraints) {
                           // Same side inset as titles/dates: spaceBetween edges.
                           final chipH =
-                              (40 * layoutScale).clamp(36.0, 44.0);
+                              (44 * layoutScale).clamp(40.0, 48.0);
                           final rowGap =
                               (14 * layoutScale).clamp(12.0, 18.0);
                           // Keep chips compact; leftover width becomes mid gaps.
@@ -3094,8 +3098,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                               color: selected
                                                   ? Colors.white
                                                   : const Color(0xFF12899B),
-                                              fontSize: (11 * layoutScale)
-                                                  .clamp(10.0, 12.0),
+                                              fontSize: (14 * layoutScale)
+                                                  .clamp(13.0, 15.0),
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
@@ -3145,8 +3149,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             _selectedDropOffIndex < _dropOffLocations.length)
         ? _dropOffLocations[_selectedDropOffIndex]
         : _dropOffLocations.first;
-    final noteFs = (12 * layoutScale).clamp(11.0, 13.0);
-    final windowH = (46 * layoutScale).clamp(40.0, 50.0);
+    final noteFs = (13 * layoutScale).clamp(12.0, 14.0);
+    final windowH = (50 * layoutScale).clamp(44.0, 54.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3194,8 +3198,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                       padding: const EdgeInsets.all(2),
                       child: SvgPicture.asset(
                         'assets/images/icons/profile/edit.svg',
-                        width: (24 * layoutScale).clamp(20.0, 26.0),
-                        height: (24 * layoutScale).clamp(20.0, 26.0),
+                        width: (28 * layoutScale).clamp(24.0, 30.0),
+                        height: (28 * layoutScale).clamp(24.0, 30.0),
                         colorFilter: const ColorFilter.mode(
                           Color(0xFF062F35),
                           BlendMode.srcIn,
@@ -3217,8 +3221,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 children: [
                   SvgPicture.asset(
                     'assets/images/icons/repairmypair/walk.svg',
-                    width: (15 * layoutScale).clamp(13.0, 17.0),
-                    height: (23 * layoutScale).clamp(20.0, 26.0),
+                    width: (18 * layoutScale).clamp(16.0, 20.0),
+                    height: (26 * layoutScale).clamp(24.0, 30.0),
                   ),
                   SizedBox(width: (10 * layoutScale).clamp(8.0, 12.0)),
                   Expanded(
@@ -3248,13 +3252,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         ),
         SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
         SizedBox(
-          height: (82 * layoutScale).clamp(72.0, 92.0),
+          height: (88 * layoutScale).clamp(78.0, 98.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(_pickupDays.length, (index) {
               final selected = _selectedPickupDay == index;
               final day = _pickupDays[index];
-              final box = (42 * layoutScale).clamp(36.0, 48.0);
+              final box = (44 * layoutScale).clamp(38.0, 50.0);
               return InkWell(
                 onTap: _submitting
                     ? null
@@ -3270,7 +3274,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                         textAlign: TextAlign.center,
                         style: GoogleFonts.montserrat(
                           color: const Color(0xFF12899B),
-                          fontSize: (11 * layoutScale).clamp(10.0, 12.0),
+                          fontSize: (14 * layoutScale).clamp(13.0, 15.0),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -3295,8 +3299,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                             color: selected
                                 ? Colors.white
                                 : const Color(0xFF12899B),
-                            fontSize: (14 * layoutScale).clamp(12.0, 15.0),
-                            fontWeight: FontWeight.w400,
+                            fontSize: (17 * layoutScale).clamp(15.0, 18.0),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
@@ -3360,7 +3364,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                             color: selected
                                 ? Colors.white
                                 : const Color(0xFF12899B),
-                            fontSize: (13 * layoutScale).clamp(11.0, 15.0),
+                            fontSize: (14 * layoutScale).clamp(13.0, 15.0),
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -3516,11 +3520,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     required VoidCallback onToggleHours,
     required VoidCallback onBook,
   }) {
-    final nameFs = (14 * layoutScale).clamp(12.0, 15.0);
-    final addressFs = (16 * layoutScale).clamp(13.0, 16.0);
-    final metaFs = (12 * layoutScale).clamp(11.0, 13.0);
-    final bookH = (32 * layoutScale).clamp(30.0, 36.0);
-    final distW = (55 * layoutScale).clamp(50.0, 60.0);
+    final nameFs = (15 * layoutScale).clamp(13.0, 16.0);
+    final addressFs = (16 * layoutScale).clamp(14.0, 17.0);
+    final metaFs = (13 * layoutScale).clamp(12.0, 14.0);
+    final bookH = (34 * layoutScale).clamp(32.0, 38.0);
+    final distW = (58 * layoutScale).clamp(52.0, 64.0);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 160),
@@ -3598,7 +3602,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   children: [
                     Container(
                       width: double.infinity,
-                      height: (32 * layoutScale).clamp(28.0, 34.0),
+                      height: (36 * layoutScale).clamp(32.0, 38.0),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: const Color(0xFFD8D8D8),
@@ -3613,8 +3617,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                       ),
                       child: SvgPicture.asset(
                         'assets/images/icons/profile/navigation.svg',
-                        width: (16 * layoutScale).clamp(14.0, 18.0),
-                        height: (16 * layoutScale).clamp(14.0, 18.0),
+                        width: (20 * layoutScale).clamp(18.0, 22.0),
+                        height: (20 * layoutScale).clamp(18.0, 22.0),
                         colorFilter: const ColorFilter.mode(
                           Color(0xFF062F35),
                           BlendMode.srcIn,
@@ -3623,7 +3627,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                     ),
                     Container(
                       width: double.infinity,
-                      height: (26 * layoutScale).clamp(22.0, 28.0),
+                      height: (28 * layoutScale).clamp(24.0, 30.0),
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(
                         color: Color(0xFFD8D8D8),
@@ -3656,8 +3660,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 children: [
                   Image.asset(
                     'assets/images/icons/repairmypair/clock.png',
-                    width: (12 * layoutScale).clamp(11.0, 14.0),
-                    height: (12 * layoutScale).clamp(11.0, 14.0),
+                    width: (16 * layoutScale).clamp(14.0, 18.0),
+                    height: (16 * layoutScale).clamp(14.0, 18.0),
                     color: location.isOpen
                         ? const Color(0xFF0FB700)
                         : const Color(0xFFABABAB),
@@ -3701,8 +3705,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                     duration: const Duration(milliseconds: 180),
                     child: Image.asset(
                       'assets/images/icons/repairmypair/chevron_down.png',
-                      width: (16 * layoutScale).clamp(14.0, 18.0),
-                      height: (16 * layoutScale).clamp(14.0, 18.0),
+                      width: (18 * layoutScale).clamp(16.0, 20.0),
+                      height: (18 * layoutScale).clamp(16.0, 20.0),
                       color: const Color(0xFF062F35),
                     ),
                   ),
@@ -3732,7 +3736,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                             : '${_weekDayLabels[day.day] ?? day.day} - ${_formatAmPm(day.openTime)} to ${_formatAmPm(day.closeTime)}',
                         style: GoogleFonts.montserrat(
                           color: const Color(0xFF062F35),
-                          fontSize: (12 * layoutScale).clamp(11.0, 13.0),
+                          fontSize: (13 * layoutScale).clamp(12.0, 14.0),
                           fontWeight: FontWeight.w400,
                           height: 1.35,
                         ),
@@ -3753,8 +3757,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               children: [
                 SvgPicture.asset(
                   'assets/images/phone.svg',
-                  width: (12 * layoutScale).clamp(11.0, 14.0),
-                  height: (12 * layoutScale).clamp(11.0, 14.0),
+                  width: (16 * layoutScale).clamp(14.0, 18.0),
+                  height: (16 * layoutScale).clamp(14.0, 18.0),
                   colorFilter: const ColorFilter.mode(
                     Colors.black,
                     BlendMode.srcIn,
@@ -4141,8 +4145,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final shoeW = (118 * layoutScale).clamp(96.0, 118.0);
     final shoeH = (63 * layoutScale).clamp(52.0, 64.0);
     final thumbW = (149 * layoutScale).clamp(120.0, 149.0);
-    final thumbH = (69 * layoutScale).clamp(56.0, 72.0);
+    final thumbH = (78 * layoutScale).clamp(64.0, 84.0);
     final closeSize = (22 * layoutScale).clamp(18.0, 24.0);
+    final closeOutset = closeSize * 0.45;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -4199,10 +4204,19 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                               color: Color(0xFF8D8D8D),
                             ),
                           )
-                        : Image.network(
-                            article.imageUrl,
+                        : ArticleRackShoeImage(
+                            imageUrl: article.imageUrl,
+                            width: shoeW,
+                            height: shoeH,
                             fit: BoxFit.contain,
-                            errorBuilder: (_, _, _) => const ColoredBox(
+                            placeholder: const ColoredBox(
+                              color: Color(0xFFD9D9D9),
+                              child: Icon(
+                                Icons.checkroom_outlined,
+                                color: Color(0xFF8D8D8D),
+                              ),
+                            ),
+                            errorPlaceholder: const ColoredBox(
                               color: Color(0xFFD9D9D9),
                               child: Icon(
                                 Icons.checkroom_outlined,
@@ -4264,58 +4278,69 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               if (photos.isNotEmpty) ...[
                 SizedBox(height: (14 * layoutScale).clamp(10.0, 18.0)),
                 SizedBox(
-                  height: thumbH + 6,
+                  // Height includes corner exit icon overhang; scroll stays in card.
+                  height: thumbH + closeOutset,
+                  width: double.infinity,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    clipBehavior: Clip.hardEdge,
+                    padding: EdgeInsets.only(
+                      top: closeOutset,
+                      right: closeOutset,
+                    ),
                     itemCount: photos.length,
                     separatorBuilder: (_, _) =>
                         SizedBox(width: (12 * layoutScale).clamp(8.0, 16.0)),
                     itemBuilder: (_, i) {
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: SizedBox(
-                              width: thumbW,
-                              height: thumbH,
-                              child: FutureBuilder(
-                                future: photos[i].readAsBytes(),
-                                builder: (context, snap) {
-                                  if (!snap.hasData) {
-                                    return const ColoredBox(
-                                      color: Color(0xFFD9D9D9),
+                      return SizedBox(
+                        width: thumbW,
+                        height: thumbH,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: FutureBuilder(
+                                  future: photos[i].readAsBytes(),
+                                  builder: (context, snap) {
+                                    if (!snap.hasData) {
+                                      return const ColoredBox(
+                                        color: Color(0xFFD9D9D9),
+                                      );
+                                    }
+                                    return Image.memory(
+                                      snap.data!,
+                                      fit: BoxFit.cover,
+                                      width: thumbW,
+                                      height: thumbH,
                                     );
-                                  }
-                                  return Image.memory(
-                                    snap.data!,
-                                    fit: BoxFit.cover,
-                                    width: thumbW,
-                                    height: thumbH,
-                                  );
-                                },
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                          Positioned(
-                            top: -6,
-                            right: -6,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => _removeFinalizingPhoto(
-                                articleId: article.id,
-                                planId: plan.id,
-                                index: i,
-                              ),
-                              child: SvgPicture.asset(
-                                'assets/images/icons/repairmypair/close_selected.svg',
-                                width: closeSize,
-                                height: closeSize,
-                                fit: BoxFit.contain,
+                            // Half-on / half-off top-right corner exit icon.
+                            Positioned(
+                              top: -closeOutset,
+                              right: -closeOutset,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _removeFinalizingPhoto(
+                                  articleId: article.id,
+                                  planId: plan.id,
+                                  index: i,
+                                ),
+                                child: SvgPicture.asset(
+                                  'assets/images/icons/repairmypair/close_selected.svg',
+                                  width: closeSize,
+                                  height: closeSize,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -4411,7 +4436,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       if (name.isEmpty && subtitle.isEmpty && article.imageUrl.isEmpty) {
         return const SizedBox.shrink();
       }
-      final subtitleFs = (fontSize * 0.88).clamp(11.0, 14.0);
+      final nameFs = (fontSize * 1.12).clamp(15.0, 18.0);
+      final subtitleFs = (fontSize * 0.98).clamp(13.0, 16.0);
 
       // MaintainMyPair Figma: name + subtitle, then centered shoe image below.
       if (compact) {
@@ -4428,13 +4454,13 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.boldonse(
                   color: const Color(0xFF12899B),
-                  fontSize: fontSize,
+                  fontSize: nameFs,
                   fontWeight: FontWeight.w400,
-                  height: 1.05,
+                  height: 1.2,
                 ),
               ),
             if (graySubtitle.isNotEmpty) ...[
-              SizedBox(height: 4 * layoutScale),
+              SizedBox(height: (8 * layoutScale).clamp(6.0, 10.0)),
               Text(
                 graySubtitle,
                 maxLines: 1,
@@ -4443,7 +4469,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   color: Colors.black,
                   fontSize: subtitleFs,
                   fontWeight: FontWeight.w400,
-                  height: 1.15,
+                  height: 1.25,
                 ),
               ),
             ],
@@ -4629,8 +4655,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final focused = articles[_focusedArticleIndex.clamp(0, articles.length - 1)];
     final focusedName = focused.name.trim();
     final focusedSubtitle = focused.subtitle?.trim() ?? '';
-    final nameFs = (16 * layoutScale).clamp(13.0, 16.0);
-    final subtitleFs = (16 * layoutScale).clamp(13.0, 16.0);
+    final nameFs = (18 * layoutScale).clamp(15.0, 18.0);
+    final subtitleFs = (16 * layoutScale).clamp(14.0, 16.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4663,7 +4689,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                             width: isFocused ? 3 : 1,
                           ),
                         ),
-                        // Same presentation as My Rack row (no extra tilt).
+                        // Same rack tilt/angle as My Rack / article detail.
                         child: SizedBox(
                           height: imgH,
                           width: double.infinity,
@@ -4673,11 +4699,18 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                   color: const Color(0xFF8D8D8D),
                                   size: iconSize * 0.7,
                                 )
-                              : Image.network(
-                                  article.imageUrl,
+                              : ArticleRackShoeImage(
+                                  imageUrl: article.imageUrl,
+                                  width: cardW - cardPad * 2,
+                                  height: imgH,
                                   fit: BoxFit.contain,
                                   alignment: Alignment.center,
-                                  errorBuilder: (_, _, _) => Icon(
+                                  placeholder: Icon(
+                                    Icons.checkroom_outlined,
+                                    color: const Color(0xFF8D8D8D),
+                                    size: iconSize * 0.7,
+                                  ),
+                                  errorPlaceholder: Icon(
                                     Icons.checkroom_outlined,
                                     color: const Color(0xFF8D8D8D),
                                     size: iconSize * 0.7,
@@ -4718,10 +4751,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               color: const Color(0xFF11899B),
               fontSize: nameFs,
               fontWeight: FontWeight.w400,
-              height: 1.1,
+              height: 1.2,
             ),
           ),
-        if (focusedSubtitle.isNotEmpty)
+        if (focusedSubtitle.isNotEmpty) ...[
+          SizedBox(height: (8 * layoutScale).clamp(6.0, 10.0)),
           Text(
             focusedSubtitle,
             maxLines: 1,
@@ -4730,9 +4764,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
               color: Colors.black,
               fontSize: subtitleFs,
               fontWeight: FontWeight.w400,
-              height: 1.15,
+              height: 1.25,
             ),
           ),
+        ],
       ],
     );
   }

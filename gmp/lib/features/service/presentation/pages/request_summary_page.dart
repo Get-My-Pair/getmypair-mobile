@@ -526,7 +526,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       topRight: Radius.circular(20),
     );
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
-    const dockContentH = 48.0;
+    const dockContentH = 52.0;
     final dockH = 14 + dockContentH + 14 + bottomSafe;
 
     return Scaffold(
@@ -574,14 +574,14 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                           icon: const Icon(
                                             Icons.arrow_back_ios_new_rounded,
                                             color: Color(0xFF062F35),
-                                            size: 22,
+                                            size: 24,
                                           ),
                                           padding: EdgeInsets.zero,
                                           alignment: Alignment.centerLeft,
                                           constraints:
                                               const BoxConstraints.tightFor(
-                                            width: 24,
-                                            height: 24,
+                                            width: 28,
+                                            height: 28,
                                           ),
                                         ),
                                         const SizedBox(width: 4),
@@ -592,7 +592,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.boldonse(
                                               color: const Color(0xFF062F35),
-                                              fontSize: 18,
+                                              fontSize: 20,
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
@@ -605,7 +605,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                                     'Service Details',
                                     style: GoogleFonts.boldonse(
                                       color: const Color(0xFF062F35),
-                                      fontSize: 16,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.w400,
                                     ),
                                   ),
@@ -719,9 +719,9 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 46,
-                height: 46,
-                padding: const EdgeInsets.all(8),
+                width: 54,
+                height: 54,
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: const Color(0x33D9D9D9),
                   borderRadius: BorderRadius.circular(5),
@@ -734,15 +734,15 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                 child: iconAsset.toLowerCase().endsWith('.png')
                     ? Image.asset(
                         iconAsset,
-                        width: 28,
-                        height: 28,
+                        width: 32,
+                        height: 32,
                         fit: BoxFit.contain,
                         filterQuality: FilterQuality.high,
                       )
                     : SvgPicture.asset(
                         iconAsset,
-                        width: 22,
-                        height: 22,
+                        width: 26,
+                        height: 26,
                         colorFilter: const ColorFilter.mode(
                           Color(0xFF12899B),
                           BlendMode.srcIn,
@@ -758,7 +758,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                       label,
                       style: GoogleFonts.montserrat(
                         color: const Color(0xFF12899B),
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -770,7 +770,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.montserrat(
                           color: const Color(0xFF5A5A5A),
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.w400,
                           height: 1.35,
                         ),
@@ -867,8 +867,8 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
   double _dx = 0;
   bool _fired = false;
 
-  static const double _thumb = 40;
-  static const double _height = 48;
+  static const double _thumb = 44;
+  static const double _height = 52;
 
   @override
   void didUpdateWidget(covariant _SlideToConfirm oldWidget) {
@@ -905,9 +905,9 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Leave room for the 41px repairshop target icon on the right.
+        // Leave room for the repairshop target icon on the right.
         final maxDx =
-            (constraints.maxWidth - _thumb - 8 - 41 - 8).clamp(0.0, 400.0);
+            (constraints.maxWidth - _thumb - 8 - 46 - 8).clamp(0.0, 400.0);
         return Container(
           height: _height,
           decoration: BoxDecoration(
@@ -928,7 +928,7 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
                 'Slide to confirm',
                 style: GoogleFonts.boldonse(
                   color: const Color(0xFF000000),
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -936,8 +936,8 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
                 right: 8,
                 child: Image.asset(
                   'assets/images/icons/repairshop.png',
-                  width: 41,
-                  height: 41,
+                  width: 46,
+                  height: 46,
                   fit: BoxFit.contain,
                   filterQuality: FilterQuality.high,
                 ),
@@ -962,8 +962,8 @@ class _SlideToConfirmState extends State<_SlideToConfirm> {
                     alignment: Alignment.center,
                     child: SvgPicture.asset(
                       'assets/images/icons/shoe.svg',
-                      width: 22,
-                      height: 15,
+                      width: 26,
+                      height: 18,
                       colorFilter: const ColorFilter.mode(
                         Colors.white,
                         BlendMode.srcIn,

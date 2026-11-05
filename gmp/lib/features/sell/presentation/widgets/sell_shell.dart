@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -447,10 +448,11 @@ class SellRackShoeCell extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
                       child: imageUrl != null && imageUrl!.isNotEmpty
-                          ? Image.network(
-                              imageUrl!,
+                          ? ArticleRackShoeImage(
+                              imageUrl: imageUrl!,
                               fit: BoxFit.contain,
-                              errorBuilder: (_, _, _) => const _FallbackShoe(),
+                              placeholder: const _FallbackShoe(),
+                              errorPlaceholder: const _FallbackShoe(),
                             )
                           : const _FallbackShoe(),
                     ),

@@ -360,7 +360,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                   'Purchase Summary',
                   style: GoogleFonts.boldonse(
                     color: _titleColor,
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -380,7 +380,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                       'Payment Details',
                       style: GoogleFonts.boldonse(
                         color: _titleColor,
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -485,9 +485,9 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 46,
-            height: 46,
-            padding: const EdgeInsets.all(8),
+            width: 68,
+            height: 68,
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
               color: const Color(0x33D9D9D9),
               borderRadius: BorderRadius.circular(5),
@@ -496,8 +496,8 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
             alignment: Alignment.center,
             child: SvgPicture.asset(
               'assets/images/noun-shoes-cleaning-7675732 1.svg',
-              width: 28,
-              height: 34,
+              width: 36,
+              height: 42,
               fit: BoxFit.contain,
               colorFilter: const ColorFilter.mode(
                 _accentColor,
@@ -514,7 +514,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                   'Service Type',
                   style: GoogleFonts.montserrat(
                     color: _accentColor,
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -523,7 +523,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                   _serviceDisplayTitle,
                   style: GoogleFonts.montserrat(
                     color: _valueColor,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -594,7 +594,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                           text: 'Make Payment ',
                           style: GoogleFonts.boldonse(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -602,7 +602,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                           text: '₹',
                           style: GoogleFonts.boldonse(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 26,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -610,7 +610,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                           text: amountText,
                           style: GoogleFonts.boldonse(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -643,7 +643,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
               label,
               style: GoogleFonts.montserrat(
                 color: _accentColor,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -652,7 +652,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
             value,
             style: GoogleFonts.montserrat(
               color: _valueColor,
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: boldValue ? FontWeight.w700 : FontWeight.w400,
             ),
           ),
