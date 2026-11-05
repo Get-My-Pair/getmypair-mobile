@@ -159,6 +159,7 @@ const List<_HomeServiceItem> _kHomeServiceCatalog = [
     iconAsset: _kThriftStoreIconAsset,
     kind: _HomeServiceKind.thriftHub,
     hubOnly: true,
+    disabled: true,
   ),
   _HomeServiceItem(
     label: 'Wash\nMyPair',
@@ -291,11 +292,6 @@ double _homeViewportBottomReserve(BuildContext context) {
 /// Horizontal gap between the two cards in each action row.
 double _homeSectionGap(double layoutScale) =>
     (14 * layoutScale).clamp(10.0, 16.0);
-
-/// Scales icons/text inside action cards vs Edge reference cell height.
-double _homeActionContentScale(double actionBlockH, double layoutScale) =>
-    (actionBlockH / (_kQuickActionCellHeight * layoutScale))
-        .clamp(0.72, 1.72);
 
 /// Scales My Rack inner content (title, thumbs, icons) vs Edge reference.
 double _homeRackContentScale(double rackHeight, double layoutScale) =>
@@ -1120,21 +1116,6 @@ class _HomePageState extends State<HomePage> {
                                           packedH = packedHeight();
                                         }
                                       }
-                                      final actionContentScale =
-                                          _homeActionContentScale(
-                                        equalBlockH,
-                                        layoutScale,
-                                      );
-                                      final actionIconW =
-                                          (44 * actionContentScale).clamp(
-                                        _homeScaled(28, layoutScale),
-                                        _homeScaled(62, layoutScale),
-                                      );
-                                      final actionIconH =
-                                          (42 * actionContentScale).clamp(
-                                        _homeScaled(26, layoutScale),
-                                        _homeScaled(58, layoutScale),
-                                      );
                                       final rackContentScale =
                                           _homeRackContentScale(
                                         rackHeight,
@@ -1380,8 +1361,6 @@ class _HomePageState extends State<HomePage> {
                                                       iconAssetUrl:
                                                           item.iconAsset,
                                                       layoutScale: layoutScale,
-                                                      iconWidth: actionIconW,
-                                                      iconHeight: actionIconH,
                                                       cellHeight: equalBlockH,
                                                       onTap: item.disabled
                                                           ? null
@@ -2979,7 +2958,7 @@ class _PairActionLabel extends StatelessWidget {
       fontSize: fontSize,
       fontWeight: FontWeight.w400,
       color: color,
-      height: 1.12,
+      height: 1.28,
     );
 
     return Column(
@@ -3208,8 +3187,6 @@ class _CarbonCreditsPopup extends StatelessWidget {
 class _QuickActionCard extends StatelessWidget {
   final String label;
   final String? iconAssetUrl;
-  final double iconWidth;
-  final double iconHeight;
   final double? cellHeight;
   final double layoutScale;
   final bool highlight;
@@ -3219,8 +3196,6 @@ class _QuickActionCard extends StatelessWidget {
   const _QuickActionCard({
     required this.label,
     this.iconAssetUrl,
-    this.iconWidth = 24,
-    this.iconHeight = 24,
     this.cellHeight,
     this.layoutScale = 1.0,
     this.highlight = false,
@@ -3270,35 +3245,38 @@ class _QuickActionCard extends StatelessWidget {
               final w = constraints.maxWidth;
               if (h <= 0 || w <= 0) return const SizedBox.shrink();
 
-              final padH = (w * 0.08).clamp(10.0, 14.0);
-              final padV = (h * 0.14).clamp(8.0, 12.0);
+              // Match home hub reference: padded, vertically centered row,
+              // large equal icons, tight two-line labels.
+              final padH = (w * 0.10).clamp(12.0, 18.0);
+              final padV = (h * 0.12).clamp(8.0, 12.0);
               final innerH = math.max(18.0, h - padV * 2);
               final innerW = math.max(18.0, w - padH * 2);
-              final iconH = (innerH * 0.62).clamp(22.0, 32.0);
-              final iconRatio =
-                  iconHeight <= 0 ? 1.0 : (iconWidth / iconHeight);
-              final iconW = (iconH * iconRatio).clamp(22.0, 34.0);
+              final iconSize = (innerH * 0.78).clamp(34.0, 44.0);
               final gap = (innerW * 0.06).clamp(8.0, 12.0);
-              final fontSize = (innerH * 0.28).clamp(12.0, 15.0);
-              final lineGap = (innerH * 0.22).clamp(9.0, 14.0);
+              final fontSize = (innerH * 0.40).clamp(16.0, 20.0);
+              final lineGap = (innerH * 0.08).clamp(5.0, 10.0);
 
               return Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: padH,
                   vertical: padV,
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: iconW,
-                      height: iconH,
-                      child: _buildActionIcon(textColor),
-                    ),
-                    SizedBox(width: gap),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: iconSize,
+                        height: iconSize,
+                        child: _buildActionIcon(textColor, iconSize),
+                      ),
+                      SizedBox(width: gap),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: math.max(48.0, innerW - iconSize - gap),
+                        ),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
@@ -3322,8 +3300,8 @@ class _QuickActionCard extends StatelessWidget {
                                 ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -3333,12 +3311,12 @@ class _QuickActionCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionIcon(Color textColor) {
+  Widget _buildActionIcon(Color textColor, double size) {
     final source = iconAssetUrl;
     if (source == null || source.isEmpty) {
       return Icon(
         Icons.widgets_outlined,
-        size: (iconWidth * 0.78).clamp(16.0, 28.0),
+        size: size * 0.85,
         color: textColor,
       );
     }
@@ -3346,11 +3324,13 @@ class _QuickActionCard extends StatelessWidget {
     if (source.startsWith('http://') || source.startsWith('https://')) {
       return Image.network(
         source,
+        width: size,
+        height: size,
         fit: BoxFit.contain,
         color: textColor,
         colorBlendMode: BlendMode.srcIn,
         errorBuilder: (_, _, _) =>
-            Icon(Icons.widgets_outlined, size: 24, color: textColor),
+            Icon(Icons.widgets_outlined, size: size * 0.85, color: textColor),
       );
     }
 
@@ -3361,16 +3341,20 @@ class _QuickActionCard extends StatelessWidget {
         lower.endsWith('.webp')) {
       return Image.asset(
         source,
+        width: size,
+        height: size,
         fit: BoxFit.contain,
         color: textColor,
         colorBlendMode: BlendMode.srcIn,
         errorBuilder: (_, _, _) =>
-            Icon(Icons.widgets_outlined, size: 24, color: textColor),
+            Icon(Icons.widgets_outlined, size: size * 0.85, color: textColor),
       );
     }
 
     return SvgPicture.asset(
       source,
+      width: size,
+      height: size,
       fit: BoxFit.contain,
       colorFilter: ColorFilter.mode(textColor, BlendMode.srcIn),
     );
