@@ -150,8 +150,9 @@ class _PaymentSimulateCheckoutPageState extends State<PaymentSimulateCheckoutPag
     }
   }
 
-  void _navigateSuccess() {
-    Navigator.pushReplacement(
+  Future<void> _navigateSuccess() async {
+    // Keep simulate checkout under success so paid=true returns to PaymentRequestPage.
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => PaymentSuccessPage(
@@ -162,6 +163,7 @@ class _PaymentSimulateCheckoutPageState extends State<PaymentSimulateCheckoutPag
         ),
       ),
     );
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override

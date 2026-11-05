@@ -135,9 +135,43 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
   }
 
   static String _trackingLabel(Map<String, dynamic> r) {
+    final paymentState =
+        (r['paymentState'] ?? r['workflowStatus'] ?? '').toString().toUpperCase();
+    if (paymentState == 'PAYMENT_SUCCESS' ||
+        paymentState == 'PAID' ||
+        r['isPaid'] == true) {
+      final tracking = (r['trackingState'] ?? '').toString();
+      if (tracking.isEmpty || tracking == 'request_created') {
+        return 'Payment paid';
+      }
+      return tracking.replaceAll('_', ' ');
+    }
+    if (paymentState == 'PAYMENT_PENDING' ||
+        paymentState == 'PAYMENT_INITIATED' ||
+        paymentState == 'COST_APPROVAL_PENDING') {
+      // Still awaiting payment — don't look like generic progress-only.
+      if (paymentState != 'COST_APPROVAL_PENDING') {
+        return 'Payment required';
+      }
+    }
     final tracking = (r['trackingState'] ?? '').toString();
     if (tracking.isEmpty) return 'Progress';
     return tracking.replaceAll('_', ' ');
+  }
+
+  static String _listStatusLabel(Map<String, dynamic> r) {
+    final paymentState =
+        (r['paymentState'] ?? '').toString().trim().toUpperCase();
+    if (paymentState == 'PAYMENT_SUCCESS' ||
+        paymentState == 'PAID' ||
+        r['isPaid'] == true) {
+      return 'paid';
+    }
+    if (paymentState == 'PAYMENT_PENDING' ||
+        paymentState == 'PAYMENT_INITIATED') {
+      return 'payment_required';
+    }
+    return (r['status'] ?? '').toString();
   }
 
   /// Resolves a usable image URL from a raw upload path.
@@ -322,8 +356,7 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
                                             final serviceType =
                                                 (r['serviceType'] ?? '')
                                                     .toString();
-                                            final status =
-                                                (r['status'] ?? '').toString();
+                                            final status = _listStatusLabel(r);
                                             final createdRaw =
                                                 (r['createdAt'] ?? '')
                                                     .toString();
@@ -653,12 +686,15 @@ class _StatusChip extends StatelessWidget {
     final v = status.trim().toLowerCase();
     Color bg = AppColors.info.withValues(alpha: 0.12);
     Color fg = AppColors.info;
-    if (v == 'completed') {
+    if (v == 'completed' || v == 'paid') {
       bg = AppColors.success.withValues(alpha: 0.12);
       fg = AppColors.success;
     } else if (v == 'cancelled') {
       bg = AppColors.error.withValues(alpha: 0.12);
       fg = AppColors.error;
+    } else if (v == 'payment_required') {
+      bg = AppColors.warning.withValues(alpha: 0.14);
+      fg = AppColors.warning;
     } else if (v == 'in_service') {
       bg = AppColors.primary.withValues(alpha: 0.12);
       fg = AppColors.primary;

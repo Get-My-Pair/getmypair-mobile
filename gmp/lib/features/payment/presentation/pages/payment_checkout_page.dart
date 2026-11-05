@@ -312,7 +312,8 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     unawaited(_syncBackendStatus());
 
     if (!mounted) return;
-    Navigator.pushReplacement(
+    // Keep checkout under success so a true pop result reaches PaymentRequestPage.
+    await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => PaymentSuccessPage(
@@ -323,6 +324,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
         ),
       ),
     );
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   void _goToFailed(String? failureReason) {

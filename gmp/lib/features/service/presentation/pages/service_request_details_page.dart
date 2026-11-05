@@ -10,6 +10,7 @@ import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/network_error_view.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/payment/domain/usecases/payment_usecases.dart';
 import 'package:gmp/features/payment/presentation/bloc/payment_bloc.dart';
 import 'package:gmp/features/payment/presentation/pages/payment_request_page.dart';
 import 'package:gmp/features/payment/presentation/widgets/pay_now_button.dart';
@@ -80,6 +81,9 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
               const {};
           if (!mounted) return;
           final mapped = Map<String, dynamic>.from(req);
+          // Payment collection can lag service-request fields; confirm via payment API.
+          await _mergePaidStateFromPayments(token, mapped);
+          if (!mounted) return;
           setState(() {
             _request = mapped;
             _loading = false;
@@ -101,6 +105,27 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
         }
       },
     );
+  }
+
+  Future<void> _mergePaidStateFromPayments(
+    String token,
+    Map<String, dynamic> request,
+  ) async {
+    if (_isPaymentComplete(request)) return;
+    try {
+      final existing = await sl<GetPaymentByServiceRequest>().call(
+        accessToken: token,
+        serviceRequestId: widget.requestId,
+      );
+      if (existing != null && existing.isSuccess) {
+        request['paymentState'] = 'PAYMENT_SUCCESS';
+        request['workflowStatus'] = 'PAYMENT_SUCCESS';
+        request['isPaid'] = true;
+        request['paymentCompleted'] = true;
+      }
+    } catch (_) {
+      // Keep service-request fields if payment lookup fails.
+    }
   }
 
   String _str(dynamic v) => v?.toString() ?? '';
@@ -283,6 +308,12 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
         state == 'PAYMENT_COMPLETED') {
       return true;
     }
+    final workflow = _str(r['workflowStatus']).trim().toUpperCase();
+    if (workflow == 'PAYMENT_SUCCESS' ||
+        workflow == 'PAID' ||
+        workflow == 'COMPLETED') {
+      return true;
+    }
     // Fallback fields some payloads use after Zoho confirm.
     final status = _str(r['paymentStatus']).trim().toUpperCase();
     if (status == 'PAYMENT_SUCCESS' ||
@@ -316,7 +347,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
     return double.tryParse(_str(estimated)) ?? 0;
   }
 
-  void _openPaymentFlow(Map<String, dynamic> r) {
+  Future<void> _openPaymentFlow(Map<String, dynamic> r) async {
     if (_isPaymentComplete(r)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -325,7 +356,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
       );
       return;
     }
-    Navigator.push(
+    final paid = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => BlocProvider(
@@ -340,7 +371,21 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
           ),
         ),
       ),
-    ).then((_) => _load());
+    );
+    if (!mounted) return;
+    // Optimistic UI: stop asking for payment immediately after success.
+    if (paid == true && _request != null) {
+      setState(() {
+        _request = {
+          ..._request!,
+          'paymentState': 'PAYMENT_SUCCESS',
+          'workflowStatus': 'PAYMENT_SUCCESS',
+          'isPaid': true,
+          'paymentCompleted': true,
+        };
+      });
+    }
+    await _load();
   }
 
   String _fmtAmount(dynamic v) {

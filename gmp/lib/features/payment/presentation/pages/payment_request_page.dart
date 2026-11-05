@@ -168,7 +168,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
         );
   }
 
-  void _openCheckout(PaymentLinkReady state) {
+  Future<void> _openCheckout(PaymentLinkReady state) async {
     final link = state.linkResult;
     final child = state.useSimulatedCheckout
         ? PaymentSimulateCheckoutPage(
@@ -190,7 +190,9 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                 : null,
           );
 
-    Navigator.pushReplacement(
+    // Use push (not replacement) so payment success can pop a true result
+    // back through this page to Service Request details.
+    final paid = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
@@ -199,10 +201,14 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
         ),
       ),
     );
+    if (!mounted) return;
+    if (paid == true) {
+      Navigator.of(context).pop(true);
+    }
   }
 
-  void _openSimulateFallback(PaymentLinkResult link) {
-    Navigator.pushReplacement(
+  Future<void> _openSimulateFallback(PaymentLinkResult link) async {
+    final paid = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
@@ -218,6 +224,10 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
         ),
       ),
     );
+    if (!mounted) return;
+    if (paid == true) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   @override
