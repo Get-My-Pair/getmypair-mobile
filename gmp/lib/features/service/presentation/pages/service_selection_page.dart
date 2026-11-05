@@ -158,42 +158,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     ),
   ];
 
-  static const List<MaintenancePlanData> _defaultRepairPlans = [
-    MaintenancePlanData(
-      id: 'sole_bottom_construction',
-      label: 'Sole & Bottom Construction Repairs',
-      description:
-          'Complete bottom-up sole restoration, from re-gluing delaminated outsoles and replacing worn heels to full resoles and midsole rebuilds.',
-      priceRupees: 236,
-    ),
-    MaintenancePlanData(
-      id: 'upper_seam_restoration',
-      label: 'Upper Material & Seam Restoration',
-      description:
-          'Full upper and interior restoration to patch tears, fix split seams, rebuild heel linings, and replace damaged panels.',
-      priceRupees: 236,
-    ),
-    MaintenancePlanData(
-      id: 'hardware_fastener',
-      label: 'Hardware & Fastener Repairs',
-      description:
-          'Complete hardware and fastener replacement for eyelets, zippers, straps, buckles, velcro, and snaps.',
-      priceRupees: 236,
-    ),
-    MaintenancePlanData(
-      id: 'fit_structural',
-      label: 'Fit & Structural Adjustments',
-      description:
-          'Fixes squeaks, shaky support inside your shoes, and stretches tight spots for a comfortable fit.',
-      priceRupees: 236,
-    ),
-  ];
-
+  /// No static repair tiles — always load category problems from Masteradmin API.
   List<MaintenancePlanData> _maintenancePlans = List.unmodifiable(
     _defaultMaintenancePlans,
   );
   List<MaintenancePlanData> _washPlans = List.unmodifiable(_defaultWashPlans);
-  List<MaintenancePlanData> _repairPlans = List.unmodifiable(_defaultRepairPlans);
+  List<MaintenancePlanData> _repairPlans = const [];
 
   bool _careOptionsScrollbarNeeded = false;
 
@@ -507,6 +477,10 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final i = _focusedArticleIndex.clamp(0, _flowArticles.length - 1);
     final cat = _flowArticles[i].category.trim().toLowerCase();
     if (cat.isEmpty) return all;
+    // Repair must stay category-strict; do not fall back to unrelated tiles.
+    if (_isRepairFlow) {
+      return all.where((p) => p.appliesToCategory(cat)).toList(growable: false);
+    }
     final filtered =
         all.where((p) => p.appliesToCategory(cat)).toList(growable: false);
     return filtered.isNotEmpty ? filtered : all;
@@ -3848,6 +3822,29 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final box = (28 * layoutScale).clamp(24.0, 30.0);
     final gap = (22 * layoutScale).clamp(14.0, 22.0);
     final itemGap = (10 * layoutScale).clamp(8.0, 12.0);
+
+    if (plans.isEmpty) {
+      final cat = _flowArticles.isEmpty
+          ? ''
+          : _flowArticles[
+                  _focusedArticleIndex.clamp(0, _flowArticles.length - 1)]
+              .category
+              .trim();
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: (12 * layoutScale).clamp(8.0, 16.0)),
+        child: Text(
+          cat.isEmpty
+              ? 'No repair services available yet. Please try again shortly.'
+              : 'No repair services for this footwear category yet.',
+          style: GoogleFonts.montserrat(
+            fontSize: bodyFs,
+            height: 1.35,
+            color: const Color(0xFF5A6B6E),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
