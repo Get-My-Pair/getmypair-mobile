@@ -1,20 +1,20 @@
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb;
 
-/// Dev OTP is only for Flutter web. Android/iOS always use production SMS.
-bool get isWebDevOtpEnabled => kIsWeb;
+/// Dev OTP UI: Flutter web always, plus debug mobile builds when API returns `otp`.
+bool get isWebDevOtpEnabled => kIsWeb || kDebugMode;
 
-/// Prints Dev OTP to the `flutter run` terminal (Chrome / web only).
+/// Prints Dev OTP to the `flutter run` terminal.
 void logWebDevOtpToTerminal(String otp, {String? mobile}) {
   if (!isWebDevOtpEnabled) return;
   final code = otp.trim();
   if (code.isEmpty) return;
   final phone = (mobile ?? '').trim();
   final phoneLine = phone.isEmpty ? '' : '  mobile: $phone\n';
-  // ignore: avoid_print — intentional: visible in Flutter Chrome run terminal
+  // ignore: avoid_print — intentional: visible in Flutter run terminal
   print('\n'
       '========================================\n'
-      '  WEB DEV OTP: $code\n'
+      '  DEV OTP: $code\n'
       '$phoneLine'
       '========================================\n');
-  debugPrint('[Web Dev OTP] $code${phone.isEmpty ? '' : ' ($phone)'}');
+  debugPrint('[Dev OTP] $code${phone.isEmpty ? '' : ' ($phone)'}');
 }

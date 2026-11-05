@@ -181,8 +181,14 @@ class ApiEndpoints {
       'Accept': 'application/json',
       'X-App-Source': AppConstants.appSourceForApi,
       'X-App-Version': AppConstants.appVersion,
-      'X-Client-Platform': clientPlatformHeader,
     };
+
+    // Flutter web: browsers CORS-preflight custom headers. Older API builds omitted
+    // X-Client-Platform from Allow-Headers and blocked send-otp. Rely on User-Agent
+    // (backend maps browser UA → web Dev OTP). Native apps still send the header.
+    if (!kIsWeb) {
+      headers['X-Client-Platform'] = clientPlatformHeader;
+    }
 
     if (accessToken != null) {
       headers['Authorization'] = 'Bearer $accessToken';

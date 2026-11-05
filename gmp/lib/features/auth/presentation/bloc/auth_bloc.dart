@@ -219,8 +219,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   String _mapFailureToMessage(Failure failure) {
+    // Prefer typed network failures; otherwise classify from message text.
+    if (failure is NetworkFailure) {
+      return UserFacingError.networkMessage;
+    }
     // UI never shows raw backend/API payloads.
-    return UserFacingError.sanitize(failure);
+    return UserFacingError.sanitize(failure.message);
   }
 }
 

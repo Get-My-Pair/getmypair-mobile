@@ -133,12 +133,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         body: body,
       );
 
-      // Web Dev OTP: keep `otp` for the popup + print in flutter run terminal.
-      // Android/iOS: strip it (production SMS only).
+      // Keep `otp` for Dev OTP popup when API echoes it (web / debug).
+      // Release Android/iOS: strip even if a misconfigured API leaks it.
       final data = Map<String, dynamic>.from(
         response['data'] as Map<String, dynamic>? ?? {},
       );
-      if (!kIsWeb) {
+      if (!isWebDevOtpEnabled) {
         data.remove('otp');
       } else {
         final otpRaw = data['otp'];
@@ -149,10 +149,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
 
       return data;
+    } on NetworkException {
+      rethrow;
+    } on ServerException {
+      rethrow;
     } catch (e) {
-      if (e is NetworkException) {
-        throw ServerException(e.message);
-      }
       throw ServerException('Failed to send OTP: ${e.toString()}');
     }
   }

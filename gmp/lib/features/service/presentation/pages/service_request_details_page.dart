@@ -367,7 +367,13 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
             serviceType: _str(r['serviceType']).isEmpty
                 ? null
                 : _str(r['serviceType']),
-            requestLabel: 'Request #${widget.requestId.substring(0, 8)}…',
+            requestLabel: () {
+              final publicId = _str(r['publicId']);
+              if (publicId.isNotEmpty) return 'Request #$publicId';
+              final id = widget.requestId;
+              if (id.length <= 10) return 'Request #$id';
+              return 'Request #${id.substring(0, 8)}…';
+            }(),
           ),
         ),
       ),
@@ -693,7 +699,17 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _row('Request ID', (_request!['_id'] ?? '').toString()),
+                        _row(
+                          'Request ID',
+                          () {
+                            final publicId =
+                                (_request!['publicId'] ?? '').toString().trim();
+                            if (publicId.isNotEmpty) {
+                              return publicId.toUpperCase();
+                            }
+                            return (_request!['_id'] ?? '').toString();
+                          }(),
+                        ),
                         _row(
                           'Service Type',
                           (_request!['serviceType'] ?? '')

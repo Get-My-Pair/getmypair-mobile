@@ -1,3 +1,5 @@
+import 'failures.dart';
+
 /// Maps raw exceptions / API strings into safe UI copy.
 /// Never surfaces backend stack traces, status payloads, or technical details.
 class UserFacingError {
@@ -13,6 +15,7 @@ class UserFacingError {
 
   static bool isNetwork(Object? error) {
     if (error == null) return false;
+    if (error is NetworkFailure) return true;
     final typeName = error.runtimeType.toString().toLowerCase();
     if (typeName.contains('networkfailure') ||
         typeName.contains('networkexception')) {
@@ -25,6 +28,7 @@ class UserFacingError {
         raw.contains('network failure') ||
         raw.contains('network error') ||
         raw.contains('no internet') ||
+        raw.contains('failed to fetch') ||
         raw.contains('connection timeout') ||
         raw.contains('connection timed out') ||
         raw.contains('failed host lookup') ||
@@ -34,6 +38,7 @@ class UserFacingError {
         raw.contains('clientexception') ||
         raw.contains('xmlhttprequest') ||
         raw.contains('handshake exception') ||
+        raw.contains('cors') ||
         (raw.contains('timeout') && raw.contains('connection'));
   }
 
@@ -48,6 +53,9 @@ class UserFacingError {
 
   static String _raw(Object error) {
     if (error is String) return error;
+    if (error is Failure) {
+      return '${error.runtimeType} ${error.message}';
+    }
     return error.toString();
   }
 }

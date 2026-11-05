@@ -114,7 +114,11 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
     }
   }
 
-  static String _shortId(String id) {
+  /// Prefer coded publicId (e.g. CHSHWA1234AM); else trim Mongo ObjectId.
+  static String _displayId(Map<String, dynamic> r) {
+    final publicId = (r['publicId'] ?? '').toString().trim();
+    if (publicId.isNotEmpty) return publicId.toUpperCase();
+    final id = (r['_id'] ?? '').toString();
     if (id.length <= 10) return id;
     return '…${id.substring(id.length - 6)}';
   }
@@ -512,7 +516,7 @@ class _ServiceRequestListPageState extends State<ServiceRequestListPage> {
                                                         Row(
                                                           children: [
                                                             Text(
-                                                              'ID ${_shortId(id)}',
+                                                              'ID ${_displayId(r)}',
                                                               style: GoogleFonts
                                                                   .montserrat(
                                                                 fontSize: 11,

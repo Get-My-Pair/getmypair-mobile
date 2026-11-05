@@ -10,7 +10,7 @@ export 'package:gmp/features/auth/utils/web_dev_otp_log.dart'
 
 const Color _kOtpDevPrimary = Color(0xFF062F35);
 
-/// Development OTP popup for Flutter web when the API returns the code.
+/// Development OTP popup when the API returns the code (web / debug).
 Future<void> showDevOtpDialog({
   required BuildContext context,
   required String otp,
@@ -36,7 +36,7 @@ Future<void> showDevOtpDialog({
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                'OTP Code (Web Dev)',
+                'OTP Code (Dev)',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.boldonse(
                   fontSize: 18,

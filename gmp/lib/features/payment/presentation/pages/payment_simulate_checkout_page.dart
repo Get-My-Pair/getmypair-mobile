@@ -288,7 +288,7 @@ class _CheckoutView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Order ${orderId.length > 16 ? '…${orderId.substring(orderId.length - 10)}' : orderId}',
+                  'Order $orderId',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textTertiary,
