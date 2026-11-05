@@ -17,6 +17,7 @@ import 'package:gmp/features/service/data/service_proof_upload.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'service_request_details_page.dart';
 import 'service_selection_page.dart';
 
 class RequestSummaryPage extends StatefulWidget {
@@ -144,13 +145,15 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 
-  /// Returns `null` on success, otherwise an error message.
-  Future<String?> _submitServiceRequest() async {
+  /// Creates the service request(s). On success [requestId] is set for payment.
+  Future<({String? error, String? requestId})> _submitServiceRequest() async {
     final tokenResult = await sl<GetValidAccessToken>().call();
-    if (!mounted) return 'Please try again';
+    if (!mounted) {
+      return (error: 'Please try again', requestId: null);
+    }
 
     return await tokenResult.fold(
-      (_) async => 'Please sign in again',
+      (_) async => (error: 'Please sign in again', requestId: null),
       (token) async {
         try {
           final photoUrls = <String>[];
@@ -202,23 +205,31 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                     ? ((res['data'] as Map)['request'] as Map)['_id']
                         ?.toString()
                     : null;
-            if (requestId != null) createdIds.add(requestId);
+            if (requestId != null && requestId.isNotEmpty) {
+              createdIds.add(requestId);
+            }
           }
 
-          if (!mounted) return null;
+          if (!mounted) {
+            return (error: 'Please try again', requestId: null);
+          }
           final count = widget.articleIds.length;
           await showAppFeedbackAlert(
             context,
             message: count > 1
-                ? '$count service requests created'
-                : createdIds.isNotEmpty
-                    ? 'Request created (${createdIds.first})'
-                    : 'Request created',
+                ? '$count service requests created — continue to payment'
+                : 'Request created — continue to payment',
             type: AppFeedbackType.success,
           );
-          return null;
+          return (
+            error: null,
+            requestId: createdIds.isNotEmpty ? createdIds.first : null,
+          );
         } catch (e) {
-          return e.toString().replaceFirst('Exception: ', '');
+          return (
+            error: e.toString().replaceFirst('Exception: ', ''),
+            requestId: null,
+          );
         }
       },
     );
@@ -230,14 +241,25 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       _submitting = true;
       _error = null;
     });
-    final error = await _submitServiceRequest();
+    final result = await _submitServiceRequest();
     if (!mounted) return;
     setState(() => _submitting = false);
-    if (error == null) {
-      Navigator.pop(context, true);
+    if (result.error != null) {
+      setState(() => _error = result.error);
       return;
     }
-    setState(() => _error = error);
+    final requestId = result.requestId;
+    if (requestId != null && requestId.isNotEmpty) {
+      // Open details → Continue to payment (no actual-amount gate).
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => ServiceRequestDetailsPage(requestId: requestId),
+        ),
+        (route) => route.isFirst,
+      );
+      return;
+    }
+    Navigator.pop(context, true);
   }
 
   @override

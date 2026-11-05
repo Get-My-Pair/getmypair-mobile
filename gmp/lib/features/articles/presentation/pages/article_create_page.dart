@@ -10,6 +10,7 @@ import 'package:gmp/core/widgets/app_dropdown.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/greyed_button_shell.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/features/articles/data/article_categories.dart';
 import 'package:gmp/features/articles/data/footwear_brands.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
@@ -37,7 +38,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   final _formKey = GlobalKey<FormState>();
   final _modelController = TextEditingController();
 
-  String _category = 'sports_shoe';
+  String _category = 'formal_shoes';
   String? _selectedBrand;
   String _footwearType = 'everyday';
   String _sizeRegion = 'UK';
@@ -74,15 +75,8 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   bool _submitting = false;
   String? _errorMessage;
 
-  static const List<Map<String, String>> _categories = [
-    {'value': 'sports_shoe', 'label': 'Sports shoe'},
-    {'value': 'casual', 'label': 'Casual'},
-    {'value': 'formal', 'label': 'Formal'},
-    {'value': 'sandal', 'label': 'Sandal'},
-    {'value': 'boot', 'label': 'Boot'},
-    {'value': 'slipper', 'label': 'Slipper'},
-    {'value': 'other', 'label': 'Other'},
-  ];
+  List<Map<String, String>> _categories =
+      List<Map<String, String>>.from(kDefaultArticleCategories);
   static const List<Map<String, String>> _conditions = [
     {'value': 'excellent', 'label': 'Excellent'},
     {'value': 'good', 'label': 'Good'},
@@ -96,6 +90,26 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     _modelController.addListener(() {
       if (mounted) setState(() {});
     });
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {},
+      (token) async {
+        final items = await fetchArticleCategories(token);
+        if (!mounted || items.isEmpty) return;
+        setState(() {
+          _categories = items;
+          final values = items.map((e) => e['value']).whereType<String>();
+          if (!values.contains(_category)) {
+            _category = values.isNotEmpty ? values.first : _category;
+          }
+        });
+      },
+    );
   }
 
   void _selectBrand(String brandName) {

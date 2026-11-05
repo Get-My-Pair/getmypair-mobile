@@ -592,6 +592,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
           MaterialPageRoute(
             builder: (_) => ServiceSelectionPage(
               articleId: article.id,
+              articleName: article.brand.trim().isNotEmpty
+                  ? article.brand
+                  : article.model,
+              articleImageUrl: article.rackHeroImagePath,
+              articleCategory: article.category,
               allowedServiceTypes: widget.serviceFlowAllowedTypes,
             ),
           ),
@@ -1730,6 +1735,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
       MaterialPageRoute(
         builder: (_) => ServiceSelectionPage(
           articleId: article.id,
+          articleName: article.brand.trim().isNotEmpty
+              ? article.brand
+              : article.model,
+          articleImageUrl: article.rackHeroImagePath,
+          articleCategory: article.category,
           allowedServiceTypes: widget.serviceFlowAllowedTypes,
         ),
       ),

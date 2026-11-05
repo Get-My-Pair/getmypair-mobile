@@ -13,6 +13,7 @@ import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/greyed_button_shell.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
+import 'package:gmp/features/articles/data/article_categories.dart';
 import 'package:gmp/features/articles/data/footwear_brands.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
@@ -52,7 +53,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   bool _submitting = false;
   String? _error;
 
-  String _category = 'sports_shoe';
+  String _category = 'formal_shoes';
   String _condition = 'good';
   String _sizeRegion = 'UK';
   String? _selectedSizeNumber;
@@ -63,15 +64,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   final List<File> _imageFiles = [];
   List<String> _existingImageUrls = [];
 
-  static const List<Map<String, String>> _categories = [
-    {'value': 'sports_shoe', 'label': 'Sports shoe'},
-    {'value': 'casual', 'label': 'Casual'},
-    {'value': 'formal', 'label': 'Formal'},
-    {'value': 'sandal', 'label': 'Sandal'},
-    {'value': 'boot', 'label': 'Boot'},
-    {'value': 'slipper', 'label': 'Slipper'},
-    {'value': 'other', 'label': 'Other'},
-  ];
+  List<Map<String, String>> _categories =
+      List<Map<String, String>>.from(kDefaultArticleCategories);
 
   static const List<String> _ukSizes = [
     '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14',
@@ -153,7 +147,31 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
       _applyArticle(seed);
       _loading = false;
     }
+    _loadCategories();
     _load();
+  }
+
+  Future<void> _loadCategories() async {
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {},
+      (token) async {
+        final items = await fetchArticleCategories(token);
+        if (!mounted || items.isEmpty) return;
+        setState(() {
+          _categories = items;
+          final values = items.map((e) => e['value']).whereType<String>();
+          if (_category.isNotEmpty && !values.contains(_category)) {
+            // Keep current article category even if inactive; append for display.
+            _categories = [
+              ...items,
+              {'value': _category, 'label': _category},
+            ];
+          }
+        });
+      },
+    );
   }
 
   @override

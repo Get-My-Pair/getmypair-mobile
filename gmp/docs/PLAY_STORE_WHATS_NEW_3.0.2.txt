@@ -1,8 +1,9 @@
 What's new in 3.0.2
 
-• Faster, more reliable footwear photo capture
-• Clearer network error screen when you are offline
+• Home shows your current location in a clear two-line header — tap to manage addresses
+• Home stays fixed when you pull down; swipe up to open My Rack as before
+• OTP verification is required every time you log in with your mobile number
+• More reliable footwear photo capture and verification
+• Clearer offline / network error handling
 • Smoother OTP login with SMS autofill on Android
-• Payment Paid status shown after successful service payment
-• Keyboard opens only when you tap a text field
 • Stability and performance improvements

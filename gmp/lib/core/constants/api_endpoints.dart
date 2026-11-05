@@ -86,6 +86,9 @@ class ApiEndpoints {
       '$baseUrl$articlesPrefix/delete/$id';
   static String get articlesUploadImage =>
       '$baseUrl$articlesPrefix/upload-image';
+  /// Active Masteradmin Article DB categories for add/edit article.
+  static String get articlesCategories =>
+      '$baseUrl$articlesPrefix/categories';
 
   static const String sellPrefix = '/api/sell';
   static String get sellListings => '$baseUrl$sellPrefix/listings';
@@ -99,8 +102,13 @@ class ApiEndpoints {
   /// Active Masteradmin hub addresses for CareMyPair Self Drop off.
   static String get serviceHubLocations => '$baseUrl$servicePrefix/hub-locations';
   /// Active CareMyPair problem tiles (repair | maintenance | wash).
-  static String serviceCareOptions(String serviceType) =>
-      '$baseUrl$servicePrefix/care-options/$serviceType';
+  /// Optional [category] filters tiles for the selected article (boot, sandal, …).
+  static String serviceCareOptions(String serviceType, {String? category}) {
+    final base = '$baseUrl$servicePrefix/care-options/$serviceType';
+    final cat = category?.trim() ?? '';
+    if (cat.isEmpty) return base;
+    return '$base?category=${Uri.encodeQueryComponent(cat)}';
+  }
   static String serviceById(String requestId) =>
       '$baseUrl$servicePrefix/$requestId';
   static String get serviceUpdateStatus =>

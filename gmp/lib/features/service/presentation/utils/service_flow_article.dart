@@ -5,10 +5,14 @@ class ServiceFlowArticle {
   final String? subtitle;
   final String imageUrl;
 
+  /// Article DB category code (e.g. boot, sandal) for CareMyPair filtering.
+  final String category;
+
   const ServiceFlowArticle({
     required this.id,
     required this.name,
     this.subtitle,
     this.imageUrl = '',
+    this.category = '',
   });
 }

@@ -56,12 +56,14 @@ class ServiceSelectionPage extends StatefulWidget {
     this.allowedServiceTypes,
     String? articleName,
     String? articleImageUrl,
+    String? articleCategory,
     this.flowPageTitle,
   }) : selectedArticles = [
           ServiceFlowArticle(
             id: articleId,
             name: articleName ?? '',
             imageUrl: articleImageUrl ?? '',
+            category: (articleCategory ?? '').trim().toLowerCase(),
           ),
         ];
 
@@ -804,15 +806,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 
   /// Loads CareMyPair tiles from Masteradmin DB; keeps local defaults on failure.
+  /// Filters by selected article categories (boot → boot services, etc.).
   Future<void> _loadCareOptions(String token) async {
     final type = _isWashFlow
         ? 'wash'
         : _isRepairFlow
             ? 'repair'
             : 'maintenance';
+    final categoryCodes = _flowArticles
+        .map((a) => a.category.trim().toLowerCase())
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+    final categoryQuery = categoryCodes.isEmpty ? null : categoryCodes.join(',');
     try {
       final json = await sl<DioClient>().get(
-        ApiEndpoints.serviceCareOptions(type),
+        ApiEndpoints.serviceCareOptions(type, category: categoryQuery),
         accessToken: token,
       );
       final data = (json['data'] is Map<String, dynamic>)

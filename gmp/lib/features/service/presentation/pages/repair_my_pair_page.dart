@@ -146,6 +146,7 @@ class _RepairMyPairPageState extends State<RepairMyPairPage> {
                       : _displayName(a),
               subtitle: brand.isNotEmpty && model.isNotEmpty ? model : null,
               imageUrl: _imageUrl(a.rackHeroImagePath),
+              category: a.category.trim().toLowerCase(),
             );
           },
         )

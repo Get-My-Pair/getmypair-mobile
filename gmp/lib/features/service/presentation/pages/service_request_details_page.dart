@@ -31,6 +31,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   bool _loading = true;
   bool _cancelling = false;
   bool _responding = false;
+  bool _didAutoOpenPayment = false;
   String? _error;
   Map<String, dynamic>? _request;
   static const List<String> _workflowStages = [
@@ -78,10 +79,19 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
               ((res['data'] as Map<String, dynamic>?)?['request'] as Map?) ??
               const {};
           if (!mounted) return;
+          final mapped = Map<String, dynamic>.from(req);
           setState(() {
-            _request = Map<String, dynamic>.from(req);
+            _request = mapped;
             _loading = false;
           });
+          // After create, continue straight into payment when amount is ready.
+          if (!_didAutoOpenPayment && _needsPayment(mapped)) {
+            _didAutoOpenPayment = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              _openPaymentFlow(mapped);
+            });
+          }
         } catch (e) {
           if (!mounted) return;
           setState(() {
@@ -254,13 +264,11 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
   String _decisionStr(Map<String, dynamic> r) =>
       _str(r['actualCostUserDecision']).trim().toLowerCase();
 
-  bool _pendingUserCost(Map<String, dynamic> r) =>
+  /// Additional charges from repair shop only (not the create-time service price).
+  bool _pendingAdditionalCharges(Map<String, dynamic> r) =>
       _hasActualCost(r) && _decisionStr(r) == 'pending';
 
-  bool _acceptedUserCost(Map<String, dynamic> r) =>
-      _hasActualCost(r) && _decisionStr(r) == 'accepted';
-
-  bool _rejectedUserCost(Map<String, dynamic> r) =>
+  bool _rejectedAdditionalCharges(Map<String, dynamic> r) =>
       _hasActualCost(r) && _decisionStr(r) == 'rejected';
 
   String _paymentStateStr(Map<String, dynamic> r) =>
@@ -289,15 +297,23 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
     return paid;
   }
 
+  /// Continue payment after create — no "actual amount" accept gate.
+  /// Block only while repair-shop additional charges are pending review.
   bool _needsPayment(Map<String, dynamic> r) {
-    if (!_acceptedUserCost(r)) return false;
-    return !_isPaymentComplete(r);
+    if (_pendingAdditionalCharges(r)) return false;
+    if (_rejectedAdditionalCharges(r)) return false;
+    if (_isPaymentComplete(r)) return false;
+    return _payableAmount(r) > 0;
   }
 
   double _payableAmount(Map<String, dynamic> r) {
-    final v = r['actualCost'];
-    if (v is num) return v.toDouble();
-    return double.tryParse(_str(v)) ?? 0;
+    final actual = r['actualCost'];
+    if (actual is num && actual > 0) return actual.toDouble();
+    final actualParsed = double.tryParse(_str(actual));
+    if (actualParsed != null && actualParsed > 0) return actualParsed;
+    final estimated = r['estimatedCost'];
+    if (estimated is num && estimated > 0) return estimated.toDouble();
+    return double.tryParse(_str(estimated)) ?? 0;
   }
 
   void _openPaymentFlow(Map<String, dynamic> r) {
@@ -372,7 +388,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
             } else {
               await showAppFeedbackAlert(
                 context,
-                message: 'You accepted the final service cost',
+                message: 'Additional charges accepted',
                 type: AppFeedbackType.success,
               );
             }
@@ -380,7 +396,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
             await showAppFeedbackAlert(
               context,
               message:
-                  'You rejected the final service cost — request cancelled',
+                  'You rejected the additional charges — request cancelled',
               type: AppFeedbackType.warning,
             );
           }
@@ -655,7 +671,8 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                     _requestDetailsCard(_request!),
                   ],
                   const SizedBox(height: 12),
-                  if (_pendingUserCost(_request!)) ...[
+                  // Additional charges UI only when repair shop updates cost.
+                  if (_pendingAdditionalCharges(_request!)) ...[
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
@@ -668,7 +685,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                         ),
                       ),
                       child: const Text(
-                        'Review the final service cost from the team. Accept to continue the workflow, or reject to cancel this request.',
+                        'The repair shop added charges. Accept to continue payment, or reject to cancel this request.',
                         style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textPrimary,
@@ -677,12 +694,12 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                       ),
                     ),
                     _card(
-                      title: 'Final service cost',
+                      title: 'Additional charges',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Proposed amount: ${_fmtAmount(_request!['actualCost'])}',
+                            'Updated amount: ₹${_fmtAmount(_request!['actualCost'])}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -690,9 +707,9 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          const Text(
-                            'Same units as shown in your estimate (e.g. rupees / minor units).',
-                            style: TextStyle(
+                          Text(
+                            'Service amount: ₹${_fmtAmount(_request!['estimatedCost'])}',
+                            style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
                             ),
@@ -742,7 +759,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                       ),
                     ),
                   ] else ...[
-                    if (_rejectedUserCost(_request!)) ...[
+                    if (_rejectedAdditionalCharges(_request!)) ...[
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
@@ -755,7 +772,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                           ),
                         ),
                         child: const Text(
-                          'You rejected the final service cost. This service request has been cancelled.',
+                          'You rejected the additional charges. This service request has been cancelled.',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -771,70 +788,62 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _row(
-                            'Estimated',
-                            _fmtAmount(_request!['estimatedCost']),
+                            'Service amount',
+                            '₹${_fmtAmount(_request!['estimatedCost'])}',
                           ),
-                          if (_hasActualCost(_request!)) ...[
+                          // Show updated total only when it differs from estimate
+                          // (repair shop change already accepted).
+                          if (_hasActualCost(_request!) &&
+                              _decisionStr(_request!) == 'accepted' &&
+                              _fmtAmount(_request!['actualCost']) !=
+                                  _fmtAmount(_request!['estimatedCost'])) ...[
                             _row(
-                              'Actual (quoted)',
-                              _fmtAmount(_request!['actualCost']),
+                              'Updated total',
+                              '₹${_fmtAmount(_request!['actualCost'])}',
                             ),
                           ],
-                          if (_acceptedUserCost(_request!)) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            _isPaymentComplete(_request!)
+                                ? 'Payable: ₹${_fmtAmount(_payableAmount(_request!))} (paid)'
+                                : 'Payable: ₹${_fmtAmount(_payableAmount(_request!))}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: _isPaymentComplete(_request!)
+                                  ? AppColors.success
+                                  : AppColors.primary,
+                            ),
+                          ),
+                          if (_isPaymentComplete(_request!)) ...[
                             const SizedBox(height: 10),
-                            Text(
-                              _isPaymentComplete(_request!)
-                                  ? 'Final Service Cost: ${_fmtAmount(_request!['actualCost'])} (paid)'
-                                  : 'Final Service Cost: ${_fmtAmount(_request!['actualCost'])} (accepted)',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: _isPaymentComplete(_request!)
-                                    ? AppColors.success
-                                    : AppColors.primary,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: AppColors.success,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Payment completed',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.success,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            if (_request!['actualCostAcceptedAt'] != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  'Accepted at: ${_str(_request!['actualCostAcceptedAt'])}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            if (_isPaymentComplete(_request!)) ...[
-                              const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: AppColors.success,
-                                      size: 18,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Payment completed',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.success,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
                           ],
                         ],
                       ),
@@ -864,7 +873,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Your cost has been approved. Complete payment to schedule pickup.',
+                              'Complete payment of ₹${_fmtAmount(_payableAmount(_request!))} to continue.',
                               style: GoogleFonts.montserrat(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
@@ -879,8 +888,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                           ],
                         ),
                       ),
-                    ] else if (_acceptedUserCost(_request!) &&
-                        _isPaymentComplete(_request!)) ...[
+                    ] else if (_isPaymentComplete(_request!)) ...[
                       const SizedBox(height: 12),
                       Container(
                         width: double.infinity,
@@ -905,7 +913,7 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Amount: ₹${_fmtAmount(_request!['actualCost'])}. '
+                              'Amount: ₹${_fmtAmount(_payableAmount(_request!))}. '
                               'You don’t need to pay again for this request.',
                               style: GoogleFonts.montserrat(
                                 fontSize: 13,
@@ -957,7 +965,8 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
                     SizedBox(
                       height: 48,
                       child: OutlinedButton(
-                        onPressed: (_cancelling || _pendingUserCost(_request!))
+                        onPressed: (_cancelling ||
+                                _pendingAdditionalCharges(_request!))
                             ? null
                             : _cancelRequest,
                         style: OutlinedButton.styleFrom(
