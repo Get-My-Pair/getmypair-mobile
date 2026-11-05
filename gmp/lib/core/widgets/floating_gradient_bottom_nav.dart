@@ -335,7 +335,7 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
     // value 0 = right edge, value 1 = left edge; reverse walks back right.
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4800),
+      duration: const Duration(milliseconds: 8200),
     )..addListener(_onTick)..repeat(reverse: true);
     _messageTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;

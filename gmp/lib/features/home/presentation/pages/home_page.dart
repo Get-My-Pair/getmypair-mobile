@@ -613,11 +613,12 @@ class _HomePageState extends State<HomePage> {
             _rackLoading = false;
             _rackError = null;
           });
-        } catch (e) {
+        } catch (_) {
           if (!mounted) return;
+          // Keep a friendly empty state in the preview — never dump API errors.
           setState(() {
-            _rackError = e.toString().replaceFirst('Exception: ', '');
-            _rackArticles = null;
+            _rackArticles = const <Article>[];
+            _rackError = null;
             _rackLoading = false;
           });
         }
@@ -1285,7 +1286,7 @@ class _HomePageState extends State<HomePage> {
                                                                         return Center(
                                                                           child:
                                                                               Text(
-                                                                            'No pairs yet — tap ↗ to open your rack',
+                                                                            'Add your first pair to get started!',
                                                                             textAlign:
                                                                                 TextAlign.center,
                                                                             style:
