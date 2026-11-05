@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/features/articles/data/article_categories.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/sell/data/sell_remote_datasource.dart';
 import 'package:gmp/features/sell/presentation/pages/footwear_selection_page.dart';
@@ -30,27 +31,32 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
 <path d="M5 12H19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 ''';
-  static const List<Map<String, String>> _filterTabs = [
-    {'value': '', 'label': 'All'},
-    {'value': 'sports_shoe', 'label': 'Sports'},
-    {'value': 'casual', 'label': 'Casuals'},
-    {'value': 'formal', 'label': 'Formals'},
-    {'value': 'sandal', 'label': 'Sandal'},
-    {'value': 'boot', 'label': 'Boot'},
-    {'value': 'slipper', 'label': 'Slipper'},
-    {'value': 'other', 'label': 'Other'},
-  ];
-
   List<SellListing> _listings = [];
   bool _loading = true;
   String? _error;
   String? _filterCategory;
   String _searchQuery = '';
   final ScrollController _rackScrollController = ScrollController();
+  List<Map<String, String>> _filterTabs =
+      _tabsFromCategories(kDefaultArticleCategories);
 
   bool get _isLuxury => widget.footwearType == 'luxury';
 
   String get _title => _isLuxury ? 'My Luxury Rack' : 'My Everyday Rack';
+
+  static List<Map<String, String>> _tabsFromCategories(
+    List<Map<String, String>> categories,
+  ) {
+    return [
+      const {'value': '', 'label': 'All'},
+      ...categories.map(
+        (c) => {
+          'value': (c['value'] ?? '').trim(),
+          'label': (c['label'] ?? c['value'] ?? '').trim(),
+        },
+      ),
+    ];
+  }
 
   @override
   void initState() {
@@ -81,13 +87,26 @@ class _MyFootwearRackPageState extends State<MyFootwearRackPage> {
       },
       (token) async {
         try {
-          final listings = await sl<SellRemoteDataSource>().getMyListings(
-            token,
-            footwearType: widget.footwearType,
-          );
+          final results = await Future.wait([
+            sl<SellRemoteDataSource>().getMyListings(
+              token,
+              footwearType: widget.footwearType,
+            ),
+            fetchArticleCategories(token),
+          ]);
           if (!mounted) return;
+          final listings = results[0] as List<SellListing>;
+          final categories = results[1] as List<Map<String, String>>;
+          final tabs = _tabsFromCategories(
+            categories.isNotEmpty ? categories : kDefaultArticleCategories,
+          );
+          final selectedStillValid = _filterCategory == null ||
+              _filterCategory!.isEmpty ||
+              tabs.any((t) => t['value'] == _filterCategory);
           setState(() {
             _listings = listings;
+            _filterTabs = tabs;
+            if (!selectedStillValid) _filterCategory = null;
             _loading = false;
             _error = null;
           });

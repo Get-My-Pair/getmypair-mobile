@@ -35,13 +35,23 @@ class MaintenancePlanData {
   final String label;
   final String description;
   final int priceRupees;
+  /// Article category codes this tile applies to (empty = all categories).
+  final List<String> categoryCodes;
 
   const MaintenancePlanData({
     required this.id,
     required this.label,
     this.description = '',
     required this.priceRupees,
+    this.categoryCodes = const [],
   });
+
+  bool appliesToCategory(String category) {
+    final cat = category.trim().toLowerCase();
+    if (categoryCodes.isEmpty) return true;
+    if (cat.isEmpty) return true;
+    return categoryCodes.contains(cat);
+  }
 }
 
 class ServiceSelectionPage extends StatefulWidget {
@@ -455,7 +465,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 
   String? get _repairSelectionsDescription {
-    final plans = _activeCarePlans;
+    final plans = _allCarePlansForFlow;
     final lines = <String>[];
     for (final article in _flowArticles) {
       final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
@@ -473,7 +483,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 
   int get _repairSelectionsTotalRupees {
-    final plans = _activeCarePlans;
+    final plans = _allCarePlansForFlow;
     var sum = 0;
     for (final article in _flowArticles) {
       final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
@@ -484,10 +494,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     return sum;
   }
 
-  List<MaintenancePlanData> get _activeCarePlans {
+  List<MaintenancePlanData> get _allCarePlansForFlow {
     if (_isWashFlow) return _washPlans;
     if (_isRepairFlow) return _repairPlans;
     return _maintenancePlans;
+  }
+
+  /// Plans shown for the focused shoe — filtered by that article's category.
+  List<MaintenancePlanData> get _activeCarePlans {
+    final all = _allCarePlansForFlow;
+    if (!_isCareOptionsFlow || _flowArticles.isEmpty) return all;
+    final i = _focusedArticleIndex.clamp(0, _flowArticles.length - 1);
+    final cat = _flowArticles[i].category.trim().toLowerCase();
+    if (cat.isEmpty) return all;
+    final filtered =
+        all.where((p) => p.appliesToCategory(cat)).toList(growable: false);
+    return filtered.isNotEmpty ? filtered : all;
   }
 
   List<MaintenancePlanData> get _selectedCareOptions => _activeCarePlans
@@ -561,7 +583,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   void _focusArticle(int index) {
     if (_submitting || index < 0 || index >= _flowArticles.length) return;
-    setState(() => _focusedArticleIndex = index);
+    setState(() {
+      _focusedArticleIndex = index;
+      // Drop selections that don't apply to the newly focused shoe category.
+      final allowed = _activeCarePlans.map((p) => p.id).toSet();
+      final articleId = _flowArticles[index].id;
+      final selected = _repairArticleOptionIds[articleId];
+      if (selected != null) {
+        selected.removeWhere((id) => !allowed.contains(id));
+      }
+    });
   }
 
   void _removeFlowArticle(int index) {
@@ -778,13 +809,25 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       },
       (token) async {
         try {
-          final profile = await sl<GetUserProfile>().call(token);
+          // Parallelize profile + care options so the repair screen opens faster.
+          final profileFuture = sl<GetUserProfile>().call(token);
+          final careFuture = _isCareOptionsFlow
+              ? _fetchCareOptions(token)
+              : Future<List<MaintenancePlanData>?>.value(null);
+          final results = await Future.wait([profileFuture, careFuture]);
           if (!mounted) return;
-          if (_isCareOptionsFlow) {
-            await _loadCareOptions(token);
-          }
-          if (!mounted) return;
+          final profile = results[0] as UserProfile;
+          final plans = results[1] as List<MaintenancePlanData>?;
           setState(() {
+            if (plans != null && plans.isNotEmpty) {
+              if (_isWashFlow) {
+                _washPlans = List.unmodifiable(plans);
+              } else if (_isRepairFlow) {
+                _repairPlans = List.unmodifiable(plans);
+              } else {
+                _maintenancePlans = List.unmodifiable(plans);
+              }
+            }
             _addresses = profile.addresses;
             _selectedAddress = profile.addresses.isNotEmpty
                 ? profile.addresses.first
@@ -805,9 +848,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
-  /// Loads CareMyPair tiles from Masteradmin DB; keeps local defaults on failure.
-  /// Filters by selected article categories (boot → boot services, etc.).
-  Future<void> _loadCareOptions(String token) async {
+  /// Loads CareMyPair tiles from Masteradmin DB for selected article categories.
+  Future<List<MaintenancePlanData>?> _fetchCareOptions(String token) async {
     final type = _isWashFlow
         ? 'wash'
         : _isRepairFlow
@@ -838,27 +880,28 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         if (id.isEmpty || label.isEmpty) continue;
         if (map['isActive'] == false) continue;
         final price = (map['priceRupees'] as num?)?.round() ?? 0;
+        final catsRaw = map['categoryCodes'];
+        final cats = <String>[];
+        if (catsRaw is List) {
+          for (final c in catsRaw) {
+            final code = c.toString().trim().toLowerCase();
+            if (code.isNotEmpty) cats.add(code);
+          }
+        }
         plans.add(
           MaintenancePlanData(
             id: id,
             label: label,
             description: (map['description'] ?? '').toString().trim(),
             priceRupees: price < 0 ? 0 : price,
+            categoryCodes: List.unmodifiable(cats),
           ),
         );
       }
-      if (plans.isEmpty || !mounted) return;
-      setState(() {
-        if (_isWashFlow) {
-          _washPlans = List.unmodifiable(plans);
-        } else if (_isRepairFlow) {
-          _repairPlans = List.unmodifiable(plans);
-        } else {
-          _maintenancePlans = List.unmodifiable(plans);
-        }
-      });
+      return plans.isEmpty ? null : plans;
     } catch (_) {
       // Keep hardcoded defaults when API is unavailable.
+      return null;
     }
   }
 
@@ -1731,7 +1774,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   /// One summary card per shoe × selected care/repair service.
   List<({ServiceFlowArticle article, MaintenancePlanData plan, List<XFile> photos})>
       get _finalizingCards {
-    final plans = _activeCarePlans;
+    final plans = _allCarePlansForFlow;
     final cards = <({
       ServiceFlowArticle article,
       MaintenancePlanData plan,

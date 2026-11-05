@@ -9,6 +9,7 @@ import 'package:gmp/core/errors/user_facing_error.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/network_error_view.dart';
+import 'package:gmp/features/articles/data/article_categories.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -56,6 +57,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
   String? _filterCategory;
   String _searchQuery = '';
   final ScrollController _rackScrollController = ScrollController();
+  /// Dynamic Masteradmin categories (+ leading All). Same source as add/edit article.
+  List<Map<String, String>> _filterTabs = _tabsFromCategories(kDefaultArticleCategories);
 
   static const Color _rackTealPrimary = Color(0xFF11999E);
   static const Color _rackDark = Color(0xFF062F35);
@@ -66,16 +69,20 @@ class _ArticleListPageState extends State<ArticleListPage> {
 <path d="M5 12H19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 ''';
-  static const List<Map<String, String>> _filterTabs = [
-    {'value': '', 'label': 'All'},
-    {'value': 'sports_shoe', 'label': 'Sports'},
-    {'value': 'casual', 'label': 'Casuals'},
-    {'value': 'formal', 'label': 'Formals'},
-    {'value': 'sandal', 'label': 'Sandal'},
-    {'value': 'boot', 'label': 'Boot'},
-    {'value': 'slipper', 'label': 'Slipper'},
-    {'value': 'other', 'label': 'Other'},
-  ];
+
+  static List<Map<String, String>> _tabsFromCategories(
+    List<Map<String, String>> categories,
+  ) {
+    return [
+      const {'value': '', 'label': 'All'},
+      ...categories.map(
+        (c) => {
+          'value': (c['value'] ?? '').trim(),
+          'label': (c['label'] ?? c['value'] ?? '').trim(),
+        },
+      ),
+    ];
+  }
 
   @override
   void initState() {
@@ -120,10 +127,23 @@ class _ArticleListPageState extends State<ArticleListPage> {
       },
       (token) async {
         try {
-          final result = await sl<GetMyArticles>().call(token);
+          final results = await Future.wait([
+            sl<GetMyArticles>().call(token),
+            fetchArticleCategories(token),
+          ]);
           if (!mounted) return;
+          final result = results[0] as List<Article>;
+          final categories = results[1] as List<Map<String, String>>;
+          final tabs = _tabsFromCategories(
+            categories.isNotEmpty ? categories : kDefaultArticleCategories,
+          );
+          final selectedStillValid = _filterCategory == null ||
+              _filterCategory!.isEmpty ||
+              tabs.any((t) => t['value'] == _filterCategory);
           setState(() {
             _articles = result;
+            _filterTabs = tabs;
+            if (!selectedStillValid) _filterCategory = null;
             _loading = false;
             _error = null;
           });
