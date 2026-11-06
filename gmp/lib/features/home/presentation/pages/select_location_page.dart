@@ -26,6 +26,7 @@ import '../../../auth/domain/usecases/get_valid_access_token.dart';
 import '../../../profile/domain/entities/user_profile.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
+import '../../../payment/presentation/utils/cart_navigation.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
 import '../../../../injection_container.dart';
@@ -1641,11 +1642,7 @@ class _ShoeCareBottomNav extends StatelessWidget {
             selected: false,
             icon: Icons.shopping_cart_outlined,
             onTap: () {
-              showAppFeedbackAlert(
-                context,
-                message: 'Cart coming soon',
-                type: AppFeedbackType.info,
-              );
+              openCustomerCartPage(context);
             },
           ),
           _navItem(

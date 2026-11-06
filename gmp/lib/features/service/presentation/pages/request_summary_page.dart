@@ -250,10 +250,14 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     }
     final requestId = result.requestId;
     if (requestId != null && requestId.isNotEmpty) {
-      // Open details → Continue to payment (no actual-amount gate).
+      // Show Service progress for 1s, then open Purchase Summary.
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (_) => ServiceRequestDetailsPage(requestId: requestId),
+          builder: (_) => ServiceRequestDetailsPage(
+            requestId: requestId,
+            autoContinueToPayment: true,
+            autoContinueToPaymentDelay: const Duration(seconds: 1),
+          ),
         ),
         (route) => route.isFirst,
       );

@@ -55,9 +55,13 @@ class UserNotificationItem {
   bool get isPaymentRelated => isPaymentSuccess || isPaymentFailed;
 
   String? get actionLabel {
-    if (isCostApproval) return 'Review cost';
+    if (isCostApproval) {
+      final amount = payableAmount;
+      if (amount != null && amount > 0) return 'Pay Now';
+      return 'Review cost';
+    }
     if (isPaymentSuccess) return 'View payment';
-    if (isPaymentFailed) return 'Retry payment';
+    if (isPaymentFailed) return 'Pay Now';
     return null;
   }
 

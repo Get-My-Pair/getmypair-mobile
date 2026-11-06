@@ -1647,7 +1647,7 @@ class _HomeNotificationBellSectionState
               MaterialPageRoute(
                 builder: (_) => BlocProvider.value(
                   value: profileBloc,
-                  child: const NotificationsPage(),
+                  child: const NotificationsPage(selectedTabIndex: 0),
                 ),
               ),
             );

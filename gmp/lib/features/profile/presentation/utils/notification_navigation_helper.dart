@@ -22,7 +22,19 @@ Future<void> navigateFromUserNotification(
   final serviceRequestId = item.serviceRequestId;
   if (serviceRequestId == null || serviceRequestId.isEmpty) return;
 
+  // Cost approval / pay prompts → same Purchase Summary as Cart Pay Now
+  // when a payable amount is available; otherwise open request details.
   if (item.isCostApproval) {
+    final amount = item.payableAmount;
+    if (amount != null && amount > 0) {
+      await _openPurchaseSummary(
+        context,
+        serviceRequestId: serviceRequestId,
+        amount: amount,
+        requestLabel: item.title,
+      );
+      return;
+    }
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => ServiceRequestDetailsPage(requestId: serviceRequestId),
@@ -121,19 +133,36 @@ Future<void> _openPaymentPage(
         return;
       }
 
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => BlocProvider(
-            create: (_) => sl<PaymentBloc>(),
-            child: PaymentRequestPage(
-              serviceRequestId: serviceRequestId,
-              amount: amount,
-              requestLabel: 'Request #${serviceRequestId.substring(0, 8)}…',
-            ),
-          ),
-        ),
+      await _openPurchaseSummary(
+        context,
+        serviceRequestId: serviceRequestId,
+        amount: amount,
+        requestLabel: 'Request #${serviceRequestId.substring(0, 8)}…',
       );
     },
+  );
+}
+
+Future<void> _openPurchaseSummary(
+  BuildContext context, {
+  required String serviceRequestId,
+  required double amount,
+  String? requestLabel,
+  String? serviceType,
+}) async {
+  if (!context.mounted) return;
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => BlocProvider(
+        create: (_) => sl<PaymentBloc>(),
+        child: PaymentRequestPage(
+          serviceRequestId: serviceRequestId,
+          amount: amount,
+          serviceType: serviceType,
+          requestLabel: requestLabel,
+        ),
+      ),
+    ),
   );
 }
 

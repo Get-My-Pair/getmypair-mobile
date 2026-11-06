@@ -365,6 +365,20 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                   ),
                 ),
               ),
+              IconButton(
+                tooltip: 'Close',
+                onPressed: () => Navigator.maybePop(context),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 40,
+                  height: 40,
+                ),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 26,
+                  color: _titleColor,
+                ),
+              ),
             ],
           ),
         ),
@@ -391,12 +405,12 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                       value: PaymentAmountFormatter.formatGrouped(_subTotal),
                     ),
                     _amountRow(
-                      label: 'Taxes (18% GST)',
-                      value: PaymentAmountFormatter.formatGrouped(_tax),
+                      label: 'Delivery Charges',
+                      value: 'FREE',
                     ),
                     _amountRow(
-                      label: 'Delivery Charges',
-                      value: '100% Free',
+                      label: 'Taxes (18% GST)',
+                      value: PaymentAmountFormatter.formatGrouped(_tax),
                     ),
                     _amountRow(
                       label: 'Total Payable Amount',

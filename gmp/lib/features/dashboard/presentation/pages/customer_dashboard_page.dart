@@ -9,6 +9,7 @@ import 'package:gmp/features/auth/presentation/bloc/auth_state.dart';
 import 'package:gmp/features/auth/presentation/pages/mobile_otp_page.dart';
 import 'package:gmp/features/articles/presentation/pages/article_list_page.dart';
 import 'package:gmp/features/home/presentation/pages/home_page.dart';
+import 'package:gmp/features/payment/presentation/utils/cart_navigation.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_event.dart';
 import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
@@ -107,6 +108,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   @override
   void initState() {
     super.initState();
+    registerCustomerCartNavigation();
     _currentIndex = customerDashboardTabIndex.value.clamp(0, _homeRackPageCount - 1);
     _pageController = PageController(initialPage: _currentIndex);
     _rackAllowsHomeSwipe = myRackAllowsHomeSwipe.value;
@@ -285,6 +287,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
       child: FloatingGradientBottomNav(
         currentIndex: index,
         showWalkingShoe: index == 0,
+        onCartTap: () => openCustomerCartPage(context),
         onChanged: (i) {
           final c = i.clamp(0, 2);
           if (c == 2) {

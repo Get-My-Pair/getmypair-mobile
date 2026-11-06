@@ -10,6 +10,7 @@ import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
+import 'package:gmp/core/navigation/customer_cart_nav_hook.dart';
 import 'package:gmp/features/profile/domain/entities/user_profile.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_state.dart';
@@ -23,7 +24,7 @@ import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
 /// (Figma `3042:4601`), flips at the left end, then walks back right.
 ///
 /// [currentIndex] stays semantic: `0` home, `1` rack, `2` profile.
-/// Favorites and Cart show coming-soon until those screens ship.
+/// Favorites stays coming-soon; Cart calls [onCartTap] (wired to Cart page).
 ///
 /// The exported SVG uses `foreignObject` + HTML conic-gradient; Flutter cannot
 /// render that as an asset, so the same stops are applied via [SweepGradient].
@@ -33,14 +34,23 @@ class FloatingGradientBottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onChanged,
     this.showWalkingShoe = false,
+    this.highlightCart = false,
+    this.onCartTap,
   });
 
   /// Semantic dashboard tab: `0` home, `1` rack, `2` profile.
+  /// Use `-1` with [highlightCart] when Cart is the active screen.
   final int currentIndex;
   final ValueChanged<int> onChanged;
 
   /// Pixel shoe + chat bubble — home screen only.
   final bool showWalkingShoe;
+
+  /// When true, the Cart tab (visual index 3) shows as selected.
+  final bool highlightCart;
+
+  /// Opens the Cart screen (4th tab). Required for Cart to work.
+  final VoidCallback? onCartTap;
 
   /// Inner pill from Figma: `rect … height="58" rx="29"` (`3042:4601`).
   static const double barHeight = 58;
@@ -104,12 +114,13 @@ class FloatingGradientBottomNav extends StatelessWidget {
     _NavTab(svgAsset: _middleShoeIcon, semanticIndex: 1),
     _NavTab(
       svgAsset: _cartIcon,
-      comingSoonFeature: 'Cart',
+      isCart: true,
     ),
     _NavTab(svgAsset: _profileIcon, semanticIndex: 2),
   ];
 
   static int _visualIndexFor(int semanticIndex) {
+    if (semanticIndex < 0) return -1;
     return switch (semanticIndex.clamp(0, 2)) {
       0 => 0,
       1 => 2,
@@ -119,7 +130,8 @@ class FloatingGradientBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedVisual = _visualIndexFor(currentIndex);
+    final selectedVisual =
+        highlightCart ? 3 : _visualIndexFor(currentIndex);
     final shoeW = showWalkingShoe ? walkingShoeWidthOf(context) : walkingShoeWidth;
     final shoeH =
         showWalkingShoe ? walkingShoeHeightOf(context) : walkingShoeHeight;
@@ -190,6 +202,18 @@ class FloatingGradientBottomNav extends StatelessWidget {
                               color: Colors.transparent,
                               child: InkWell(
                                 onTap: () {
+                                  if (tab.isCart) {
+                                    if (highlightCart) return;
+                                    if (onCartTap != null) {
+                                      onCartTap!();
+                                    } else {
+                                      showComingSoon(
+                                        context,
+                                        feature: 'Cart',
+                                      );
+                                    }
+                                    return;
+                                  }
                                   final semantic = tab.semanticIndex;
                                   if (semantic == null) {
                                     showComingSoon(
@@ -638,6 +662,7 @@ class _NavTab {
     this.materialIcon,
     this.semanticIndex,
     this.comingSoonFeature,
+    this.isCart = false,
   });
 
   final String? svgAsset;
@@ -645,6 +670,7 @@ class _NavTab {
   /// `0` home, `1` rack, `2` profile. Null means the tab is not wired yet.
   final int? semanticIndex;
   final String? comingSoonFeature;
+  final bool isCart;
 }
 
 /// Outer padding around [FloatingGradientBottomNav] on [CustomerDashboardPage]
@@ -690,11 +716,21 @@ class DashboardLinkedBottomNav extends StatelessWidget {
   const DashboardLinkedBottomNav({
     super.key,
     this.selectedTabIndex = 2,
+    this.highlightCart = false,
+    this.onCartTap,
     this.onProfileTabWhenCannotPop,
   });
 
   /// Highlight while this route is visible (profile flow → 2).
+  /// Use `-1` with [highlightCart] on the Cart screen.
   final int selectedTabIndex;
+
+  /// Cart tab selected (4th visual button).
+  final bool highlightCart;
+
+  /// Opens Cart. Defaults to [openCustomerCartPage] when null — pass explicitly
+  /// from call sites that import cart navigation to avoid cycles.
+  final VoidCallback? onCartTap;
 
   /// When the user taps Profile (tab 2) and this navigator cannot pop, run this
   /// instead of only syncing tab — e.g. open Edit Profile from the root profile screen.
@@ -705,10 +741,19 @@ class DashboardLinkedBottomNav extends StatelessWidget {
     return Padding(
       padding: dashboardBottomNavOuterInsets(context),
       child: FloatingGradientBottomNav(
-        currentIndex: selectedTabIndex.clamp(0, 2),
+        currentIndex: selectedTabIndex < 0 ? -1 : selectedTabIndex.clamp(0, 2),
+        highlightCart: highlightCart,
+        onCartTap: onCartTap ??
+            () {
+              if (openCustomerCartHook != null) {
+                invokeOpenCustomerCart(context);
+              } else {
+                showComingSoon(context, feature: 'Cart');
+              }
+            },
         onChanged: (i) {
           final tab = i.clamp(0, 2);
-          if (tab == selectedTabIndex) return;
+          if (!highlightCart && tab == selectedTabIndex) return;
           customerDashboardTabIndex.value = tab;
           final nav = Navigator.of(context);
           if (tab == 2) {

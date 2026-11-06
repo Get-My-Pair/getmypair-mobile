@@ -21,7 +21,19 @@ import 'package:google_fonts/google_fonts.dart';
 class ServiceRequestDetailsPage extends StatefulWidget {
   final String requestId;
 
-  const ServiceRequestDetailsPage({super.key, required this.requestId});
+  /// After create confirmation: show this Service progress screen briefly,
+  /// then continue to Purchase Summary.
+  final bool autoContinueToPayment;
+
+  /// How long to keep Service progress visible before opening payment.
+  final Duration autoContinueToPaymentDelay;
+
+  const ServiceRequestDetailsPage({
+    super.key,
+    required this.requestId,
+    this.autoContinueToPayment = false,
+    this.autoContinueToPaymentDelay = const Duration(seconds: 1),
+  });
 
   @override
   State<ServiceRequestDetailsPage> createState() =>
@@ -88,10 +100,13 @@ class _ServiceRequestDetailsPageState extends State<ServiceRequestDetailsPage> {
             _request = mapped;
             _loading = false;
           });
-          // After create, continue straight into payment when amount is ready.
-          if (!_didAutoOpenPayment && _needsPayment(mapped)) {
+          // After create confirmation: show Service progress briefly, then pay.
+          if (widget.autoContinueToPayment &&
+              !_didAutoOpenPayment &&
+              _needsPayment(mapped)) {
             _didAutoOpenPayment = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+            final delay = widget.autoContinueToPaymentDelay;
+            Future<void>.delayed(delay, () {
               if (!mounted) return;
               _openPaymentFlow(mapped);
             });
