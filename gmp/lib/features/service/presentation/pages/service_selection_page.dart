@@ -45,13 +45,6 @@ class MaintenancePlanData {
     required this.priceRupees,
     this.categoryCodes = const [],
   });
-
-  bool appliesToCategory(String category) {
-    final cat = category.trim().toLowerCase();
-    if (categoryCodes.isEmpty) return true;
-    if (cat.isEmpty) return true;
-    return categoryCodes.contains(cat);
-  }
 }
 
 class ServiceSelectionPage extends StatefulWidget {
@@ -103,6 +96,38 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   static const int kWashEstimateRupees = 236;
 
   /// Fallback tiles when API is offline — Masteradmin CareMyPair DB is source of truth.
+  /// Same service list for every article (not filtered by footwear category).
+  static const List<MaintenancePlanData> _defaultRepairPlans = [
+    MaintenancePlanData(
+      id: 'sole_bottom_construction',
+      label: 'Sole & Bottom Construction Repairs',
+      description:
+          'Complete bottom-up sole restoration, from re-gluing delaminated outsoles and replacing worn heels to full resoles and midsole rebuilds.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'upper_seam_restoration',
+      label: 'Upper Material & Seam Restoration',
+      description:
+          'Full upper and interior restoration to patch tears, fix split seams, rebuild heel linings, and replace damaged panels.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'hardware_fastener',
+      label: 'Hardware & Fastener Repairs',
+      description:
+          'Complete hardware and fastener replacement for eyelets, zippers, straps, buckles, velcro, and snaps.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'fit_structural',
+      label: 'Fit & Structural Adjustments',
+      description:
+          'Fixes squeaks, shaky support inside your shoes, and stretches tight spots for a comfortable fit.',
+      priceRupees: 236,
+    ),
+  ];
+
   static const List<MaintenancePlanData> _defaultMaintenancePlans = [
     MaintenancePlanData(
       id: 'protection_conditioning',
@@ -158,12 +183,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     ),
   ];
 
-  /// No static repair tiles — always load category problems from Masteradmin API.
   List<MaintenancePlanData> _maintenancePlans = List.unmodifiable(
     _defaultMaintenancePlans,
   );
   List<MaintenancePlanData> _washPlans = List.unmodifiable(_defaultWashPlans);
-  List<MaintenancePlanData> _repairPlans = const [];
+  List<MaintenancePlanData> _repairPlans = List.unmodifiable(_defaultRepairPlans);
 
   bool _careOptionsScrollbarNeeded = false;
 
@@ -470,21 +494,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     return _maintenancePlans;
   }
 
-  /// Plans shown for the focused shoe — filtered by that article's category.
-  List<MaintenancePlanData> get _activeCarePlans {
-    final all = _allCarePlansForFlow;
-    if (!_isCareOptionsFlow || _flowArticles.isEmpty) return all;
-    final i = _focusedArticleIndex.clamp(0, _flowArticles.length - 1);
-    final cat = _flowArticles[i].category.trim().toLowerCase();
-    if (cat.isEmpty) return all;
-    // Repair must stay category-strict; do not fall back to unrelated tiles.
-    if (_isRepairFlow) {
-      return all.where((p) => p.appliesToCategory(cat)).toList(growable: false);
-    }
-    final filtered =
-        all.where((p) => p.appliesToCategory(cat)).toList(growable: false);
-    return filtered.isNotEmpty ? filtered : all;
-  }
+  /// Same service problems for every shoe. Categories stay in Masteradmin only.
+  List<MaintenancePlanData> get _activeCarePlans => _allCarePlansForFlow;
 
   List<MaintenancePlanData> get _selectedCareOptions => _activeCarePlans
       .where((p) => _uiSelectedOptionIds.contains(p.id))
@@ -559,13 +570,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     if (_submitting || index < 0 || index >= _flowArticles.length) return;
     setState(() {
       _focusedArticleIndex = index;
-      // Drop selections that don't apply to the newly focused shoe category.
-      final allowed = _activeCarePlans.map((p) => p.id).toSet();
-      final articleId = _flowArticles[index].id;
-      final selected = _repairArticleOptionIds[articleId];
-      if (selected != null) {
-        selected.removeWhere((id) => !allowed.contains(id));
-      }
     });
   }
 
@@ -822,22 +826,16 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
-  /// Loads CareMyPair tiles from Masteradmin DB for selected article categories.
+  /// Loads CareMyPair service tiles (same list for every article).
   Future<List<MaintenancePlanData>?> _fetchCareOptions(String token) async {
     final type = _isWashFlow
         ? 'wash'
         : _isRepairFlow
             ? 'repair'
             : 'maintenance';
-    final categoryCodes = _flowArticles
-        .map((a) => a.category.trim().toLowerCase())
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList();
-    final categoryQuery = categoryCodes.isEmpty ? null : categoryCodes.join(',');
     try {
       final json = await sl<DioClient>().get(
-        ApiEndpoints.serviceCareOptions(type, category: categoryQuery),
+        ApiEndpoints.serviceCareOptions(type),
         accessToken: token,
       );
       final data = (json['data'] is Map<String, dynamic>)
@@ -862,6 +860,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             if (code.isNotEmpty) cats.add(code);
           }
         }
+        // Category-assigned tiles stay in Masteradmin. User app shows service problems only.
+        if (cats.isNotEmpty) continue;
         plans.add(
           MaintenancePlanData(
             id: id,
@@ -3828,18 +3828,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final itemGap = (10 * layoutScale).clamp(8.0, 12.0);
 
     if (plans.isEmpty) {
-      final cat = _flowArticles.isEmpty
-          ? ''
-          : _flowArticles[
-                  _focusedArticleIndex.clamp(0, _flowArticles.length - 1)]
-              .category
-              .trim();
+      final emptyLabel = _isWashFlow
+          ? 'wash'
+          : _isRepairFlow
+              ? 'repair'
+              : 'maintenance';
       return Padding(
         padding: EdgeInsets.symmetric(vertical: (12 * layoutScale).clamp(8.0, 16.0)),
         child: Text(
-          cat.isEmpty
-              ? 'No repair services available yet. Please try again shortly.'
-              : 'No repair services for this footwear category yet.',
+          'No $emptyLabel services available yet. Please try again shortly.',
           style: GoogleFonts.montserrat(
             fontSize: bodyFs,
             height: 1.35,

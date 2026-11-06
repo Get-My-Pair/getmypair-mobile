@@ -10,11 +10,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:gmp/features/service/presentation/pages/active_services_page.dart';
 import 'package:gmp/features/service/presentation/pages/maintain_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/pages/pair_progress_page.dart';
 import 'package:gmp/features/service/presentation/pages/repair_my_pair_page.dart';
-import 'package:gmp/features/service/presentation/pages/service_request_details_page.dart';
-import 'package:gmp/features/service/presentation/pages/service_request_list_page.dart';
+import 'package:gmp/features/service/presentation/pages/service_history_page.dart';
 import 'package:gmp/features/service/presentation/pages/wash_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/utils/care_active_job.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 
@@ -157,12 +159,12 @@ class _CareMyPairPageState extends State<CareMyPairPage> {
       HubSearchHit(
         title: 'Active Service',
         subtitle: 'Track your current Care request',
-        keywords: ['active', 'track', 'status', 'ongoing', 'care'],
+        keywords: ['active', 'track', 'status', 'ongoing', 'care', 'jobs'],
         icon: Icons.timelapse_rounded,
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => const ServiceRequestListPage(),
+              builder: (_) => const ActiveServicesPage(),
             ),
           );
         },
@@ -170,12 +172,12 @@ class _CareMyPairPageState extends State<CareMyPairPage> {
       HubSearchHit(
         title: 'Service History',
         subtitle: 'Past CareMyPair requests',
-        keywords: ['history', 'past', 'requests', 'orders', 'care'],
+        keywords: ['history', 'past', 'requests', 'orders', 'care', 'review'],
         icon: Icons.history_rounded,
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => const ServiceRequestListPage(),
+              builder: (_) => const ServiceHistoryPage(),
             ),
           );
         },
@@ -307,8 +309,7 @@ class _CareMyPairPageState extends State<CareMyPairPage> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      const ServiceRequestListPage(),
+                                  builder: (_) => const ServiceHistoryPage(),
                                 ),
                               );
                             },
@@ -725,13 +726,9 @@ class _SecondaryServiceCard extends StatelessWidget {
   }
 }
 
-/// Loads the newest non-terminal care request and shows the Active Service card.
+/// Newest active Care request — delivery ETA or drop-off confirm; opens Active Jobs.
 class _ActiveServiceSection extends StatefulWidget {
   const _ActiveServiceSection();
-
-  static const Set<String> _careTypes = {'repair', 'maintenance', 'wash'};
-  static const Set<String> _terminalStatuses = {'completed', 'cancelled'};
-  static const Set<String> _terminalTracking = {'delivered', 'cancelled'};
 
   @override
   State<_ActiveServiceSection> createState() => _ActiveServiceSectionState();
@@ -739,6 +736,8 @@ class _ActiveServiceSection extends StatefulWidget {
 
 class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
   Map<String, dynamic>? _active;
+  Set<String> _dropOffConfirmed = {};
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -747,11 +746,18 @@ class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
   }
 
   Future<void> _load() async {
+    final confirmed = await CareActiveJob.loadDropOffConfirmedIds();
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
 
     await tokenResult.fold(
-      (_) async {},
+      (_) async {
+        setState(() {
+          _dropOffConfirmed = confirmed;
+          _loaded = true;
+          _active = null;
+        });
+      },
       (token) async {
         try {
           final res = await sl<DioClient>().get(
@@ -764,83 +770,108 @@ class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
           final active = list
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
-              .where(_isActiveCareRequest)
+              .where(CareActiveJob.isActiveCareRequest)
               .toList();
           if (!mounted) return;
-          setState(() => _active = active.isEmpty ? null : active.first);
+          setState(() {
+            _dropOffConfirmed = confirmed;
+            _loaded = true;
+            _active = active.isEmpty ? null : active.first;
+          });
         } catch (_) {
-          // Keep hidden on failure.
+          if (!mounted) return;
+          setState(() {
+            _dropOffConfirmed = confirmed;
+            _loaded = true;
+          });
         }
       },
     );
   }
 
-  static bool _isActiveCareRequest(Map<String, dynamic> r) {
-    final type = (r['serviceType'] ?? '').toString().trim().toLowerCase();
-    if (!_ActiveServiceSection._careTypes.contains(type)) return false;
-    final status = (r['status'] ?? '').toString().trim().toLowerCase();
-    if (_ActiveServiceSection._terminalStatuses.contains(status)) return false;
-    final tracking =
-        (r['trackingState'] ?? '').toString().trim().toLowerCase();
-    if (_ActiveServiceSection._terminalTracking.contains(tracking)) {
-      return false;
-    }
-    return true;
-  }
-
-  static String _serviceLabel(String raw) {
-    switch (raw.trim().toLowerCase()) {
-      case 'repair':
-        return 'RepairMyPair';
-      case 'maintenance':
-        return 'MaintainMyPair';
-      case 'wash':
-        return 'WashMyPair';
-      default:
-        if (raw.isEmpty) return 'Service';
-        return raw.replaceAll('_', ' ');
-    }
-  }
-
-  static String _requestId(Map<String, dynamic> r) {
-    return (r['_id'] ?? r['id'] ?? '').toString().trim();
-  }
-
-  void _openActive(BuildContext context) {
-    final id = _active == null ? '' : _requestId(_active!);
-    if (id.isEmpty) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const ServiceRequestListPage(),
-        ),
-      );
-      return;
-    }
-    Navigator.of(context).push(
+  Future<void> _openActiveJobs() async {
+    await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => ServiceRequestDetailsPage(requestId: id),
+        builder: (_) => const ActiveServicesPage(),
       ),
     );
+    if (mounted) _load();
+  }
+
+  Future<void> _openProgress() async {
+    final active = _active;
+    if (active == null) {
+      await _openActiveJobs();
+      return;
+    }
+    final id = CareActiveJob.requestId(active);
+    if (id.isEmpty) {
+      await _openActiveJobs();
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            PairProgressPage(requestId: id, initialRequest: active),
+      ),
+    );
+    if (mounted) _load();
+  }
+
+  Future<void> _confirmDroppedOff() async {
+    final active = _active;
+    if (active == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm drop off'),
+        content: const Text(
+          'Have you dropped off your pair at the service location?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not yet'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes, dropped off'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    await CareActiveJob.markDropOffConfirmed(CareActiveJob.requestId(active));
+    if (!mounted) return;
+    await showAppFeedbackAlert(
+      context,
+      message: 'Drop off confirmed',
+      type: AppFeedbackType.success,
+    );
+    if (mounted) _load();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_active == null) return const SizedBox.shrink();
-
-    final serviceType = (_active!['serviceType'] ?? '').toString();
-    final label = _serviceLabel(serviceType);
+    if (!_loaded) return const SizedBox.shrink();
 
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final titleSize = (16.0 * uiScale).clamp(14.0, 16.0);
     final chevronSize = (28.0 * uiScale).clamp(24.0, 28.0);
+    final active = _active;
+    final needsDrop = active != null &&
+        CareActiveJob.needsDropOffConfirm(
+          active,
+          dropOffConfirmedIds: _dropOffConfirmed,
+        );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 28),
         InkWell(
-          onTap: () => _openActive(context),
+          onTap: _openActiveJobs,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
@@ -866,43 +897,29 @@ class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
           ),
         ),
         const SizedBox(height: 12),
-        _ActiveServiceCard(
-          serviceLabel: label,
-          onTap: () => _openActive(context),
-          onMarkDroppedOff: () => _confirmDroppedOff(context),
-        ),
+        if (active == null)
+          Text(
+            'No pairs are currently in treatment',
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF9AA4A6),
+              fontSize: (14.0 * uiScale).clamp(12.0, 14.0),
+              fontWeight: FontWeight.w500,
+            ),
+          )
+        else
+          _ActiveServiceCard(
+            serviceLabel: CareActiveJob.serviceLabel(
+              (active['serviceType'] ?? '').toString(),
+            ),
+            needsDropOffConfirm: needsDrop,
+            estimatedDeliveryLabel: CareActiveJob.formatEstimatePretty(
+              CareActiveJob.estimatedDelivery(active),
+            ),
+            onTap: _openProgress,
+            onMarkDroppedOff: _confirmDroppedOff,
+          ),
       ],
     );
-  }
-
-  Future<void> _confirmDroppedOff(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirm drop off'),
-        content: const Text(
-          'Have you dropped off your pair at the service location?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Not yet'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes, dropped off'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true || !context.mounted) return;
-    await showAppFeedbackAlert(
-      context,
-      message: 'Drop off confirmed',
-      type: AppFeedbackType.success,
-    );
-    if (!context.mounted) return;
-    _openActive(context);
   }
 }
 
@@ -910,11 +927,15 @@ class _ActiveServiceCard extends StatelessWidget {
   static const String _servIcon = 'assets/images/icons/profile/serv.svg';
 
   final String serviceLabel;
+  final bool needsDropOffConfirm;
+  final String estimatedDeliveryLabel;
   final VoidCallback onTap;
   final VoidCallback onMarkDroppedOff;
 
   const _ActiveServiceCard({
     required this.serviceLabel,
+    required this.needsDropOffConfirm,
+    required this.estimatedDeliveryLabel,
     required this.onTap,
     required this.onMarkDroppedOff,
   });
@@ -923,7 +944,6 @@ class _ActiveServiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-    // Figma 3208:10259 — 46px icon box, 14/16 type, 24px CTA.
     final iconBox = (46.0 * uiScale).clamp(42.0, 52.0);
     final iconPad = (11.0 * uiScale).clamp(9.0, 12.0);
     final iconSize = (iconBox - iconPad * 2).clamp(20.0, 30.0);
@@ -997,66 +1017,91 @@ class _ActiveServiceCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Left breathing room before Confirm Drop off column.
                     SizedBox(width: (16.0 * uiScale).clamp(12.0, 20.0)),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Confirm Drop off',
-                          maxLines: 1,
-                          style: GoogleFonts.montserrat(
-                            color: const Color(0xFF12899B),
-                            fontSize: labelSize,
-                            fontWeight: FontWeight.w600,
+                    if (needsDropOffConfirm)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Confirm Drop off',
+                            maxLines: 1,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: labelSize,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: onMarkDroppedOff,
-                            borderRadius: BorderRadius.circular(50),
-                            child: Ink(
-                              height: btnH,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: (9.0 * uiScale).clamp(8.0, 12.0),
-                                vertical: (4.0 * uiScale).clamp(3.0, 5.0),
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.centerRight,
-                                  end: Alignment.centerLeft,
-                                  colors: [
-                                    Color(0xFF0CADC5),
-                                    Color(0xFF063239),
+                          SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: onMarkDroppedOff,
+                              borderRadius: BorderRadius.circular(50),
+                              child: Ink(
+                                height: btnH,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (9.0 * uiScale).clamp(8.0, 12.0),
+                                  vertical: (4.0 * uiScale).clamp(3.0, 5.0),
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.centerRight,
+                                    end: Alignment.centerLeft,
+                                    colors: [
+                                      Color(0xFF0CADC5),
+                                      Color(0xFF063239),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(50),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x19000000),
+                                      blurRadius: 2,
+                                      offset: Offset(0, 2),
+                                    ),
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(50),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x19000000),
-                                    blurRadius: 2,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'Mark as Dropped off',
-                                  maxLines: 1,
-                                  style: GoogleFonts.boldonse(
-                                    color: Colors.white,
-                                    fontSize: btnFs,
-                                    fontWeight: FontWeight.w400,
+                                child: Center(
+                                  child: Text(
+                                    'Mark as Dropped off',
+                                    maxLines: 1,
+                                    style: GoogleFonts.boldonse(
+                                      color: Colors.white,
+                                      fontSize: btnFs,
+                                      fontWeight: FontWeight.w400,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Estimated Delivery',
+                            maxLines: 1,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: labelSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
+                          Text(
+                            estimatedDeliveryLabel,
+                            maxLines: 1,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: valueSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),

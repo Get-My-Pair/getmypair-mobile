@@ -101,13 +101,33 @@ class ApiEndpoints {
   static String get serviceEstimationDefaults => '$baseUrl$servicePrefix/estimation-defaults';
   /// Active Masteradmin hub addresses for CareMyPair Self Drop off.
   static String get serviceHubLocations => '$baseUrl$servicePrefix/hub-locations';
-  /// Active CareMyPair problem tiles (repair | maintenance | wash).
-  /// Optional [category] filters tiles for the selected article (boot, sandal, …).
+  /// Active CareMyPair service problems (repair | maintenance | wash).
+  /// The user app shows the same list for every article. [category] is ignored.
   static String serviceCareOptions(String serviceType, {String? category}) {
     final base = '$baseUrl$servicePrefix/care-options/$serviceType';
     final cat = category?.trim() ?? '';
     if (cat.isEmpty) return base;
     return '$base?category=${Uri.encodeQueryComponent(cat)}';
+  }
+
+  /// Problem-wise progress timeline (estimateDays + progressSteps).
+  static String serviceCareProgress({
+    String? code,
+    String? serviceType,
+    String? id,
+  }) {
+    final params = <String, String>{};
+    final c = code?.trim() ?? '';
+    final t = serviceType?.trim() ?? '';
+    final i = id?.trim() ?? '';
+    if (c.isNotEmpty) params['code'] = c;
+    if (t.isNotEmpty) params['serviceType'] = t;
+    if (i.isNotEmpty) params['id'] = i;
+    final q = params.entries
+        .map((e) =>
+            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+    return '$baseUrl$servicePrefix/care-progress${q.isEmpty ? '' : '?$q'}';
   }
   static String serviceById(String requestId) =>
       '$baseUrl$servicePrefix/$requestId';
