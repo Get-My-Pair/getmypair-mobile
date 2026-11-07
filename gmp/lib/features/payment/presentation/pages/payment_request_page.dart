@@ -528,7 +528,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
                   'Service Type',
                   style: GoogleFonts.montserrat(
                     color: _accentColor,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
