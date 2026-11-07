@@ -226,7 +226,8 @@ class _PairProgressPageState extends State<PairProgressPage> {
                             _pill(
                               label: 'Timeline',
                               filled: true,
-                              color: const Color(0xFF12899B),
+                              color: Colors.black,
+                              fontWeight: FontWeight.w400,
                             ),
                             Expanded(
                               child: Padding(
@@ -234,7 +235,7 @@ class _PairProgressPageState extends State<PairProgressPage> {
                                     const EdgeInsets.symmetric(horizontal: 8),
                                 child: CustomPaint(
                                   painter: _DashedLinePainter(
-                                    color: const Color(0xFFB7C4C7),
+                                    color: Colors.black.withValues(alpha: 0.30),
                                   ),
                                   child: const SizedBox(height: 1),
                                 ),
@@ -243,8 +244,15 @@ class _PairProgressPageState extends State<PairProgressPage> {
                             _pill(
                               label: inProgress ? 'In Progress' : 'Done',
                               filled: true,
-                              color: const Color(0xFF2E7D32),
-                              icon: Icons.check_circle_rounded,
+                              color: inProgress
+                                  ? const Color(0xFF0FB700)
+                                  : const Color(0xFF12899B),
+                              leading: _ProgressCheckIcon(
+                                size: 16,
+                                style: inProgress
+                                    ? _ProgressCheckStyle.inProgress
+                                    : _ProgressCheckStyle.done,
+                              ),
                             ),
                           ],
                         ),
@@ -273,50 +281,85 @@ class _PairProgressPageState extends State<PairProgressPage> {
                                       ),
                                     ),
                                   )
-                                : RefreshIndicator(
-                                    color: const Color(0xFF11999E),
-                                    onRefresh: _load,
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        18,
-                                        16,
-                                        18,
-                                        120,
-                                      ),
-                                      itemCount: steps.length,
-                                      itemBuilder: (_, i) {
-                                        final step = steps[i];
-                                        final done = i < current;
-                                        final active = i == current;
-                                        final pending = i > current;
-                                        final when = r == null
-                                            ? null
-                                            : CareActiveJob.stepCompletedAt(
-                                                r,
-                                                i,
-                                                stepCount: steps.length,
-                                                estimateDays: _estimateDays,
-                                              );
-                                        return _TimelineRow(
-                                          title: step.title,
-                                          subtitle: i == 0
-                                              ? (step.subtitle ??
-                                                  CareActiveJob.serviceLabel(
-                                                    (r?['serviceType'] ?? '')
-                                                        .toString(),
-                                                  ))
-                                              : step.subtitle,
-                                          timeLabel: pending
-                                              ? '----'
-                                              : CareActiveJob.formatStepTime(
-                                                  when,
-                                                ),
-                                          done: done,
-                                          active: active,
-                                          isLast: i == steps.length - 1,
-                                        );
-                                      },
-                                    ),
+                                : LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final deviceH =
+                                          MediaQuery.sizeOf(context).height;
+                                      final navReserve = 100.0 + bottomSafe;
+                                      final topPad = 16.0;
+                                      final usable = (constraints.maxHeight -
+                                              topPad -
+                                              navReserve)
+                                          .clamp(0.0, double.infinity);
+                                      // ~row content height (icon + 1–2 lines)
+                                      const rowContent = 44.0;
+                                      final gaps = (steps.length - 1)
+                                          .clamp(1, 100);
+                                      final fillMid = (usable -
+                                              steps.length * rowContent) /
+                                          gaps;
+                                      // Scale with device height (Figma ~47 on ~932)
+                                      final deviceMid = deviceH * 0.05;
+                                      final midSpace = (fillMid > deviceMid
+                                              ? fillMid
+                                              : deviceMid)
+                                          .clamp(28.0, deviceH * 0.085)
+                                          .toDouble();
+
+                                      return RefreshIndicator(
+                                        color: const Color(0xFF11999E),
+                                        onRefresh: _load,
+                                        child: ListView.builder(
+                                          physics:
+                                              const AlwaysScrollableScrollPhysics(),
+                                          padding: EdgeInsets.fromLTRB(
+                                            18,
+                                            topPad,
+                                            18,
+                                            navReserve,
+                                          ),
+                                          itemCount: steps.length,
+                                          itemBuilder: (_, i) {
+                                            final step = steps[i];
+                                            final done = i < current;
+                                            final active = i == current;
+                                            final pending = i > current;
+                                            final when = r == null
+                                                ? null
+                                                : CareActiveJob
+                                                    .stepCompletedAt(
+                                                    r,
+                                                    i,
+                                                    stepCount: steps.length,
+                                                    estimateDays:
+                                                        _estimateDays,
+                                                  );
+                                            return _TimelineRow(
+                                              title: step.title,
+                                              subtitle: i == 0
+                                                  ? (step.subtitle ??
+                                                      CareActiveJob
+                                                          .serviceLabel(
+                                                        (r?['serviceType'] ??
+                                                                '')
+                                                            .toString(),
+                                                      ))
+                                                  : step.subtitle,
+                                              timeLabel: pending
+                                                  ? '.....'
+                                                  : CareActiveJob
+                                                      .formatStepTime(
+                                                      when,
+                                                    ),
+                                              done: done,
+                                              active: active,
+                                              isLast: i == steps.length - 1,
+                                              midSpace: midSpace,
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
                                   ),
                       ),
                     ],
@@ -346,34 +389,128 @@ class _PairProgressPageState extends State<PairProgressPage> {
     required String label,
     required bool filled,
     required Color color,
-    IconData? icon,
+    Widget? leading,
+    FontWeight fontWeight = FontWeight.w600,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: filled ? color.withValues(alpha: 0.12) : Colors.transparent,
+        color: filled ? Colors.white : Colors.transparent,
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: color.withValues(alpha: 0.55)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 4),
+          if (leading != null) ...[
+            leading,
+            const SizedBox(width: 6),
           ],
           Text(
             label,
             style: GoogleFonts.montserrat(
               color: color,
               fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: fontWeight,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+enum _ProgressCheckStyle { done, pending, inProgress }
+
+/// Matches Figma: filled teal + white check (done), grey ring + grey check
+/// (pending), green ring + green check (in progress badge).
+class _ProgressCheckIcon extends StatelessWidget {
+  final double size;
+  final _ProgressCheckStyle style;
+
+  const _ProgressCheckIcon({
+    required this.size,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    switch (style) {
+      case _ProgressCheckStyle.done:
+        return Container(
+          width: size,
+          height: size,
+          decoration: const BoxDecoration(
+            color: Color(0xFF12899B),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.check_rounded,
+            size: size * 0.62,
+            color: Colors.white,
+          ),
+        );
+      case _ProgressCheckStyle.inProgress:
+        return SizedBox(
+          width: size,
+          height: size,
+          child: CustomPaint(
+            painter: _RingCheckPainter(
+              color: const Color(0xFF0FB700),
+              strokeWidth: size * 0.09,
+            ),
+          ),
+        );
+      case _ProgressCheckStyle.pending:
+        return SizedBox(
+          width: size,
+          height: size,
+          child: CustomPaint(
+            painter: _RingCheckPainter(
+              color: const Color(0xFFB0B0B0),
+              strokeWidth: size * 0.08,
+            ),
+          ),
+        );
+    }
+  }
+}
+
+class _RingCheckPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  _RingCheckPainter({
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.shortestSide / 2) - strokeWidth;
+    final ring = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius, ring);
+
+    final check = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth * 1.15
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path()
+      ..moveTo(size.width * 0.28, size.height * 0.52)
+      ..lineTo(size.width * 0.43, size.height * 0.66)
+      ..lineTo(size.width * 0.72, size.height * 0.34);
+    canvas.drawPath(path, check);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingCheckPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
 }
 
 class _TimelineRow extends StatelessWidget {
@@ -383,6 +520,7 @@ class _TimelineRow extends StatelessWidget {
   final bool done;
   final bool active;
   final bool isLast;
+  final double midSpace;
 
   const _TimelineRow({
     required this.title,
@@ -391,6 +529,7 @@ class _TimelineRow extends StatelessWidget {
     required this.done,
     required this.active,
     required this.isLast,
+    required this.midSpace,
   });
 
   @override
@@ -399,6 +538,7 @@ class _TimelineRow extends StatelessWidget {
     final muted = const Color(0xFF9AA4A6);
     final titleColor = (done || active) ? teal : muted;
     final timeColor = (done || active) ? const Color(0xFF5A6B6E) : muted;
+    final gap = isLast ? 0.0 : midSpace;
 
     return IntrinsicHeight(
       child: Row(
@@ -408,31 +548,18 @@ class _TimelineRow extends StatelessWidget {
             width: 28,
             child: Column(
               children: [
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: done || active ? teal : Colors.transparent,
-                    border: Border.all(
-                      color: done || active ? teal : muted,
-                      width: 1.6,
-                    ),
-                  ),
-                  child: done || active
-                      ? const Icon(
-                          Icons.check_rounded,
-                          size: 14,
-                          color: Colors.white,
-                        )
-                      : null,
+                _ProgressCheckIcon(
+                  size: 22,
+                  style: done || active
+                      ? _ProgressCheckStyle.done
+                      : _ProgressCheckStyle.pending,
                 ),
                 if (!isLast)
                   Expanded(
                     child: Container(
-                      width: 2,
+                      width: 1,
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      color: done ? teal.withValues(alpha: 0.55) : muted,
+                      color: const Color(0xFF898989),
                     ),
                   ),
               ],
@@ -441,7 +568,7 @@ class _TimelineRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 22),
+              padding: EdgeInsets.only(bottom: gap),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
