@@ -3063,7 +3063,7 @@ class _CarbonCreditsChip extends StatelessWidget {
               ),
               SizedBox(width: (8 * s).clamp(6.0, 10.0)),
               Text(
-                'Carbon Credits',
+                'Eco credit',
                 style: GoogleFonts.montserrat(
                   color: Colors.black,
                   fontSize: labelSize,
@@ -3126,7 +3126,7 @@ class _CarbonCreditsPopup extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Carbon Credits',
+              'Eco credit',
               textAlign: TextAlign.center,
               style: GoogleFonts.boldonse(
                 color: const Color(0xFF062F35),
@@ -3136,7 +3136,7 @@ class _CarbonCreditsPopup extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Earn carbon credits by caring for, repairing, and giving your footwear a second life with GetMyPair.',
+              'Earn eco credits by caring for, repairing, and giving your footwear a second life with GetMyPair.',
               textAlign: TextAlign.center,
               style: GoogleFonts.montserrat(
                 color: const Color(0xFF5C6E73),

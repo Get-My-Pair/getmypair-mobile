@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
-import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/service/presentation/utils/care_active_job.dart';
 import 'package:gmp/features/service/presentation/widgets/service_request_bg_layer.dart';
@@ -23,8 +22,8 @@ class PairProgressPage extends StatefulWidget {
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
-    bottomLeft: Radius.circular(50),
-    bottomRight: Radius.circular(50),
+    bottomLeft: Radius.circular(28),
+    bottomRight: Radius.circular(28),
   );
 
   @override
@@ -153,22 +152,18 @@ class _PairProgressPageState extends State<PairProgressPage> {
             estimateDays: _estimateDays,
           );
     final inProgress = r != null && CareActiveJob.isActiveCareRequest(r);
-    final eta = r == null
-        ? null
-        : CareActiveJob.formatEstimatePretty(
-            CareActiveJob.estimatedDelivery(r, overrideDays: _estimateDays),
-          );
+
+    final bottomPad = 16.0 + bottomSafe;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      extendBody: true,
       body: Stack(
         children: [
           ...ServiceRequestBgLayer.stackBehind(),
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
+              padding: EdgeInsets.fromLTRB(8, 30, 10, bottomPad),
               child: DecoratedBox(
                 decoration: ShapeDecoration(
                   color: ServiceRequestBgLayer.panelFill,
@@ -220,7 +215,7 @@ class _PairProgressPageState extends State<PairProgressPage> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 10, 18, 4),
+                        padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
                         child: Row(
                           children: [
                             _pill(
@@ -257,18 +252,6 @@ class _PairProgressPageState extends State<PairProgressPage> {
                           ],
                         ),
                       ),
-                      if (eta != null)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 4, 18, 0),
-                          child: Text(
-                            'Estimated delivery · $eta · $_estimateDays days',
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFF6B7779),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
                       Expanded(
                         child: _loading && r == null
                             ? const AppSkeletonCards()
@@ -283,28 +266,22 @@ class _PairProgressPageState extends State<PairProgressPage> {
                                   )
                                 : LayoutBuilder(
                                     builder: (context, constraints) {
-                                      final deviceH =
-                                          MediaQuery.sizeOf(context).height;
-                                      final navReserve = 100.0 + bottomSafe;
-                                      final topPad = 16.0;
+                                      const topPad = 28.0;
+                                      const bottomListPad = 24.0;
+                                      // ~row content height (icon + 1–2 lines)
+                                      const rowContent = 40.0;
                                       final usable = (constraints.maxHeight -
                                               topPad -
-                                              navReserve)
+                                              bottomListPad)
                                           .clamp(0.0, double.infinity);
-                                      // ~row content height (icon + 1–2 lines)
-                                      const rowContent = 44.0;
-                                      final gaps = (steps.length - 1)
-                                          .clamp(1, 100);
+                                      final gaps =
+                                          (steps.length - 1).clamp(1, 100);
                                       final fillMid = (usable -
                                               steps.length * rowContent) /
                                           gaps;
-                                      // Scale with device height (Figma ~47 on ~932)
-                                      final deviceMid = deviceH * 0.05;
-                                      final midSpace = (fillMid > deviceMid
-                                              ? fillMid
-                                              : deviceMid)
-                                          .clamp(28.0, deviceH * 0.085)
-                                          .toDouble();
+                                      // Equal gaps between steps; bump min a little.
+                                      final midSpace =
+                                          fillMid.clamp(28.0, 84.0).toDouble();
 
                                       return RefreshIndicator(
                                         color: const Color(0xFF11999E),
@@ -312,11 +289,11 @@ class _PairProgressPageState extends State<PairProgressPage> {
                                         child: ListView.builder(
                                           physics:
                                               const AlwaysScrollableScrollPhysics(),
-                                          padding: EdgeInsets.fromLTRB(
+                                          padding: const EdgeInsets.fromLTRB(
                                             18,
                                             topPad,
                                             18,
-                                            navReserve,
+                                            bottomListPad,
                                           ),
                                           itemCount: steps.length,
                                           itemBuilder: (_, i) {
@@ -366,18 +343,6 @@ class _PairProgressPageState extends State<PairProgressPage> {
                   ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const DashboardLinkedBottomNav(selectedTabIndex: 1),
-                SizedBox(height: bottomSafe),
-              ],
             ),
           ),
         ],

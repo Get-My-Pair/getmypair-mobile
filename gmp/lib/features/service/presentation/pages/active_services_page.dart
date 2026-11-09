@@ -1,36 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
-import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
-import 'package:gmp/core/widgets/chevron_screen_back_button.dart';
+import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
-import 'package:gmp/features/payment/presentation/bloc/payment_bloc.dart';
-import 'package:gmp/features/payment/presentation/pages/payment_request_page.dart';
-import 'package:gmp/features/payment/presentation/utils/payment_amount_formatter.dart';
-import 'package:gmp/features/payment/presentation/widgets/pay_now_button.dart';
 import 'package:gmp/features/service/presentation/pages/pair_progress_page.dart';
 import 'package:gmp/features/service/presentation/utils/care_active_job.dart';
+import 'package:gmp/features/service/presentation/widgets/service_request_bg_layer.dart';
 import 'package:gmp/injection_container.dart';
 
-/// Active CareMyPair jobs — Cart-style cards; Pay Now opens Purchase Summary.
+/// Active CareMyPair jobs — light panel + progress-style cards (Figma Active Services).
 class ActiveServicesPage extends StatefulWidget {
   const ActiveServicesPage({super.key});
+
+  static const BorderRadius _panelRadius = BorderRadius.only(
+    topLeft: Radius.circular(20),
+    topRight: Radius.circular(20),
+    bottomLeft: Radius.circular(50),
+    bottomRight: Radius.circular(50),
+  );
 
   @override
   State<ActiveServicesPage> createState() => _ActiveServicesPageState();
 }
 
 class _ActiveServicesPageState extends State<ActiveServicesPage> {
-  static const Color _titleColor = Color(0xFFDFE7E9);
-
   bool _loading = true;
   bool _approvingIdBusy = false;
   String? _error;
@@ -103,38 +102,7 @@ class _ActiveServicesPageState extends State<ActiveServicesPage> {
     if (mounted) _load();
   }
 
-  Future<void> _openPayNow(Map<String, dynamic> r) async {
-    final id = CareActiveJob.requestId(r);
-    final amount = _payableAmount(r);
-    if (id.isEmpty || amount <= 0) return;
-
-    // Pending extra-cost approval must be accepted before checkout.
-    if (CareActiveJob.needsAdditionalCostApproval(r)) {
-      await _approveAdditionalCost(r, openPaymentAfter: true);
-      return;
-    }
-
-    final paid = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider(
-          create: (_) => sl<PaymentBloc>(),
-          child: PaymentRequestPage(
-            serviceRequestId: id,
-            amount: amount,
-            serviceType: (r['serviceType'] ?? '').toString(),
-            requestLabel: _requestLabel(r),
-          ),
-        ),
-      ),
-    );
-    if (!mounted) return;
-    if (paid == true) await _load();
-  }
-
-  Future<void> _approveAdditionalCost(
-    Map<String, dynamic> r, {
-    bool openPaymentAfter = false,
-  }) async {
+  Future<void> _approveAdditionalCost(Map<String, dynamic> r) async {
     final id = CareActiveJob.requestId(r);
     if (id.isEmpty || _approvingIdBusy) return;
     setState(() => _approvingIdBusy = true);
@@ -159,29 +127,11 @@ class _ActiveServicesPageState extends State<ActiveServicesPage> {
           if (!mounted) return;
           await _load();
           if (!mounted) return;
-          final amount = CareActiveJob.actualCostAmount(r) ?? 0;
-          if (openPaymentAfter && amount > 0) {
-            await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => sl<PaymentBloc>(),
-                  child: PaymentRequestPage(
-                    serviceRequestId: id,
-                    amount: amount,
-                    serviceType: (r['serviceType'] ?? '').toString(),
-                    requestLabel: _requestLabel(r),
-                  ),
-                ),
-              ),
-            );
-            if (mounted) _load();
-          } else {
-            await showAppFeedbackAlert(
-              context,
-              message: 'Additional charges accepted',
-              type: AppFeedbackType.success,
-            );
-          }
+          await showAppFeedbackAlert(
+            context,
+            message: 'Additional charges accepted',
+            type: AppFeedbackType.success,
+          );
         } catch (e) {
           if (!mounted) return;
           await showAppFeedbackAlert(
@@ -196,206 +146,200 @@ class _ActiveServicesPageState extends State<ActiveServicesPage> {
     );
   }
 
-  static double _payableAmount(Map<String, dynamic> r) {
-    final actual = CareActiveJob.actualCostAmount(r);
-    if (actual != null && actual > 0) return actual;
-    final estimated = CareActiveJob.estimatedCostAmount(r);
-    if (estimated != null && estimated > 0) return estimated;
-    return 0;
-  }
-
-  static bool _isPaid(Map<String, dynamic> r) {
-    final paymentState =
-        (r['paymentState'] ?? r['workflowStatus'] ?? '').toString().toUpperCase();
-    return r['isPaid'] == true ||
-        r['paymentCompleted'] == true ||
-        paymentState == 'PAYMENT_SUCCESS' ||
-        paymentState == 'PAID' ||
-        paymentState == 'PAYMENT_REFUNDED';
-  }
-
-  static bool _showPayNow(Map<String, dynamic> r) {
-    if (_isPaid(r)) return false;
-    return _payableAmount(r) > 0;
-  }
-
-  static String _requestLabel(Map<String, dynamic> r) {
-    final publicId = (r['publicId'] ?? '').toString().trim();
-    if (publicId.isNotEmpty) return 'Request #$publicId';
-    final id = CareActiveJob.requestId(r);
-    if (id.isEmpty) return 'Request';
-    if (id.length <= 10) return 'Request #$id';
-    return 'Request #${id.substring(0, 8)}…';
+  static String _deliveryLabel(Map<String, dynamic> r, Set<String> confirmed) {
+    if (CareActiveJob.needsDropOffConfirm(r, dropOffConfirmedIds: confirmed)) {
+      return 'Confirm at hub';
+    }
+    final d = CareActiveJob.estimatedDelivery(r);
+    final day = d.day;
+    final ordinal = (day >= 11 && day <= 13)
+        ? 'th'
+        : switch (day % 10) {
+            1 => 'st',
+            2 => 'nd',
+            3 => 'rd',
+            _ => 'th',
+          };
+    final month = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ][d.month - 1];
+    return '$day$ordinal $month\' ${d.year}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: BgTheme.scaffoldBackgroundColor,
-        body: SafeArea(
-          top: false,
-          bottom: false,
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    image: const DecorationImage(
-                      image: AssetImage(BgTheme.backgroundImageAsset),
-                      fit: BoxFit.cover,
+        backgroundColor: Colors.transparent,
+        extendBody: true,
+        body: Stack(
+          children: [
+            ...ServiceRequestBgLayer.stackBehind(),
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 30, 10, 0),
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: ServiceRequestBgLayer.panelFill,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: ActiveServicesPage._panelRadius,
                     ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
-                    boxShadow: [
+                    shadows: const [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.22),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
+                        color: Color(0x19000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: RefreshIndicator(
-                    color: AppColors.secondary,
-                    backgroundColor: AppColors.footwearHeroStart,
-                    onRefresh: _load,
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverPadding(
-                          padding: ArticleStyleHeaderInsets.scrollContentPadding(
-                            context,
+                  child: ClipRRect(
+                    borderRadius: ActiveServicesPage._panelRadius,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                onPressed: () => Navigator.maybePop(context),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints.tightFor(
+                                  width: 26,
+                                  height: 26,
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Color(0xFF062F35),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Active Services',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          sliver: SliverList(
-                            delegate: SliverChildListDelegate([
-                              _buildHeader(),
-                              const SizedBox(height: 28),
-                              if (_loading)
-                                AppSkeletonList(
-                                  itemCount: 4,
-                                  shrinkWrap: true,
-                                  showAvatar: false,
-                                  color: Colors.white.withValues(alpha: 0.38),
-                                  padding: EdgeInsets.zero,
-                                )
-                              else if (_error != null)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 32),
-                                  child: Text(
-                                    _error!,
-                                    style: GoogleFonts.montserrat(
-                                      color: AppColors.onGradientMuted,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                )
-                              else if (_jobs.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 48,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'No pairs are currently in treatment',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.montserrat(
-                                        color: AppColors.onGradientBody,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
+                        ),
+                        Expanded(
+                          child: _loading
+                              ? const AppSkeletonList(itemCount: 3)
+                              : _error != null
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(24),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              _error!,
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.montserrat(
+                                                color: const Color(0xFFB00020),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            FilledButton(
+                                              onPressed: _load,
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor:
+                                                    const Color(0xFF11999E),
+                                              ),
+                                              child: const Text('Retry'),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                )
-                              else ...[
-                                Text(
-                                  'Active jobs',
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                ..._jobs.map(
-                                  (r) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 14),
-                                    child: _ActiveJobCard(
-                                      request: r,
-                                      dropOffConfirmed: _dropOffConfirmed,
-                                      showPayNow: _showPayNow(r),
-                                      amount: _payableAmount(r),
-                                      requestLabel: _requestLabel(r),
-                                      approving: _approvingIdBusy,
-                                      onTap: () => _openProgress(r),
-                                      onPayNow: () => _openPayNow(r),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ]),
-                          ),
+                                    )
+                                  : _jobs.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            'No pairs are currently in treatment',
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.montserrat(
+                                              color: const Color(0xFF9AA4A6),
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        )
+                                      : RefreshIndicator(
+                                          color: const Color(0xFF11999E),
+                                          onRefresh: _load,
+                                          child: ListView.separated(
+                                            physics:
+                                                const AlwaysScrollableScrollPhysics(),
+                                            padding: EdgeInsets.fromLTRB(
+                                              16,
+                                              8,
+                                              16,
+                                              120 + bottomSafe,
+                                            ),
+                                            itemCount: _jobs.length,
+                                            separatorBuilder: (_, _) =>
+                                                const SizedBox(height: 14),
+                                            itemBuilder: (_, i) {
+                                              final r = _jobs[i];
+                                              return _ActiveJobCard(
+                                                request: r,
+                                                deliveryLabel: _deliveryLabel(
+                                                  r,
+                                                  _dropOffConfirmed,
+                                                ),
+                                                showExtraCostApprove:
+                                                    CareActiveJob
+                                                        .needsAdditionalCostApproval(
+                                                  r,
+                                                ),
+                                                approving: _approvingIdBusy,
+                                                onOpenProgress: () =>
+                                                    _openProgress(r),
+                                                onApprove: () =>
+                                                    _approveAdditionalCost(r),
+                                              );
+                                            },
+                                          ),
+                                        ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-              const DashboardLinkedBottomNav(selectedTabIndex: 1),
-            ],
-          ),
+            ),
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const ChevronScreenBackButton(iconColor: _titleColor),
-        const SizedBox(width: 7),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              Text(
-                'Active Services',
-                style: GoogleFonts.boldonse(
-                  color: _titleColor,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w400,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _loading
-                    ? 'Loading active jobs…'
-                    : _jobs.isEmpty
-                        ? 'No active services right now.'
-                        : 'You have ${_jobs.length} active service${_jobs.length == 1 ? '' : 's'}.',
-                style: GoogleFonts.montserrat(
-                  color: AppColors.onGradientBody,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w300,
-                  height: 1.25,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -403,140 +347,352 @@ class _ActiveServicesPageState extends State<ActiveServicesPage> {
 class _ActiveJobCard extends StatelessWidget {
   const _ActiveJobCard({
     required this.request,
-    required this.dropOffConfirmed,
-    required this.showPayNow,
-    required this.amount,
-    required this.requestLabel,
+    required this.deliveryLabel,
+    required this.showExtraCostApprove,
     required this.approving,
-    required this.onTap,
-    required this.onPayNow,
+    required this.onOpenProgress,
+    required this.onApprove,
   });
 
   final Map<String, dynamic> request;
-  final Set<String> dropOffConfirmed;
-  final bool showPayNow;
-  final double amount;
-  final String requestLabel;
+  final String deliveryLabel;
+  final bool showExtraCostApprove;
   final bool approving;
-  final VoidCallback onTap;
-  final VoidCallback onPayNow;
+  final VoidCallback onOpenProgress;
+  final VoidCallback onApprove;
+
+  String get _actionMessage {
+    final note = (request['actualCostNote'] ??
+            request['additionalCostNote'] ??
+            request['inspectionNote'] ??
+            request['problemDescription'] ??
+            '')
+        .toString()
+        .trim();
+    final cost = CareActiveJob.actualCostAmount(request);
+    final rupees = cost != null ? CareActiveJob.formatRupees(cost) : null;
+    final finding = note.isNotEmpty
+        ? note.split(RegExp(r'[\n,]')).first.trim()
+        : 'We found an extra repair need.';
+    if (rupees != null) {
+      return '$finding\nApprove ₹$rupees repair?';
+    }
+    return '$finding\nAdditional charges need your approval.';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final serviceTitle = CareActiveJob.serviceLabel(
-      (request['serviceType'] ?? '').toString(),
-    );
-    final status = CareActiveJob.statusBlurb(request);
-    final needsDrop = CareActiveJob.needsDropOffConfirm(
-      request,
-      dropOffConfirmedIds: dropOffConfirmed,
-    );
-    final eta = CareActiveJob.formatEstimatePretty(
-      CareActiveJob.estimatedDelivery(request),
-    );
+    final brand = CareActiveJob.brand(request);
+    final model = CareActiveJob.modelLine(request);
+    final serviceType = (request['serviceType'] ?? '').toString();
+    final badge = CareActiveJob.serviceLabel(serviceType);
+    final imageUrl = CareActiveJob.articleImageUrl(request);
+    final badgeAsset = CareActiveJob.serviceBadgeAsset(serviceType);
+    final progressTitle = CareActiveJob.currentProgressTitle(request);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: onOpenProgress,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           decoration: BoxDecoration(
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: const Color(0xFF7FD4E0).withValues(alpha: 0.9),
-            ),
+            border: Border.all(color: const Color(0xFF12899B), width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 6,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF7FD4E0)),
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
-                    child: SvgPicture.asset(
-                      'assets/images/noun-shoes-cleaning-7675732 1.svg',
-                      fit: BoxFit.contain,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFF7FD4E0),
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          serviceTitle,
+                          brand,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          requestLabel,
-                          style: GoogleFonts.montserrat(
-                            color: AppColors.onGradientMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          status,
-                          style: GoogleFonts.montserrat(
-                            color: AppColors.onGradientBody,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF12899B),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            height: 1.15,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          needsDrop ? 'Drop off: Confirm at hub' : 'ETA: $eta',
+                          model,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.montserrat(
-                            color: AppColors.onGradientMuted,
-                            fontSize: 11,
+                            color: const Color(0xFF062F35),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        if (amount > 0) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            PaymentAmountFormatter.formatGrouped(amount),
-                            style: GoogleFonts.montserrat(
-                              color: AppColors.secondary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 92,
+                      height: 72,
+                      child: imageUrl.isEmpty
+                          ? Container(
+                              color: const Color(0xFFE8EEEE),
+                              child: const Icon(
+                                Icons.directions_walk_rounded,
+                                size: 28,
+                                color: Color(0xFF12899B),
+                              ),
+                            )
+                          : ArticleRackShoeImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.contain,
                             ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Left: timeline progress (dynamic). Right: service label badge.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      progressTitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF12899B),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF062F35),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          badgeAsset,
+                          width: 14,
+                          height: 14,
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xFF0CADC5),
+                            BlendMode.srcIn,
                           ),
-                        ],
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          badge,
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF0CADC5),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
-              if (showPayNow) ...[
-                const SizedBox(height: 12),
-                PayNowButton(
-                  onPressed: approving ? null : onPayNow,
-                  loading: approving,
-                  label: 'Pay Now',
-                  showIcon: false,
+              const SizedBox(height: 12),
+              const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8EA)),
+              const SizedBox(height: 12),
+              _MetaRow(label: 'Expected Delivery:', value: deliveryLabel),
+              // Only when shop adds extra cost pending user approval.
+              if (showExtraCostApprove) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFE11D48),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE11D48),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              '!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Action Required',
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFFE11D48),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _actionMessage,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF062F35),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _GradientPillButton(
+                        label: 'Approve',
+                        loading: approving,
+                        onPressed: approving ? null : onApprove,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF8A9496),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF062F35),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GradientPillButton extends StatelessWidget {
+  const _GradientPillButton({
+    required this.label,
+    required this.onPressed,
+    this.loading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(100),
+        child: Ink(
+          height: 44,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+              colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+            ),
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x19000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: GoogleFonts.boldonse(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
           ),
         ),
       ),

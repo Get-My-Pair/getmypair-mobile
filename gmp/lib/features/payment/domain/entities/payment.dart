@@ -35,11 +35,31 @@ class Payment extends Equatable {
     this.updatedAt,
   });
 
-  bool get isSuccess => status == 'PAYMENT_SUCCESS';
-  bool get isFailed => status == 'PAYMENT_FAILED';
-  bool get isPending =>
-      status == 'PAYMENT_PENDING' || status == 'PAYMENT_INITIATED';
-  bool get isRefunded => status == 'REFUNDED';
+  bool get isSuccess {
+    final s = status.trim().toUpperCase();
+    return s == 'PAYMENT_SUCCESS' ||
+        s == 'PAID' ||
+        s == 'SUCCESS' ||
+        s == 'COMPLETED' ||
+        s == 'CAPTURED';
+  }
+
+  bool get isFailed => status.toUpperCase().contains('FAIL');
+  bool get isPending {
+    final s = status.trim().toUpperCase();
+    return s == 'PAYMENT_PENDING' ||
+        s == 'PAYMENT_INITIATED' ||
+        s == 'PENDING' ||
+        s == 'INITIATED';
+  }
+
+  bool get isRefunded {
+    final s = status.trim().toUpperCase();
+    return s == 'REFUNDED' || s == 'PAYMENT_REFUNDED';
+  }
+
+  /// True when money was captured (success / refunded / paidAt set).
+  bool get countsAsPaid => isSuccess || isRefunded || paidAt != null;
 
   @override
   List<Object?> get props => [

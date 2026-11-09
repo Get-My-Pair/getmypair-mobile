@@ -64,15 +64,59 @@ class CareActiveJob {
     }
   }
 
+  /// Known CareMyPair problem codes → display titles (Figma / masteradmin).
+  static const Map<String, String> problemTitlesByCode = {
+    'sole_bottom_construction': 'Sole & Bottom Construction Repairs',
+    'upper_seam_restoration': 'Upper Material & Seam Restoration',
+    'hardware_fastener': 'Hardware & Fastener Repairs',
+    'fit_structural': 'Fit & Structural Adjustments',
+    'protection_conditioning': 'Protection & Conditioning',
+    'surface_care_polishing': 'Preventive Surface Care & Polishing',
+    'structural_shape': 'Structural & Shape Maintenance',
+    'storage_preservation': 'Storage & Preservation Prep',
+    'exterior_surface_deep_clean': 'Exterior & Surface Deep Cleaning',
+    'interior_care_sanitization': 'Interior Care & Sanitization',
+    'detailing_finishing': 'Detailing & Finishing',
+  };
+
   static String serviceOptionLabel(Map<String, dynamic> r) {
-    final plan = (r['maintenancePlanLabel'] ?? '').toString().trim();
-    if (plan.isNotEmpty) return plan;
+    // Prefer canonical title from problem code when available.
+    final code = problemCodeOf(r);
+    final byCode = problemTitlesByCode[code];
+    if (byCode != null && byCode.isNotEmpty) return byCode;
+
+    final plan = (r['maintenancePlanLabel'] ?? r['problemName'] ?? '')
+        .toString()
+        .trim();
     final problem = (r['problemDescription'] ?? '').toString().trim();
-    if (problem.isNotEmpty) {
-      final first = problem.split(RegExp(r'[\n,]')).first.trim();
-      if (first.isNotEmpty) return first;
-    }
+    final raw = plan.isNotEmpty
+        ? plan
+        : (problem.isNotEmpty
+            ? problem.split(RegExp(r'[\n,]')).first.trim()
+            : '');
+    if (raw.isNotEmpty) return _cleanOptionLabel(raw, r);
     return serviceLabel((r['serviceType'] ?? '').toString());
+  }
+
+  /// Drops redundant "Brand: …" prefix so cards don't show "Action: Sole &…".
+  static String _cleanOptionLabel(String raw, Map<String, dynamic> r) {
+    var text = raw.trim();
+    final b = brand(r);
+    if (b.isNotEmpty) {
+      final prefix = RegExp(
+        '^${RegExp.escape(b)}\\s*:\\s*',
+        caseSensitive: false,
+      );
+      text = text.replaceFirst(prefix, '').trim();
+    }
+    // Short brand-like "Something: rest" → keep rest only.
+    final generic = RegExp(r'^([^:]{1,24}):\s+(.+)$');
+    final m = generic.firstMatch(text);
+    if (m != null) {
+      final rest = (m.group(2) ?? '').trim();
+      if (rest.isNotEmpty) text = rest;
+    }
+    return text.isEmpty ? raw.trim() : text;
   }
 
   static bool isSelfDrop(Map<String, dynamic> r) {
@@ -205,6 +249,30 @@ class CareActiveJob {
     if (v == null) return '—';
     if (v % 1 == 0) return v.toInt().toString();
     return v.toStringAsFixed(0);
+  }
+
+  /// Current / latest timeline step title for Active Services cards.
+  static String currentProgressTitle(
+    Map<String, dynamic> r, {
+    List<CareProgressStep>? steps,
+    int? estimateDays,
+  }) {
+    if (needsAdditionalCostApproval(r)) return 'Waiting for your approval';
+    final serviceType = (r['serviceType'] ?? 'repair').toString();
+    final list = (steps != null && steps.isNotEmpty)
+        ? steps
+        : parseProgressSteps(
+            r['progressSteps'],
+            serviceType: serviceType,
+          );
+    if (list.isEmpty) return statusBlurb(r);
+    final idx = currentProgressIndex(
+      r,
+      stepCount: list.length,
+      estimateDays: estimateDays,
+    ).clamp(0, list.length - 1);
+    final title = list[idx].title.trim();
+    return title.isEmpty ? statusBlurb(r) : title;
   }
 
   static String statusBlurb(Map<String, dynamic> r) {

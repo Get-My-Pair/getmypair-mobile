@@ -23,8 +23,8 @@ class PaymentModel extends Payment {
     return PaymentModel(
       id: _str(json['_id'] ?? json['id']),
       orderId: _str(json['orderId']),
-      serviceRequestId: _str(json['serviceRequestId']),
-      userId: _str(json['userId']),
+      serviceRequestId: _idOf(json['serviceRequestId']),
+      userId: _idOf(json['userId']),
       amount: _toDouble(json['amount']),
       currency: _str(json['currency']).isEmpty ? 'INR' : _str(json['currency']),
       status: _str(json['status']),
@@ -40,6 +40,15 @@ class PaymentModel extends Payment {
   }
 
   static String _str(dynamic v) => v?.toString() ?? '';
+
+  /// Handles plain id string or populated `{ _id / id }` object from API.
+  static String _idOf(dynamic v) {
+    if (v == null) return '';
+    if (v is Map) {
+      return _str(v['_id'] ?? v['id']).trim();
+    }
+    return _str(v).trim();
+  }
 
   static String? _optionalStr(dynamic v) {
     final s = v?.toString().trim();

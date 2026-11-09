@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/navigation/customer_dashboard_tab_index.dart';
@@ -15,13 +16,14 @@ import '../../../../features/profile/presentation/pages/profile_page.dart';
 import '../../../../features/service/presentation/utils/care_active_job.dart';
 import '../../../../features/service/presentation/widgets/service_request_bg_layer.dart';
 import '../../../../injection_container.dart';
+import '../../domain/usecases/payment_usecases.dart';
 import '../bloc/payment_bloc.dart';
 import '../utils/cart_navigation.dart';
 import '../utils/payment_amount_formatter.dart';
 import 'payment_request_page.dart';
 
-/// Cart (4th nav): same light panel + card look as Active Progress / History,
-/// with **Pay Now** only.
+/// Cart (4th nav): same light panel + card look as Active Progress / History.
+/// Unpaid → **Pay Now**; already paid → **Payment Paid** (no pay action).
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -37,6 +39,8 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
+  static const _paidPrefsKey = 'cart_paid_service_request_ids';
+
   bool _loading = true;
   String? _error;
   List<_CartPayableItem> _items = const [];
@@ -46,6 +50,57 @@ class _CartPageState extends State<CartPage> {
     super.initState();
     registerCustomerCartNavigation();
     _load();
+  }
+
+  Future<SharedPreferences> _prefs() async {
+    if (sl.isRegistered<SharedPreferences>()) {
+      return sl<SharedPreferences>();
+    }
+    return SharedPreferences.getInstance();
+  }
+
+  Future<Set<String>> _loadLocalPaidIds() async {
+    final prefs = await _prefs();
+    return (prefs.getStringList(_paidPrefsKey) ?? const <String>[]).toSet();
+  }
+
+  Future<void> _rememberPaidId(String requestId) async {
+    final id = requestId.trim();
+    if (id.isEmpty) return;
+    final prefs = await _prefs();
+    final list = prefs.getStringList(_paidPrefsKey) ?? <String>[];
+    if (list.contains(id)) return;
+    list.add(id);
+    await prefs.setStringList(_paidPrefsKey, list);
+  }
+
+  Future<Set<String>> _paidIdsFromPaymentHistory(String token) async {
+    try {
+      final history = await sl<GetPaymentHistory>().call(
+        accessToken: token,
+        page: 1,
+        limit: 100,
+      );
+      return history.items
+          .where((p) => p.countsAsPaid)
+          .map((p) => p.serviceRequestId.trim().toLowerCase())
+          .where((id) => id.isNotEmpty)
+          .toSet();
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<bool> _isPaidViaPaymentApi(String token, String requestId) async {
+    try {
+      final payment = await sl<GetPaymentByServiceRequest>().call(
+        accessToken: token,
+        serviceRequestId: requestId,
+      );
+      return payment != null && payment.countsAsPaid;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _load() async {
@@ -66,6 +121,12 @@ class _CartPageState extends State<CartPage> {
       },
       (token) async {
         try {
+          final localPaid = {
+            for (final id in await _loadLocalPaidIds()) id.trim().toLowerCase(),
+          };
+          final historyPaid = await _paidIdsFromPaymentHistory(token);
+          final paidIds = {...localPaid, ...historyPaid};
+
           final res = await sl<DioClient>().get(
             ApiEndpoints.serviceMy,
             accessToken: token,
@@ -73,12 +134,45 @@ class _CartPageState extends State<CartPage> {
           final list =
               ((res['data'] as Map<String, dynamic>?)?['requests'] as List?) ??
                   const [];
-          final items = list
+          var items = list
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
-              .map(_CartPayableItem.tryFrom)
+              .where(CareActiveJob.isActiveCareRequest)
+              .map((r) => _CartPayableItem.tryFrom(r, paidOverrideIds: paidIds))
               .whereType<_CartPayableItem>()
-              .toList(growable: false);
+              .toList();
+
+          // Transaction history / by-request API is source of truth —
+          // service request `paymentState` often lags after checkout.
+          final unpaid = items.where((e) => !e.isPaid).toList();
+          if (unpaid.isNotEmpty) {
+            final verified = await Future.wait(
+              unpaid.map((item) async {
+                final ok = await _isPaidViaPaymentApi(token, item.id);
+                return (item.id, ok);
+              }),
+            );
+            final newlyPaid = <String>{};
+            for (final (id, ok) in verified) {
+              if (ok) newlyPaid.add(id);
+            }
+            if (newlyPaid.isNotEmpty) {
+              for (final id in newlyPaid) {
+                await _rememberPaidId(id);
+              }
+              items = [
+                for (final row in items)
+                  newlyPaid.contains(row.id)
+                      ? row.copyWith(isPaid: true)
+                      : row,
+              ];
+            }
+          }
+
+          for (final id in historyPaid) {
+            await _rememberPaidId(id);
+          }
+
           if (!mounted) return;
           setState(() {
             _items = items;
@@ -96,6 +190,7 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<void> _openPurchaseSummary(_CartPayableItem item) async {
+    if (item.isPaid) return;
     final paid = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => BlocProvider(
@@ -110,7 +205,16 @@ class _CartPageState extends State<CartPage> {
       ),
     );
     if (!mounted) return;
-    if (paid == true) await _load();
+    if (paid == true) {
+      await _rememberPaidId(item.id);
+      setState(() {
+        _items = [
+          for (final row in _items)
+            row.id == item.id ? row.copyWith(isPaid: true) : row,
+        ];
+      });
+      await _load();
+    }
   }
 
   @override
@@ -217,7 +321,7 @@ class _CartPageState extends State<CartPage> {
                                 : _items.isEmpty
                                     ? Center(
                                         child: Text(
-                                          'No pending payments',
+                                          'No cart items right now',
                                           style: GoogleFonts.montserrat(
                                             color: const Color(0xFF9AA4A6),
                                             fontSize: 15,
@@ -236,14 +340,18 @@ class _CartPageState extends State<CartPage> {
                                             120 + bottomSafe,
                                           ),
                                           itemCount: _items.length,
-                                          separatorBuilder: (_, __) =>
+                                          separatorBuilder: (_, _) =>
                                               const SizedBox(height: 14),
                                           itemBuilder: (_, i) {
                                             final item = _items[i];
                                             return _CartProgressStyleCard(
                                               item: item,
-                                              onPayNow: () =>
-                                                  _openPurchaseSummary(item),
+                                              onPayNow: item.isPaid
+                                                  ? null
+                                                  : () =>
+                                                      _openPurchaseSummary(
+                                                        item,
+                                                      ),
                                             );
                                           },
                                         ),
@@ -298,7 +406,7 @@ class _CartPageState extends State<CartPage> {
   }
 }
 
-/// Same card chrome as Service History / Active Progress list cards.
+/// Same card layout as Active Services jobs.
 class _CartProgressStyleCard extends StatelessWidget {
   const _CartProgressStyleCard({
     required this.item,
@@ -306,18 +414,19 @@ class _CartProgressStyleCard extends StatelessWidget {
   });
 
   final _CartPayableItem item;
-  final VoidCallback onPayNow;
+  final VoidCallback? onPayNow;
 
   @override
   Widget build(BuildContext context) {
     final badgeAsset = CareActiveJob.serviceBadgeAsset(item.serviceType);
+    final paid = item.isPaid;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF0F6876), width: 1),
+        border: Border.all(color: const Color(0xFF12899B), width: 1),
         boxShadow: const [
           BoxShadow(
             color: Color(0x14000000),
@@ -342,8 +451,9 @@ class _CartProgressStyleCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.montserrat(
                         color: const Color(0xFF12899B),
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
+                        height: 1.15,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -352,85 +462,26 @@ class _CartProgressStyleCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.montserrat(
-                        color: const Color(0xFF8A9496),
-                        fontSize: 12,
+                        color: const Color(0xFF062F35),
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.option,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFF062F35),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF062F35),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                badgeAsset,
-                                width: 14,
-                                height: 14,
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xFF0CADC5),
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                item.serviceTitle,
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      PaymentAmountFormatter.formatGrouped(item.amount),
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF12899B),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 child: SizedBox(
-                  width: 72,
-                  height: 56,
+                  width: 92,
+                  height: 72,
                   child: item.imageUrl.isEmpty
                       ? Container(
                           color: const Color(0xFFE8EEEE),
                           child: const Icon(
                             Icons.directions_walk_rounded,
+                            size: 28,
                             color: Color(0xFF12899B),
                           ),
                         )
@@ -443,43 +494,164 @@ class _CartProgressStyleCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onPayNow,
-              borderRadius: BorderRadius.circular(100),
-              child: Ink(
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.centerRight,
-                    end: Alignment.centerLeft,
-                    colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  item.option,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF062F35),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
-                  borderRadius: BorderRadius.circular(100),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF062F35),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(
+                      badgeAsset,
+                      width: 14,
+                      height: 14,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF0CADC5),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      item.serviceTitle,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF0CADC5),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Text(
-                    'Pay Now',
-                    style: GoogleFonts.boldonse(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8EA)),
+          const SizedBox(height: 12),
+          _CartMetaRow(
+            label: 'Amount:',
+            value: PaymentAmountFormatter.formatGrouped(item.amount),
+          ),
+          const SizedBox(height: 8),
+          _CartMetaRow(
+            label: 'Payment:',
+            value: paid ? 'Paid' : 'Pending',
+          ),
+          const SizedBox(height: 14),
+          if (paid)
+            Container(
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EEEE),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(color: const Color(0xFF0F6876)),
+              ),
+              child: Text(
+                'Payment Paid',
+                style: GoogleFonts.boldonse(
+                  color: const Color(0xFF062F35),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            )
+          else
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onPayNow,
+                borderRadius: BorderRadius.circular(100),
+                child: Ink(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                      colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                    ),
+                    borderRadius: BorderRadius.circular(100),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 4,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Pay Now',
+                      style: GoogleFonts.boldonse(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
+    );
+  }
+}
+
+class _CartMetaRow extends StatelessWidget {
+  const _CartMetaRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF8A9496),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF062F35),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -494,6 +666,7 @@ class _CartPayableItem {
   final String option;
   final String imageUrl;
   final double amount;
+  final bool isPaid;
 
   const _CartPayableItem({
     required this.id,
@@ -505,30 +678,71 @@ class _CartPayableItem {
     required this.option,
     required this.imageUrl,
     required this.amount,
+    required this.isPaid,
   });
 
-  static _CartPayableItem? tryFrom(Map<String, dynamic> r) {
+  _CartPayableItem copyWith({bool? isPaid}) {
+    return _CartPayableItem(
+      id: id,
+      serviceType: serviceType,
+      serviceTitle: serviceTitle,
+      requestLabel: requestLabel,
+      brand: brand,
+      model: model,
+      option: option,
+      imageUrl: imageUrl,
+      amount: amount,
+      isPaid: isPaid ?? this.isPaid,
+    );
+  }
+
+  static bool _isPaidRequest(Map<String, dynamic> r) {
+    final paymentState =
+        (r['paymentState'] ?? r['workflowStatus'] ?? r['paymentStatus'] ?? '')
+            .toString()
+            .toUpperCase()
+            .trim();
+    if (r['isPaid'] == true || r['paymentCompleted'] == true) return true;
+    if (paymentState == 'PAYMENT_SUCCESS' ||
+        paymentState == 'PAID' ||
+        paymentState == 'PAYMENT_REFUNDED' ||
+        paymentState == 'SUCCESS' ||
+        paymentState == 'COMPLETED') {
+      return true;
+    }
+    final status = (r['status'] ?? '').toString().toLowerCase().trim();
+    if (status == 'paid' || status == 'payment_success') return true;
+    return false;
+  }
+
+  static _CartPayableItem? tryFrom(
+    Map<String, dynamic> r, {
+    Set<String> paidOverrideIds = const {},
+  }) {
     final id = (r['_id'] ?? r['id'] ?? '').toString().trim();
     if (id.isEmpty) return null;
-
-    final paymentState =
-        (r['paymentState'] ?? r['workflowStatus'] ?? '').toString().toUpperCase();
-    final isPaid = r['isPaid'] == true ||
-        r['paymentCompleted'] == true ||
-        paymentState == 'PAYMENT_SUCCESS' ||
-        paymentState == 'PAID' ||
-        paymentState == 'PAYMENT_REFUNDED';
-    if (isPaid) return null;
 
     final amount = _payableAmount(r);
     if (amount <= 0) return null;
 
-    final needsPay = paymentState.isEmpty ||
-        paymentState == 'PAYMENT_PENDING' ||
-        paymentState == 'PAYMENT_INITIATED' ||
-        paymentState == 'PAYMENT_FAILED' ||
-        paymentState == 'COST_APPROVAL_PENDING';
-    if (!needsPay) return null;
+    final isPaid = _isPaidRequest(r) ||
+        paidOverrideIds.contains(id.toLowerCase());
+    final paymentState =
+        (r['paymentState'] ?? r['workflowStatus'] ?? r['paymentStatus'] ?? '')
+            .toString()
+            .toUpperCase()
+            .trim();
+
+    // Keep unpaid cart rows + paid active rows (show Payment Paid).
+    if (!isPaid) {
+      final needsPay = paymentState.isEmpty ||
+          paymentState == 'PAYMENT_PENDING' ||
+          paymentState == 'PAYMENT_INITIATED' ||
+          paymentState == 'PAYMENT_FAILED' ||
+          paymentState == 'COST_APPROVAL_PENDING' ||
+          paymentState == 'AWAITING_PAYMENT';
+      if (!needsPay) return null;
+    }
 
     final serviceType = (r['serviceType'] ?? '').toString();
     final publicId = (r['publicId'] ?? '').toString().trim();
@@ -548,6 +762,7 @@ class _CartPayableItem {
       option: CareActiveJob.serviceOptionLabel(r),
       imageUrl: CareActiveJob.articleImageUrl(r),
       amount: amount,
+      isPaid: isPaid,
     );
   }
 
