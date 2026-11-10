@@ -230,7 +230,7 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
                                           ),
                                           itemCount: _jobs.length,
                                           separatorBuilder: (_, __) =>
-                                              const SizedBox(height: 14),
+                                              const SizedBox(height: 22),
                                           itemBuilder: (_, i) {
                                             final r = _jobs[i];
                                             final id =
@@ -284,18 +284,18 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final brand = CareActiveJob.brand(request);
     final model = CareActiveJob.modelLine(request);
-    final option = CareActiveJob.serviceOptionLabel(request);
+    final problemTitle = CareActiveJob.serviceOptionLabel(request);
     final serviceType = (request['serviceType'] ?? '').toString();
     final badge = CareActiveJob.serviceLabel(serviceType);
     final imageUrl = CareActiveJob.articleImageUrl(request);
     final badgeAsset = CareActiveJob.serviceBadgeAsset(serviceType);
 
+    // Figma 3393:4752 — brand + image, problem line + badge, then Rate CTA only.
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF0F6876), width: 1),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
         boxShadow: const [
           BoxShadow(
             color: Color(0x14000000),
@@ -318,10 +318,11 @@ class _HistoryCard extends StatelessWidget {
                       brand,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF12899B),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      style: GoogleFonts.boldonse(
+                        color: const Color(0xFF11899B),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        height: 1.2,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -330,91 +331,92 @@ class _HistoryCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.montserrat(
-                        color: const Color(0xFF8A9496),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            option,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFF062F35),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF062F35),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SvgPicture.asset(
-                                badgeAsset,
-                                width: 14,
-                                height: 14,
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xFF0CADC5),
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                badge,
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 72,
-                  height: 56,
-                  child: imageUrl.isEmpty
-                      ? Container(
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 118,
+                height: 63,
+                child: imageUrl.isEmpty
+                    ? Container(
+                        decoration: BoxDecoration(
                           color: const Color(0xFFE8EEEE),
-                          child: const Icon(
-                            Icons.directions_walk_rounded,
-                            color: Color(0xFF12899B),
-                          ),
-                        )
-                      : ArticleRackShoeImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.contain,
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: const Icon(
+                          Icons.directions_walk_rounded,
+                          size: 28,
+                          color: Color(0xFF11899B),
+                        ),
+                      )
+                    : ArticleRackShoeImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.contain,
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  problemTitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.montserrat(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                height: 31,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF062F35),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(
+                      badgeAsset,
+                      width: 18,
+                      height: 18,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF09E0FF),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      badge,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF09E0FF),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
           if (alreadyRated)
             Container(
-              height: 44,
+              height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: const Color(0xFFE8EEEE),
@@ -425,7 +427,7 @@ class _HistoryCard extends StatelessWidget {
                 'Thanks for rating',
                 style: GoogleFonts.boldonse(
                   color: const Color(0xFF062F35),
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -437,7 +439,7 @@ class _HistoryCard extends StatelessWidget {
                 onTap: onRate,
                 borderRadius: BorderRadius.circular(100),
                 child: Ink(
-                  height: 44,
+                  height: 36,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.centerRight,
@@ -447,7 +449,7 @@ class _HistoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(100),
                     boxShadow: const [
                       BoxShadow(
-                        color: Color(0x19000000),
+                        color: Color(0x1A000000),
                         blurRadius: 4,
                         offset: Offset(0, 4),
                       ),
@@ -458,7 +460,7 @@ class _HistoryCard extends StatelessWidget {
                       "Rate your pair's glow-up",
                       style: GoogleFonts.boldonse(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
                     ),

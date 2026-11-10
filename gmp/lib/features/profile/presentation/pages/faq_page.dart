@@ -122,7 +122,7 @@ class _FaqPageState extends State<FaqPage> {
                                 number: 4,
                                 question: 'How can I track my request?',
                                 answer:
-                                    'Go to Profile → My Orders (or Service requests) to see status, tracking steps, costs, and proof photos you submitted.',
+                                    'Go to Profile → My Orders (or CareMyPair → Active Services) to see status and tracking steps for your requests.',
                               ),
                               _FaqItem(
                                 number: 5,

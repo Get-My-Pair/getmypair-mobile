@@ -11,7 +11,7 @@ import '../../../../features/payment/presentation/bloc/payment_bloc.dart';
 import '../../../../features/payment/presentation/pages/payment_failed_page.dart';
 import '../../../../features/payment/presentation/pages/payment_request_page.dart';
 import '../../../../features/payment/presentation/pages/transaction_details_page.dart';
-import '../../../../features/service/presentation/pages/service_request_details_page.dart';
+import '../../../../features/service/presentation/pages/pair_progress_page.dart';
 import '../../../../injection_container.dart';
 import 'user_notifications.dart';
 
@@ -37,7 +37,7 @@ Future<void> navigateFromUserNotification(
     }
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => ServiceRequestDetailsPage(requestId: serviceRequestId),
+        builder: (_) => PairProgressPage(requestId: serviceRequestId),
       ),
     );
     return;
@@ -50,7 +50,7 @@ Future<void> navigateFromUserNotification(
 
   await Navigator.of(context).push<void>(
     MaterialPageRoute(
-      builder: (_) => ServiceRequestDetailsPage(requestId: serviceRequestId),
+      builder: (_) => PairProgressPage(requestId: serviceRequestId),
     ),
   );
 }

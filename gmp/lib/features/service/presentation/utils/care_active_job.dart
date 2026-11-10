@@ -357,46 +357,62 @@ class CareActiveJob {
     return true;
   }
 
+  static final RegExp _objectIdRe = RegExp(r'^[a-fA-F0-9]{24}$');
+
+  /// First CareMyPair problem code / id from the service request.
+  /// Multi-select values are comma-joined — timeline uses the first.
   static String problemCodeOf(Map<String, dynamic> r) {
-    final planId = (r['maintenancePlanId'] ?? '').toString().trim();
-    if (planId.isNotEmpty) {
-      // Multi-select ids are comma-joined — use the first problem for timeline.
-      return planId.split(',').first.trim();
+    for (final key in [
+      'maintenancePlanId',
+      'problemCode',
+      'careProblemCode',
+      'careOptionCode',
+      'code',
+    ]) {
+      final raw = (r[key] ?? '').toString().trim();
+      if (raw.isEmpty) continue;
+      return raw.split(',').first.trim();
     }
     return '';
   }
 
-  /// Fallback steps when Masteradmin content is offline.
-  static List<CareProgressStep> fallbackProgressSteps(String serviceType) {
-    final label = serviceLabel(serviceType);
-    return [
-      CareProgressStep(title: 'Order Confirmed', subtitle: label),
-      const CareProgressStep(title: 'Work in progress — day 2.'),
-      const CareProgressStep(title: 'Work in progress — day 3.'),
-      const CareProgressStep(title: 'Work in progress — day 4.'),
-      const CareProgressStep(title: 'Work in progress — day 5.'),
-      const CareProgressStep(title: 'Quality Check'),
-      const CareProgressStep(title: 'Ready for delivery'),
-    ];
-  }
+  /// True when [value] looks like a Mongo ObjectId (Masteradmin problem `_id`).
+  static bool isProblemObjectId(String value) =>
+      _objectIdRe.hasMatch(value.trim());
 
+  /// Parse Masteradmin `progressSteps` only — no static placeholder steps.
   static List<CareProgressStep> parseProgressSteps(
     dynamic raw, {
     required String serviceType,
   }) {
-    if (raw is! List || raw.isEmpty) {
-      return fallbackProgressSteps(serviceType);
-    }
+    if (raw is! List || raw.isEmpty) return const [];
     final out = <CareProgressStep>[];
-    for (final item in raw) {
+    final sorted = [...raw];
+    sorted.sort((a, b) {
+      int orderOf(dynamic item) {
+        if (item is Map) {
+          final n = item['sortOrder'];
+          if (n is num) return n.toInt();
+          return int.tryParse(n?.toString() ?? '') ?? 0;
+        }
+        return 0;
+      }
+
+      return orderOf(a).compareTo(orderOf(b));
+    });
+
+    for (final item in sorted) {
       if (item is Map) {
-        final title =
-            (item['title'] ?? item['label'] ?? item['text'] ?? '').toString().trim();
+        final title = (item['title'] ?? item['label'] ?? item['text'] ?? '')
+            .toString()
+            .trim();
         if (title.isEmpty) continue;
         final subtitle = (item['subtitle'] ?? '').toString().trim();
         out.add(CareProgressStep(
           title: title,
-          subtitle: subtitle.isEmpty && out.isEmpty ? serviceLabel(serviceType) : subtitle,
+          subtitle: subtitle.isEmpty && out.isEmpty
+              ? serviceLabel(serviceType)
+              : (subtitle.isEmpty ? null : subtitle),
         ));
       } else {
         final title = item.toString().trim();
@@ -407,7 +423,15 @@ class CareActiveJob {
         ));
       }
     }
-    return out.isEmpty ? fallbackProgressSteps(serviceType) : out;
+    return out;
+  }
+
+  /// Pull estimateDays from Masteradmin care-progress / problem payload.
+  static int? parseEstimateDays(dynamic raw) {
+    if (raw is num && raw >= 1) return raw.round();
+    final parsed = int.tryParse(raw?.toString() ?? '');
+    if (parsed != null && parsed >= 1) return parsed;
+    return null;
   }
 
   /// Current step index. Advances 1 step per day across [estimateDays] / step count.

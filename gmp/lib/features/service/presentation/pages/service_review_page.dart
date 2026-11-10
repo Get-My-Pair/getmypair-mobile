@@ -9,7 +9,7 @@ import 'package:gmp/features/service/presentation/utils/care_active_job.dart';
 import 'package:gmp/features/service/presentation/utils/care_service_review_store.dart';
 import 'package:gmp/features/service/presentation/widgets/service_request_bg_layer.dart';
 
-/// Rate your pair’s glow-up — stars + optional comment.
+/// Rate your pair’s glow-up — Figma Feedback (3398:4915).
 class ServiceReviewPage extends StatefulWidget {
   const ServiceReviewPage({super.key, required this.request});
 
@@ -21,6 +21,9 @@ class ServiceReviewPage extends StatefulWidget {
     bottomLeft: Radius.circular(50),
     bottomRight: Radius.circular(50),
   );
+
+  static const _starAsset =
+      'assets/images/icons/caremypair/rating_star.svg';
 
   @override
   State<ServiceReviewPage> createState() => _ServiceReviewPageState();
@@ -50,7 +53,6 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
       ),
     );
     if (!mounted) return;
-    if (!mounted) return;
     final done = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => const ServiceReviewThanksPage(),
@@ -63,15 +65,22 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
   @override
   Widget build(BuildContext context) {
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final size = MediaQuery.sizeOf(context);
+    final narrow = size.width < 380;
     final r = widget.request;
     final brand = CareActiveJob.brand(r);
     final model = CareActiveJob.modelLine(r);
-    final option = CareActiveJob.serviceOptionLabel(r);
+    final problemTitle = CareActiveJob.serviceOptionLabel(r);
     final serviceType = (r['serviceType'] ?? '').toString();
     final badge = CareActiveJob.serviceLabel(serviceType);
     final imageUrl = CareActiveJob.articleImageUrl(r);
     final badgeAsset = CareActiveJob.serviceBadgeAsset(serviceType);
     final canSubmit = _rating >= 1 && !_submitting;
+
+    final hPad = narrow ? 16.0 : 22.0;
+    final starGap = narrow ? 22.0 : 36.0;
+    final imageW = narrow ? 96.0 : 118.0;
+    final imageH = narrow ? 52.0 : 63.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -114,23 +123,26 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
                                 onPressed: () => Navigator.maybePop(context),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints.tightFor(
-                                  width: 26,
-                                  height: 26,
+                                  width: 38,
+                                  height: 38,
                                 ),
                                 icon: const Icon(
                                   Icons.arrow_back_ios_new_rounded,
                                   color: Color(0xFF062F35),
-                                  size: 24,
+                                  size: 22,
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   "Rate your pair's glow-up",
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.boldonse(
                                     color: const Color(0xFF062F35),
-                                    fontSize: 18,
+                                    fontSize: narrow ? 16 : 18,
                                     fontWeight: FontWeight.w400,
+                                    height: 1.2,
                                   ),
                                 ),
                               ),
@@ -140,14 +152,15 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
                         Expanded(
                           child: SingleChildScrollView(
                             padding: EdgeInsets.fromLTRB(
-                              20,
-                              20,
-                              20,
+                              hPad,
+                              24,
+                              hPad,
                               120 + bottomSafe,
                             ),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                // Same summary block as Service History card (no Rate CTA).
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -158,169 +171,184 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
                                         children: [
                                           Text(
                                             brand,
-                                            style: GoogleFonts.montserrat(
-                                              color: const Color(0xFF12899B),
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w700,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.boldonse(
+                                              color: const Color(0xFF11899B),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w400,
+                                              height: 1.2,
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             model,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.montserrat(
-                                              color: const Color(0xFF062F35),
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
+                                              color: Colors.black,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w400,
                                             ),
-                                          ),
-                                          const SizedBox(height: 14),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  option,
-                                                  style: GoogleFonts.montserrat(
-                                                    color:
-                                                        const Color(0xFF062F35),
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 4,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      const Color(0xFF062F35),
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    SvgPicture.asset(
-                                                      badgeAsset,
-                                                      width: 14,
-                                                      height: 14,
-                                                      colorFilter:
-                                                          const ColorFilter
-                                                              .mode(
-                                                        Color(0xFF0CADC5),
-                                                        BlendMode.srcIn,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      badge,
-                                                      style: GoogleFonts
-                                                          .montserrat(
-                                                        color: Colors.white,
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: SizedBox(
-                                        width: 72,
-                                        height: 56,
-                                        child: imageUrl.isEmpty
-                                            ? Container(
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      width: imageW,
+                                      height: imageH,
+                                      child: imageUrl.isEmpty
+                                          ? Container(
+                                              decoration: BoxDecoration(
                                                 color: const Color(0xFFE8EEEE),
-                                                child: const Icon(
-                                                  Icons
-                                                      .directions_walk_rounded,
-                                                  color: Color(0xFF12899B),
-                                                ),
-                                              )
-                                            : ArticleRackShoeImage(
-                                                imageUrl: imageUrl,
-                                                fit: BoxFit.contain,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
+                                              child: const Icon(
+                                                Icons.directions_walk_rounded,
+                                                size: 28,
+                                                color: Color(0xFF11899B),
+                                              ),
+                                            )
+                                          : ArticleRackShoeImage(
+                                              imageUrl: imageUrl,
+                                              fit: BoxFit.contain,
+                                            ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        problemTitle,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.montserrat(
+                                          color: Colors.black,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      height: 31,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF062F35),
+                                        borderRadius:
+                                            BorderRadius.circular(100),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SvgPicture.asset(
+                                            badgeAsset,
+                                            width: 18,
+                                            height: 18,
+                                            colorFilter: const ColorFilter.mode(
+                                              Color(0xFF09E0FF),
+                                              BlendMode.srcIn,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            badge,
+                                            style: GoogleFonts.montserrat(
+                                              color: const Color(0xFF09E0FF),
+                                              fontSize: narrow ? 11 : 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 28),
+
+                                SizedBox(height: narrow ? 22 : 26),
                                 Text(
                                   'Rate your experience',
                                   style: GoogleFonts.montserrat(
-                                    color: const Color(0xFF5A5A5A),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 14),
                                 Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: List.generate(5, (i) {
                                     final star = i + 1;
                                     final selected = star <= _rating;
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: InkWell(
-                                        onTap: () =>
-                                            setState(() => _rating = star),
-                                        customBorder: const CircleBorder(),
-                                        child: Icon(
-                                          selected
-                                              ? Icons.star_rounded
-                                              : Icons.star_border_rounded,
-                                          size: 34,
-                                          color: selected
-                                              ? const Color(0xFF062F35)
-                                              : const Color(0xFF8A9496),
+                                    return GestureDetector(
+                                      onTap: () =>
+                                          setState(() => _rating = star),
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: starGap < 28 ? 2 : 0,
+                                          vertical: 6,
+                                        ),
+                                        child: Opacity(
+                                          opacity: selected ? 1 : 0.28,
+                                          child: SvgPicture.asset(
+                                            ServiceReviewPage._starAsset,
+                                            width: 24,
+                                            height: 23,
+                                            colorFilter: ColorFilter.mode(
+                                              selected
+                                                  ? const Color(0xFF062F35)
+                                                  : const Color(0xFF062F35),
+                                              BlendMode.srcIn,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     );
                                   }),
                                 ),
-                                const SizedBox(height: 24),
+
+                                SizedBox(height: narrow ? 20 : 26),
                                 Text(
                                   'Anything that can be improved?',
                                   style: GoogleFonts.montserrat(
-                                    color: const Color(0xFF5A5A5A),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
                                   ),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 6),
                                 TextField(
                                   controller: _commentController,
+                                  minLines: 3,
                                   maxLines: 5,
                                   style: GoogleFonts.montserrat(
                                     color: const Color(0xFF062F35),
-                                    fontSize: 14,
+                                    fontSize: 13,
                                   ),
                                   decoration: InputDecoration(
                                     hintText: 'Type here...',
                                     hintStyle: GoogleFonts.montserrat(
-                                      color: const Color(0xFF8ADCE8),
-                                      fontSize: 14,
+                                      color: const Color(0x8012899B),
+                                      fontSize: 12,
                                       fontStyle: FontStyle.italic,
                                     ),
                                     filled: true,
-                                    fillColor: const Color(0xFFF0F0F0),
-                                    contentPadding: const EdgeInsets.all(14),
+                                    fillColor: const Color(0x1AFFFFFF),
+                                    contentPadding: const EdgeInsets.all(12),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10),
                                       borderSide: const BorderSide(
-                                        color: Color(0xFF8ADCE8),
+                                        color: Color(0x6612899B),
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
@@ -332,52 +360,71 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 28),
+
+                                SizedBox(height: narrow ? 32 : 42),
                                 Center(
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: canSubmit ? _submit : null,
-                                      borderRadius: BorderRadius.circular(100),
-                                      child: Ink(
-                                        width: 220,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          gradient: canSubmit
-                                              ? const LinearGradient(
-                                                  begin: Alignment.centerRight,
-                                                  end: Alignment.centerLeft,
-                                                  colors: [
-                                                    Color(0xFF0CADC5),
-                                                    Color(0xFF063239),
-                                                  ],
-                                                )
-                                              : null,
-                                          color: canSubmit
-                                              ? null
-                                              : const Color(0xFFBDBDBD),
-                                          borderRadius:
-                                              BorderRadius.circular(100),
-                                        ),
-                                        child: Center(
-                                          child: _submitting
-                                              ? const SizedBox(
-                                                  width: 22,
-                                                  height: 22,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    color: Colors.white,
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: narrow ? double.infinity : 241,
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: canSubmit ? _submit : null,
+                                        borderRadius:
+                                            BorderRadius.circular(100),
+                                        child: Ink(
+                                          width: narrow ? double.infinity : 241,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            gradient: canSubmit
+                                                ? const LinearGradient(
+                                                    begin:
+                                                        Alignment.centerRight,
+                                                    end: Alignment.centerLeft,
+                                                    colors: [
+                                                      Color(0xFF0CADC5),
+                                                      Color(0xFF063239),
+                                                    ],
+                                                  )
+                                                : null,
+                                            color: canSubmit
+                                                ? null
+                                                : const Color(0xFFBDBDBD),
+                                            borderRadius:
+                                                BorderRadius.circular(100),
+                                            boxShadow: canSubmit
+                                                ? const [
+                                                    BoxShadow(
+                                                      color: Color(0x1A000000),
+                                                      blurRadius: 4,
+                                                      offset: Offset(0, 4),
+                                                    ),
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: Center(
+                                            child: _submitting
+                                                ? const SizedBox(
+                                                    width: 22,
+                                                    height: 22,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.white,
+                                                    ),
+                                                  )
+                                                : Text(
+                                                    'Submit',
+                                                    style:
+                                                        GoogleFonts.boldonse(
+                                                      color: Colors.white,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                    ),
                                                   ),
-                                                )
-                                              : Text(
-                                                  'Submit',
-                                                  style: GoogleFonts.boldonse(
-                                                    color: Colors.white,
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w400,
-                                                  ),
-                                                ),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -393,11 +440,11 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
                 ),
               ),
             ),
-            Positioned(
+            const Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: const DashboardLinkedBottomNav(selectedTabIndex: 1),
+              child: DashboardLinkedBottomNav(selectedTabIndex: 1),
             ),
           ],
         ),

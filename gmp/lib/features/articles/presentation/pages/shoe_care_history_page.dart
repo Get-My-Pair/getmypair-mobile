@@ -7,7 +7,7 @@ import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/service/presentation/pages/care_my_pair_page.dart';
-import 'package:gmp/features/service/presentation/pages/service_request_details_page.dart';
+import 'package:gmp/features/service/presentation/pages/pair_progress_page.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -439,7 +439,7 @@ class _ShoeCareHistoryPageState extends State<ShoeCareHistoryPage> {
               if (id.isEmpty) return;
               await Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
-                  builder: (_) => ServiceRequestDetailsPage(requestId: id),
+                  builder: (_) => PairProgressPage(requestId: id),
                 ),
               );
               if (mounted) _load();

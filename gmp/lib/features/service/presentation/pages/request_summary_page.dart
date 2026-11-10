@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
@@ -12,12 +13,13 @@ import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/payment/presentation/bloc/payment_bloc.dart';
+import 'package:gmp/features/payment/presentation/pages/payment_request_page.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
 import 'package:gmp/features/service/data/service_proof_upload.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'service_request_details_page.dart';
 import 'service_selection_page.dart';
 
 class RequestSummaryPage extends StatefulWidget {
@@ -250,18 +252,26 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     }
     final requestId = result.requestId;
     if (requestId != null && requestId.isNotEmpty) {
-      // Show Service progress for 1s, then open Purchase Summary.
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => ServiceRequestDetailsPage(
-            requestId: requestId,
-            autoContinueToPayment: true,
-            autoContinueToPaymentDelay: const Duration(seconds: 1),
+      final amount = widget.estimatedCostRupees.toDouble();
+      if (amount > 0) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (_) => sl<PaymentBloc>(),
+              child: PaymentRequestPage(
+                serviceRequestId: requestId,
+                amount: amount,
+                serviceType: widget.service.value,
+                requestLabel: requestId.length <= 10
+                    ? 'Request #$requestId'
+                    : 'Request #${requestId.substring(0, 8)}…',
+              ),
+            ),
           ),
-        ),
-        (route) => route.isFirst,
-      );
-      return;
+          (route) => route.isFirst,
+        );
+        return;
+      }
     }
     Navigator.pop(context, true);
   }

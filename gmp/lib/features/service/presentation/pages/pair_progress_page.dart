@@ -8,7 +8,8 @@ import 'package:gmp/features/service/presentation/widgets/service_request_bg_lay
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// "Your Pair's Progress" — Masteradmin problem-wise steps; 1 step / estimate day.
+/// "Your Pair's Progress" — steps come from Masteradmin CareMyPair
+/// (`/service/care-progress`), not hardcoded copy.
 class PairProgressPage extends StatefulWidget {
   final String requestId;
   final Map<String, dynamic>? initialRequest;
@@ -41,14 +42,12 @@ class _PairProgressPageState extends State<PairProgressPage> {
   void initState() {
     super.initState();
     _request = widget.initialRequest;
-    final type = (_request?['serviceType'] ?? 'repair').toString();
-    _steps = CareActiveJob.fallbackProgressSteps(type);
     _load();
   }
 
   Future<void> _load() async {
     setState(() {
-      _loading = _request == null;
+      _loading = true;
       _error = null;
     });
     final tokenResult = await sl<GetValidAccessToken>().call();
@@ -73,78 +72,196 @@ class _PairProgressPageState extends State<PairProgressPage> {
               ? _request
               : Map<String, dynamic>.from(req);
 
-          var steps = CareActiveJob.fallbackProgressSteps(
-            (request?['serviceType'] ?? 'repair').toString(),
-          );
-          var estimateDays = CareActiveJob.defaultEstimateDays;
-
-          final code = request == null ? '' : CareActiveJob.problemCodeOf(request);
-          final serviceType = (request?['serviceType'] ?? '').toString();
-          if (code.isNotEmpty) {
-            try {
-              final prog = await sl<DioClient>().get(
-                ApiEndpoints.serviceCareProgress(
-                  code: code,
-                  serviceType: serviceType,
-                ),
-                accessToken: token,
-              );
-              final data = (prog['data'] is Map)
-                  ? Map<String, dynamic>.from(prog['data'] as Map)
-                  : <String, dynamic>{};
-              final rawSteps = data['progressSteps'] ??
-                  (data['item'] is Map
-                      ? (data['item'] as Map)['progressSteps']
-                      : null);
-              steps = CareActiveJob.parseProgressSteps(
-                rawSteps,
-                serviceType: serviceType,
-              );
-              final daysRaw = data['estimateDays'] ??
-                  (data['item'] is Map
-                      ? (data['item'] as Map)['estimateDays']
-                      : null);
-              if (daysRaw is num && daysRaw >= 1) {
-                estimateDays = daysRaw.round();
-              } else {
-                final parsed = int.tryParse(daysRaw?.toString() ?? '');
-                if (parsed != null && parsed >= 1) estimateDays = parsed;
-              }
-            } catch (_) {
-              // Keep fallbacks when progress API is unavailable.
-            }
+          if (request == null) {
+            if (!mounted) return;
+            setState(() {
+              _loading = false;
+              _error = 'Service request not found';
+            });
+            return;
           }
+
+          final serviceType = (request['serviceType'] ?? '').toString();
+          final loaded = await _loadMasteradminProgress(
+            token: token,
+            request: request,
+            serviceType: serviceType,
+          );
 
           if (!mounted) return;
           setState(() {
             _request = request;
-            _steps = steps;
-            _estimateDays = estimateDays;
+            _steps = loaded.steps;
+            _estimateDays = loaded.estimateDays;
             _loading = false;
+            _error = loaded.steps.isEmpty
+                ? 'Progress timeline is not configured for this service yet.'
+                : null;
           });
         } catch (e) {
           if (!mounted) return;
           setState(() {
             _loading = false;
-            if (_request == null) {
-              _error = e.toString().replaceFirst('Exception: ', '');
-            }
+            _error = e.toString().replaceFirst('Exception: ', '');
           });
         }
       },
     );
   }
 
+  /// Masteradmin CareMyPair problem → estimateDays + progressSteps.
+  Future<({List<CareProgressStep> steps, int estimateDays})>
+      _loadMasteradminProgress({
+    required String token,
+    required Map<String, dynamic> request,
+    required String serviceType,
+  }) async {
+    var estimateDays = CareActiveJob.estimateDaysFor(request);
+    final embedded = CareActiveJob.parseProgressSteps(
+      request['progressSteps'],
+      serviceType: serviceType,
+    );
+    if (embedded.isNotEmpty) {
+      final days = CareActiveJob.parseEstimateDays(request['estimateDays']);
+      return (
+        steps: embedded,
+        estimateDays: days ?? estimateDays,
+      );
+    }
+
+    final key = CareActiveJob.problemCodeOf(request);
+    Map<String, dynamic>? data;
+
+    if (key.isNotEmpty) {
+      data = await _fetchCareProgress(
+        token: token,
+        code: CareActiveJob.isProblemObjectId(key) ? null : key,
+        id: CareActiveJob.isProblemObjectId(key) ? key : null,
+        serviceType: serviceType,
+      );
+    }
+
+    // Resolve by problem label when code/id was not saved on the request.
+    if (data == null) {
+      final matched = await _resolveProblemKeyByLabel(
+        token: token,
+        request: request,
+        serviceType: serviceType,
+      );
+      if (matched != null) {
+        data = await _fetchCareProgress(
+          token: token,
+          code: matched.code,
+          id: matched.id,
+          serviceType: serviceType,
+        );
+      }
+    }
+
+    if (data == null) {
+      return (steps: const <CareProgressStep>[], estimateDays: estimateDays);
+    }
+
+    final rawSteps = data['progressSteps'] ??
+        (data['item'] is Map
+            ? (data['item'] as Map)['progressSteps']
+            : null);
+    final steps = CareActiveJob.parseProgressSteps(
+      rawSteps,
+      serviceType: serviceType,
+    );
+    final daysRaw = data['estimateDays'] ??
+        (data['item'] is Map ? (data['item'] as Map)['estimateDays'] : null);
+    final days = CareActiveJob.parseEstimateDays(daysRaw);
+    return (
+      steps: steps,
+      estimateDays: days ??
+          (steps.isNotEmpty ? steps.length : estimateDays),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _fetchCareProgress({
+    required String token,
+    String? code,
+    String? id,
+    required String serviceType,
+  }) async {
+    final c = (code ?? '').trim();
+    final i = (id ?? '').trim();
+    if (c.isEmpty && i.isEmpty) return null;
+    try {
+      final prog = await sl<DioClient>().get(
+        ApiEndpoints.serviceCareProgress(
+          code: c.isEmpty ? null : c,
+          id: i.isEmpty ? null : i,
+          serviceType: serviceType,
+        ),
+        accessToken: token,
+      );
+      if (prog['data'] is Map) {
+        return Map<String, dynamic>.from(prog['data'] as Map);
+      }
+    } catch (_) {
+      // Caller shows empty / error — never invent static steps.
+    }
+    return null;
+  }
+
+  /// Match Masteradmin care-options by request label when no code is stored.
+  Future<({String? code, String? id})?> _resolveProblemKeyByLabel({
+    required String token,
+    required Map<String, dynamic> request,
+    required String serviceType,
+  }) async {
+    final type = serviceType.trim().toLowerCase();
+    if (type.isEmpty) return null;
+    final label = (request['maintenancePlanLabel'] ??
+            request['problemName'] ??
+            request['problemDescription'] ??
+            '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    if (label.isEmpty) return null;
+
+    try {
+      final json = await sl<DioClient>().get(
+        ApiEndpoints.serviceCareOptions(type),
+        accessToken: token,
+      );
+      final data = (json['data'] is Map)
+          ? Map<String, dynamic>.from(json['data'] as Map)
+          : <String, dynamic>{};
+      final list =
+          (data['items'] ?? json['items']) as List<dynamic>? ?? const [];
+      for (final raw in list.whereType<Map>()) {
+        final map = Map<String, dynamic>.from(raw);
+        final name = (map['name'] ?? map['label'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        if (name.isEmpty) continue;
+        if (name != label && !label.contains(name) && !name.contains(label)) {
+          continue;
+        }
+        final code = (map['code'] ?? '').toString().trim();
+        final id = (map['_id'] ?? map['id'] ?? '').toString().trim();
+        if (code.isEmpty && id.isEmpty) continue;
+        return (
+          code: code.isEmpty ? null : code,
+          id: id.isEmpty ? null : id,
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final r = _request;
-    final steps = _steps.isEmpty
-        ? CareActiveJob.fallbackProgressSteps(
-            (r?['serviceType'] ?? 'repair').toString(),
-          )
-        : _steps;
-    final current = r == null
+    final steps = _steps;
+    final current = r == null || steps.isEmpty
         ? 0
         : CareActiveJob.currentProgressIndex(
             r,
@@ -253,14 +370,20 @@ class _PairProgressPageState extends State<PairProgressPage> {
                         ),
                       ),
                       Expanded(
-                        child: _loading && r == null
+                        child: _loading
                             ? const AppSkeletonCards()
-                            : _error != null && r == null
+                            : (_error != null && steps.isEmpty)
                                 ? Center(
-                                    child: Text(
-                                      _error!,
-                                      style: GoogleFonts.montserrat(
-                                        color: const Color(0xFFB00020),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24),
+                                      child: Text(
+                                        _error!,
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.montserrat(
+                                          color: const Color(0xFF5A6B6E),
+                                          fontSize: 14,
+                                          height: 1.4,
+                                        ),
                                       ),
                                     ),
                                   )
@@ -268,7 +391,6 @@ class _PairProgressPageState extends State<PairProgressPage> {
                                     builder: (context, constraints) {
                                       const topPad = 28.0;
                                       const bottomListPad = 24.0;
-                                      // ~row content height (icon + 1–2 lines)
                                       const rowContent = 40.0;
                                       final usable = (constraints.maxHeight -
                                               topPad -
@@ -279,7 +401,6 @@ class _PairProgressPageState extends State<PairProgressPage> {
                                       final fillMid = (usable -
                                               steps.length * rowContent) /
                                           gaps;
-                                      // Equal gaps between steps; bump min a little.
                                       final midSpace =
                                           fillMid.clamp(28.0, 84.0).toDouble();
 
@@ -313,15 +434,7 @@ class _PairProgressPageState extends State<PairProgressPage> {
                                                   );
                                             return _TimelineRow(
                                               title: step.title,
-                                              subtitle: i == 0
-                                                  ? (step.subtitle ??
-                                                      CareActiveJob
-                                                          .serviceLabel(
-                                                        (r?['serviceType'] ??
-                                                                '')
-                                                            .toString(),
-                                                      ))
-                                                  : step.subtitle,
+                                              subtitle: step.subtitle,
                                               timeLabel: pending
                                                   ? '.....'
                                                   : CareActiveJob
