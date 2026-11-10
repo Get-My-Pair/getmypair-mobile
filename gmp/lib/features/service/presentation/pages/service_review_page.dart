@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/service/presentation/pages/service_review_thanks_page.dart';
@@ -21,9 +22,6 @@ class ServiceReviewPage extends StatefulWidget {
     bottomLeft: Radius.circular(50),
     bottomRight: Radius.circular(50),
   );
-
-  static const _starAsset =
-      'assets/images/icons/caremypair/rating_star.svg';
 
   @override
   State<ServiceReviewPage> createState() => _ServiceReviewPageState();
@@ -289,6 +287,9 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
                                   children: List.generate(5, (i) {
                                     final star = i + 1;
                                     final selected = star <= _rating;
+                                    final color = selected
+                                        ? AppColors.primary
+                                        : const Color(0x4D062F35);
                                     return GestureDetector(
                                       onTap: () =>
                                           setState(() => _rating = star),
@@ -298,19 +299,12 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
                                           horizontal: starGap < 28 ? 2 : 0,
                                           vertical: 6,
                                         ),
-                                        child: Opacity(
-                                          opacity: selected ? 1 : 0.28,
-                                          child: SvgPicture.asset(
-                                            ServiceReviewPage._starAsset,
-                                            width: 24,
-                                            height: 23,
-                                            colorFilter: ColorFilter.mode(
-                                              selected
-                                                  ? const Color(0xFF062F35)
-                                                  : const Color(0xFF062F35),
-                                              BlendMode.srcIn,
-                                            ),
-                                          ),
+                                        // Icon fallback — SVG asset can fail on web
+                                        // until a full restart after pubspec add.
+                                        child: Icon(
+                                          Icons.star_rounded,
+                                          size: 28,
+                                          color: color,
                                         ),
                                       ),
                                     );
