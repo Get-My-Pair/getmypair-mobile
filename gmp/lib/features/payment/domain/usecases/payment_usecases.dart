@@ -87,9 +87,11 @@ class GetPaymentByServiceRequest {
   Future<Payment?> call({
     required String accessToken,
     required String serviceRequestId,
+    bool refreshFromZoho = false,
   }) =>
       repository.getPaymentByServiceRequest(
         accessToken: accessToken,
         serviceRequestId: serviceRequestId,
+        refreshFromZoho: refreshFromZoho,
       );
 }

@@ -93,9 +93,11 @@ class _CartPageState extends State<CartPage> {
 
   Future<bool> _isPaidViaPaymentApi(String token, String requestId) async {
     try {
+      // refreshFromZoho asks API to verify pending Zoho links and sync paid state.
       final payment = await sl<GetPaymentByServiceRequest>().call(
         accessToken: token,
         serviceRequestId: requestId,
+        refreshFromZoho: true,
       );
       return payment != null && payment.countsAsPaid;
     } catch (_) {

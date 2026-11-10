@@ -97,11 +97,13 @@ class PaymentRepositoryImpl implements PaymentRepository {
   Future<Payment?> getPaymentByServiceRequest({
     required String accessToken,
     required String serviceRequestId,
+    bool refreshFromZoho = false,
   }) async {
     try {
       return await remoteDataSource.getPaymentByServiceRequest(
         accessToken,
         serviceRequestId,
+        refreshFromZoho: refreshFromZoho,
       );
     } catch (e) {
       throw _mapError(e);

@@ -386,6 +386,7 @@ class _ActiveJobCard extends StatelessWidget {
     final model = CareActiveJob.modelLine(request);
     final serviceType = (request['serviceType'] ?? '').toString();
     final badge = CareActiveJob.serviceLabel(serviceType);
+    final problemTitle = CareActiveJob.serviceOptionLabel(request);
     final imageUrl = CareActiveJob.articleImageUrl(request);
     final badgeAsset = CareActiveJob.serviceBadgeAsset(serviceType);
     final progressTitle = CareActiveJob.currentProgressTitle(request);
@@ -468,19 +469,19 @@ class _ActiveJobCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              // Left: timeline progress (dynamic). Right: service label badge.
+              // Left: problem / service option title. Right: service type badge.
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Text(
-                      progressTitle,
-                      maxLines: 3,
+                      problemTitle,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.montserrat(
-                        color: const Color(0xFF12899B),
+                        color: const Color(0xFF062F35),
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         height: 1.3,
                       ),
                     ),
@@ -524,6 +525,8 @@ class _ActiveJobCard extends StatelessWidget {
               const SizedBox(height: 12),
               const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8EA)),
               const SizedBox(height: 12),
+              _MetaRow(label: 'Service Status:', value: progressTitle),
+              const SizedBox(height: 8),
               _MetaRow(label: 'Expected Delivery:', value: deliveryLabel),
               // Only when shop adds extra cost pending user approval.
               if (showExtraCostApprove) ...[
@@ -613,18 +616,16 @@ class _MetaRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.montserrat(
-              color: const Color(0xFF8A9496),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+        Text(
+          label,
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF8A9496),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(width: 12),
-        Flexible(
+        Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,

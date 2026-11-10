@@ -309,7 +309,8 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     PaymentAnalytics.checkoutCompleted(widget.orderId);
     PaymentAnalytics.paymentSuccess(widget.orderId, widget.amount);
 
-    unawaited(_syncBackendStatus());
+    // Must finish backend verify/sync so cart no longer shows Pay Now.
+    await _syncBackendStatus(retries: 5);
 
     if (!mounted) return;
     // Keep checkout under success so a true pop result reaches PaymentRequestPage.
@@ -348,24 +349,33 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     );
   }
 
-  Future<void> _syncBackendStatus() async {
-    try {
-      final token = _accessToken;
-      if (token == null) return;
+  Future<void> _syncBackendStatus({int retries = 3}) async {
+    final token = _accessToken;
+    if (token == null) return;
+    for (var i = 0; i < retries; i++) {
       try {
-        await sl<VerifyPayment>()(
+        final verified = await sl<VerifyPayment>()(
           accessToken: token,
           orderId: widget.orderId,
         );
-      } catch (_) {
-        await sl<RefreshPaymentStatus>()(
+        if (verified.verified || verified.payment.isSuccess) return;
+        final refreshed = await sl<RefreshPaymentStatus>()(
           accessToken: token,
           orderId: widget.orderId,
           refreshFromZoho: true,
         );
+        if (refreshed.verified || refreshed.payment.isSuccess) return;
+        // Also sync by service request (marks SR paymentState = SUCCESS).
+        final byRequest = await sl<GetPaymentByServiceRequest>()(
+          accessToken: token,
+          serviceRequestId: widget.serviceRequestId,
+          refreshFromZoho: true,
+        );
+        if (byRequest != null && byRequest.countsAsPaid) return;
+      } catch (_) {
+        // Retry — Zoho / webhook lag is common right after checkout.
       }
-    } catch (_) {
-      // Success UI already shown; backend can catch up via webhook/poll.
+      await Future<void>.delayed(Duration(milliseconds: 600 + (i * 400)));
     }
   }
 

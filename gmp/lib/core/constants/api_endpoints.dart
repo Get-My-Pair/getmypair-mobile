@@ -152,8 +152,11 @@ class ApiEndpoints {
       '$baseUrl$paymentPrefix/history?page=$page&limit=$limit';
   static String paymentById(String paymentId) =>
       '$baseUrl$paymentPrefix/$paymentId';
-  static String paymentByServiceRequest(String serviceRequestId) =>
-      '$baseUrl$paymentPrefix/by-service-request/$serviceRequestId';
+  static String paymentByServiceRequest(
+    String serviceRequestId, {
+    bool refresh = false,
+  }) =>
+      '$baseUrl$paymentPrefix/by-service-request/$serviceRequestId${refresh ? '?refresh=true' : ''}';
   static String paymentStatus(String orderId, {bool refresh = false}) =>
       '$baseUrl$paymentPrefix/status/$orderId${refresh ? '?refresh=true' : ''}';
   static String get paymentCallback => '$baseUrl$paymentPrefix/callback';
