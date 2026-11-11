@@ -20,8 +20,9 @@ import 'payment_failed_page.dart';
 import 'payment_success_page.dart';
 
 /// Zoho Checkout — in-app WebView on mobile, external browser on web.
-/// After GPay / UPI returns to the app, status is checked and success opens
-/// with the celebration animation.
+///
+/// Client-side URL/text signals only trigger a backend verify. The success
+/// page opens only when the server reports verified/paid.
 class PaymentCheckoutPage extends StatefulWidget {
   final String checkoutUrl;
   final String orderId;
@@ -50,15 +51,19 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
   bool _pageLoaded = false;
   bool _zohoFallbackTriggered = false;
   bool _handledSuccess = false;
+  bool _handledFailure = false;
   bool _launchedExternalWallet = false;
+  bool _verifyInFlight = false;
   Timer? _loadTimeout;
   Timer? _statusPollTimer;
   String? _accessToken;
+  late final Set<String> _allowedHosts;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _allowedHosts = _buildAllowedHosts(widget.checkoutUrl);
     PaymentAnalytics.checkoutOpened(widget.orderId);
     unawaited(_prepareTokenAndPoll());
     if (kIsWeb) {
@@ -74,26 +79,25 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     // GPay / PhonePe / UPI: user leaves app → pays → returns here.
     if (state == AppLifecycleState.resumed &&
         !_handledSuccess &&
+        !_handledFailure &&
         (_launchedExternalWallet || kIsWeb)) {
       unawaited(_onReturnedFromWallet());
     }
   }
 
   Future<void> _onReturnedFromWallet() async {
-    if (_handledSuccess || !mounted) return;
+    if (_handledSuccess || _handledFailure || !mounted) return;
 
-    // Zoho may already paint success in the WebView after wallet return.
-    final looksSuccessful = await _pageShowsZohoSuccess();
-    if (looksSuccessful) {
-      await _goToAppSuccess();
-      return;
+    // Client-side Zoho success chrome is only a hint to verify — never navigate.
+    if (await _pageShowsZohoSuccess()) {
+      await _verifyThenNavigate(forceVerify: true);
+      if (_handledSuccess || _handledFailure) return;
     }
 
-    // Faster checks right after resume from GPay.
     for (var i = 0; i < 5; i++) {
-      if (!mounted || _handledSuccess) return;
-      await _pollPaymentStatus(forceVerify: true);
-      if (_handledSuccess) return;
+      if (!mounted || _handledSuccess || _handledFailure) return;
+      await _verifyThenNavigate(forceVerify: true);
+      if (_handledSuccess || _handledFailure) return;
       await Future<void>.delayed(const Duration(milliseconds: 700));
     }
   }
@@ -110,14 +114,19 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
   void _startStatusPoll({Duration every = const Duration(seconds: 3)}) {
     _statusPollTimer?.cancel();
     _statusPollTimer = Timer.periodic(every, (_) {
-      unawaited(_pollPaymentStatus());
+      unawaited(_verifyThenNavigate());
     });
   }
 
-  Future<void> _pollPaymentStatus({bool forceVerify = false}) async {
-    if (_handledSuccess || !mounted) return;
+  /// Navigates to success only when the backend confirms payment.
+  Future<void> _verifyThenNavigate({bool forceVerify = false}) async {
+    if (_handledSuccess || _handledFailure || !mounted || _verifyInFlight) {
+      return;
+    }
     final token = _accessToken;
     if (token == null) return;
+
+    _verifyInFlight = true;
     try {
       var result = forceVerify
           ? await sl<VerifyPayment>()(
@@ -130,7 +139,6 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
               refreshFromZoho: true,
             );
 
-      // If verify failed / pending, one Zoho refresh helps webhook lag.
       if (!result.verified &&
           !result.payment.isSuccess &&
           !result.payment.isFailed) {
@@ -141,7 +149,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
         );
       }
 
-      if (!mounted || _handledSuccess) return;
+      if (!mounted || _handledSuccess || _handledFailure) return;
       if (result.verified || result.payment.isSuccess) {
         await _goToAppSuccess();
       } else if (result.payment.isFailed) {
@@ -149,12 +157,18 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
       }
     } catch (_) {
       // Keep polling; transient network / Zoho lag is expected.
+    } finally {
+      _verifyInFlight = false;
     }
   }
 
   void _startLoadTimeout() {
     _loadTimeout = Timer(const Duration(seconds: 12), () {
-      if (!mounted || _pageLoaded || _zohoFallbackTriggered || _handledSuccess) {
+      if (!mounted ||
+          _pageLoaded ||
+          _zohoFallbackTriggered ||
+          _handledSuccess ||
+          _handledFailure) {
         return;
       }
       _triggerZohoFallback();
@@ -162,7 +176,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
   }
 
   void _triggerZohoFallback() {
-    if (_zohoFallbackTriggered || _handledSuccess) return;
+    if (_zohoFallbackTriggered || _handledSuccess || _handledFailure) return;
     _zohoFallbackTriggered = true;
     _loadTimeout?.cancel();
     PaymentAnalytics.zohoConnectionFallback(widget.orderId);
@@ -183,6 +197,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
 
   void _initWebView() {
     _webController = WebViewController()
+      // Zoho Checkout requires JS; navigation is host-allowlisted below.
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -194,30 +209,33 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
           onUrlChange: (change) {
             final url = change.url;
             if (url == null) return;
-            if (_isReturnUrl(url) || _isZohoSuccessUrl(url)) {
-              unawaited(_goToAppSuccess());
+            if (_isVerifyTriggerUrl(url)) {
+              unawaited(_verifyThenNavigate(forceVerify: true));
             }
           },
           onWebResourceError: (error) {
-            if (_pageLoaded || _handledSuccess) return;
+            if (_pageLoaded || _handledSuccess || _handledFailure) return;
             if (error.isForMainFrame == true) _triggerZohoFallback();
           },
           onHttpError: (error) {
-            if (_pageLoaded || _handledSuccess) return;
+            if (_pageLoaded || _handledSuccess || _handledFailure) return;
             final code = error.response?.statusCode ?? 0;
             if (code >= 500) _triggerZohoFallback();
           },
           onNavigationRequest: (request) {
             final url = request.url;
-            if (_isReturnUrl(url) || _isZohoSuccessUrl(url)) {
-              unawaited(_goToAppSuccess());
+            if (_isVerifyTriggerUrl(url)) {
+              // gmp:// and Zoho return URLs only trigger verify — never trust alone.
+              unawaited(_verifyThenNavigate(forceVerify: true));
               return NavigationDecision.prevent;
             }
             if (PaymentExternalLauncher.shouldLaunchExternally(url)) {
               _launchedExternalWallet = true;
-              // Poll faster while user is in GPay.
               _startStatusPoll(every: const Duration(seconds: 2));
               PaymentExternalLauncher.launch(url);
+              return NavigationDecision.prevent;
+            }
+            if (!_isAllowedNavigation(url)) {
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
@@ -228,16 +246,10 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
   }
 
   Future<void> _onWebPageFinished(String url) async {
-    if (_handledSuccess || !mounted) return;
+    if (_handledSuccess || _handledFailure || !mounted) return;
 
-    if (_isReturnUrl(url) || _isZohoSuccessUrl(url)) {
-      await _goToAppSuccess();
-      return;
-    }
-
-    final looksSuccessful = await _pageShowsZohoSuccess();
-    if (looksSuccessful) {
-      await _goToAppSuccess();
+    if (_isVerifyTriggerUrl(url) || await _pageShowsZohoSuccess()) {
+      await _verifyThenNavigate(forceVerify: true);
     }
   }
 
@@ -267,17 +279,14 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     return s == 'true' || s == '1' || s == '"true"';
   }
 
-  bool _isReturnUrl(String url) {
+  /// Client-side hints that payment *may* have completed — verify required.
+  bool _isVerifyTriggerUrl(String url) {
     final lower = url.toLowerCase();
-    return lower.startsWith('gmp://payment/') ||
-        lower.contains('payment/callback') ||
-        lower.contains('payment-success') ||
-        lower.contains('payment_link_reference=') ||
-        lower.contains('payment_link_id=');
-  }
-
-  bool _isZohoSuccessUrl(String url) {
-    final lower = url.toLowerCase();
+    if (lower.startsWith('gmp://payment/')) return true;
+    if (lower.contains('payment/callback')) return true;
+    if (lower.contains('payment-success')) return true;
+    if (lower.contains('payment_link_reference=')) return true;
+    if (lower.contains('payment_link_id=')) return true;
     if (lower.contains('status=success') ||
         lower.contains('payment_status=success') ||
         lower.contains('/payment/success') ||
@@ -292,6 +301,41 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     return false;
   }
 
+  Set<String> _buildAllowedHosts(String checkoutUrl) {
+    const known = <String>{
+      'zohopayments.com',
+      'payments.zoho.com',
+      'payments.zoho.in',
+      'paymentssandbox.zoho.in',
+      'accounts.zoho.com',
+      'accounts.zoho.in',
+      'checkout.zoho.com',
+      'checkout.zoho.in',
+      'zoho.com',
+      'zoho.in',
+      'pay.google.com',
+      'google.com',
+    };
+    final hosts = Set<String>.from(known);
+    final uri = Uri.tryParse(checkoutUrl);
+    final host = uri?.host.toLowerCase();
+    if (host != null && host.isNotEmpty) hosts.add(host);
+    return hosts;
+  }
+
+  bool _isAllowedNavigation(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return false;
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme == 'about' || scheme == 'data' || scheme == 'blob') return true;
+    if (scheme != 'https' && scheme != 'http') return false;
+    final host = uri.host.toLowerCase();
+    if (host.isEmpty) return false;
+    return _allowedHosts.any(
+      (allowed) => host == allowed || host.endsWith('.$allowed'),
+    );
+  }
+
   Future<void> _openExternal() async {
     _launchedExternalWallet = true;
     final uri = Uri.parse(widget.checkoutUrl);
@@ -302,18 +346,14 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
   }
 
   Future<void> _goToAppSuccess() async {
-    if (_handledSuccess || !mounted) return;
+    if (_handledSuccess || _handledFailure || !mounted) return;
     _handledSuccess = true;
     _loadTimeout?.cancel();
     _statusPollTimer?.cancel();
     PaymentAnalytics.checkoutCompleted(widget.orderId);
     PaymentAnalytics.paymentSuccess(widget.orderId, widget.amount);
 
-    // Must finish backend verify/sync so cart no longer shows Pay Now.
-    await _syncBackendStatus(retries: 5);
-
     if (!mounted) return;
-    // Keep checkout under success so a true pop result reaches PaymentRequestPage.
     await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -329,8 +369,8 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
   }
 
   void _goToFailed(String? failureReason) {
-    if (_handledSuccess || !mounted) return;
-    _handledSuccess = true;
+    if (_handledSuccess || _handledFailure || !mounted) return;
+    _handledFailure = true;
     _statusPollTimer?.cancel();
     PaymentAnalytics.paymentFailed(widget.orderId, failureReason);
     Navigator.pushReplacement(
@@ -347,36 +387,6 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
         ),
       ),
     );
-  }
-
-  Future<void> _syncBackendStatus({int retries = 3}) async {
-    final token = _accessToken;
-    if (token == null) return;
-    for (var i = 0; i < retries; i++) {
-      try {
-        final verified = await sl<VerifyPayment>()(
-          accessToken: token,
-          orderId: widget.orderId,
-        );
-        if (verified.verified || verified.payment.isSuccess) return;
-        final refreshed = await sl<RefreshPaymentStatus>()(
-          accessToken: token,
-          orderId: widget.orderId,
-          refreshFromZoho: true,
-        );
-        if (refreshed.verified || refreshed.payment.isSuccess) return;
-        // Also sync by service request (marks SR paymentState = SUCCESS).
-        final byRequest = await sl<GetPaymentByServiceRequest>()(
-          accessToken: token,
-          serviceRequestId: widget.serviceRequestId,
-          refreshFromZoho: true,
-        );
-        if (byRequest != null && byRequest.countsAsPaid) return;
-      } catch (_) {
-        // Retry — Zoho / webhook lag is common right after checkout.
-      }
-      await Future<void>.delayed(Duration(milliseconds: 600 + (i * 400)));
-    }
   }
 
   @override
