@@ -15,6 +15,8 @@ import 'package:gmp/features/articles/data/footwear_orientation_detector.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/injection_container.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -402,14 +404,29 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           setState(() => _processingLabel = 'Preparing photo…');
         }
         try {
-          imageToSave = await FootwearBackgroundRemover.removeBackground(file);
+          final tokenResult = await sl<GetValidAccessToken>().call();
+          final accessToken = tokenResult.fold((_) => null, (t) => t);
+          if (accessToken == null || accessToken.isEmpty) {
+            throw FootwearBackgroundRemoverException(
+              'Sign in to prepare footwear photos.',
+              isUnavailable: true,
+            );
+          }
+          imageToSave = await FootwearBackgroundRemover.removeBackground(
+            file,
+            accessToken: accessToken,
+          );
         } on FootwearBackgroundRemoverException catch (e) {
           if (!mounted) return;
-          await _showMessageDialog(
-            title: 'Photo preparation failed',
-            message: e.message,
-          );
-          return;
+          if (e.isUnavailable) {
+            // Server key unset or no session — keep original photo.
+          } else {
+            await _showMessageDialog(
+              title: 'Photo preparation failed',
+              message: e.message,
+            );
+            return;
+          }
         } catch (e) {
           if (!mounted) return;
           await _showMessageDialog(

@@ -4,9 +4,9 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<!-- Google Maps SDK — replace with your Maps SDK for iOS API key -->
+	<!-- Google Maps SDK — set via GOOGLE_MAPS_API_KEY in ios/Flutter/Secrets.xcconfig (gitignored) or Xcode build setting. Restrict by iOS bundle ID + Maps SDK for iOS. -->
 	<key>GMSApiKey</key>
-	<string>AIzaSyDea05I6AVaExAvm2uSyuSRGqX7hq9i5Tw</string>
+	<string>$(GOOGLE_MAPS_API_KEY)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

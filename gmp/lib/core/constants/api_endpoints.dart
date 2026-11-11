@@ -19,10 +19,19 @@ class ApiEndpoints {
   static const bool _kUseLocalApi =
       bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
 
-  /// Get base URL based on environment
+  /// Get base URL based on environment.
+  ///
+  /// `flutter run --dart-define=USE_LOCAL_API=true` points at a local API
+  /// (Android emulator → 10.0.2.2, iOS/desktop/web → localhost).
   static String get baseUrl {
-    if (kDebugMode && _kUseLocalApi) {
-      return 'https://getmypair-api.onrender.com';
+    if (_kUseLocalApi) {
+      if (kIsWeb) return 'http://localhost:3000';
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.android:
+          return 'http://10.0.2.2:3000';
+        default:
+          return 'http://localhost:3000';
+      }
     }
     return AppConstants.defaultApiBaseUrl;
   }
@@ -86,6 +95,9 @@ class ApiEndpoints {
       '$baseUrl$articlesPrefix/delete/$id';
   static String get articlesUploadImage =>
       '$baseUrl$articlesPrefix/upload-image';
+  /// Server-side remove.bg proxy (API key never leaves the backend).
+  static String get articlesRemoveBackground =>
+      '$baseUrl$articlesPrefix/remove-background';
   /// Active Masteradmin Article DB categories for add/edit article.
   static String get articlesCategories =>
       '$baseUrl$articlesPrefix/categories';

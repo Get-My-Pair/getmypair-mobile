@@ -19,6 +19,36 @@ val googleMapsApiKey: String =
         ?: System.getenv("GOOGLE_MAPS_API_KEY")
         ?: ""
 
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingProp(name: String): String? {
+    val fromKeyFile = keystoreProperties.getProperty(name)?.trim()
+    if (!fromKeyFile.isNullOrEmpty()) return fromKeyFile
+    val fromProject = (project.findProperty(name) as? String)?.trim()
+    if (!fromProject.isNullOrEmpty()) return fromProject
+    return System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+val releaseStoreFilePath = signingProp("storeFile")
+    ?: signingProp("MYAPP_UPLOAD_STORE_FILE")
+val releaseStorePassword = signingProp("storePassword")
+    ?: signingProp("MYAPP_UPLOAD_STORE_PASSWORD")
+val releaseKeyAlias = signingProp("keyAlias")
+    ?: signingProp("MYAPP_UPLOAD_KEY_ALIAS")
+val releaseKeyPassword = signingProp("keyPassword")
+    ?: signingProp("MYAPP_UPLOAD_KEY_PASSWORD")
+
+val hasReleaseSigning =
+    !releaseStoreFilePath.isNullOrEmpty() &&
+        !releaseStorePassword.isNullOrEmpty() &&
+        !releaseKeyAlias.isNullOrEmpty() &&
+        !releaseKeyPassword.isNullOrEmpty()
+
 android {
     namespace = "com.getmypair.userapp"
     compileSdk = 36
@@ -46,17 +76,24 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(project.findProperty("MYAPP_UPLOAD_STORE_FILE") as String)
-            storePassword = project.findProperty("MYAPP_UPLOAD_STORE_PASSWORD") as String
-            keyAlias = project.findProperty("MYAPP_UPLOAD_KEY_ALIAS") as String
-            keyPassword = project.findProperty("MYAPP_UPLOAD_KEY_PASSWORD") as String
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFilePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                // Local/CI builds without key.properties still configure successfully.
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
