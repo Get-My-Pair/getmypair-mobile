@@ -16,6 +16,9 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthLocalDataSource localDataSource;
   final NetworkInfo networkInfo;
 
+  /// Serializes concurrent refresh calls so rotated refresh tokens are not raced.
+  Future<Either<Failure, void>>? _refreshInFlight;
+
   AuthRepositoryImpl({
     required this.remoteDataSource,
     required this.localDataSource,
@@ -392,6 +395,21 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, void>> refreshToken() async {
+    final inFlight = _refreshInFlight;
+    if (inFlight != null) return inFlight;
+
+    final future = _refreshTokenUnlocked();
+    _refreshInFlight = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_refreshInFlight, future)) {
+        _refreshInFlight = null;
+      }
+    }
+  }
+
+  Future<Either<Failure, void>> _refreshTokenUnlocked() async {
     try {
       final refreshToken = await localDataSource.getRefreshToken();
       if (refreshToken == null) {
@@ -401,11 +419,12 @@ class AuthRepositoryImpl implements AuthRepository {
       if (await networkInfo.isConnected) {
         try {
           // Get new access token from backend
-          final newAccessToken = await remoteDataSource.refreshToken(refreshToken);
-          
+          final newAccessToken =
+              await remoteDataSource.refreshToken(refreshToken);
+
           // Save the new access token
           await localDataSource.saveAccessToken(newAccessToken);
-          
+
           return const Right(null);
         } on ServerException catch (e) {
           final message = e.message.toLowerCase();
