@@ -72,16 +72,21 @@ class FootwearBackgroundRemover {
       return out;
     }
 
-    if (response.statusCode == 503) {
+    final message = _parseErrorMessage(response.statusCode, response.body);
+
+    // 404 = route not deployed yet; 501/503 = server feature off.
+    // Soft-fail so footwear upload still works without a cutout.
+    if (response.statusCode == 404 ||
+        response.statusCode == 501 ||
+        response.statusCode == 503 ||
+        message.toLowerCase().contains('route not found')) {
       throw FootwearBackgroundRemoverException(
-        'Background removal is not configured on the server.',
+        message,
         isUnavailable: true,
       );
     }
 
-    throw FootwearBackgroundRemoverException(
-      _parseErrorMessage(response.statusCode, response.body),
-    );
+    throw FootwearBackgroundRemoverException(message);
   }
 
   static bool _looksLikePng(List<int> bytes) {
