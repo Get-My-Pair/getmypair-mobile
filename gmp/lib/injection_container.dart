@@ -38,6 +38,7 @@ import 'features/payment/domain/repositories/payment_repository.dart';
 import 'features/payment/domain/usecases/payment_usecases.dart';
 import 'features/payment/presentation/bloc/payment_bloc.dart';
 import 'core/network/dio_client.dart';
+import 'core/storage/secure_storage_service.dart';
 import 'core/network/network_info.dart';
 
 final sl = GetIt.instance;
@@ -72,7 +73,10 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<AuthLocalDataSource>()) {
     sl.registerLazySingleton<AuthLocalDataSource>(
-      () => AuthLocalDataSourceImpl(sharedPreferences: sl()),
+      () => AuthLocalDataSourceImpl(
+        sharedPreferences: sl(),
+        secureStorage: SecureStorageService(),
+      ),
     );
   }
 

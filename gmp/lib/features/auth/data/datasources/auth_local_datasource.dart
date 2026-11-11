@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../models/login_response_model.dart';
 import '../models/user_model.dart';
 
@@ -50,8 +51,12 @@ class DeviceAuthCredential {
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   final SharedPreferences sharedPreferences;
+  final SecureStorageService secureStorage;
 
-  AuthLocalDataSourceImpl({required this.sharedPreferences});
+  AuthLocalDataSourceImpl({
+    required this.sharedPreferences,
+    SecureStorageService? secureStorage,
+  }) : secureStorage = secureStorage ?? SecureStorageService();
 
   String _normalizeMobileKey(String mobile) {
     final digits = mobile.trim().replaceAll(RegExp(r'[^0-9]'), '');
@@ -59,11 +64,30 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     return digits;
   }
 
+  /// One-time move from plaintext SharedPreferences → secure storage.
+  Future<String?> _readSecureOrMigrate(String key) async {
+    final secureValue = await secureStorage.read(key);
+    if (secureValue != null && secureValue.isNotEmpty) {
+      return secureValue;
+    }
+    final legacy = sharedPreferences.getString(key);
+    if (legacy != null && legacy.isNotEmpty) {
+      await secureStorage.write(key, legacy);
+      await sharedPreferences.remove(key);
+      return legacy;
+    }
+    return null;
+  }
+
   @override
   Future<void> saveTokens(Tokens tokens) async {
     try {
-      await sharedPreferences.setString(AppConstants.accessTokenKey, tokens.accessToken);
-      await sharedPreferences.setString(AppConstants.refreshTokenKey, tokens.refreshToken);
+      await secureStorage.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+      await sharedPreferences.remove(AppConstants.accessTokenKey);
+      await sharedPreferences.remove(AppConstants.refreshTokenKey);
     } catch (e) {
       throw CacheException('Failed to save tokens: ${e.toString()}');
     }
@@ -72,7 +96,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<void> saveAccessToken(String token) async {
     try {
-      await sharedPreferences.setString(AppConstants.accessTokenKey, token);
+      await secureStorage.write(SecureStorageService.accessTokenKey, token);
+      await sharedPreferences.remove(AppConstants.accessTokenKey);
     } catch (e) {
       throw CacheException('Failed to save access token: ${e.toString()}');
     }
@@ -81,7 +106,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<String?> getAccessToken() async {
     try {
-      return sharedPreferences.getString(AppConstants.accessTokenKey);
+      return await _readSecureOrMigrate(AppConstants.accessTokenKey);
     } catch (e) {
       throw CacheException('Failed to get access token: ${e.toString()}');
     }
@@ -90,7 +115,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<String?> getRefreshToken() async {
     try {
-      return sharedPreferences.getString(AppConstants.refreshTokenKey);
+      return await _readSecureOrMigrate(AppConstants.refreshTokenKey);
     } catch (e) {
       throw CacheException('Failed to get refresh token: ${e.toString()}');
     }
@@ -99,7 +124,11 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<void> saveUser(UserModel user) async {
     try {
-      await sharedPreferences.setString(AppConstants.userKey, jsonEncode(user.toJson()));
+      await secureStorage.write(
+        SecureStorageService.userKey,
+        jsonEncode(user.toJson()),
+      );
+      await sharedPreferences.remove(AppConstants.userKey);
     } catch (e) {
       throw CacheException('Failed to save user: ${e.toString()}');
     }
@@ -108,7 +137,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<UserModel?> getUser() async {
     try {
-      final userJson = sharedPreferences.getString(AppConstants.userKey);
+      final userJson = await _readSecureOrMigrate(AppConstants.userKey);
       if (userJson != null) {
         return UserModel.fromJson(jsonDecode(userJson));
       }
@@ -122,6 +151,9 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   Future<void> clearAll() async {
     try {
       // Session only — retain deviceId + deviceAuth across logout/login.
+      await secureStorage.delete(SecureStorageService.accessTokenKey);
+      await secureStorage.delete(SecureStorageService.refreshTokenKey);
+      await secureStorage.delete(SecureStorageService.userKey);
       await sharedPreferences.remove(AppConstants.accessTokenKey);
       await sharedPreferences.remove(AppConstants.refreshTokenKey);
       await sharedPreferences.remove(AppConstants.userKey);
@@ -133,7 +165,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<String> getOrCreateDeviceId() async {
     try {
-      final existing = sharedPreferences.getString(AppConstants.deviceIdKey);
+      final existing = await _readSecureOrMigrate(AppConstants.deviceIdKey);
       if (existing != null && existing.trim().length >= 8) {
         return existing.trim();
       }
@@ -163,7 +195,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
         generated = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
       }
 
-      await sharedPreferences.setString(AppConstants.deviceIdKey, generated);
+      await secureStorage.write(SecureStorageService.deviceIdKey, generated);
+      await sharedPreferences.remove(AppConstants.deviceIdKey);
       return generated;
     } catch (e) {
       throw CacheException('Failed to get device id: ${e.toString()}');
@@ -178,21 +211,25 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     DateTime? expiresAt,
   }) async {
     try {
-      await sharedPreferences.setString(
-        AppConstants.deviceAuthMobileKey,
+      await secureStorage.write(
+        SecureStorageService.deviceAuthMobileKey,
         _normalizeMobileKey(mobile),
       );
-      await sharedPreferences.setString(AppConstants.deviceIdKey, deviceId);
-      await sharedPreferences.setString(
-        AppConstants.deviceAuthTokenKey,
+      await secureStorage.write(SecureStorageService.deviceIdKey, deviceId);
+      await secureStorage.write(
+        SecureStorageService.deviceAuthTokenKey,
         deviceAuthToken,
       );
       if (expiresAt != null) {
-        await sharedPreferences.setString(
-          AppConstants.deviceAuthExpiresAtKey,
+        await secureStorage.write(
+          SecureStorageService.deviceAuthExpiresAtKey,
           expiresAt.toIso8601String(),
         );
       }
+      await sharedPreferences.remove(AppConstants.deviceAuthMobileKey);
+      await sharedPreferences.remove(AppConstants.deviceIdKey);
+      await sharedPreferences.remove(AppConstants.deviceAuthTokenKey);
+      await sharedPreferences.remove(AppConstants.deviceAuthExpiresAtKey);
     } catch (e) {
       throw CacheException('Failed to save device auth: ${e.toString()}');
     }
@@ -201,9 +238,10 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<DeviceAuthCredential?> getDeviceAuthForMobile(String mobile) async {
     try {
-      final storedMobile = sharedPreferences.getString(AppConstants.deviceAuthMobileKey);
-      final token = sharedPreferences.getString(AppConstants.deviceAuthTokenKey);
-      final deviceId = sharedPreferences.getString(AppConstants.deviceIdKey);
+      final storedMobile =
+          await _readSecureOrMigrate(AppConstants.deviceAuthMobileKey);
+      final token = await _readSecureOrMigrate(AppConstants.deviceAuthTokenKey);
+      final deviceId = await _readSecureOrMigrate(AppConstants.deviceIdKey);
       if (storedMobile == null ||
           token == null ||
           token.isEmpty ||
@@ -216,7 +254,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
       }
 
       DateTime? expiresAt;
-      final expRaw = sharedPreferences.getString(AppConstants.deviceAuthExpiresAtKey);
+      final expRaw =
+          await _readSecureOrMigrate(AppConstants.deviceAuthExpiresAtKey);
       if (expRaw != null && expRaw.isNotEmpty) {
         expiresAt = DateTime.tryParse(expRaw);
       }
@@ -237,6 +276,9 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<void> clearDeviceAuth() async {
     try {
+      await secureStorage.delete(SecureStorageService.deviceAuthTokenKey);
+      await secureStorage.delete(SecureStorageService.deviceAuthMobileKey);
+      await secureStorage.delete(SecureStorageService.deviceAuthExpiresAtKey);
       await sharedPreferences.remove(AppConstants.deviceAuthTokenKey);
       await sharedPreferences.remove(AppConstants.deviceAuthMobileKey);
       await sharedPreferences.remove(AppConstants.deviceAuthExpiresAtKey);

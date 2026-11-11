@@ -18,13 +18,34 @@ class SecureStorageService {
   );
 
   // Keys
-  static const String _accessTokenKey = 'access_token';
-  static const String _refreshTokenKey = 'refresh_token';
+  static const String accessTokenKey = 'access_token';
+  static const String refreshTokenKey = 'refresh_token';
+  static const String userKey = 'user_data';
+  static const String deviceIdKey = 'device_id';
+  static const String deviceAuthTokenKey = 'device_auth_token';
+  static const String deviceAuthMobileKey = 'device_auth_mobile';
+  static const String deviceAuthExpiresAtKey = 'device_auth_expires_at';
   static const String _userIdKey = 'user_id';
   static const String _userRoleKey = 'user_role';
   static const String _isLoggedInKey = 'is_logged_in';
   static const String _isProfileCompleteKey = 'is_profile_complete';
   static const String _phoneNumberKey = 'phone_number';
+
+  Future<void> write(String key, String? value) async {
+    if (value == null) {
+      await _storage.delete(key: key);
+      return;
+    }
+    await _storage.write(key: key, value: value);
+  }
+
+  Future<String?> read(String key) async {
+    return _storage.read(key: key);
+  }
+
+  Future<void> delete(String key) async {
+    await _storage.delete(key: key);
+  }
 
   // Token Management
   Future<void> saveTokens({
@@ -32,18 +53,18 @@ class SecureStorageService {
     required String refreshToken,
   }) async {
     await Future.wait([
-      _storage.write(key: _accessTokenKey, value: accessToken),
-      _storage.write(key: _refreshTokenKey, value: refreshToken),
+      _storage.write(key: accessTokenKey, value: accessToken),
+      _storage.write(key: refreshTokenKey, value: refreshToken),
       _storage.write(key: _isLoggedInKey, value: 'true'),
     ]);
   }
 
   Future<String?> getAccessToken() async {
-    return await _storage.read(key: _accessTokenKey);
+    return await _storage.read(key: accessTokenKey);
   }
 
   Future<String?> getRefreshToken() async {
-    return await _storage.read(key: _refreshTokenKey);
+    return await _storage.read(key: refreshTokenKey);
   }
 
   Future<bool> hasValidToken() async {
@@ -105,8 +126,8 @@ class SecureStorageService {
   // Clear only auth tokens
   Future<void> clearTokens() async {
     await Future.wait([
-      _storage.delete(key: _accessTokenKey),
-      _storage.delete(key: _refreshTokenKey),
+      _storage.delete(key: accessTokenKey),
+      _storage.delete(key: refreshTokenKey),
       _storage.write(key: _isLoggedInKey, value: 'false'),
     ]);
   }
