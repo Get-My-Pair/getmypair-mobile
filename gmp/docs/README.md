@@ -19,7 +19,7 @@ Aligned with backend docs in `getmypair-api/server/docs/`.
 | Entry | `lib/main.dart` → splash → auth → dashboard / onboarding |
 | DI | `lib/injection_container.dart` |
 | API base & paths | `lib/core/constants/api_endpoints.dart` |
-| App constants | `lib/core/constants/app_constants.dart` (`USER_APP`, version `3.0.0`) |
+| App constants | `lib/core/constants/app_constants.dart` (`USER_APP`, version `3.0.3`) |
 | Named routes | `lib/routes.dart` (many flows use `MaterialPageRoute`) |
 | Features | `lib/features/{auth,profile,articles,service,sell,payment,home,dashboard}/` |
 
