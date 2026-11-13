@@ -6,10 +6,8 @@ import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_ba
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'donate_my_pair_page.dart';
-
 /// Save hub — same shell as [CareMyPairPage]: search, service cards, media rows.
-/// Donate opens the existing [DonateMyPairPage] flow. Recycle is coming soon.
+/// DonateMyPair and RecycleMyPair both show Coming soon for now.
 class SaveMyPairPage extends StatefulWidget {
   const SaveMyPairPage({super.key});
 
@@ -76,7 +74,7 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
           'service',
         ],
         icon: Icons.volunteer_activism_outlined,
-        onTap: () => _openDonateFlow(context),
+        onTap: () => showComingSoon(context, feature: 'DonateMyPair'),
       ),
       HubSearchHit(
         title: 'RecycleMyPair',
@@ -185,7 +183,10 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
                                   child: _ServiceCard(
                                     label: 'Donate\nMyPair',
                                     icon: Icons.volunteer_activism_outlined,
-                                    onTap: () => _openDonateFlow(context),
+                                    onTap: () => showComingSoon(
+                                      context,
+                                      feature: 'DonateMyPair',
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -247,13 +248,6 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
     );
   }
 
-  void _openDonateFlow(BuildContext context) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const DonateMyPairPage(),
-      ),
-    );
-  }
 }
 
 class _Header extends StatelessWidget {

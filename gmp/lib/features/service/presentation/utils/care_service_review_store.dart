@@ -1,7 +1,7 @@
-import 'dart:convert';
-
+import 'package:gmp/core/constants/api_endpoints.dart';
+import 'package:gmp/core/network/dio_client.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class CareServiceReview {
   final String requestId;
@@ -25,71 +25,89 @@ class CareServiceReview {
 
   factory CareServiceReview.fromJson(Map<String, dynamic> json) {
     return CareServiceReview(
-      requestId: (json['requestId'] ?? '').toString(),
+      requestId: (json['requestId'] ?? json['_id'] ?? '').toString(),
       rating: (json['rating'] as num?)?.toInt() ?? 0,
       comment: (json['comment'] ?? '').toString(),
       submittedAt: DateTime.tryParse('${json['submittedAt']}') ?? DateTime.now(),
     );
   }
+
+  /// Reads nested `customerReview` from a service request payload.
+  static CareServiceReview? fromServiceRequest(Map<String, dynamic> request) {
+    final id = (request['_id'] ?? request['id'] ?? '').toString().trim();
+    final raw = request['customerReview'];
+    if (raw is! Map) return null;
+    final rating = (raw['rating'] as num?)?.toInt() ?? 0;
+    if (id.isEmpty || rating < 1) return null;
+    return CareServiceReview(
+      requestId: id,
+      rating: rating,
+      comment: (raw['comment'] ?? '').toString(),
+      submittedAt:
+          DateTime.tryParse('${raw['submittedAt']}') ?? DateTime.now(),
+    );
+  }
 }
 
-/// Local store for Service History “Rate your pair’s glow-up” submissions.
+/// Backend-backed reviews for Service History (“Rate your pair’s glow-up”).
+/// Does not use SharedPreferences — source of truth is the service request DB.
 class CareServiceReviewStore {
   CareServiceReviewStore._();
 
-  static const _prefsKey = 'care_service_reviews_v1';
-
-  static Future<SharedPreferences> _prefs() async {
-    if (sl.isRegistered<SharedPreferences>()) {
-      return sl<SharedPreferences>();
-    }
-    return SharedPreferences.getInstance();
+  static bool hasReviewedOnRequest(Map<String, dynamic> request) {
+    return CareServiceReview.fromServiceRequest(request) != null;
   }
 
-  static Future<Map<String, CareServiceReview>> loadAll() async {
-    final prefs = await _prefs();
-    final raw = prefs.getString(_prefsKey);
-    if (raw == null || raw.isEmpty) return {};
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return {};
-      final out = <String, CareServiceReview>{};
-      for (final entry in decoded.entries) {
-        final value = entry.value;
-        if (value is Map) {
-          final review = CareServiceReview.fromJson(
-            Map<String, dynamic>.from(value),
-          );
-          if (review.requestId.isNotEmpty) {
-            out[review.requestId] = review;
-          }
-        }
+  static Future<CareServiceReview> submit({
+    required String requestId,
+    required int rating,
+    String comment = '',
+  }) async {
+    final id = requestId.trim();
+    if (id.isEmpty || rating < 1 || rating > 5) {
+      throw Exception('Invalid review');
+    }
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    final token = tokenResult.fold<String?>(
+      (_) => null,
+      (t) => t,
+    );
+    if (token == null || token.isEmpty) {
+      throw Exception('Please sign in again');
+    }
+
+    final res = await sl<DioClient>().post(
+      ApiEndpoints.serviceSubmitReview,
+      accessToken: token,
+      body: {
+        'requestId': id,
+        'rating': rating,
+        if (comment.trim().isNotEmpty) 'comment': comment.trim(),
+      },
+    );
+    final data = res['data'];
+    if (data is Map) {
+      final reviewRaw = data['review'];
+      if (reviewRaw is Map) {
+        return CareServiceReview.fromJson({
+          ...Map<String, dynamic>.from(reviewRaw),
+          'requestId': id,
+        });
       }
-      return out;
-    } catch (_) {
-      return {};
+      final request = data['request'];
+      if (request is Map) {
+        final parsed = CareServiceReview.fromServiceRequest(
+          Map<String, dynamic>.from(request),
+        );
+        if (parsed != null) return parsed;
+      }
     }
-  }
-
-  static Future<CareServiceReview?> get(String requestId) async {
-    final all = await loadAll();
-    return all[requestId.trim()];
-  }
-
-  static Future<bool> hasReviewed(String requestId) async {
-    final review = await get(requestId);
-    return review != null && review.rating > 0;
-  }
-
-  static Future<void> save(CareServiceReview review) async {
-    final id = review.requestId.trim();
-    if (id.isEmpty || review.rating < 1) return;
-    final prefs = await _prefs();
-    final all = await loadAll();
-    all[id] = review;
-    final encoded = <String, dynamic>{
-      for (final e in all.entries) e.key: e.value.toJson(),
-    };
-    await prefs.setString(_prefsKey, jsonEncode(encoded));
+    return CareServiceReview(
+      requestId: id,
+      rating: rating,
+      comment: comment.trim(),
+      submittedAt: DateTime.now(),
+    );
   }
 }

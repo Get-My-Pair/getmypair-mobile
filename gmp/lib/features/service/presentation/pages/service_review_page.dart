@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/service/presentation/pages/service_review_thanks_page.dart';
@@ -42,22 +43,29 @@ class _ServiceReviewPageState extends State<ServiceReviewPage> {
     if (_rating < 1 || _submitting) return;
     setState(() => _submitting = true);
     final id = CareActiveJob.requestId(widget.request);
-    await CareServiceReviewStore.save(
-      CareServiceReview(
+    try {
+      await CareServiceReviewStore.submit(
         requestId: id,
         rating: _rating,
         comment: _commentController.text.trim(),
-        submittedAt: DateTime.now(),
-      ),
-    );
-    if (!mounted) return;
-    final done = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => const ServiceReviewThanksPage(),
-      ),
-    );
-    if (!mounted) return;
-    Navigator.of(context).pop(done == true);
+      );
+      if (!mounted) return;
+      final done = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => const ServiceReviewThanksPage(),
+        ),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(done == true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      await showAppFeedbackAlert(
+        context,
+        type: AppFeedbackType.failure,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
   }
 
   @override

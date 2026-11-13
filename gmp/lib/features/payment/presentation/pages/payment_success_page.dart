@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
 import '../services/payment_analytics.dart';
-import '../utils/cart_paid_ids_store.dart';
 
 /// Full-screen Zoho payment success celebration.
 class PaymentSuccessPage extends StatefulWidget {
@@ -45,9 +44,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
   void initState() {
     super.initState();
     PaymentAnalytics.paymentSuccess(widget.orderId, widget.amount);
-    // Persist immediately so Cart flips to Payment Paid even if navigation
-    // does not return `paid=true` to the opener (e.g. pay-after-create).
-    unawaited(CartPaidIdsStore.remember(widget.serviceRequestId));
+    // Paid state is read from payment APIs / service request DB on Cart reload.
 
     _popupController = AnimationController(
       vsync: this,

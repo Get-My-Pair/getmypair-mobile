@@ -154,6 +154,8 @@ class ApiEndpoints {
       '$baseUrl$servicePrefix/upload-proof/video';
   static String get serviceRespondActualCost =>
       '$baseUrl$servicePrefix/respond-actual-cost';
+  /// Customer Service History review (rating + comment) — persisted in DB.
+  static String get serviceSubmitReview => '$baseUrl$servicePrefix/review';
 
   // Module 5 – Payments (Zoho Checkout)
   static const String paymentPrefix = '/api/payment';

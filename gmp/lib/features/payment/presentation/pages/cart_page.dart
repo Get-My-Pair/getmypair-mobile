@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/navigation/customer_dashboard_tab_index.dart';
@@ -39,8 +38,6 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  static const _paidPrefsKey = 'cart_paid_service_request_ids';
-
   bool _loading = true;
   String? _error;
   List<_CartPayableItem> _items = const [];
@@ -50,28 +47,6 @@ class _CartPageState extends State<CartPage> {
     super.initState();
     registerCustomerCartNavigation();
     _load();
-  }
-
-  Future<SharedPreferences> _prefs() async {
-    if (sl.isRegistered<SharedPreferences>()) {
-      return sl<SharedPreferences>();
-    }
-    return SharedPreferences.getInstance();
-  }
-
-  Future<Set<String>> _loadLocalPaidIds() async {
-    final prefs = await _prefs();
-    return (prefs.getStringList(_paidPrefsKey) ?? const <String>[]).toSet();
-  }
-
-  Future<void> _rememberPaidId(String requestId) async {
-    final id = requestId.trim();
-    if (id.isEmpty) return;
-    final prefs = await _prefs();
-    final list = prefs.getStringList(_paidPrefsKey) ?? <String>[];
-    if (list.contains(id)) return;
-    list.add(id);
-    await prefs.setStringList(_paidPrefsKey, list);
   }
 
   Future<Set<String>> _paidIdsFromPaymentHistory(String token) async {
@@ -123,11 +98,10 @@ class _CartPageState extends State<CartPage> {
       },
       (token) async {
         try {
-          final localPaid = {
-            for (final id in await _loadLocalPaidIds()) id.trim().toLowerCase(),
-          };
+          // Paid state comes only from payment APIs / service request DB —
+          // never SharedPreferences.
           final historyPaid = await _paidIdsFromPaymentHistory(token);
-          final paidIds = {...localPaid, ...historyPaid};
+          final paidIds = {...historyPaid};
 
           final res = await sl<DioClient>().get(
             ApiEndpoints.serviceMy,
@@ -159,9 +133,6 @@ class _CartPageState extends State<CartPage> {
               if (ok) newlyPaid.add(id);
             }
             if (newlyPaid.isNotEmpty) {
-              for (final id in newlyPaid) {
-                await _rememberPaidId(id);
-              }
               items = [
                 for (final row in items)
                   newlyPaid.contains(row.id)
@@ -169,10 +140,6 @@ class _CartPageState extends State<CartPage> {
                       : row,
               ];
             }
-          }
-
-          for (final id in historyPaid) {
-            await _rememberPaidId(id);
           }
 
           if (!mounted) return;
@@ -208,7 +175,6 @@ class _CartPageState extends State<CartPage> {
     );
     if (!mounted) return;
     if (paid == true) {
-      await _rememberPaidId(item.id);
       setState(() {
         _items = [
           for (final row in _items)

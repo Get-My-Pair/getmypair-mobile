@@ -46,7 +46,6 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
       _error = null;
     });
 
-    final reviews = await CareServiceReviewStore.loadAll();
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
 
@@ -55,7 +54,7 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
         setState(() {
           _loading = false;
           _error = 'Please sign in again';
-          _reviewedIds = reviews.keys.toSet();
+          _reviewedIds = {};
         });
       },
       (token) async {
@@ -79,17 +78,22 @@ class _ServiceHistoryPageState extends State<ServiceHistoryPage> {
                   DateTime.fromMillisecondsSinceEpoch(0);
               return db.compareTo(da);
             });
+          final reviewed = <String>{
+            for (final r in jobs)
+              if (CareServiceReviewStore.hasReviewedOnRequest(r))
+                CareActiveJob.requestId(r),
+          }..removeWhere((id) => id.isEmpty);
           if (!mounted) return;
           setState(() {
             _jobs = jobs;
-            _reviewedIds = reviews.keys.toSet();
+            _reviewedIds = reviewed;
             _loading = false;
           });
         } catch (e) {
           if (!mounted) return;
           setState(() {
             _loading = false;
-            _reviewedIds = reviews.keys.toSet();
+            _reviewedIds = {};
             _error = e.toString().replaceFirst('Exception: ', '');
           });
         }

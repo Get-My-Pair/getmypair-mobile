@@ -32,7 +32,6 @@ import '../../../articles/domain/entities/article.dart';
 import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
-import '../../../service/presentation/pages/donate_my_pair_page.dart';
 import '../../../service/presentation/pages/maintain_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
 import '../../../service/presentation/pages/repair_my_pair_page.dart';
@@ -436,6 +435,10 @@ class _HomePageState extends State<HomePage> {
       showComingSoon(context, feature: 'RentMyPair');
       return;
     }
+    if (kind == _HomeServiceKind.donate) {
+      showComingSoon(context, feature: 'DonateMyPair');
+      return;
+    }
     if (kind == _HomeServiceKind.recycle) {
       showComingSoon(context, feature: 'RecycleMyPair');
       return;
@@ -454,8 +457,9 @@ class _HomePageState extends State<HomePage> {
       _HomeServiceKind.maintain => const MaintainMyPairPage(),
       _HomeServiceKind.repair => const RepairMyPairPage(),
       _HomeServiceKind.sell => const SellMyPairPage(),
-      _HomeServiceKind.donate => const DonateMyPairPage(),
-      _HomeServiceKind.rent || _HomeServiceKind.recycle =>
+      _HomeServiceKind.donate ||
+      _HomeServiceKind.rent ||
+      _HomeServiceKind.recycle =>
         const SizedBox.shrink(),
     };
 
