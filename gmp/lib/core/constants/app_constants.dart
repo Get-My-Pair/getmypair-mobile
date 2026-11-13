@@ -1,7 +1,7 @@
 class AppConstants {
   // App Info (align with pubspec.yaml version)
   static const String appName = 'GetMyPair';
-  static const String appVersion = '3.0.3';
+  static const String appVersion = '3.0.4';
 
   /// Sent as X-App-Source to backend for role assignment (USER_APP -> user role).
   static const String appSourceForApi = 'USER_APP';

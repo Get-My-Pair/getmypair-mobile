@@ -1,0 +1,15 @@
+What's new in 3.0.4
+
+• DonateMyPair and RecycleMyPair show Coming soon while we finish those flows
+• Service History reviews now save to your account (not only on this device)
+• Cart payment status loads from the server for a consistent Paid / Pay Now state
+• Pair Progress and care timelines stay synced with live service data
+• Stability improvements for checkout and service history
+
+---
+Paste into Play Console → Production → Create release → Release notes
+(Keep under 500 characters; English en-IN / en-US)
+
+Short paste (≤500 chars):
+
+DonateMyPair and RecycleMyPair show Coming soon. Service reviews and cart payment status now sync from your account. Pair Progress stays up to date with live service data. Checkout and history stability improvements.
