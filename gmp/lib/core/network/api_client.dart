@@ -183,14 +183,9 @@ class _AuthInterceptor extends Interceptor {
             final retryResponse = await _dio.fetch(err.requestOptions);
             return handler.resolve(retryResponse);
           }
-        } on DioException catch (refreshErr) {
-          final status = refreshErr.response?.statusCode;
-          // Only clear local session when the refresh token itself is
-          // rejected. Anything else (offline, server error) leaves the
-          // tokens in place so the user stays logged in.
-          if (status == 401 || status == 403) {
-            await _storage.clearAll();
-          }
+        } on DioException catch (_) {
+          // Auto-logout disabled: never clear local session on refresh failure.
+          // Manual logout is the only path that clears tokens.
         } catch (_) {
           // Unknown error – treat as transient; do not log out.
         }

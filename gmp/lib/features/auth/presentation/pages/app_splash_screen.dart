@@ -8,8 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/theme/app_gradients.dart';
-import '../../../../core/utils/jwt_helper.dart';
 import '../../../../injection_container.dart';
 import '../../../dashboard/presentation/pages/customer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
@@ -18,22 +18,10 @@ import 'onboarding/onboarding_flow_page.dart';
 
 /// Persistent-login splash screen.
 ///
-/// We deliberately treat **local storage** (SharedPreferences) as the source
-/// of truth for "has this user logged in before?". If a refresh token is
-/// present and not JWT-expired we route the user directly to the dashboard,
-/// **without waiting for the network round-trip**. The [AuthBloc] keeps doing
-/// its background `/me` check; if the backend later rejects the refresh
-/// token, [AuthUnauthenticated] is emitted and the dashboard's existing
-/// listener bounces the user to the login screen.
-///
-/// This makes Chrome refresh / cold start behave correctly even when:
-/// - the backend is sleeping (Render.com cold start),
-/// - the network is offline,
-/// - or the access token has expired (refresh happens lazily, in background).
-///
-/// Login state is therefore governed by ONLY:
-///   1. Refresh token expiry / rejection by the backend.
-///   2. Manual logout (clears local storage explicitly).
+/// Local storage is the source of truth for "has this user logged in?".
+/// If a cached user and any token are present we route straight to the
+/// dashboard. Token expiry / refresh rejection never auto-logout — only
+/// manual Logout clears the session.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -73,33 +61,27 @@ class _SplashScreenState extends State<SplashScreen> {
       final prefs = sl.isRegistered<SharedPreferences>()
           ? sl<SharedPreferences>()
           : await SharedPreferences.getInstance();
-      final refreshToken = prefs.getString(AppConstants.refreshTokenKey);
-      final accessToken = prefs.getString(AppConstants.accessTokenKey);
-      final hasUser = (prefs.getString(AppConstants.userKey) ?? '').isNotEmpty;
-      final hasUsableRefresh =
-          refreshToken != null &&
-          refreshToken.isNotEmpty &&
-          !_isJwtDefinitelyExpired(refreshToken);
-      final hasUsableAccess =
-          accessToken != null && accessToken.isNotEmpty;
-      // Either token + cached user is enough to consider the session live.
-      // We only require *some* token because the bloc's background refresh
-      // will rotate access tokens as needed.
-      hasSession = hasUser && (hasUsableRefresh || hasUsableAccess);
+      final secure = SecureStorageService();
+
+      // Tokens/user may live in secure storage (current) or SharedPreferences (legacy).
+      final refreshToken = await secure.getRefreshToken() ??
+          prefs.getString(AppConstants.refreshTokenKey);
+      final accessToken = await secure.getAccessToken() ??
+          prefs.getString(AppConstants.accessTokenKey);
+      final userJson = await secure.read(SecureStorageService.userKey) ??
+          prefs.getString(AppConstants.userKey);
+
+      final hasUser = (userJson ?? '').isNotEmpty;
+      final hasRefresh = refreshToken != null && refreshToken.isNotEmpty;
+      final hasAccess = accessToken != null && accessToken.isNotEmpty;
+      // Cached user + any token = stay logged in (ignore JWT expiry).
+      hasSession = hasUser && (hasRefresh || hasAccess);
     } catch (_) {
       hasSession = false;
     }
     if (!mounted) return;
     setState(() => _hasLocalSession = hasSession);
     _maybeNavigate(context.read<AuthBloc>().state);
-  }
-
-  /// Returns true only when the token is a JWT *and* its `exp` claim is in
-  /// the past. Opaque (non-JWT) tokens are treated as still usable – let the
-  /// backend make the final call via 401.
-  bool _isJwtDefinitelyExpired(String token) {
-    if (!JwtHelper.isTokenExpired(token)) return false;
-    return JwtHelper.getTokenExpiration(token) != null;
   }
 
   void _maybeNavigate(AuthState state) {

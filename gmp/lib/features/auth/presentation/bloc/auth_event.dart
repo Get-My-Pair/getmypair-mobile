@@ -76,7 +76,8 @@ class AuthLogout extends AuthEvent {
   const AuthLogout();
 }
 
-/// Session expired (e.g. refresh token failed). Clear local data only and show login; do not call logout API.
+/// Session refresh failed. Auto-logout is disabled — kept for compatibility;
+/// AuthBloc re-checks local session instead of clearing it.
 class AuthSessionExpired extends AuthEvent {
   const AuthSessionExpired();
 }

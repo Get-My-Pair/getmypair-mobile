@@ -21,6 +21,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final GetCurrentUser getCurrentUser;
   final Logout logout;
   final CheckAuthStatus checkAuthStatus;
+  // Kept for DI compatibility; auto-logout no longer clears session.
+  // ignore: unused_field
   final ClearSessionLocally clearSessionLocally;
 
   AuthBloc({
@@ -49,12 +51,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
 
-    // Login state is governed by ONLY two events:
-    //   1. Refresh token expired / rejected by backend (AuthenticationFailure)
-    //   2. Manual logout (handled by AuthLogout)
-    // Any other failure (network down, backend 5xx, parse error, etc.) must
-    // NOT log the user out. We keep them on the dashboard with cached data
-    // and let a later launch / API call refresh once connectivity returns.
+    // Login state is governed by local session + manual logout only.
+    // Token expiry / refresh rejection must NOT auto-logout.
     final result = await checkAuthStatus();
     final isAuthenticated = result.fold((_) => false, (value) => value);
     if (!isAuthenticated) {
@@ -65,15 +63,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final userResult = await getCurrentUser();
     userResult.fold(
       (failure) {
-        if (failure is AuthenticationFailure) {
-          // Refresh token truly invalid – treat as logged out.
-          emit(const AuthUnauthenticated());
-          return;
-        }
-        // Transient failure with no cached user available. Do NOT clear the
-        // refresh token here; surface as unauthenticated only because we have
-        // no User entity to render. Tokens stay in local storage so the next
-        // launch can recover the session automatically.
+        // Still considered logged in locally, but we have no User to render.
+        // Do not clear tokens — next launch / API call can recover.
         emit(const AuthUnauthenticated());
       },
       (user) => emit(AuthAuthenticated(user)),
@@ -205,8 +196,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSessionExpired event,
     Emitter<AuthState> emit,
   ) async {
-    await clearSessionLocally();
-    emit(const AuthUnauthenticated());
+    // Auto-logout disabled: keep local session. User must tap Logout.
+    // Re-check status so UI stays authenticated when cached user exists.
+    add(const AuthCheckStatus());
   }
 
   Future<void> _onClearError(

@@ -9,8 +9,9 @@ import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
 import '../models/login_response_model.dart';
 
-/// Session: user stays logged in until they tap Logout or refresh token expires.
-/// Access token is refreshed automatically; only on refresh failure do we clear session and show login.
+/// Session: user stays logged in until they tap Logout.
+/// Access token is refreshed automatically when possible; refresh failure never
+/// clears the local session or forces login.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
@@ -25,25 +26,23 @@ class AuthRepositoryImpl implements AuthRepository {
     required this.networkInfo,
   });
 
+  Future<bool> _hasLocalSession() async {
+    final refreshToken = await localDataSource.getRefreshToken();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      return true;
+    }
+    final accessToken = await localDataSource.getAccessToken();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      return true;
+    }
+    final cachedUser = await localDataSource.getUser();
+    return cachedUser != null;
+  }
+
   Future<bool> _hasUsableRefreshToken() async {
     final refreshToken = await localDataSource.getRefreshToken();
-    if (refreshToken == null || refreshToken.isEmpty) {
-      return false;
-    }
-
-    // Do not auto-clear session here. The app should keep the user logged in
-    // unless they explicitly log out.
-    //
-    // If refresh token is a JWT and expired, report unusable so callers can
-    // decide whether to use cached user data, but keep local session intact.
-    if (JwtHelper.isTokenExpired(refreshToken)) {
-      final exp = JwtHelper.getTokenExpiration(refreshToken);
-      if (exp != null) {
-        return false;
-      }
-    }
-
-    return true;
+    // Presence alone is enough — never treat JWT `exp` as auto-logout.
+    return refreshToken != null && refreshToken.isNotEmpty;
   }
 
   Future<void> _persistDeviceAuth(String mobile, LoginResponseModel response) async {
@@ -266,14 +265,13 @@ class AuthRepositoryImpl implements AuthRepository {
 
         final refreshResult = await refreshToken();
         if (refreshResult.isLeft()) {
+          // Never auto-logout on refresh failure — prefer cached profile.
+          if (cachedUser != null) {
+            return Right(cachedUser);
+          }
           return refreshResult.fold(
             (l) => Left(l),
-            (_) {
-              if (cachedUser != null) {
-                return Right(cachedUser);
-              }
-              return const Left(AuthenticationFailure('Refresh failed'));
-            },
+            (_) => const Left(AuthenticationFailure('Refresh failed')),
           );
         }
         accessToken = await localDataSource.getAccessToken();
@@ -316,19 +314,12 @@ class AuthRepositoryImpl implements AuthRepository {
                 }
               }
             }
-            // Refresh failed. Distinguish *why* it failed so we only end the
-            // session for genuine refresh-token rejection. Network / server
-            // errors are transient and must NOT log the user out.
+            // Refresh failed — keep local session; never force logout.
+            if (cachedUser != null) {
+              return Right(cachedUser);
+            }
             return refreshResult.fold(
-              (failure) {
-                if (failure is AuthenticationFailure) {
-                  return Left(failure);
-                }
-                if (cachedUser != null) {
-                  return Right(cachedUser);
-                }
-                return Left(failure);
-              },
+              (failure) => Left(failure),
               (_) => Left(ServerFailure(e.message)),
             );
           }
@@ -384,8 +375,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, bool>> isAuthenticated() async {
     try {
-      final hasRefreshToken = await _hasUsableRefreshToken();
-      return Right(hasRefreshToken);
+      // Logged in = local session present. Only manual logout clears it.
+      return Right(await _hasLocalSession());
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
     } catch (e) {
