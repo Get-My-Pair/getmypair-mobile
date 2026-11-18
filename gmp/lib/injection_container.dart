@@ -32,6 +32,9 @@ import 'features/articles/domain/usecases/upload_article_image.dart';
 import 'features/articles/domain/usecases/update_article.dart';
 import 'features/articles/domain/usecases/delete_article.dart';
 import 'features/sell/data/sell_remote_datasource.dart';
+import 'features/rent/data/rent_remote_datasource.dart';
+import 'features/donate/data/donate_remote_datasource.dart';
+import 'features/recycle/data/recycle_remote_datasource.dart';
 import 'features/payment/data/datasources/payment_remote_datasource.dart';
 import 'features/payment/data/repositories/payment_repository_impl.dart';
 import 'features/payment/domain/repositories/payment_repository.dart';
@@ -230,6 +233,15 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<SellRemoteDataSource>()) {
     sl.registerLazySingleton(() => SellRemoteDataSource());
+  }
+  if (!sl.isRegistered<RentRemoteDataSource>()) {
+    sl.registerLazySingleton(() => RentRemoteDataSource());
+  }
+  if (!sl.isRegistered<DonateRemoteDataSource>()) {
+    sl.registerLazySingleton(() => DonateRemoteDataSource());
+  }
+  if (!sl.isRegistered<RecycleRemoteDataSource>()) {
+    sl.registerLazySingleton(() => RecycleRemoteDataSource());
   }
 
   //! Features - Payment (Module 5)

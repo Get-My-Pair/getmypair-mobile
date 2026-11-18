@@ -106,6 +106,20 @@ class ApiEndpoints {
   static String get sellListings => '$baseUrl$sellPrefix/listings';
   static String get sellUploadProof => '$baseUrl$sellPrefix/upload-proof';
 
+  static const String rentPrefix = '/api/rent';
+  static String get rentUploadImage => '$baseUrl$rentPrefix/upload-image';
+  static String get rentListings => '$baseUrl$rentPrefix/listings';
+  static String get rentAvailable => '$baseUrl$rentPrefix/available';
+  static String get rentRequests => '$baseUrl$rentPrefix/requests';
+  static String get rentIncomingRequests => '$baseUrl$rentPrefix/requests/incoming';
+
+  static const String donatePrefix = '/api/donate';
+  static String get donateUploadImage => '$baseUrl$donatePrefix/upload-image';
+  static String get donateRequests => '$baseUrl$donatePrefix/requests';
+
+  static const String recyclePrefix = '/api/recycle';
+  static String get recycleSlides => '$baseUrl$recyclePrefix/slides';
+
   // Module 4 – Service Requests
   static const String servicePrefix = '/api/service';
   static String get serviceCreate => '$baseUrl$servicePrefix/create';
@@ -174,6 +188,22 @@ class ApiEndpoints {
   static String paymentStatus(String orderId, {bool refresh = false}) =>
       '$baseUrl$paymentPrefix/status/$orderId${refresh ? '?refresh=true' : ''}';
   static String get paymentCallback => '$baseUrl$paymentPrefix/callback';
+
+  static const String thriftPrefix = '/api/thrift';
+  static String thriftProducts({String q = '', String category = ''}) {
+    final params = <String, String>{};
+    if (q.trim().isNotEmpty) params['q'] = q.trim();
+    if (category.trim().isNotEmpty && category != 'all') {
+      params['category'] = category.trim();
+    }
+    final uri = Uri.parse('$baseUrl$thriftPrefix/products').replace(
+      queryParameters: params.isEmpty ? null : params,
+    );
+    return uri.toString();
+  }
+
+  static String thriftProduct(String id) => '$baseUrl$thriftPrefix/products/$id';
+  static String get thriftCheckout => '$baseUrl$thriftPrefix/checkout';
 
   // Cobblers for customer nearby discovery
   /// Query must match backend `GET /api/cobbler/profile/nearby` (auth + role checks on server).

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/features/donate/presentation/pages/donate_request_page.dart';
+import 'package:gmp/features/recycle/presentation/pages/recycle_slideshow_page.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Save hub — same shell as [CareMyPairPage]: search, service cards, media rows.
-/// DonateMyPair and RecycleMyPair both show Coming soon for now.
+/// Save hub — DonateMyPair creates a photo request; RecycleMyPair walks the process.
 class SaveMyPairPage extends StatefulWidget {
   const SaveMyPairPage({super.key});
 
@@ -74,7 +75,11 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
           'service',
         ],
         icon: Icons.volunteer_activism_outlined,
-        onTap: () => showComingSoon(context, feature: 'DonateMyPair'),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DonateRequestPage()),
+          );
+        },
       ),
       HubSearchHit(
         title: 'RecycleMyPair',
@@ -87,7 +92,11 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
           'service',
         ],
         icon: Icons.recycling_outlined,
-        onTap: () => showComingSoon(context, feature: 'RecycleMyPair'),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const RecycleSlideshowPage()),
+          );
+        },
       ),
     ];
 
@@ -183,10 +192,13 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
                                   child: _ServiceCard(
                                     label: 'Donate\nMyPair',
                                     icon: Icons.volunteer_activism_outlined,
-                                    onTap: () => showComingSoon(
-                                      context,
-                                      feature: 'DonateMyPair',
-                                    ),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const DonateRequestPage(),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -194,10 +206,14 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
                                   child: _ServiceCard(
                                     label: 'Recycle\nMyPair',
                                     icon: Icons.recycling_outlined,
-                                    onTap: () => showComingSoon(
-                                      context,
-                                      feature: 'RecycleMyPair',
-                                    ),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const RecycleSlideshowPage(),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ],

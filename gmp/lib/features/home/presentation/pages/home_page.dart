@@ -38,7 +38,10 @@ import '../../../service/presentation/pages/repair_my_pair_page.dart';
 import '../../../service/presentation/pages/save_my_pair_page.dart';
 import '../../../service/presentation/pages/wash_my_pair_page.dart';
 import '../../../sell/presentation/pages/sell_my_pair_page.dart';
-import '../../../../core/widgets/app_feedback_alert.dart';
+import '../../../rent/presentation/pages/rent_my_pair_page.dart';
+import '../../../donate/presentation/pages/donate_request_page.dart';
+import '../../../recycle/presentation/pages/recycle_slideshow_page.dart';
+import '../../../thrift/presentation/pages/thrift_store_page.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
 
@@ -431,36 +434,18 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _openHomeService(_HomeServiceKind kind) async {
     _dismissHomeSearchKeyboard();
-    if (kind == _HomeServiceKind.rent) {
-      showComingSoon(context, feature: 'RentMyPair');
-      return;
-    }
-    if (kind == _HomeServiceKind.donate) {
-      showComingSoon(context, feature: 'DonateMyPair');
-      return;
-    }
-    if (kind == _HomeServiceKind.recycle) {
-      showComingSoon(context, feature: 'RecycleMyPair');
-      return;
-    }
-    if (kind == _HomeServiceKind.thriftHub) {
-      showComingSoon(context, feature: 'Thrift Store');
-      return;
-    }
-
     final Widget page = switch (kind) {
       _HomeServiceKind.careHub => const CareMyPairPage(),
       _HomeServiceKind.rehomeHub => const RehomeMyPairPage(),
       _HomeServiceKind.saveHub => const SaveMyPairPage(),
-      _HomeServiceKind.thriftHub => const SizedBox.shrink(),
+      _HomeServiceKind.thriftHub => const ThriftStorePage(),
       _HomeServiceKind.wash => const WashMyPairPage(),
       _HomeServiceKind.maintain => const MaintainMyPairPage(),
       _HomeServiceKind.repair => const RepairMyPairPage(),
       _HomeServiceKind.sell => const SellMyPairPage(),
-      _HomeServiceKind.donate ||
-      _HomeServiceKind.rent ||
-      _HomeServiceKind.recycle =>
-        const SizedBox.shrink(),
+      _HomeServiceKind.rent => const RentMyPairPage(),
+      _HomeServiceKind.donate => const DonateRequestPage(),
+      _HomeServiceKind.recycle => const RecycleSlideshowPage(),
     };
 
     await Navigator.of(context).push(

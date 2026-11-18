@@ -3,10 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
-import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/rent/presentation/pages/available_rent_footwear_page.dart';
+import 'package:gmp/features/rent/presentation/pages/rent_my_pair_page.dart';
 import 'package:gmp/features/sell/presentation/pages/sell_my_pair_page.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
@@ -72,7 +73,11 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
           'service',
         ],
         icon: Icons.event_available_outlined,
-        onTap: () => showComingSoon(context, feature: 'RentMyPair'),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const RentMyPairPage()),
+          );
+        },
       ),
     ];
 
@@ -89,7 +94,11 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
             ...style.label.toLowerCase().split(' '),
           ],
           icon: Icons.ice_skating_outlined,
-          onTap: () => showComingSoon(context, feature: 'RentMyPair'),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AvailableRentFootwearPage()),
+            );
+          },
         ),
       );
     }
@@ -385,10 +394,14 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                                           SizedBox(width: cardGap),
                                           Expanded(
                                             child: _SecondaryServiceCard(
-                                              onTap: () => showComingSoon(
-                                                context,
-                                                feature: 'RentMyPair',
-                                              ),
+                                              onTap: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const RentMyPairPage(),
+                                                  ),
+                                                );
+                                              },
                                             ),
                                           ),
                                         ],
