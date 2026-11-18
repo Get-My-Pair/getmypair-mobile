@@ -5,41 +5,39 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Onboarding screen 4 — “Donate. Sell. Rent. Earn.” with rehome + carbon badges.
 ///
-/// Layout from Figma frame **430×932** ([node 1676-143]). Exported PNGs
-/// ([sc4.1.png], [sc4.2.png]) already include tilt — positions are derived by
-/// centering each asset on the Figma component bounding box (no extra rotation).
+/// Layout from Figma frame **430×932**. Uses high-res flat PNGs + runtime tilt
+/// (not the low-res pre-rotated `sc4.*` exports, which looked blurry).
 class OnboardingSlideFour extends StatelessWidget {
   const OnboardingSlideFour({super.key});
 
-  static const String _rehomeAsset = 'assets/images/onboarding/sc4.1.png';
-  static const String _creditsAsset = 'assets/images/onboarding/sc4.2.png';
+  static const String _rehomeAsset =
+      'assets/images/5ffd5d392d9fb22b1fcb70d7dd46f976f635eb18.png';
+  static const String _creditsAsset =
+      'assets/images/20868ffbf2d16aaa9386162dca63285509afb735.png';
 
   /// Figma export frame (logical px).
   static const double _figmaW = 430;
   static const double _figmaH = 932;
 
-  /// Native export sizes (pre-rotated PNGs).
-  static const double _rehomeAssetW = 244;
-  static const double _rehomeAssetH = 142;
-  static const double _creditsAssetW = 338;
-  static const double _creditsAssetH = 105;
+  // Rehome MyPair — Figma: left 100.60, top 163, 230×110, rotateZ(0.14).
+  static const double _rehomeLeft = 100.60;
+  static const double _rehomeTop = 163;
+  static const double _rehomeW = 230;
+  static const double _rehomeH = 110;
+  static const double _rehomeAngle = 0.14;
 
-  // Figma component boxes (vector layers before raster export).
-  static const double _rehomeBoxLeft = 100.60;
-  static const double _rehomeBoxTop = 145;
-  static const double _rehomeBoxW = 230;
-  static const double _rehomeBoxH = 132;
+  // Carbon Credits — Figma: left 45, top 341.14, 334×49, rotateZ(-0.17).
+  static const double _creditsLeft = 45;
+  static const double _creditsTop = 341.14;
+  static const double _creditsW = 334;
+  static const double _creditsH = 49;
+  static const double _creditsAngle = -0.17;
 
-  static const double _creditsBoxLeft = 45;
-  static const double _creditsBoxTop = 278;
-  static const double _creditsBoxW = 334;
-  static const double _creditsBoxH = 70;
-
-  // Copy — Figma: left 36, top 423, width 353, gap 20 (nudged up for bottom bar).
+  // Copy — Figma: left 36, top 423, width 353, gap 20.
   static const double _copyLeft = 36;
-  static const double _copyTop = 385;
+  static const double _copyTop = 423;
   static const double _copyWidth = 353;
-  static const double _copyGap = 18;
+  static const double _copyGap = 20;
   static const List<String> _bodyLines = [
     'Your ultimate footwear',
     'ecosystem. Do good for the',
@@ -48,54 +46,25 @@ class OnboardingSlideFour extends StatelessWidget {
   ];
   static const double _bodyLineGap = 6;
 
-  /// Centers a raster asset on a Figma component rect.
-  static double _assetLeft(double boxLeft, double boxW, double assetW) =>
-      boxLeft + (boxW - assetW) / 2;
-
-  static double _assetTop(double boxTop, double boxH, double assetH) =>
-      boxTop + (boxH - assetH) / 2;
-
   @override
   Widget build(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
         final scale = math.min(w / _figmaW, h / _figmaH);
 
-        final rehomeLeft = _assetLeft(
-              _rehomeBoxLeft,
-              _rehomeBoxW,
-              _rehomeAssetW,
-            ) /
-            _figmaW *
-            w;
-        final rehomeTop = _assetTop(
-              _rehomeBoxTop,
-              _rehomeBoxH,
-              _rehomeAssetH,
-            ) /
-            _figmaH *
-            h;
-        final rehomeW = _rehomeAssetW / _figmaW * w;
-        final rehomeH = _rehomeAssetH / _figmaH * h;
+        final rehomeLeft = _rehomeLeft / _figmaW * w;
+        final rehomeTop = _rehomeTop / _figmaH * h;
+        final rehomeW = _rehomeW / _figmaW * w;
+        final rehomeH = _rehomeH / _figmaH * h;
 
-        final creditsLeft = _assetLeft(
-              _creditsBoxLeft,
-              _creditsBoxW,
-              _creditsAssetW,
-            ) /
-            _figmaW *
-            w;
-        final creditsTop = _assetTop(
-              _creditsBoxTop,
-              _creditsBoxH,
-              _creditsAssetH,
-            ) /
-            _figmaH *
-            h;
-        final creditsW = _creditsAssetW / _figmaW * w;
-        final creditsH = _creditsAssetH / _figmaH * h;
+        final creditsLeft = _creditsLeft / _figmaW * w;
+        final creditsTop = _creditsTop / _figmaH * h;
+        final creditsW = _creditsW / _figmaW * w;
+        final creditsH = _creditsH / _figmaH * h;
 
         final copyLeft = _copyLeft / _figmaW * w;
         final copyTop = _copyTop / _figmaH * h;
@@ -104,17 +73,17 @@ class OnboardingSlideFour extends StatelessWidget {
         final bodyLineGap = _bodyLineGap / _figmaH * h;
 
         final titleStyle = GoogleFonts.boldonse(
-          fontSize: (50 * scale).clamp(34.0, 52.0),
+          fontSize: (48 * scale).clamp(34.0, 52.0),
           fontWeight: FontWeight.w400,
           color: Colors.white,
-          height: 1.38,
+          height: 1.33,
           letterSpacing: 0,
         );
         final bodyStyle = GoogleFonts.montserrat(
-          fontSize: (26 * scale).clamp(16.0, 24.0),
+          fontSize: (24 * scale).clamp(16.0, 24.0),
           fontWeight: FontWeight.w400,
           color: Colors.white.withValues(alpha: 0.92),
-          height: 1.5,
+          height: 1.45,
           letterSpacing: 0,
         );
         const titleHeightBehavior = TextHeightBehavior(
@@ -126,77 +95,132 @@ class OnboardingSlideFour extends StatelessWidget {
           applyHeightToLastDescent: false,
         );
 
-        return ClipRect(
-          child: Stack(
-            clipBehavior: Clip.hardEdge,
-            children: [
-              Positioned(
-                left: creditsLeft,
-                top: creditsTop,
-                width: creditsW,
-                height: creditsH,
-                child: Image.asset(
-                  _creditsAsset,
-                  fit: BoxFit.fill,
-                  filterQuality: FilterQuality.high,
-                  gaplessPlayback: true,
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: rehomeLeft,
+              top: rehomeTop,
+              width: rehomeW,
+              height: rehomeH,
+              child: _TiltedBadge(
+                angle: _rehomeAngle,
+                child: _SharpAsset(
+                  asset: _rehomeAsset,
+                  width: rehomeW,
+                  height: rehomeH,
+                  dpr: dpr,
                 ),
               ),
-              Positioned(
-                left: rehomeLeft,
-                top: rehomeTop,
-                width: rehomeW,
-                height: rehomeH,
-                child: Image.asset(
-                  _rehomeAsset,
-                  fit: BoxFit.fill,
-                  filterQuality: FilterQuality.high,
-                  gaplessPlayback: true,
+            ),
+            Positioned(
+              left: creditsLeft,
+              top: creditsTop,
+              width: creditsW,
+              height: creditsH,
+              child: _TiltedBadge(
+                angle: _creditsAngle,
+                child: _SharpAsset(
+                  asset: _creditsAsset,
+                  width: creditsW,
+                  height: creditsH,
+                  dpr: dpr,
                 ),
               ),
-              Positioned(
-                left: copyLeft,
-                top: copyTop,
-                width: copyWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: copyWidth,
-                      child: Text(
-                        'Donate.\nSell.\nRent.\nEarn.',
-                        style: titleStyle,
-                        textAlign: TextAlign.left,
-                        textHeightBehavior: titleHeightBehavior,
-                      ),
+            ),
+            Positioned(
+              left: copyLeft,
+              top: copyTop,
+              width: copyWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: copyWidth,
+                    child: Text(
+                      'Donate.\nSell.\nRent.\nEarn.',
+                      style: titleStyle,
+                      textAlign: TextAlign.left,
+                      textHeightBehavior: titleHeightBehavior,
                     ),
-                    SizedBox(height: copyGap),
-                    SizedBox(
-                      width: copyWidth,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (var i = 0; i < _bodyLines.length; i++) ...[
-                            if (i > 0) SizedBox(height: bodyLineGap),
-                            Text(
-                              _bodyLines[i],
-                              style: bodyStyle,
-                              textAlign: TextAlign.left,
-                              textHeightBehavior: bodyHeightBehavior,
-                            ),
-                          ],
+                  ),
+                  SizedBox(height: copyGap),
+                  SizedBox(
+                    width: copyWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < _bodyLines.length; i++) ...[
+                          if (i > 0) SizedBox(height: bodyLineGap),
+                          Text(
+                            _bodyLines[i],
+                            style: bodyStyle,
+                            textAlign: TextAlign.left,
+                            textHeightBehavior: bodyHeightBehavior,
+                          ),
                         ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+/// Figma `Container.transform` rotates from the top-left corner.
+class _TiltedBadge extends StatelessWidget {
+  const _TiltedBadge({required this.angle, required this.child});
+
+  final double angle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      alignment: Alignment.topLeft,
+      angle: angle,
+      filterQuality: FilterQuality.medium,
+      child: child,
+    );
+  }
+}
+
+/// Decodes the PNG at device-pixel size so badges stay sharp on high-DPI screens.
+class _SharpAsset extends StatelessWidget {
+  const _SharpAsset({
+    required this.asset,
+    required this.width,
+    required this.height,
+    required this.dpr,
+  });
+
+  final String asset;
+  final double width;
+  final double height;
+  final double dpr;
+
+  @override
+  Widget build(BuildContext context) {
+    final cacheW = (width * dpr).round().clamp(1, 4096);
+    final cacheH = (height * dpr).round().clamp(1, 4096);
+
+    return Image.asset(
+      asset,
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      isAntiAlias: true,
+      gaplessPlayback: true,
+      cacheWidth: cacheW,
+      cacheHeight: cacheH,
     );
   }
 }

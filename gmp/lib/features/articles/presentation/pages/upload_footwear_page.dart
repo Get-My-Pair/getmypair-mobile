@@ -15,6 +15,8 @@ import 'package:gmp/features/articles/data/footwear_orientation_detector.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_scanner_overlay.dart';
 import 'package:gmp/features/articles/presentation/pages/footwear_camera_capture_page.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/injection_container.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -57,13 +59,17 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _images = List<File>.from(widget.initialFiles.take(_maxPhotos));
+    // Don't inherit focus/keyboard from the previous form page.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    });
     _initCamera();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _liveScanner.stop();
+    // Fire-and-forget: stop stream then dispose controller.
     _disposeCamera();
     super.dispose();
   }
@@ -79,10 +85,11 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     );
   }
 
-  void _disposeCamera() {
-    _liveScanner.stop();
-    _cameraController?.dispose();
+  Future<void> _disposeCamera() async {
+    await _liveScanner.stop();
+    final controller = _cameraController;
     _cameraController = null;
+    await controller?.dispose();
   }
 
   void _onScanStatusChanged(FootwearScanStatus status) {
@@ -141,7 +148,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     }
 
     try {
-      _disposeCamera();
+      await _disposeCamera();
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         throw StateError('No camera found on this device.');
@@ -182,7 +189,10 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     final dir = await getTemporaryDirectory();
     final path =
         '${dir.path}/footwear_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    return File(xFile.path).copy(path);
+    // Prefer bytes write — more reliable than File.copy across CameraX temp paths.
+    final bytes = await xFile.readAsBytes();
+    if (bytes.isEmpty) return null;
+    return File(path).writeAsBytes(bytes, flush: true);
   }
 
   Future<bool> _ensureGalleryPermission() async {
@@ -207,6 +217,7 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
 
   Future<void> _pickFromGallery() async {
     if (_remaining <= 0) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!await _ensureGalleryPermission()) return;
 
     final picker = ImagePicker();
@@ -238,29 +249,52 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
     if (controller == null ||
         !controller.value.isInitialized ||
         _capturing ||
+        _validatingImage ||
         _remaining <= 0) {
       return;
     }
 
     setState(() => _capturing = true);
-    await _liveScanner.stop();
     try {
+      // Must fully stop the live ML image stream before takePicture (CameraX).
+      await _liveScanner.prepareForStillCapture(controller);
+      if (!mounted || _cameraController != controller) return;
+      if (!controller.value.isInitialized) {
+        throw StateError('Camera is not ready. Please retry.');
+      }
+
       final xFile = await controller.takePicture();
       final file = await _persistCapture(xFile);
-      if (file == null || !mounted) return;
+      if (file == null || !mounted) {
+        if (mounted) {
+          await _showMessageDialog(
+            title: 'Capture failed',
+            message: 'Could not save the photo. Please try again.',
+          );
+        }
+        return;
+      }
       await _processNewImage(file);
     } catch (e) {
       if (mounted) {
+        final raw = e.toString();
+        final isPluginNoise = raw.contains('MissingPluginException') ||
+            raw.contains('closeImageLabelDetector');
         await _showMessageDialog(
           title: 'Capture failed',
-          message: e.toString().replaceFirst('Exception: ', ''),
+          message: isPluginNoise
+              ? 'Could not capture the photo. Please try again.'
+              : raw.replaceFirst('Exception: ', ''),
         );
       }
     } finally {
       if (mounted) {
         setState(() => _capturing = false);
         final active = _cameraController;
-        if (active != null && active.value.isInitialized) {
+        if (active != null &&
+            active.value.isInitialized &&
+            !_validatingImage &&
+            _remaining > 0) {
           await _startLiveScan(active);
         }
       }
@@ -370,14 +404,29 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           setState(() => _processingLabel = 'Preparing photo…');
         }
         try {
-          imageToSave = await FootwearBackgroundRemover.removeBackground(file);
+          final tokenResult = await sl<GetValidAccessToken>().call();
+          final accessToken = tokenResult.fold((_) => null, (t) => t);
+          if (accessToken == null || accessToken.isEmpty) {
+            throw FootwearBackgroundRemoverException(
+              'Sign in to prepare footwear photos.',
+              isUnavailable: true,
+            );
+          }
+          imageToSave = await FootwearBackgroundRemover.removeBackground(
+            file,
+            accessToken: accessToken,
+          );
         } on FootwearBackgroundRemoverException catch (e) {
           if (!mounted) return;
-          await _showMessageDialog(
-            title: 'Photo preparation failed',
-            message: e.message,
-          );
-          return;
+          if (e.isUnavailable) {
+            // Server key unset or no session — keep original photo.
+          } else {
+            await _showMessageDialog(
+              title: 'Photo preparation failed',
+              message: e.message,
+            );
+            return;
+          }
         } catch (e) {
           if (!mounted) return;
           await _showMessageDialog(
@@ -753,13 +802,15 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
           ),
           const SizedBox(height: 16),
           Text(
-            'Please upload a clear image showing the side profile\n'
+            'Please upload a clear image showing the side profile '
             'of your footwear for accurate detection.',
+            softWrap: true,
+            textAlign: TextAlign.start,
             style: GoogleFonts.montserrat(
               color: Colors.white,
               fontSize: subtitleSize,
               fontWeight: FontWeight.w400,
-              height: 1.3,
+              height: 1.35,
             ),
           ),
         ],
@@ -1011,7 +1062,10 @@ class _UploadFootwearPageState extends State<UploadFootwearPage>
         children: [
           _actionButton(
             label: atMax ? 'Max $_maxPhotos photos' : 'Click Image',
-            onPressed: !atMax && cameraReady && !_validatingImage
+            onPressed: !atMax &&
+                    cameraReady &&
+                    !_validatingImage &&
+                    !_capturing
                 ? _captureFromPreview
                 : null,
           ),

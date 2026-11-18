@@ -22,9 +22,9 @@ typedef FootwearScanStatusCallback = void Function(FootwearScanStatus status);
 class FootwearLiveScanner {
   FootwearLiveScanner();
 
-  static const Duration _minFrameInterval = Duration(milliseconds: 800);
-  static const int _acceptStreak = 2;
-  static const int _rejectStreak = 2;
+  static const Duration _minFrameInterval = Duration(milliseconds: 650);
+  static const int _acceptStreak = 1;
+  static const int _rejectStreak = 3;
 
   CameraController? _controller;
   FootwearScanStatusCallback? _onStatusChanged;
@@ -45,7 +45,7 @@ class FootwearLiveScanner {
   }) async {
     await stop();
     if (kIsWeb) {
-      _emit(FootwearScanStatus.unavailable);
+      _emit(FootwearScanStatus.footwearDetected);
       return;
     }
 
@@ -75,24 +75,56 @@ class FootwearLiveScanner {
     _onStatusChanged = null;
     _detectStreak = 0;
     _rejectStreakCount = 0;
-    _processing = false;
     _lastProcessedAt = null;
 
-    if (_streamActive && controller != null) {
-      try {
-        if (controller.value.isInitialized &&
-            controller.value.isStreamingImages) {
-          await controller.stopImageStream();
+    // Wait for any in-flight ML frame so takePicture is not racing the stream.
+    final deadline = DateTime.now().add(const Duration(milliseconds: 1200));
+    while (_processing && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    _processing = false;
+
+    if (controller != null && controller.value.isInitialized) {
+      // Always stop if Dart thinks we are streaming OR CameraX still reports it.
+      if (_streamActive || controller.value.isStreamingImages) {
+        try {
+          if (controller.value.isStreamingImages) {
+            await controller.stopImageStream();
+          }
+        } catch (e) {
+          debugPrint('FootwearLiveScanner: stopImageStream failed: $e');
         }
-      } catch (e) {
-        debugPrint('FootwearLiveScanner: stopImageStream failed: $e');
       }
     }
     _streamActive = false;
 
-    await _labeler?.close();
+    final labeler = _labeler;
     _labeler = null;
+    if (labeler != null) {
+      try {
+        await labeler.close();
+      } catch (e) {
+        // Some devices/builds throw MissingPluginException on close —
+        // never block capture because of labeler cleanup.
+        debugPrint('FootwearLiveScanner: labeler.close failed: $e');
+      }
+    }
     _emit(FootwearScanStatus.idle);
+  }
+
+  /// Stops streaming and leaves the controller ready for [CameraController.takePicture].
+  Future<void> prepareForStillCapture(CameraController controller) async {
+    await stop();
+    // CameraX needs a short settle after unbinding ImageAnalysis.
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    if (controller.value.isInitialized && controller.value.isStreamingImages) {
+      try {
+        await controller.stopImageStream();
+      } catch (e) {
+        debugPrint('FootwearLiveScanner: prepareForStillCapture stop failed: $e');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+    }
   }
 
   void updateDeviceOrientation(DeviceOrientation orientation) {

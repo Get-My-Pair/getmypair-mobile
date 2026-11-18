@@ -4,12 +4,26 @@ import 'package:flutter/foundation.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../utils/web_dev_otp_log.dart';
 import '../models/login_response_model.dart';
 import '../models/user_model.dart';
 
+
 abstract class AuthRemoteDataSource {
-  Future<Map<String, dynamic>> sendOTP(String mobile);
-  Future<LoginResponseModel> verifyOTP(String mobile, String otp);
+  Future<Map<String, dynamic>> sendOTP(
+    String mobile, {
+    String? androidSmsHash,
+  });
+  Future<LoginResponseModel> verifyOTP(
+    String mobile,
+    String otp, {
+    required String deviceId,
+  });
+  Future<LoginResponseModel> loginWithTrustedDevice({
+    required String mobile,
+    required String deviceId,
+    required String deviceAuthToken,
+  });
   Future<LoginResponseModel> loginWithEmail({
     required String email,
     required String password,
@@ -21,6 +35,7 @@ abstract class AuthRemoteDataSource {
     required String gender,
     required String householdType,
     Map<String, dynamic>? location,
+    String? deviceId,
   });
   Future<UserModel> getCurrentUser(String accessToken);
   Future<void> logout(String refreshToken, String? accessToken);
@@ -89,57 +104,83 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     return value[0].toUpperCase() + value.substring(1);
   }
 
+  /// `8682851249` / `918682851249` / `+918682851249` → `+918682851249`.
+  String _normalizeMobile(String mobile) {
+    final raw = mobile.trim();
+    if (raw.isEmpty) return raw;
+    if (raw.startsWith('+')) return raw;
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length == 10) return '+91$digits';
+    if (digits.length == 12 && digits.startsWith('91')) return '+$digits';
+    return '+91$digits';
+  }
+
   @override
-  Future<Map<String, dynamic>> sendOTP(String mobile) async {
+  Future<Map<String, dynamic>> sendOTP(
+    String mobile, {
+    String? androidSmsHash,
+  }) async {
     try {
-      // Ensure mobile has + prefix if it doesn't
-      String normalizedMobile = mobile.trim();
-      if (normalizedMobile.isNotEmpty && !normalizedMobile.startsWith('+')) {
-        // Add country code if missing (assuming India +91)
-        normalizedMobile = '+91$normalizedMobile';
+      final normalizedMobile = _normalizeMobile(mobile);
+      final body = <String, dynamic>{'mobile': normalizedMobile};
+      final hash = (androidSmsHash ?? '').trim();
+      if (hash.length == 11) {
+        body['androidSmsHash'] = hash;
       }
 
       final response = await client.post(
         ApiEndpoints.sendOtp,
-        body: {'mobile': normalizedMobile},
+        body: body,
       );
 
-      // Return response data which may include OTP in development mode
-      final data = response['data'] as Map<String, dynamic>? ?? {};
-      
-      if (kDebugMode && data.containsKey('otp')) {
-        // ignore: avoid_print
-        print('DEBUG: OTP received from backend: ${data['otp']}');
+      // Keep `otp` for Dev OTP popup when API echoes it (web / debug).
+      // Release Android/iOS: strip even if a misconfigured API leaks it.
+      final data = Map<String, dynamic>.from(
+        response['data'] as Map<String, dynamic>? ?? {},
+      );
+      if (!isWebDevOtpEnabled) {
+        data.remove('otp');
+      } else {
+        final otpRaw = data['otp'];
+        final otp = otpRaw == null ? '' : otpRaw.toString().trim();
+        if (otp.isNotEmpty) {
+          logWebDevOtpToTerminal(otp, mobile: normalizedMobile);
+        }
       }
-      
+
       return data;
+    } on NetworkException {
+      rethrow;
+    } on ServerException {
+      rethrow;
     } catch (e) {
-      if (e is NetworkException) {
-        throw ServerException(e.message);
-      }
       throw ServerException('Failed to send OTP: ${e.toString()}');
     }
   }
 
   @override
-  Future<LoginResponseModel> verifyOTP(String mobile, String otp) async {
+  Future<LoginResponseModel> verifyOTP(
+    String mobile,
+    String otp, {
+    required String deviceId,
+  }) async {
     try {
-      // Ensure mobile has + prefix if it doesn't (must match the format used in sendOTP)
-      String normalizedMobile = mobile.trim();
-      if (normalizedMobile.isNotEmpty && !normalizedMobile.startsWith('+')) {
-        normalizedMobile = '+91$normalizedMobile';
-      }
+      final normalizedMobile = _normalizeMobile(mobile);
 
       // Ensure OTP is a clean 6-digit string (remove any spaces or non-numeric chars)
       final cleanOtp = otp.trim().replaceAll(RegExp(r'[^0-9]'), '');
 
       final deviceInfo = await _deviceInfoHeaderValue();
+      final body = <String, dynamic>{
+        'mobile': normalizedMobile,
+        'otp': cleanOtp,
+      };
+      if (deviceId.trim().isNotEmpty) {
+        body['deviceId'] = deviceId.trim();
+      }
       final response = await client.post(
         ApiEndpoints.verifyOtp,
-        body: {
-          'mobile': normalizedMobile,
-          'otp': cleanOtp,
-        },
+        body: body,
         extraHeaders: {
           'device-info': deviceInfo,
         },
@@ -150,6 +191,40 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Extract the actual error message from the exception
       String errorMessage = 'Failed to verify OTP';
       if (e.toString().contains('ServerException')) {
+        errorMessage = e.toString().replaceFirst('ServerException: ', '');
+      } else {
+        errorMessage = e.toString();
+      }
+      throw ServerException(errorMessage);
+    }
+  }
+
+  @override
+  Future<LoginResponseModel> loginWithTrustedDevice({
+    required String mobile,
+    required String deviceId,
+    required String deviceAuthToken,
+  }) async {
+    try {
+      final normalizedMobile = _normalizeMobile(mobile);
+      final deviceInfo = await _deviceInfoHeaderValue();
+      final response = await client.post(
+        ApiEndpoints.loginTrustedDevice,
+        body: {
+          'mobile': normalizedMobile,
+          'deviceId': deviceId,
+          'deviceAuthToken': deviceAuthToken,
+        },
+        extraHeaders: {
+          'device-info': deviceInfo,
+        },
+      );
+      return LoginResponseModel.fromJson(response);
+    } catch (e) {
+      String errorMessage = 'Device authorization expired';
+      if (e is ServerException) {
+        errorMessage = e.message;
+      } else if (e.toString().contains('ServerException')) {
         errorMessage = e.toString().replaceFirst('ServerException: ', '');
       } else {
         errorMessage = e.toString();
@@ -176,13 +251,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String gender,
     required String householdType,
     Map<String, dynamic>? location,
+    String? deviceId,
   }) async {
     try {
-      // Ensure mobile has + prefix if it doesn't
-      String normalizedMobile = mobile;
-      if (mobile.isNotEmpty && !mobile.startsWith('+')) {
-        normalizedMobile = '+91$mobile';
-      }
+      final normalizedMobile = _normalizeMobile(mobile);
 
       final body = <String, dynamic>{
         'mobile': normalizedMobile,
@@ -191,6 +263,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'gender': gender.toLowerCase(),
         'householdType': householdType,
       };
+      if (deviceId != null && deviceId.trim().isNotEmpty) {
+        body['deviceId'] = deviceId.trim();
+      }
       // Backend auth.validation only allows location: { lat, lng, address }
       if (location != null && location.isNotEmpty) {
         final loc = <String, dynamic>{};

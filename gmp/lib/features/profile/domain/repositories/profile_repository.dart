@@ -50,6 +50,8 @@ abstract class ProfileRepository {
     required String accessToken,
     required String name,
     required String relation,
+    required String gender,
+    required DateTime dateOfBirth,
   });
 
   Future<FamilyMember> updateFamilyMember({
@@ -57,10 +59,24 @@ abstract class ProfileRepository {
     required String memberId,
     String? name,
     String? relation,
+    String? gender,
+    DateTime? dateOfBirth,
   });
 
   Future<void> deleteFamilyMember({
     required String accessToken,
     required String memberId,
+  });
+
+  Future<UserProfile> switchActiveProfile({
+    required String accessToken,
+    required String profileId,
+  });
+
+  Future<String> uploadFamilyMemberImage({
+    required String accessToken,
+    required String memberId,
+    required Uint8List imageBytes,
+    required String fileName,
   });
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/active_profile_header.dart';
 import '../../../../core/errors/exceptions.dart';
 
 import '../models/article_model.dart';
@@ -13,6 +14,7 @@ abstract class ArticleRemoteDataSource {
     required String brand,
     required String model,
     required String category,
+    String footwearType = 'everyday',
     required String color,
     int? purchaseYear,
     required String condition,
@@ -29,6 +31,7 @@ abstract class ArticleRemoteDataSource {
     String? brand,
     String? model,
     String? category,
+    String? footwearType,
     String? color,
     int? purchaseYear,
     String? condition,
@@ -42,13 +45,17 @@ abstract class ArticleRemoteDataSource {
 class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
   static const Duration _timeout = Duration(seconds: 30);
 
-  Map<String, String> _headers(String accessToken) => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-App-Source': AppConstants.appSourceForApi,
-        'X-App-Version': AppConstants.appVersion,
-      };
+  Map<String, String> _headers(String accessToken) {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $accessToken',
+      'X-App-Source': AppConstants.appSourceForApi,
+      'X-App-Version': AppConstants.appVersion,
+    };
+    ActiveProfileHeader.applyTo(headers);
+    return headers;
+  }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
     if (response.body.isEmpty) {
@@ -139,6 +146,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
     required String brand,
     required String model,
     required String category,
+    String footwearType = 'everyday',
     required String color,
     int? purchaseYear,
     required String condition,
@@ -150,6 +158,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       final body = <String, dynamic>{
         'brand': brand,
         'model': model,
+        'footwearType': footwearType,
         'category': category,
         'color': color,
         'condition': condition,
@@ -195,6 +204,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       request.headers['X-App-Source'] = AppConstants.appSourceForApi;
       request.headers['X-App-Version'] = AppConstants.appVersion;
       request.headers['Accept'] = 'application/json';
+      ActiveProfileHeader.applyTo(request.headers);
       request.fields['articleId'] = articleId;
       request.files.add(http.MultipartFile.fromBytes(
         'file',
@@ -228,6 +238,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
     String? brand,
     String? model,
     String? category,
+    String? footwearType,
     String? color,
     int? purchaseYear,
     String? condition,
@@ -240,6 +251,7 @@ class ArticleRemoteDataSourceImpl implements ArticleRemoteDataSource {
       if (brand != null) body['brand'] = brand;
       if (model != null) body['model'] = model;
       if (category != null) body['category'] = category;
+      if (footwearType != null) body['footwearType'] = footwearType;
       if (color != null) body['color'] = color;
       if (purchaseYear != null) body['purchaseYear'] = purchaseYear;
       if (condition != null) body['condition'] = condition;

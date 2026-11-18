@@ -32,11 +32,12 @@ class FootwearImageValidationResult {
     );
   }
 
+  /// Used when on-device ML Kit cannot run. Callers should treat this as a
+  /// soft pass — never block the user from capturing/uploading.
   factory FootwearImageValidationResult.unavailable({String? message}) {
     return FootwearImageValidationResult._(
-      isFootwear: false,
-      message: message ??
-          'Could not verify this image. Try again on a physical device with a clear shoe photo.',
+      isFootwear: true,
+      message: message,
     );
   }
 }
@@ -45,43 +46,146 @@ class FootwearImageValidationResult {
 class FootwearImageValidator {
   FootwearImageValidator._();
 
-  static const double _minShoeConfidence = 0.42;
-  static const double _labelThreshold = 0.35;
+  static const double _minShoeConfidence = 0.22;
+  static const double _weakShoeConfidence = 0.16;
+  static const double _labelThreshold = 0.22;
 
   /// Exposed for live camera scanning (same threshold as file validation).
   static double get labelThreshold => _labelThreshold;
 
+  /// Footwear-related ML Kit labels, spellings, and material hints (e.g. rubber).
   static const List<String> _shoeTerms = [
     'shoe',
     'shoes',
     'footwear',
+    'foot wear',
+    'footware',
+    'foot-wear',
     'sneaker',
     'sneakers',
-    'boot',
-    'boots',
-    'sandal',
-    'sandals',
-    'slipper',
-    'slippers',
-    'loafer',
-    'loafers',
-    'heel',
-    'heels',
     'trainer',
     'trainers',
-    'cleat',
-    'cleats',
-    'oxford',
-    'moccasin',
-    'clog',
+    'running shoe',
+    'running shoes',
+    'tennis shoe',
+    'tennis shoes',
+    'athletic shoe',
+    'athletic shoes',
+    'basketball shoe',
+    'basketball shoes',
+    'sport shoe',
+    'sports shoe',
+    'sports shoes',
+    'gym shoe',
+    'gym shoes',
+    'cross trainer',
+    'cross-trainer',
+    'boot',
+    'boots',
+    'hiking boot',
+    'hiking boots',
+    'work boot',
+    'work boots',
+    'ankle boot',
+    'ankle boots',
+    'combat boot',
+    'combat boots',
+    'wellington',
+    'wellington boot',
+    'wellingtons',
+    'wellies',
+    'gumboot',
+    'gumboots',
+    'galosh',
+    'galoshes',
+    'duck boot',
+    'rain boot',
+    'rain boots',
+    'sandal',
+    'sandals',
     'flip-flop',
     'flip flop',
-    'running shoe',
-    'tennis shoe',
-    'athletic shoe',
-    'basketball shoe',
-    'hiking boot',
+    'flipflop',
+    'flipflops',
+    'flip-flops',
+    'slide',
+    'slides',
+    'thong sandal',
+    'slipper',
+    'slippers',
+    'house shoe',
+    'house shoes',
+    'bedroom slipper',
+    'loafer',
+    'loafers',
+    'oxford',
+    'oxfords',
+    'derby',
+    'brogue',
+    'brogues',
+    'moccasin',
+    'moccasins',
+    'monk shoe',
+    'dress shoe',
+    'dress shoes',
+    'ballet flat',
+    'ballet flats',
+    'flat shoe',
+    'flats',
+    'heel',
+    'heels',
+    'high heel',
+    'high heels',
     'high-heeled',
+    'high-heeled shoe',
+    'pump',
+    'pumps',
+    'stiletto',
+    'stilettos',
+    'wedge',
+    'wedges',
+    'platform shoe',
+    'clog',
+    'clogs',
+    'espadrille',
+    'espadrilles',
+    'boat shoe',
+    'boat shoes',
+    'deck shoe',
+    'cleat',
+    'cleats',
+    'football boot',
+    'football boots',
+    'soccer shoe',
+    'soccer shoes',
+    'golf shoe',
+    'golf shoes',
+    'skate shoe',
+    'skate shoes',
+    'crocs',
+    'croc',
+    'rubber',
+    'rubber shoe',
+    'rubber shoes',
+    'rubber boot',
+    'rubber boots',
+    'rubber sandal',
+    'rubber sandals',
+    'rubber slipper',
+    'rubber slippers',
+    'rubber sole',
+    'gumshoe',
+    'chappal',
+    'chappals',
+    'kolhapuri',
+    'jutti',
+    'mule',
+    'mules',
+    'canvas shoe',
+    'leather shoe',
+    'leather boot',
+    'formal shoe',
+    'casual shoe',
   ];
 
   static bool _isShoeLabel(String text) {
@@ -197,19 +301,34 @@ class FootwearImageValidator {
     final detectedItem =
         detectedRaw != null ? friendlyItemName(detectedRaw) : null;
 
-    if (shoeScore >= _minShoeConfidence && shoeScore >= nonShoeScore) {
+    // Accept any clear footwear signal, even if another label scores slightly higher.
+    if (shoeScore >= _minShoeConfidence) {
       return FootwearImageValidationResult.accepted();
     }
 
-    if (shoeScore > 0 && shoeScore < _minShoeConfidence) {
+    // Accept weaker footwear hits when they still appear among top labels.
+    final sorted = List<ImageLabel>.from(labels)
+      ..sort((a, b) => b.confidence.compareTo(a.confidence));
+    for (final label in sorted.take(5)) {
+      if (_isShoeLabel(label.label) &&
+          label.confidence >= _weakShoeConfidence) {
+        return FootwearImageValidationResult.accepted();
+      }
+    }
+
+    // Accept when footwear is competitive with the strongest non-footwear label.
+    if (shoeScore >= _weakShoeConfidence &&
+        (nonShoeScore <= 0 || shoeScore >= nonShoeScore * 0.55)) {
+      return FootwearImageValidationResult.accepted();
+    }
+
+    if (shoeScore > 0 && shoeScore < _weakShoeConfidence) {
       return FootwearImageValidationResult.rejected(
         detectedItem: detectedItem,
         message: buildRejectedMessage(weakShoe: true),
       );
     }
 
-    final sorted = List<ImageLabel>.from(labels)
-      ..sort((a, b) => b.confidence.compareTo(a.confidence));
     final topOverall = sorted.first;
     final dynamicItem = _isShoeLabel(topOverall.label)
         ? detectedItem
@@ -228,24 +347,44 @@ class FootwearImageValidator {
       );
     }
 
+    // ML Kit image labeling is unavailable on web — allow upload without blocking.
     if (kIsWeb) {
-      return FootwearImageValidationResult.unavailable();
+      return FootwearImageValidationResult.accepted();
     }
 
-    final labeler = ImageLabeler(
-      options: ImageLabelerOptions(confidenceThreshold: _labelThreshold),
-    );
-
-    try {
-      final labels = await labeler.processImage(
-        InputImage.fromFilePath(file.path),
+    // One retry: live-scanner teardown can briefly leave the native detector busy.
+    Object? lastError;
+    StackTrace? lastStack;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
+      final labeler = ImageLabeler(
+        options: ImageLabelerOptions(confidenceThreshold: _labelThreshold),
       );
-      return classifyLabels(labels);
-    } catch (e, st) {
-      debugPrint('FootwearImageValidator: $e\n$st');
-      return FootwearImageValidationResult.unavailable();
-    } finally {
-      await labeler.close();
+      try {
+        final labels = await labeler.processImage(
+          InputImage.fromFilePath(file.path),
+        );
+        return classifyLabels(labels);
+      } catch (e, st) {
+        lastError = e;
+        lastStack = st;
+        debugPrint('FootwearImageValidator (attempt ${attempt + 1}): $e\n$st');
+      } finally {
+        try {
+          await labeler.close();
+        } catch (e) {
+          debugPrint('FootwearImageValidator: labeler.close failed: $e');
+        }
+      }
     }
+
+    // MissingPluginException, model download failures, emulator gaps, etc.
+    // must not block capture — same soft-pass behavior as web.
+    debugPrint(
+      'FootwearImageValidator: giving up after retries: $lastError\n$lastStack',
+    );
+    return FootwearImageValidationResult.unavailable();
   }
 }

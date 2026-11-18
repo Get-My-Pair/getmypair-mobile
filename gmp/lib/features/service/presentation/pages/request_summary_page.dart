@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
-import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/payment/presentation/bloc/payment_bloc.dart';
+import 'package:gmp/features/payment/presentation/pages/payment_request_page.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
 import 'package:gmp/features/service/data/service_proof_upload.dart';
 import 'package:gmp/injection_container.dart';
@@ -69,7 +73,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
       widget.service.value == 'donate' ||
       widget.service.value == 'dispose';
 
-  String get _flowPageTitle {
+  String get _serviceDisplayTitle {
     switch (widget.service.value) {
       case 'maintenance':
         return 'MaintainMyPair';
@@ -84,35 +88,13 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     }
   }
 
-  String get _serviceDisplayTitle {
-    switch (widget.service.value) {
-      case 'maintenance':
-        return 'Maintain My Pair';
-      case 'wash':
-        return 'Wash My Pair';
-      case 'donate':
-        return 'Donate My Pair';
-      case 'dispose':
-        return 'Dispose My Pair';
-      default:
-        return 'Repair My Pair';
-    }
+  String get _repairShopLabel {
+    final city = widget.address.city.trim();
+    if (city.isNotEmpty) return city;
+    final line = widget.address.addressLine1.trim();
+    if (line.isNotEmpty) return line;
+    return 'Nearby';
   }
-
-  String get _confirmButtonLabel {
-    switch (widget.service.value) {
-      case 'donate':
-        return 'All Set for Donation';
-      case 'dispose':
-        return 'All Set for Disposal';
-      default:
-        return 'Request Quotation';
-    }
-  }
-
-  bool get _hideEstimationRow =>
-      widget.service.value == 'donate' ||
-      widget.service.value == 'dispose';
 
   bool get _articlesLoaded => _articles.isNotEmpty;
 
@@ -123,9 +105,6 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         .where((n) => n.isNotEmpty)
         .join(', ');
   }
-
-  int get _totalEstimatedRupees =>
-      widget.estimatedCostRupees * widget.articleIds.length;
 
   @override
   void initState() {
@@ -168,24 +147,15 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
     );
   }
 
-  Future<void> _confirmRequest() async {
-    if (_submitting) return;
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-
+  /// Creates the service request(s). On success [requestId] is set for payment.
+  Future<({String? error, String? requestId})> _submitServiceRequest() async {
     final tokenResult = await sl<GetValidAccessToken>().call();
-    if (!mounted) return;
+    if (!mounted) {
+      return (error: 'Please try again', requestId: null);
+    }
 
-    await tokenResult.fold(
-      (_) async {
-        if (!mounted) return;
-        setState(() {
-          _submitting = false;
-          _error = 'Please sign in again';
-        });
-      },
+    return await tokenResult.fold(
+      (_) async => (error: 'Please sign in again', requestId: null),
       (token) async {
         try {
           final photoUrls = <String>[];
@@ -212,7 +182,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
               'photos': photoUrls,
               'videos': videoUrls,
               'estimatedCost': widget.estimatedCostRupees,
-              'pickupMode': widget.homePickup ? 'home_pickup' : 'cobbler_nearby',
+              'pickupMode':
+                  widget.homePickup ? 'home_pickup' : 'cobbler_nearby',
             };
             if (desc != null && desc.isNotEmpty) {
               body['problemDescription'] = desc;
@@ -233,37 +204,76 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
 
             final requestId =
                 (res['data'] is Map && (res['data'] as Map)['request'] is Map)
-                    ? ((res['data'] as Map)['request'] as Map)['_id']?.toString()
+                    ? ((res['data'] as Map)['request'] as Map)['_id']
+                        ?.toString()
                     : null;
-            if (requestId != null) createdIds.add(requestId);
+            if (requestId != null && requestId.isNotEmpty) {
+              createdIds.add(requestId);
+            }
           }
 
-          if (!mounted) return;
+          if (!mounted) {
+            return (error: 'Please try again', requestId: null);
+          }
           final count = widget.articleIds.length;
           await showAppFeedbackAlert(
             context,
             message: count > 1
-                ? '$count service requests created'
-                : createdIds.isNotEmpty
-                    ? 'Request created (${createdIds.first})'
-                    : 'Request created',
+                ? '$count service requests created — continue to payment'
+                : 'Request created — continue to payment',
             type: AppFeedbackType.success,
           );
-          if (!mounted) return;
-          Navigator.pop(context, true);
+          return (
+            error: null,
+            requestId: createdIds.isNotEmpty ? createdIds.first : null,
+          );
         } catch (e) {
-          if (!mounted) return;
-          setState(() {
-            _submitting = false;
-            _error = e.toString().replaceFirst('Exception: ', '');
-          });
-        } finally {
-          if (mounted) {
-            setState(() => _submitting = false);
-          }
+          return (
+            error: e.toString().replaceFirst('Exception: ', ''),
+            requestId: null,
+          );
         }
       },
     );
+  }
+
+  Future<void> _confirmRequest() async {
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final result = await _submitServiceRequest();
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (result.error != null) {
+      setState(() => _error = result.error);
+      return;
+    }
+    final requestId = result.requestId;
+    if (requestId != null && requestId.isNotEmpty) {
+      final amount = widget.estimatedCostRupees.toDouble();
+      if (amount > 0) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (_) => sl<PaymentBloc>(),
+              child: PaymentRequestPage(
+                serviceRequestId: requestId,
+                amount: amount,
+                serviceType: widget.service.value,
+                requestLabel: requestId.length <= 10
+                    ? 'Request #$requestId'
+                    : 'Request #${requestId.substring(0, 8)}…',
+              ),
+            ),
+          ),
+          (route) => route.isFirst,
+        );
+        return;
+      }
+    }
+    Navigator.pop(context, true);
   }
 
   @override
@@ -287,8 +297,8 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
         centerTitle: false,
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+          ? const AppSkeletonCards(
+              color: Color(0x66FFFFFF),
             )
           : ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
@@ -521,21 +531,20 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
   }
 
   Widget _buildRepairSummaryPage() {
-    final footwearName = _footwearDisplayName;
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final problemText = widget.problemDescription?.trim().isNotEmpty == true
         ? widget.problemDescription!.trim()
-        : 'Lorem ipsum dolor sit amet consectetur. Ut vitae libero lorem tincidunt egestas congue. Enim ultricies luctus porta ut.';
+        : '—';
 
     const panelRadius = BorderRadius.only(
       topLeft: Radius.circular(20),
       topRight: Radius.circular(20),
-      bottomLeft: Radius.circular(50),
-      bottomRight: Radius.circular(50),
     );
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    const dockContentH = 52.0;
+    final dockH = 14 + dockContentH + 14 + bottomSafe;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         children: [
@@ -543,7 +552,7 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 30, 10, 0),
+              padding: EdgeInsets.fromLTRB(10, 52, 10, dockH - 12),
               child: DecoratedBox(
                 decoration: const ShapeDecoration(
                   color: Color(0xFFF0F0F0),
@@ -559,260 +568,239 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
                 child: ClipRRect(
                   borderRadius: panelRadius,
                   child: _loading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: Color(0xFF11999E)),
-                        )
+                      ? const AppSkeletonCards()
                       : ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                          padding: const EdgeInsets.fromLTRB(
+                            20,
+                            16,
+                            20,
+                            24,
+                          ),
                           children: [
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: _submitting ? null : () => Navigator.pop(context),
-                                  icon: const Icon(
-                                    Icons.arrow_back_ios_new_rounded,
-                                    color: Color(0xFF062F35),
-                                    size: 24,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  alignment: Alignment.centerLeft,
-                                  constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _flowPageTitle,
-                                  style: GoogleFonts.boldonse(
-                                    color: const Color(0xFF062F35),
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Summary',
-                              style: GoogleFonts.boldonse(
-                                color: const Color(0xFF062F35),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            _summaryLine('Type of service:', _serviceDisplayTitle),
-                            _summaryLine('Name of my footwear:', footwearName),
-                            _summaryLine(
-                              'Pickup scheduled on:',
-                              widget.pickupScheduleLabel ?? 'Not specified',
-                              singleLineValue: true,
-                            ),
-                            if (!_hideEstimationRow)
-                              _summaryLine(
-                                'Estimation cost:',
-                                widget.articleIds.length > 1
-                                    ? '₹${widget.estimatedCostRupees} × ${widget.articleIds.length} = ₹$_totalEstimatedRupees'
-                                    : '₹${widget.estimatedCostRupees}',
-                              ),
-                            _summaryLine('Problem described:', ''),
-                            const SizedBox(height: 2),
-                            Text(
-                              problemText,
-                              style: GoogleFonts.montserrat(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            _buildProofPreviewStrip(),
-                            const SizedBox(height: 24),
-                            Center(
-                              child: SizedBox(
-                                width: 237,
-                                height: 48,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.centerRight,
-                                      end: Alignment.centerLeft,
-                                      colors: [Color(0xFF0CADC5), Color(0xFF063239)],
-                                    ),
-                                    borderRadius: BorderRadius.circular(100),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color(0x19000000),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: TextButton(
-                                    onPressed: _submitting || !_articlesLoaded
-                                        ? null
-                                        : _confirmRequest,
-                                    style: TextButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(100),
-                                      ),
-                                    ),
-                                    child: _submitting
-                                        ? const SizedBox(
-                                            height: 22,
-                                            width: 22,
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : Text(
-                                            _confirmButtonLabel,
+                                  Transform.translate(
+                                    offset: const Offset(-8, 0),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          onPressed: _submitting
+                                              ? null
+                                              : () => Navigator.pop(context),
+                                          icon: const Icon(
+                                            Icons.arrow_back_ios_new_rounded,
+                                            color: Color(0xFF062F35),
+                                            size: 24,
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          alignment: Alignment.centerLeft,
+                                          constraints:
+                                              const BoxConstraints.tightFor(
+                                            width: 28,
+                                            height: 28,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            'Confirming Service',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.boldonse(
-                                              color: Colors.white,
-                                              fontSize: 16,
+                                              color: const Color(0xFF062F35),
+                                              fontSize: 20,
                                               fontWeight: FontWeight.w400,
                                             ),
                                           ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ),
-            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                _error!,
-                                style: GoogleFonts.montserrat(
-                                  color: AppColors.error,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    'Service Details',
+                                    style: GoogleFonts.boldonse(
+                                      color: const Color(0xFF062F35),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _detailRow(
+                                    iconAsset:
+                                        'assets/images/noun-shoes-cleaning-7675732 1.svg',
+                                    label: 'Service Type',
+                                    value: _serviceDisplayTitle,
+                                  ),
+                                  _detailRow(
+                                    iconAsset:
+                                        'assets/images/icons/repairshop.png',
+                                    label: 'Repair Shop',
+                                    value: _repairShopLabel,
+                                  ),
+                                  _detailRow(
+                                    iconAsset:
+                                        'assets/images/icons/calendar.svg',
+                                    label: 'Slot Details',
+                                    value: widget.pickupScheduleLabel ??
+                                        'Not specified',
+                                  ),
+                                  _detailRow(
+                                    iconAsset:
+                                        'assets/images/icons/shoe.svg',
+                                    label: 'Number of Footwear',
+                                    value: _articlesLoaded
+                                        ? '${_articles.length}'
+                                        : '${widget.articleIds.length}',
+                                  ),
+                                  _detailRow(
+                                    iconAsset:
+                                        'assets/images/icons/message-circle.svg',
+                                    label: 'Reason for Service',
+                                    value: problemText,
+                                    multiline: true,
+                                  ),
+                                  if (_error != null) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _error!,
+                                      style: GoogleFonts.montserrat(
+                                        color: AppColors.error,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                           ],
                         ),
                 ),
               ),
             ),
           ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: DashboardLinkedBottomNav(selectedTabIndex: 1),
-          ),
-          SizedBox(height: bottomSafe),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryLine(
-    String key,
-    String value, {
-    bool singleLineValue = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            key,
-            style: GoogleFonts.boldonse(
-              color: const Color(0xFF12899B),
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              value,
-              maxLines: singleLineValue ? 1 : 2,
-              overflow: TextOverflow.ellipsis,
-              softWrap: !singleLineValue,
-              style: GoogleFonts.montserrat(
-                color: Colors.black,
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
+          if (!_loading)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
+                ),
+                padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomSafe),
+                child: _submitting
+                    ? const SizedBox(
+                        height: dockContentH,
+                        child: Center(
+                          child: SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Color(0xFF11899B),
+                            ),
+                          ),
+                        ),
+                      )
+                    : SizedBox(
+                        height: dockContentH,
+                        child: _SlideToConfirm(
+                          enabled: _articlesLoaded && !_submitting,
+                          onConfirmed: _confirmRequest,
+                        ),
+                      ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildProofPreviewStrip() {
-    final images = widget.proofImages;
-    final videos = widget.proofVideos;
-    if (images.isEmpty && videos.isEmpty) {
-      return Text(
-        'No proof photos or videos attached.',
-        style: GoogleFonts.montserrat(
-          color: const Color(0xFF8D8D8D),
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-        ),
-      );
-    }
+  Widget _detailRow({
+    required String iconAsset,
+    required String label,
+    required String value,
+    bool multiline = false,
+    Widget? trailing,
+  }) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (images.isNotEmpty)
-          SizedBox(
-            height: 104,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: images.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, index) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 104,
-                    height: 104,
-                    child: FutureBuilder(
-                      future: images[index].readAsBytes(),
-                      builder: (context, snap) {
-                        if (!snap.hasData) {
-                          return Container(
-                            color: const Color(0xFFD6D6D6),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF11999E),
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        return Image.memory(
-                          snap.data!,
-                          fit: BoxFit.cover,
-                        );
-                      },
-                    ),
+        Padding(
+          padding: const EdgeInsets.only(top: 14, bottom: 20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0x33D9D9D9),
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: const Color(0xFF12899B),
+                    width: 1,
                   ),
-                );
-              },
-            ),
+                ),
+                alignment: Alignment.center,
+                child: iconAsset.toLowerCase().endsWith('.png')
+                    ? Image.asset(
+                        iconAsset,
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      )
+                    : SvgPicture.asset(
+                        iconAsset,
+                        width: 26,
+                        height: 26,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF12899B),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF12899B),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (value.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        value,
+                        maxLines: multiline ? 6 : 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF5A5A5A),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w400,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                    if (trailing != null) ...[
+                      const SizedBox(height: 10),
+                      trailing,
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-        if (videos.isNotEmpty) ...[
-          if (images.isNotEmpty) const SizedBox(height: 10),
-          Text(
-            '${videos.length} video(s) attached: ${videos.map((v) => v.name).join(', ')}',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.montserrat(
-              color: Colors.black87,
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
+        ),
+        const Divider(height: 1, thickness: 1, color: Color(0xFFD8D8D8)),
       ],
     );
   }
@@ -871,6 +859,137 @@ class _RequestSummaryPageState extends State<RequestSummaryPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SlideToConfirm extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback onConfirmed;
+
+  const _SlideToConfirm({
+    super.key,
+    required this.enabled,
+    required this.onConfirmed,
+  });
+
+  @override
+  State<_SlideToConfirm> createState() => _SlideToConfirmState();
+}
+
+class _SlideToConfirmState extends State<_SlideToConfirm> {
+  double _dx = 0;
+  bool _fired = false;
+
+  static const double _thumb = 44;
+  static const double _height = 52;
+
+  @override
+  void didUpdateWidget(covariant _SlideToConfirm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.enabled && _dx != 0) {
+      setState(() {
+        _dx = 0;
+        _fired = false;
+      });
+    }
+  }
+
+  void _onDragUpdate(DragUpdateDetails details, double maxDx) {
+    if (!widget.enabled || _fired) return;
+    setState(() {
+      _dx = (_dx + details.delta.dx).clamp(0.0, maxDx);
+    });
+  }
+
+  void _onDragEnd(double maxDx) {
+    if (!widget.enabled || _fired) return;
+    if (_dx >= maxDx * 0.85) {
+      setState(() {
+        _dx = maxDx;
+        _fired = true;
+      });
+      widget.onConfirmed();
+    } else {
+      setState(() => _dx = 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Leave room for the repairshop target icon on the right.
+        final maxDx =
+            (constraints.maxWidth - _thumb - 8 - 46 - 8).clamp(0.0, 400.0);
+        return Container(
+          height: _height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F0F0),
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                'Slide to confirm',
+                style: GoogleFonts.boldonse(
+                  color: const Color(0xFF000000),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Positioned(
+                right: 8,
+                child: Image.asset(
+                  'assets/images/icons/repairshop.png',
+                  width: 46,
+                  height: 46,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+              Positioned(
+                left: 4 + _dx,
+                child: GestureDetector(
+                  onHorizontalDragUpdate: widget.enabled
+                      ? (d) => _onDragUpdate(d, maxDx)
+                      : null,
+                  onHorizontalDragEnd:
+                      widget.enabled ? (_) => _onDragEnd(maxDx) : null,
+                  child: Container(
+                    width: _thumb,
+                    height: _thumb,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.enabled
+                          ? const Color(0xFF12899B)
+                          : const Color(0xFF9BB5BA),
+                    ),
+                    alignment: Alignment.center,
+                    child: SvgPicture.asset(
+                      'assets/images/icons/shoe.svg',
+                      width: 26,
+                      height: 18,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

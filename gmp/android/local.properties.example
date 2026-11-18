@@ -1,0 +1,5 @@
+# Copy values into android/local.properties (gitignored) — do not commit real keys.
+# sdk.dir is usually written by Flutter/Android Studio automatically.
+#
+# sdk.dir=C:\\Users\\YOU\\AppData\\Local\\Android\\sdk
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY

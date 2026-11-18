@@ -12,9 +12,8 @@ class DonateMyPairPage extends StatelessWidget {
     return const RepairMyPairPage(
       pageTitle: 'DonateMyPair',
       allowedServiceTypes: ['donate'],
-      description:
-          'DonateMyPair helps you give your footwear a second life.\n\n'
-          'Please select the footwear you\'d like to donate.',
+      tagline: 'Give Your Pair a Second Life!!',
+      description: 'Please select the footwear you\'d like to donate.',
     );
   }
 }

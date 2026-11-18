@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'app_constants.dart';
+import 'active_profile_header.dart';
 
 /// API endpoints for getmypair-mobile.
 /// Aligned with getmypair-api backend: /api/auth/*, /api/version.
@@ -18,10 +19,19 @@ class ApiEndpoints {
   static const bool _kUseLocalApi =
       bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
 
-  /// Get base URL based on environment
+  /// Get base URL based on environment.
+  ///
+  /// `flutter run --dart-define=USE_LOCAL_API=true` points at a local API
+  /// (Android emulator → 10.0.2.2, iOS/desktop/web → localhost).
   static String get baseUrl {
-    if (kDebugMode && _kUseLocalApi) {
-      return 'https://getmypair-api.onrender.com';
+    if (_kUseLocalApi) {
+      if (kIsWeb) return 'http://localhost:3000';
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.android:
+          return 'http://10.0.2.2:3000';
+        default:
+          return 'http://localhost:3000';
+      }
     }
     return AppConstants.defaultApiBaseUrl;
   }
@@ -34,6 +44,7 @@ class ApiEndpoints {
   // Auth endpoints (getmypair-api: server/src/routes/auth.routes.js)
   static String get sendOtp => '$baseUrl$apiPrefix/send-otp';
   static String get verifyOtp => '$baseUrl$apiPrefix/verify-otp';
+  static String get loginTrustedDevice => '$baseUrl$apiPrefix/login-trusted-device';
   static String get completeProfile => '$baseUrl$apiPrefix/complete-profile';
   static String get refreshToken => '$baseUrl$apiPrefix/refresh-token';
   static String get logout => '$baseUrl$apiPrefix/logout';
@@ -63,6 +74,9 @@ class ApiEndpoints {
       '$baseUrl$userProfilePrefix/family-members/update';
   static String userProfileDeleteFamilyMember(String memberId) =>
       '$baseUrl$userProfilePrefix/family-members/delete/$memberId';
+  static String get userProfileUploadFamilyMemberImage =>
+      '$baseUrl$userProfilePrefix/family-members/upload-image';
+  static String get userProfileSwitch => '$baseUrl$userProfilePrefix/switch';
 
   // User in-app notifications (cost approval, payments, etc.)
   static const String userNotificationsPrefix = '/api/user/notifications';
@@ -81,12 +95,66 @@ class ApiEndpoints {
       '$baseUrl$articlesPrefix/delete/$id';
   static String get articlesUploadImage =>
       '$baseUrl$articlesPrefix/upload-image';
+  /// Server-side remove.bg proxy (API key never leaves the backend).
+  static String get articlesRemoveBackground =>
+      '$baseUrl$articlesPrefix/remove-background';
+  /// Active Masteradmin Article DB categories for add/edit article.
+  static String get articlesCategories =>
+      '$baseUrl$articlesPrefix/categories';
+
+  static const String sellPrefix = '/api/sell';
+  static String get sellListings => '$baseUrl$sellPrefix/listings';
+  static String get sellUploadProof => '$baseUrl$sellPrefix/upload-proof';
+
+  static const String rentPrefix = '/api/rent';
+  static String get rentUploadImage => '$baseUrl$rentPrefix/upload-image';
+  static String get rentListings => '$baseUrl$rentPrefix/listings';
+  static String get rentAvailable => '$baseUrl$rentPrefix/available';
+  static String get rentRequests => '$baseUrl$rentPrefix/requests';
+  static String get rentIncomingRequests => '$baseUrl$rentPrefix/requests/incoming';
+
+  static const String donatePrefix = '/api/donate';
+  static String get donateUploadImage => '$baseUrl$donatePrefix/upload-image';
+  static String get donateRequests => '$baseUrl$donatePrefix/requests';
+
+  static const String recyclePrefix = '/api/recycle';
+  static String get recycleSlides => '$baseUrl$recyclePrefix/slides';
 
   // Module 4 – Service Requests
   static const String servicePrefix = '/api/service';
   static String get serviceCreate => '$baseUrl$servicePrefix/create';
   static String get serviceMy => '$baseUrl$servicePrefix/my';
   static String get serviceEstimationDefaults => '$baseUrl$servicePrefix/estimation-defaults';
+  /// Active Masteradmin hub addresses for CareMyPair Self Drop off.
+  static String get serviceHubLocations => '$baseUrl$servicePrefix/hub-locations';
+  /// Active CareMyPair service problems (repair | maintenance | wash).
+  /// The user app shows the same list for every article. [category] is ignored.
+  static String serviceCareOptions(String serviceType, {String? category}) {
+    final base = '$baseUrl$servicePrefix/care-options/$serviceType';
+    final cat = category?.trim() ?? '';
+    if (cat.isEmpty) return base;
+    return '$base?category=${Uri.encodeQueryComponent(cat)}';
+  }
+
+  /// Problem-wise progress timeline (estimateDays + progressSteps).
+  static String serviceCareProgress({
+    String? code,
+    String? serviceType,
+    String? id,
+  }) {
+    final params = <String, String>{};
+    final c = code?.trim() ?? '';
+    final t = serviceType?.trim() ?? '';
+    final i = id?.trim() ?? '';
+    if (c.isNotEmpty) params['code'] = c;
+    if (t.isNotEmpty) params['serviceType'] = t;
+    if (i.isNotEmpty) params['id'] = i;
+    final q = params.entries
+        .map((e) =>
+            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+    return '$baseUrl$servicePrefix/care-progress${q.isEmpty ? '' : '?$q'}';
+  }
   static String serviceById(String requestId) =>
       '$baseUrl$servicePrefix/$requestId';
   static String get serviceUpdateStatus =>
@@ -100,6 +168,8 @@ class ApiEndpoints {
       '$baseUrl$servicePrefix/upload-proof/video';
   static String get serviceRespondActualCost =>
       '$baseUrl$servicePrefix/respond-actual-cost';
+  /// Customer Service History review (rating + comment) — persisted in DB.
+  static String get serviceSubmitReview => '$baseUrl$servicePrefix/review';
 
   // Module 5 – Payments (Zoho Checkout)
   static const String paymentPrefix = '/api/payment';
@@ -110,11 +180,30 @@ class ApiEndpoints {
       '$baseUrl$paymentPrefix/history?page=$page&limit=$limit';
   static String paymentById(String paymentId) =>
       '$baseUrl$paymentPrefix/$paymentId';
-  static String paymentByServiceRequest(String serviceRequestId) =>
-      '$baseUrl$paymentPrefix/by-service-request/$serviceRequestId';
+  static String paymentByServiceRequest(
+    String serviceRequestId, {
+    bool refresh = false,
+  }) =>
+      '$baseUrl$paymentPrefix/by-service-request/$serviceRequestId${refresh ? '?refresh=true' : ''}';
   static String paymentStatus(String orderId, {bool refresh = false}) =>
       '$baseUrl$paymentPrefix/status/$orderId${refresh ? '?refresh=true' : ''}';
   static String get paymentCallback => '$baseUrl$paymentPrefix/callback';
+
+  static const String thriftPrefix = '/api/thrift';
+  static String thriftProducts({String q = '', String category = ''}) {
+    final params = <String, String>{};
+    if (q.trim().isNotEmpty) params['q'] = q.trim();
+    if (category.trim().isNotEmpty && category != 'all') {
+      params['category'] = category.trim();
+    }
+    final uri = Uri.parse('$baseUrl$thriftPrefix/products').replace(
+      queryParameters: params.isEmpty ? null : params,
+    );
+    return uri.toString();
+  }
+
+  static String thriftProduct(String id) => '$baseUrl$thriftPrefix/products/$id';
+  static String get thriftCheckout => '$baseUrl$thriftPrefix/checkout';
 
   // Cobblers for customer nearby discovery
   /// Query must match backend `GET /api/cobbler/profile/nearby` (auth + role checks on server).
@@ -140,6 +229,18 @@ class ApiEndpoints {
   static String get userProfileAddresses =>
       '$baseUrl$userProfilePrefix/addresses';
 
+  /// web | android | ios — backend uses this for Dev OTP vs MSG91 SMS.
+  static String get clientPlatformHeader {
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+        return 'ios';
+      case TargetPlatform.android:
+      default:
+        return 'android';
+    }
+  }
+
   /// Headers for API calls. Includes app version and role (X-App-Source) for backend.
   static Map<String, String> getHeaders({String? accessToken}) {
     final headers = <String, String>{
@@ -149,9 +250,17 @@ class ApiEndpoints {
       'X-App-Version': AppConstants.appVersion,
     };
 
+    // Flutter web: browsers CORS-preflight custom headers. Older API builds omitted
+    // X-Client-Platform from Allow-Headers and blocked send-otp. Rely on User-Agent
+    // (backend maps browser UA → web Dev OTP). Native apps still send the header.
+    if (!kIsWeb) {
+      headers['X-Client-Platform'] = clientPlatformHeader;
+    }
+
     if (accessToken != null) {
       headers['Authorization'] = 'Bearer $accessToken';
     }
+    ActiveProfileHeader.applyTo(headers);
 
     return headers;
   }

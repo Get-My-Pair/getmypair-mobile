@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'payment_page_shell.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 
 class PaymentLoader extends StatelessWidget {
   final String? message;
@@ -10,28 +9,43 @@ class PaymentLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SpinKitPulse(color: PaymentPageTheme.loaderColor, size: 48),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                message!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  height: 1.35,
-                ),
+    final messageWidget = message == null
+        ? null
+        : Padding(
+            padding: const EdgeInsets.fromLTRB(32, 0, 32, 24),
+            child: Text(
+              message!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                height: 1.35,
               ),
             ),
+          );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cards = const SingleChildScrollView(
+          physics: NeverScrollableScrollPhysics(),
+          child: AppSkeletonCards(),
+        );
+        if (!constraints.maxHeight.isFinite) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppSkeletonCards(),
+              ?messageWidget,
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Expanded(child: cards),
+            ?messageWidget,
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -49,7 +63,9 @@ class PaymentInlineLoader extends StatelessWidget {
         const SizedBox(
           width: 18,
           height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: AppSkeletonPulse(
+            child: AppSkeletonBone(width: 18, height: 18, radius: 9),
+          ),
         ),
         if (label != null) ...[
           const SizedBox(width: 10),

@@ -9,8 +9,9 @@ class WashMyPairPage extends StatelessWidget {
     return const RepairMyPairPage(
       pageTitle: 'WashMyPair',
       allowedServiceTypes: ['wash'],
+      tagline: '',
       description:
-          'WashMyPair gives your footwear a deep clean.\n\nSelect one or more pairs you\'d like to wash.',
+          'WashMyPair is a service that gives your footwear a deep clean. Please select the footwear you\'d like to wash.',
     );
   }
 }

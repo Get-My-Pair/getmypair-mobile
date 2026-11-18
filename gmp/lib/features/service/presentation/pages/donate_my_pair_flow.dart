@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
@@ -341,11 +342,7 @@ class _DonateMyPairDetailsPageState extends State<DonateMyPairDetailsPage> {
                   child: ClipRRect(
                     borderRadius: _panelRadius,
                     child: _loading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF11999E),
-                            ),
-                          )
+                        ? const AppSkeletonCards()
                         : _buildDonateDetailsBody(context),
                   ),
                 ),

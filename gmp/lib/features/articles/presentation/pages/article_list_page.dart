@@ -5,14 +5,18 @@ import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/navigation/customer_dashboard_tab_index.dart';
 import 'package:gmp/core/theme/app_colors.dart';
+import 'package:gmp/core/errors/user_facing_error.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/core/widgets/network_error_view.dart';
+import 'package:gmp/features/articles/data/article_categories.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 
 import '../../../service/presentation/pages/service_selection_page.dart';
+import '../../../service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'article_create_page.dart';
 import 'article_details_page.dart';
 
@@ -35,7 +39,7 @@ class ArticleListPage extends StatefulWidget {
     super.key,
     this.serviceFlowAllowedTypes,
     this.serviceFlowTitle,
-    this.showBottomBar = true,
+    this.showBottomBar = false,
   });
 
   @override
@@ -53,6 +57,8 @@ class _ArticleListPageState extends State<ArticleListPage> {
   String? _filterCategory;
   String _searchQuery = '';
   final ScrollController _rackScrollController = ScrollController();
+  /// Dynamic Masteradmin categories (+ leading All). Same source as add/edit article.
+  List<Map<String, String>> _filterTabs = _tabsFromCategories(kDefaultArticleCategories);
 
   static const Color _rackTealPrimary = Color(0xFF11999E);
   static const Color _rackDark = Color(0xFF062F35);
@@ -63,24 +69,42 @@ class _ArticleListPageState extends State<ArticleListPage> {
 <path d="M5 12H19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 ''';
-  static const List<Map<String, String>> _filterTabs = [
-    {'value': 'formal', 'label': 'Formals'},
-    {'value': 'sports_shoe', 'label': 'Nike'},
-    {'value': 'casual', 'label': 'Casuals'},
-    {'value': 'boot', 'label': 'Heels'},
-    {'value': 'sandal', 'label': 'Converse'},
-  ];
+
+  static List<Map<String, String>> _tabsFromCategories(
+    List<Map<String, String>> categories,
+  ) {
+    return [
+      const {'value': '', 'label': 'All'},
+      ...categories.map(
+        (c) => {
+          'value': (c['value'] ?? '').trim(),
+          'label': (c['label'] ?? c['value'] ?? '').trim(),
+        },
+      ),
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
+    _rackScrollController.addListener(_syncHomeSwipeGate);
+    myRackAllowsHomeSwipe.value = true;
     _loadArticles();
   }
 
   @override
   void dispose() {
+    _rackScrollController.removeListener(_syncHomeSwipeGate);
     _rackScrollController.dispose();
     super.dispose();
+  }
+
+  void _syncHomeSwipeGate() {
+    final atTop = !_rackScrollController.hasClients ||
+        _rackScrollController.offset <= 0.5;
+    if (myRackAllowsHomeSwipe.value != atTop) {
+      myRackAllowsHomeSwipe.value = atTop;
+    }
   }
 
   Future<void> _loadArticles() async {
@@ -99,23 +123,40 @@ class _ArticleListPageState extends State<ArticleListPage> {
           _error = 'Please sign in again';
           _loading = false;
         });
+        myRackAllowsHomeSwipe.value = true;
       },
       (token) async {
         try {
-          final result = await sl<GetMyArticles>().call(token);
+          final results = await Future.wait([
+            sl<GetMyArticles>().call(token),
+            fetchArticleCategories(token),
+          ]);
           if (!mounted) return;
+          final result = results[0] as List<Article>;
+          final categories = results[1] as List<Map<String, String>>;
+          final tabs = _tabsFromCategories(
+            categories.isNotEmpty ? categories : kDefaultArticleCategories,
+          );
+          final selectedStillValid = _filterCategory == null ||
+              _filterCategory!.isEmpty ||
+              tabs.any((t) => t['value'] == _filterCategory);
           setState(() {
             _articles = result;
+            _filterTabs = tabs;
+            if (!selectedStillValid) _filterCategory = null;
             _loading = false;
             _error = null;
           });
+          myRackAllowsHomeSwipe.value = true;
+          _syncHomeSwipeGate();
         } catch (e) {
           if (!mounted) return;
           setState(() {
-            _error = e.toString().replaceFirst('Exception: ', '');
+            _error = UserFacingError.sanitize(e);
             _articles = null;
             _loading = false;
           });
+          myRackAllowsHomeSwipe.value = true;
         }
       },
     );
@@ -147,6 +188,19 @@ class _ArticleListPageState extends State<ArticleListPage> {
     }
 
     return out.toList();
+  }
+
+  void _navigateHomeFromRack() {
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+      return;
+    }
+    // Dashboard PageView animates My Rack → Home (Reels-style slide).
+    if (customerDashboardTabIndex.value != 0) {
+      customerDashboardTabIndex.value = 0;
+    }
+    nav.popUntil((route) => route.isFirst);
   }
 
   @override
@@ -217,51 +271,13 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: _rackTealPrimary),
-          const SizedBox(height: 16),
-          Text(
-            'Loading your rack...',
-            style: GoogleFonts.montserrat(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const _RackGridSkeleton();
   }
 
   Widget _buildError() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(
-                fontSize: 15,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            AppGradientNextStyleButton(
-              label: 'Retry',
-              onPressed: _loadArticles,
-              leading: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-              showTrailingIcon: false,
-            ),
-          ],
-        ),
-      ),
+    return NetworkErrorView(
+      error: _error,
+      onRetry: _loadArticles,
     );
   }
 
@@ -318,7 +334,6 @@ class _ArticleListPageState extends State<ArticleListPage> {
     final topTitleGap = (20.0 * uiScale).clamp(18.0, 28.0);
     final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
     const plusSize = 42.0;
-    const searchHeight = 42.0;
     final filtersHeight = (28.0 * uiScale).clamp(26.0, 32.0);
     final sectionGap = (10.0 * uiScale).clamp(8.0, 14.0);
 
@@ -339,17 +354,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
                   children: [
                     IconButton(
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                      onPressed: () {
-                        final nav = Navigator.of(context);
-                        if (nav.canPop()) {
-                          nav.pop();
-                          return;
-                        }
-                        customerDashboardTabIndex.value = 0;
-                        nav.popUntil((route) => route.isFirst);
-                      },
+                      constraints:
+                          const BoxConstraints.tightFor(width: 26, height: 26),
+                      visualDensity:
+                          const VisualDensity(horizontal: -4, vertical: -4),
+                      onPressed: _navigateHomeFromRack,
                       icon: SvgPicture.asset(
                         'assets/images/chevron-left.svg',
                         width: 26,
@@ -438,77 +447,13 @@ class _ArticleListPageState extends State<ArticleListPage> {
               ),
             ),
           ),
-        SizedBox(height: (28.0 * uiScale).clamp(20.0, 36.0)),
+        SizedBox(height: (14.0 * uiScale).clamp(12.0, 18.0)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: headerHInset),
-          child: Container(
-            height: searchHeight,
-            padding: const EdgeInsets.all(1.2),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
-              ),
-              borderRadius: BorderRadius.circular(100),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x22000000),
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Row(
-                  children: [
-                    SvgPicture.asset(
-                      'assets/images/search.svg',
-                      width: 22,
-                      height: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                        textAlignVertical: TextAlignVertical.center,
-                        style: GoogleFonts.montserrat(
-                          fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          isCollapsed: false,
-                          filled: false,
-                          fillColor: Colors.transparent,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          focusedErrorBorder: InputBorder.none,
-                          hintText: 'Search',
-                          hintStyle: GoogleFonts.montserrat(
-                            color: Colors.black.withValues(alpha: 0.34),
-                            fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                ),
-              ),
-            ),
+          child: HubGradientSearchBar(
+            hintText: 'Search',
+            showClear: true,
+            onChanged: (value) => setState(() => _searchQuery = value),
           ),
         ),
         SizedBox(height: sectionGap),
@@ -523,10 +468,22 @@ class _ArticleListPageState extends State<ArticleListPage> {
               final tab = _filterTabs[i];
               final value = tab['value']!;
               final label = tab['label']!;
+              final isAll = value.isEmpty;
+              final selected = isAll
+                  ? (_filterCategory == null || _filterCategory!.isEmpty)
+                  : _filterCategory == value;
               return _FilterChipPill(
                 label: label,
-                selected: _filterCategory == value,
-                onTap: () => setState(() => _filterCategory = value),
+                selected: selected,
+                onTap: () => setState(() {
+                  if (isAll) {
+                    _filterCategory = null;
+                  } else if (_filterCategory == value) {
+                    _filterCategory = null;
+                  } else {
+                    _filterCategory = value;
+                  }
+                }),
               );
             },
           ),
@@ -655,6 +612,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
           MaterialPageRoute(
             builder: (_) => ServiceSelectionPage(
               articleId: article.id,
+              articleName: article.brand.trim().isNotEmpty
+                  ? article.brand
+                  : article.model,
+              articleImageUrl: article.rackHeroImagePath,
+              articleCategory: article.category,
               allowedServiceTypes: widget.serviceFlowAllowedTypes,
             ),
           ),
@@ -765,7 +727,7 @@ class _RackRow extends StatelessWidget {
         decoration: const BoxDecoration(
           color: _kRackCardBgHome,
           border: Border(
-            bottom: BorderSide(color: _kRackCardBorderHome, width: 3),
+            bottom: BorderSide(color: _kRackCardBorderHome, width: 1),
           ),
           borderRadius: _kRackShelfBorderRadius,
         ),
@@ -834,6 +796,273 @@ class _FilterChipPill extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Rack-shaped placeholder while articles load.
+/// Same chrome and shelf rows as My Rack: three shoes per shelf.
+class _RackGridSkeleton extends StatefulWidget {
+  const _RackGridSkeleton();
+
+  @override
+  State<_RackGridSkeleton> createState() => _RackGridSkeletonState();
+}
+
+class _RackGridSkeletonState extends State<_RackGridSkeleton>
+    with SingleTickerProviderStateMixin {
+  static const Color _bone = Color(0xFFB7C9CE);
+  static const Color _rackDark = Color(0xFF062F35);
+
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final headerHInset = (12.0 * uiScale).clamp(10.0, 20.0);
+    final titleLeftInset = (headerHInset - 4).clamp(10.0, 18.0);
+    final topTitleGap = (20.0 * uiScale).clamp(18.0, 28.0);
+    final titleSize = (20.0 * uiScale).clamp(18.0, 24.0);
+    const plusSize = 42.0;
+    const searchHeight = 42.0;
+    final filtersHeight = (28.0 * uiScale).clamp(26.0, 32.0);
+    final sectionGap = (10.0 * uiScale).clamp(8.0, 14.0);
+    final spacing = (10.0 * uiScale).clamp(8.0, 14.0);
+    final searchFont = (16.0 * uiScale).clamp(13.0, 17.0);
+    final nameSize = (12.5 * uiScale).clamp(11.0, 14.0);
+    final labelGap = (3.0 * uiScale).clamp(2.0, 5.0);
+    final panelPad = (6.0 * uiScale).clamp(4.0, 8.0);
+    // Shoe thumbs sit inside the shelf with BoxFit.contain, so the
+    // placeholder stays a short wide bone instead of filling the cell.
+    final shoeWidth = (56.0 * uiScale).clamp(48.0, 62.0);
+    final shoeHeight = (34.0 * uiScale).clamp(28.0, 40.0);
+    final labelWidth = (42.0 * uiScale).clamp(36.0, 48.0);
+    const chipWidths = <double>[68, 50, 70, 54, 76];
+
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.4, end: 0.9).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              titleLeftInset,
+              topTitleGap,
+              headerHInset,
+              0,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: _bone,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Container(
+                  width: titleSize * 4.6,
+                  height: titleSize,
+                  decoration: BoxDecoration(
+                    color: _rackDark.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: plusSize,
+                  height: plusSize,
+                  decoration: const BoxDecoration(
+                    color: _bone,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: (14.0 * uiScale).clamp(12.0, 18.0)),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: headerHInset),
+            child: Container(
+              height: searchHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(color: _bone, width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: const BoxDecoration(
+                      color: _bone,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: searchFont * 3.6,
+                    height: searchFont,
+                    decoration: BoxDecoration(
+                      color: _bone,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: sectionGap),
+          SizedBox(
+            height: filtersHeight,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: headerHInset),
+              itemCount: chipWidths.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, index) {
+                return Container(
+                  width: chipWidths[index],
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: _bone),
+                  ),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: (8.0 * uiScale).clamp(6.0, 10.0)),
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.fromLTRB(
+                headerHInset,
+                2,
+                headerHInset,
+                (24.0 * uiScale).clamp(20.0, 30.0),
+              ),
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 4,
+              itemBuilder: (context, rowIndex) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: rowIndex == 3 ? 0 : spacing),
+                  child: _RackRow(
+                    uiScale: uiScale,
+                    children: [
+                      _RackSkeletonCell(
+                        shoeWidth: shoeWidth,
+                        shoeHeight: shoeHeight,
+                        labelWidth: labelWidth,
+                        labelHeight: nameSize,
+                        labelGap: labelGap,
+                        panelPad: panelPad,
+                      ),
+                      _RackSkeletonCell(
+                        shoeWidth: shoeWidth,
+                        shoeHeight: shoeHeight,
+                        labelWidth: labelWidth,
+                        labelHeight: nameSize,
+                        labelGap: labelGap,
+                        panelPad: panelPad,
+                      ),
+                      _RackSkeletonCell(
+                        shoeWidth: shoeWidth,
+                        shoeHeight: shoeHeight,
+                        labelWidth: labelWidth,
+                        labelHeight: nameSize,
+                        labelGap: labelGap,
+                        panelPad: panelPad,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          Container(
+            height: (16.0 * uiScale).clamp(12.0, 20.0),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(18),
+                topRight: Radius.circular(18),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One shoe slot on a skeleton shelf: compact image bone plus a short label.
+class _RackSkeletonCell extends StatelessWidget {
+  const _RackSkeletonCell({
+    required this.shoeWidth,
+    required this.shoeHeight,
+    required this.labelWidth,
+    required this.labelHeight,
+    required this.labelGap,
+    required this.panelPad,
+  });
+
+  final double shoeWidth;
+  final double shoeHeight;
+  final double labelWidth;
+  final double labelHeight;
+  final double labelGap;
+  final double panelPad;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(panelPad, panelPad, panelPad, panelPad - 1),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const Spacer(),
+          Container(
+            width: shoeWidth,
+            height: shoeHeight,
+            decoration: BoxDecoration(
+              color: const Color(0xFFB7C9CE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          SizedBox(height: labelGap),
+          Container(
+            width: labelWidth,
+            height: labelHeight,
+            decoration: BoxDecoration(
+              color: const Color(0xFFB7C9CE),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -977,7 +1206,7 @@ class ArticleListPage extends StatefulWidget {
     super.key,
     this.serviceFlowAllowedTypes,
     this.serviceFlowTitle,
-    this.showBottomBar = true,
+    this.showBottomBar = false,
   });
 
   @override
@@ -1052,7 +1281,7 @@ class _ArticleListPageState extends State<ArticleListPage> {
         } catch (e) {
           if (!mounted) return;
           setState(() {
-            _error = e.toString().replaceFirst('Exception: ', '');
+            _error = UserFacingError.sanitize(e);
             _articles = null;
             _loading = false;
           });
@@ -1166,55 +1395,13 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   Widget _buildLoading(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(color: _rackTealPrimary),
-          const SizedBox(height: 16),
-          Text(
-            'Loading your rack…',
-            style: GoogleFonts.montserrat(
-              fontSize: Responsive.fontSize(context, 14),
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const _RackGridSkeleton();
   }
 
   Widget _buildError(BuildContext context) {
-    final h = Responsive.horizontalPaddingOf(context);
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: h),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: AppColors.error),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(
-                fontSize: Responsive.fontSize(context, 15),
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _loadArticles,
-              icon: const Icon(Icons.refresh, size: 20),
-              label: const Text('Retry'),
-              style: FilledButton.styleFrom(
-                backgroundColor: _rackTeal,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return NetworkErrorView(
+      error: _error,
+      onRetry: _loadArticles,
     );
   }
 
@@ -1263,11 +1450,14 @@ class _ArticleListPageState extends State<ArticleListPage> {
   }
 
   static const List<Map<String, String>> _filterTabs = [
-    {'value': 'formal', 'label': 'Formals'},
-    {'value': 'sports_shoe', 'label': 'Nike'},
+    {'value': '', 'label': 'All'},
+    {'value': 'sports_shoe', 'label': 'Sports'},
     {'value': 'casual', 'label': 'Casuals'},
-    {'value': 'boot', 'label': 'Heels'},
-    {'value': 'sandal', 'label': 'Converse'},
+    {'value': 'formal', 'label': 'Formals'},
+    {'value': 'sandal', 'label': 'Sandal'},
+    {'value': 'boot', 'label': 'Boot'},
+    {'value': 'slipper', 'label': 'Slipper'},
+    {'value': 'other', 'label': 'Other'},
   ];
 
   Widget _buildRackBody(BuildContext context) {
@@ -1372,100 +1562,10 @@ class _ArticleListPageState extends State<ArticleListPage> {
           const SizedBox(height: 14),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: hPad),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ChatbotPage()),
-                  );
-                },
-                borderRadius: BorderRadius.circular(100),
-                child: Ink(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: ShapeDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [Color(0xFF063239), Color(0xFF0CADC5)],
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.star_outline_rounded, color: Colors.white, size: 24),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Style Me',
-                        style: GoogleFonts.boldonse(
-                          color: Colors.white,
-                          fontSize: Responsive.fontSize(context, 16),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: hPad),
-            child: Container(
-              height: 42,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: ShapeDecoration(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  side: const BorderSide(width: 1, color: Color(0xFF09E0FF)),
-                  borderRadius: BorderRadius.circular(100),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.search_rounded,
-                    color: Colors.black.withValues(alpha: 0.34),
-                    size: 22,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      onChanged: (v) => setState(() => _searchQuery = v),
-                      textAlignVertical: TextAlignVertical.center,
-                      style: GoogleFonts.montserrat(
-                        fontSize: Responsive.fontSize(context, 16),
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        isCollapsed: false,
-                        filled: false,
-                        fillColor: Colors.transparent,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        hintText: 'Search',
-                        hintStyle: GoogleFonts.montserrat(
-                          color: Colors.black.withValues(alpha: 0.34),
-                          fontSize: Responsive.fontSize(context, 16),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            child: HubGradientSearchBar(
+              hintText: 'Search',
+              showClear: true,
+              onChanged: (v) => setState(() => _searchQuery = v),
             ),
           ),
           const SizedBox(height: 14),
@@ -1485,7 +1585,15 @@ class _ArticleListPageState extends State<ArticleListPage> {
                 return _FilterChipPill(
                   label: label,
                   selected: isSelected,
-                  onTap: () => setState(() => _filterCategory = value.isEmpty ? null : value),
+                  onTap: () => setState(() {
+                    if (value.isEmpty) {
+                      _filterCategory = null;
+                    } else if (_filterCategory == value) {
+                      _filterCategory = null;
+                    } else {
+                      _filterCategory = value;
+                    }
+                  }),
                 );
               },
             ),
@@ -1647,6 +1755,11 @@ class _ArticleListPageState extends State<ArticleListPage> {
       MaterialPageRoute(
         builder: (_) => ServiceSelectionPage(
           articleId: article.id,
+          articleName: article.brand.trim().isNotEmpty
+              ? article.brand
+              : article.model,
+          articleImageUrl: article.rackHeroImagePath,
+          articleCategory: article.category,
           allowedServiceTypes: widget.serviceFlowAllowedTypes,
         ),
       ),

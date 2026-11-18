@@ -38,8 +38,9 @@ abstract class PaymentRemoteDataSource {
 
   Future<PaymentModel?> getPaymentByServiceRequest(
     String accessToken,
-    String serviceRequestId,
-  );
+    String serviceRequestId, {
+    bool refreshFromZoho = false,
+  });
 }
 
 class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
@@ -170,15 +171,31 @@ class PaymentRemoteDataSourceImpl implements PaymentRemoteDataSource {
   @override
   Future<PaymentModel?> getPaymentByServiceRequest(
     String accessToken,
-    String serviceRequestId,
-  ) async {
+    String serviceRequestId, {
+    bool refreshFromZoho = false,
+  }) async {
     try {
       final res = await client.get(
-        ApiEndpoints.paymentByServiceRequest(serviceRequestId),
+        ApiEndpoints.paymentByServiceRequest(
+          serviceRequestId,
+          refresh: refreshFromZoho,
+        ),
         accessToken: accessToken,
       );
       final data = _data(res);
       if (data['serviceRequestFound'] == false) return null;
+      if (data['alreadyPaid'] == true && data['payment'] == null) {
+        // Service request marked paid without payment payload — treat as paid.
+        return PaymentModel.fromJson({
+          '_id': serviceRequestId,
+          'orderId': 'PAID',
+          'serviceRequestId': serviceRequestId,
+          'userId': '',
+          'amount': 0,
+          'status': 'PAYMENT_SUCCESS',
+          'paidAt': DateTime.now().toIso8601String(),
+        });
+      }
       final paymentJson = data['payment'];
       if (paymentJson == null) return null;
       return PaymentModel.fromJson(Map<String, dynamic>.from(paymentJson as Map));

@@ -1,0 +1,18 @@
+What's new in 3.0.3
+
+• Track Active Jobs and Your Pair Progress with a clearer timeline
+• Service History with rating and thank-you feedback after care
+• Smoother payments — success only after verified checkout
+• Dynamic CareMyPair options and My Rack category filters
+• Stronger login security with encrypted token storage
+• Safer payment links and UPI / wallet checkout handling
+• More reliable footwear photo upload when prep services are offline
+• Home and Care UI polish, plus stability fixes
+
+---
+Paste into Play Console → Production → Create release → Release notes
+(Keep under 500 characters; English en-IN / en-US)
+
+Short paste (≤500 chars):
+
+Track Active Jobs and Pair Progress more clearly. Review past services and leave feedback. Smoother, verified payments. Dynamic care options and rack filters. Stronger login security and safer checkout. More reliable footwear photo upload. UI polish and stability fixes.

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.1.0+6
+version: 3.0.4+11
 
 environment:
   sdk: ^3.10.8
@@ -35,7 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   
-  # HTTP client for API calls (^1.x required by flutter_map)
+  # HTTP client for API calls
   http: ^1.6.0
   http_parser: ^4.1.2
   mime: ^2.0.0
@@ -69,31 +69,37 @@ dependencies:
   reactive_forms: ^18.0.0
 
   # Location permission (for backend integration)
-  permission_handler: ^12.0.1
+  permission_handler: ^13.0.2
   geolocator: ^14.0.2
-  geocoding: ^3.0.0
+  geocoding: ^5.0.1
 
-  # Map (OpenStreetMap, no API key required)
-  flutter_map: ^8.2.2
-  latlong2: ^0.9.1
+  # Google Maps:
+  # - Android: GOOGLE_MAPS_API_KEY in android/local.properties
+  # - iOS: GMSApiKey in ios/Runner/Info.plist
+  # - Web: script tag in web/index.html (Maps JavaScript API must be enabled)
+  google_maps_flutter: ^2.18.1
+  web: ^1.1.1
 
   # Image picker for profile photo
   image_picker: ^1.0.7
   image_picker_android: ^0.8.13
   image_picker_platform_interface: ^2.11.1
   # Image cropper replacement (pure Dart) for cropping camera/gallery images before upload
-  crop_your_image: ^0.7.0
+  crop_your_image: ^2.0.1
   flutter_tts: ^4.2.5
   camera: ^0.12.0+1
   path_provider: ^2.1.5
-  google_mlkit_image_labeling: ^0.16.1
-  device_info_plus: ^12.4.0
+  # 0.16.1 needs Dart ^3.12; keep 0.15.x for current SDK 3.11.x
+  google_mlkit_image_labeling: ^0.15.0
+  device_info_plus: ^13.3.0
   # Pixel-level decoding for footwear orientation detection
   image: ^4.3.0
-
+  
   # Payment checkout
   url_launcher: ^6.3.1
   webview_flutter: ^4.10.0
+  file_picker: ^13.3.0
+  smart_auth: ^3.2.0
 
 
 
@@ -139,19 +145,35 @@ flutter:
     - assets/images/onboarding/sc3.png
     - assets/images/onboarding/sc4.1.png
     - assets/images/onboarding/sc4.2.png
+    - assets/images/5ffd5d392d9fb22b1fcb70d7dd46f976f635eb18.png
+    - assets/images/20868ffbf2d16aaa9386162dca63285509afb735.png
     - assets/images/noun-shoes-cleaning-7675732 1.svg
     - assets/images/calendar.svg
     - assets/images/allicons/
     - assets/images/phone.svg
     - assets/images/img/caremypair/
     - assets/images/icons/
+    - assets/images/icons/alert-circle.svg
     - assets/images/icons/caremypair/
     - assets/images/icons/caremypair/rmp.svg
     - assets/images/icons/caremypair/mmp.svg
     - assets/images/icons/caremypair/wmp.svg
+    - assets/images/icons/caremypair/rating_star.svg
+    - assets/images/icons/repairmypair/
+    - assets/images/icons/repairmypair/camera.svg
+    - assets/images/icons/repairmypair/close_selected.svg
+    - assets/images/icons/repairmypair/close_unselected.svg
+    - assets/images/icons/rehomemypair/
+    - assets/images/icons/rehomemypair/sellmypair.png
+    - assets/images/icons/rehomemypair/rentmypair_shoe.png
+    - assets/images/icons/savemypair/
     - assets/images/icons/myrack/
     - assets/images/icons/myrack/filter.svg
     - assets/images/icons/myrack/shoe.png
+    - assets/images/sellmypair/
+    - assets/images/sellmypair/review.svg
+    - assets/images/sellmypair/done.svg
+    - assets/images/sellmypair/reject.svg
     - assets/images/icons/auth/
     - assets/images/icons/auth/apple.svg
     - assets/images/icons/auth/google.svg
@@ -160,7 +182,11 @@ flutter:
     - assets/images/icons/home/caremypair.svg
     - assets/images/icons/home/rentmypair.svg
     - assets/images/icons/home/rehomemypair.svg
+    - assets/images/icons/home/thriftstore.png
+    - assets/images/home/
+    - assets/images/home/Group 134.svg
     - assets/images/icons/profile/
+    - assets/images/icons/profile/info.svg
     - assets/images/icons/profile/edit.svg
     - assets/images/icons/profile/home.svg
     - assets/images/icons/profile/monitor.svg
@@ -171,10 +197,12 @@ flutter:
     - assets/images/icons/profile/toggle-left.svg
     - assets/images/icons/profile/watch.svg
     - assets/images/icons/home.svg
-    - assets/images/icons/shoe.svg
     - assets/images/icons/profile.svg
     - assets/images/logo/
     - assets/images/logo/gmp_app_logo_white_1.png
+    - assets/images/payment/
+    - assets/images/payment/payment_success_check.png
+    - assets/images/payment/payment_success_bg.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -201,6 +229,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# permission_handler_android 14.1.x needs Android SDK 37 (not installed here).
+dependency_overrides:
+  permission_handler_android: 13.0.1
 
 # App icon (Android & iOS)
 # After adding/updating icon file run: dart run flutter_launcher_icons

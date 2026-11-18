@@ -31,12 +31,17 @@ import 'features/articles/domain/usecases/create_article.dart';
 import 'features/articles/domain/usecases/upload_article_image.dart';
 import 'features/articles/domain/usecases/update_article.dart';
 import 'features/articles/domain/usecases/delete_article.dart';
+import 'features/sell/data/sell_remote_datasource.dart';
+import 'features/rent/data/rent_remote_datasource.dart';
+import 'features/donate/data/donate_remote_datasource.dart';
+import 'features/recycle/data/recycle_remote_datasource.dart';
 import 'features/payment/data/datasources/payment_remote_datasource.dart';
 import 'features/payment/data/repositories/payment_repository_impl.dart';
 import 'features/payment/domain/repositories/payment_repository.dart';
 import 'features/payment/domain/usecases/payment_usecases.dart';
 import 'features/payment/presentation/bloc/payment_bloc.dart';
 import 'core/network/dio_client.dart';
+import 'core/storage/secure_storage_service.dart';
 import 'core/network/network_info.dart';
 
 final sl = GetIt.instance;
@@ -71,7 +76,10 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<AuthLocalDataSource>()) {
     sl.registerLazySingleton<AuthLocalDataSource>(
-      () => AuthLocalDataSourceImpl(sharedPreferences: sl()),
+      () => AuthLocalDataSourceImpl(
+        sharedPreferences: sl(),
+        secureStorage: SecureStorageService(),
+      ),
     );
   }
 
@@ -167,6 +175,15 @@ Future<void> init() async {
   if (!sl.isRegistered<UpdateFamilyMember>()) {
     sl.registerLazySingleton(() => UpdateFamilyMember(sl()));
   }
+  if (!sl.isRegistered<SwitchActiveProfile>()) {
+    sl.registerLazySingleton(() => SwitchActiveProfile(sl()));
+  }
+  if (!sl.isRegistered<UploadFamilyMemberImage>()) {
+    sl.registerLazySingleton(() => UploadFamilyMemberImage(sl()));
+  }
+  if (!sl.isRegistered<DeleteFamilyMember>()) {
+    sl.registerLazySingleton(() => DeleteFamilyMember(sl()));
+  }
   if (!sl.isRegistered<ProfileBloc>()) {
     sl.registerFactory(
       () => ProfileBloc(
@@ -178,6 +195,9 @@ Future<void> init() async {
         deleteAddress: sl(),
         addFamilyMember: sl(),
         updateFamilyMember: sl(),
+        switchActiveProfile: sl(),
+        uploadFamilyMemberImage: sl(),
+        deleteFamilyMember: sl(),
       ),
     );
   }
@@ -210,6 +230,18 @@ Future<void> init() async {
   }
   if (!sl.isRegistered<DeleteArticle>()) {
     sl.registerLazySingleton(() => DeleteArticle(sl()));
+  }
+  if (!sl.isRegistered<SellRemoteDataSource>()) {
+    sl.registerLazySingleton(() => SellRemoteDataSource());
+  }
+  if (!sl.isRegistered<RentRemoteDataSource>()) {
+    sl.registerLazySingleton(() => RentRemoteDataSource());
+  }
+  if (!sl.isRegistered<DonateRemoteDataSource>()) {
+    sl.registerLazySingleton(() => DonateRemoteDataSource());
+  }
+  if (!sl.isRegistered<RecycleRemoteDataSource>()) {
+    sl.registerLazySingleton(() => RecycleRemoteDataSource());
   }
 
   //! Features - Payment (Module 5)

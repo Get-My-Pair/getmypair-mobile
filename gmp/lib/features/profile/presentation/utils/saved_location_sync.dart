@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../domain/entities/address.dart';
 import '../../domain/entities/user_profile.dart';
@@ -58,17 +57,18 @@ class AddressParts {
 
   factory AddressParts.fromDisplayLine(
     String display, {
-    LatLng? coordinates,
+    double? latitude,
+    double? longitude,
   }) {
     var cleaned = display.replaceFirst(RegExp(r'^📍\s*'), '').trim();
     if (cleaned.isEmpty ||
         cleaned == 'Selected location' ||
         cleaned == 'Loading address...' ||
         cleaned.startsWith('Location ')) {
-      if (coordinates != null) {
+      if (latitude != null && longitude != null) {
         return AddressParts(
           addressLine1:
-              '${coordinates.latitude.toStringAsFixed(5)}, ${coordinates.longitude.toStringAsFixed(5)}',
+              '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}',
           city: 'Current location',
           state: '',
           pincode: '',
@@ -124,6 +124,7 @@ UserProfile? userProfileFromProfileState(ProfileState state) {
   if (state is ProfileImageUploading) return state.profile;
   if (state is ProfileError) return state.profile;
   if (state is AddressActionLoading) return state.profile;
+  if (state is ProfileSwitching) return state.profile;
   return null;
 }
 
@@ -176,12 +177,16 @@ abstract final class SavedLocationSync {
   }
 
   /// Returns `true` if the user chose to save or update (or data was already up to date).
+  ///
+  /// When [promptOnlyWhenEmpty] is true (home open), only asks if there are no
+  /// saved addresses — never prompts again once location data exists.
   static Future<bool> maybePersist({
     required BuildContext context,
     required ProfileBloc profileBloc,
     required String accessToken,
     required AddressParts parts,
     List<Address>? addresses,
+    bool promptOnlyWhenEmpty = false,
   }) async {
     if (accessToken.isEmpty) return false;
     if (parts.addressLine1.trim().isEmpty && parts.city.trim().isEmpty) {
@@ -190,6 +195,12 @@ abstract final class SavedLocationSync {
 
     final resolvedAddresses =
         addresses ?? userProfileFromProfileState(profileBloc.state)?.addresses ?? [];
+
+    // Home open / auto-detect: skip entirely if user already has location data.
+    if (promptOnlyWhenEmpty && resolvedAddresses.isNotEmpty) {
+      return false;
+    }
+
     final existing = findMatchingAddress(resolvedAddresses, parts);
 
     if (existing != null && _keyFromAddress(existing) == _keyFromParts(parts)) {
@@ -201,6 +212,9 @@ abstract final class SavedLocationSync {
     final preview = parts.preview;
     final bool? confirmed;
     if (existing != null) {
+      // Auto-open flow should not nag to replace existing addresses.
+      if (promptOnlyWhenEmpty) return false;
+
       confirmed = await _showDialog(
         context: context,
         title: 'Update saved location?',

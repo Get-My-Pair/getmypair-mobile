@@ -47,3 +47,16 @@ class AddressActionLoading extends ProfileState {
   @override
   List<Object?> get props => [profile];
 }
+
+class ProfileSwitching extends ProfileState {
+  final UserProfile profile;
+  final String targetProfileId;
+  final String targetName;
+  const ProfileSwitching({
+    required this.profile,
+    required this.targetProfileId,
+    required this.targetName,
+  });
+  @override
+  List<Object?> get props => [profile, targetProfileId, targetName];
+}

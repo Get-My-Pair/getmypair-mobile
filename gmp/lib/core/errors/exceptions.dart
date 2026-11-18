@@ -1,3 +1,5 @@
+import 'package:gmp/core/errors/user_facing_error.dart';
+
 class ServerException implements Exception {
   final String message;
   /// HTTP status code when exception is from an API response (e.g. 401, 403).
@@ -7,6 +9,20 @@ class ServerException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Express catch-all 404 (`Route not found`) or Flutter unknown named route.
+bool isUnregisteredRouteMessage(String message) {
+  final m = message.trim().toLowerCase();
+  return m == 'route not found' || m.contains('no route defined for');
+}
+
+String userFacingFamilyProfileError(String message) {
+  if (isUnregisteredRouteMessage(message)) {
+    return 'Could not complete this family profile action. Please try again.';
+  }
+  // Never return raw backend/API text to the UI.
+  return UserFacingError.sanitize(message);
 }
 
 class NetworkException implements Exception {

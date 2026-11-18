@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -334,10 +335,12 @@ class _ManageDevicesPageState extends State<ManageDevicesPage> {
                       ),
                       const SizedBox(height: 12),
                       if (_isLoading)
-                        const Center(child: Padding(
-                          padding: EdgeInsets.only(top: 18, bottom: 18),
-                          child: CircularProgressIndicator(),
-                        ))
+                        AppSkeletonList(
+                          itemCount: 3,
+                          shrinkWrap: true,
+                          color: Colors.white.withValues(alpha: 0.38),
+                          padding: const EdgeInsets.only(top: 8),
+                        )
                       else
                         _DeviceRow(
                           iconAsset: _iconAssetForDeviceInfo(

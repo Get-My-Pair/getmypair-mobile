@@ -18,6 +18,7 @@ class ApiConfig {
   static const String register = '/auth/register';
   static const String sendOtp = '/auth/send-otp';
   static const String verifyOtp = '/auth/verify-otp';
+  static const String loginTrustedDevice = '/auth/login-trusted-device';
   static const String resendOtp = '/auth/resend-otp';
   static const String refreshToken = '/auth/refresh-token';
   static const String logout = '/auth/logout';

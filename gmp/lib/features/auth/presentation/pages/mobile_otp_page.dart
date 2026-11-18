@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:smart_auth/smart_auth.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../data/models/country_code.dart';
@@ -27,9 +30,9 @@ class MobileOTPPage extends StatefulWidget {
 class _MobileOTPPageState extends State<MobileOTPPage> {
   static const String _kAuthBgAsset = 'assets/images/bg/auth.png';
   static const String _kAuthBgFallbackAsset = 'assets/images/bg.png';
-  static const String _kAuthFacebookIcon = 'assets/images/icons/auth/facebook.svg';
-  static const String _kAuthGoogleIcon = 'assets/images/icons/auth/google.svg';
-  static const String _kAuthAppleIcon = 'assets/images/icons/auth/apple.svg';
+  // static const String _kAuthFacebookIcon = 'assets/images/icons/auth/facebook.svg';
+  // static const String _kAuthGoogleIcon = 'assets/images/icons/auth/google.svg';
+  // static const String _kAuthAppleIcon = 'assets/images/icons/auth/apple.svg';
   static const Color _kPrimary = Color(0xFF062F35);
   static const Color _kAccent = Color(0xFF0F6876);
   /// Text/icons on the teal sweep (Figma: white).
@@ -40,6 +43,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
 
   final TextEditingController _phoneController = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
+  final GlobalKey _phoneFieldKey = GlobalKey();
 
   CountryCode _selectedCountry = CountryCode.popularCountries[0];
 
@@ -54,11 +58,42 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   double? _layoutViewportHeight;
 
   @override
+  void initState() {
+    super.initState();
+    _phoneFocusNode.addListener(_onPhoneFocusChanged);
+  }
+
+  @override
   void dispose() {
     _sendingProgressTimer?.cancel();
+    _phoneFocusNode.removeListener(_onPhoneFocusChanged);
     _phoneController.dispose();
     _phoneFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onPhoneFocusChanged() {
+    if (_phoneFocusNode.hasFocus) {
+      _ensurePhoneFieldVisible();
+    }
+  }
+
+  void _ensurePhoneFieldVisible() {
+    void scrollIntoView() {
+      if (!mounted || !_phoneFocusNode.hasFocus) return;
+      final fieldContext = _phoneFieldKey.currentContext;
+      if (fieldContext == null) return;
+      Scrollable.ensureVisible(
+        fieldContext,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        alignment: 0.12,
+      );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => scrollIntoView());
+    // Second pass after the IME finishes resizing the viewport.
+    Future<void>.delayed(const Duration(milliseconds: 320), scrollIntoView);
   }
 
   void _startSendingProgress() {
@@ -87,8 +122,26 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   static const int _minNationalDigits = 10;
   static const int _maxNationalDigits = 10;
 
-  int get _nationalDigitCount =>
-      _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '').length;
+  /// Strip a pasted country code so `+91` + `918682851249` does not become
+  /// `+91918682851249`.
+  String _normalizeLocalPhoneDigits(String raw, String dialCode) {
+    var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    final cc = dialCode.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cc.isNotEmpty &&
+        digits.length == cc.length + _maxNationalDigits &&
+        digits.startsWith(cc)) {
+      digits = digits.substring(cc.length);
+    }
+    if (digits.length > _maxNationalDigits) {
+      digits = digits.substring(digits.length - _maxNationalDigits);
+    }
+    return digits;
+  }
+
+  int get _nationalDigitCount => _normalizeLocalPhoneDigits(
+        _phoneController.text,
+        _selectedCountry.dialCode,
+      ).length;
 
   bool get _isPhoneValid {
     final n = _nationalDigitCount;
@@ -96,7 +149,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   }
 
   void _validatePhone(String value) {
-    final clean = value.replaceAll(RegExp(r'[^0-9]'), '');
+    final clean = _normalizeLocalPhoneDigits(value, _selectedCountry.dialCode);
     setState(() {
       if (clean.isEmpty) {
         _phoneError = null;
@@ -111,9 +164,19 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
   }
 
   void _onPhoneChanged(String value) {
-    _validatePhone(value);
-    final clean = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (clean.length >= _maxNationalDigits && _phoneFocusNode.hasFocus) {
+    final normalized = _normalizeLocalPhoneDigits(
+      value,
+      _selectedCountry.dialCode,
+    );
+    if (normalized != value.replaceAll(RegExp(r'[^0-9]'), '') ||
+        value != normalized) {
+      _phoneController.value = TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    }
+    _validatePhone(normalized);
+    if (normalized.length >= _maxNationalDigits && _phoneFocusNode.hasFocus) {
       _phoneFocusNode.unfocus();
     }
   }
@@ -138,7 +201,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     );
   }
 
-  void _sendOtp() {
+  Future<void> _sendOtp() async {
     if (!_isPhoneValid) return;
     if (!_agreedToTerms) {
       showAppFeedbackAlert(
@@ -149,30 +212,51 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
       return;
     }
 
-    final clean = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final clean = _normalizeLocalPhoneDigits(
+      _phoneController.text,
+      _selectedCountry.dialCode,
+    );
     final fullMobile = '${_selectedCountry.dialCode}$clean';
     setState(() => _isSendingOtp = true);
     _startSendingProgress();
-    context.read<AuthBloc>().add(AuthSendOTP(fullMobile));
+
+    String? smsHash;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final sig = await SmartAuth.instance.getAppSignature();
+        if (sig.hasData) {
+          final raw = sig.requireData.trim();
+          if (raw.length == 11) smsHash = raw;
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    context.read<AuthBloc>().add(AuthSendOTP(
+          fullMobile,
+          androidSmsHash: smsHash,
+        ));
   }
 
   void _openOtpPage(String mobile, {String? otp}) {
+    _phoneFocusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => OTPPage(
           mobile: mobile,
           countryCode: _selectedCountry.dialCode,
           phoneNumber: _phoneController.text,
-          prefilledOtp: otp,
+          prefilledOtp: isWebDevOtpEnabled ? otp : null,
         ),
       ),
     );
   }
 
-  void _showOtpDialog(String otp, String mobile) {
+  void _showWebDevOtpDialog(String otp, String mobile) {
     showDevOtpDialog(
       context: context,
       otp: otp,
+      mobile: mobile,
       primaryActionLabel: 'Continue',
       onPrimary: () => _openOtpPage(mobile, otp: otp),
       secondaryActionLabel: 'Copy & Continue',
@@ -205,11 +289,20 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     _layoutViewportHeight = height;
   }
 
+  /// Keyboard height under both iOS (viewInsets) and Android `adjustResize`
+  /// (viewport shrink with optional empty viewInsets).
+  double _keyboardInset(MediaQueryData mediaQuery, double layoutHeight) {
+    final fromInsets = mediaQuery.viewInsets.bottom;
+    final fromShrink = (layoutHeight - mediaQuery.size.height).clamp(0.0, layoutHeight);
+    return math.max(fromInsets, fromShrink);
+  }
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     _syncLayoutViewportHeight(mediaQuery);
     final layoutHeight = _layoutViewportHeight!;
+    final keyboardInset = _keyboardInset(mediaQuery, layoutHeight);
     final layoutMediaQuery = mediaQuery.copyWith(
       size: Size(mediaQuery.size.width, layoutHeight),
       viewInsets: EdgeInsets.zero,
@@ -232,12 +325,25 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
     final topInset = layoutMediaQuery.padding.top;
     // Keep hero responsive across short/tall phones.
     // Previous 0.95 factor made this almost always hit max height.
-    final headerSweepHeight = (size.height * 0.25).clamp(132.0, 205.0);
+    final headerSweepHeight = (size.height * 0.28).clamp(148.0, 230.0);
     final cardTop = topInset + headerSweepHeight;
+    // On compact screens (e.g. Galaxy S25), slide the panel up just enough to
+    // keep the phone field + Send OTP above the IME. Closed-keyboard layout is
+    // unchanged (keyboardInset == 0).
+    const minFormViewport = 300.0;
+    final effectiveCardTop = keyboardInset > 0
+        ? math.min(
+            cardTop,
+            (layoutHeight - keyboardInset - minFormViewport).clamp(
+              topInset + 8.0,
+              cardTop,
+            ),
+          )
+        : cardTop;
 
     return Scaffold(
-      // Keep hero + card geometry stable when the keyboard opens (avoid inset resize +
-      // Column reflow that pushes content upward).
+      // Keep hero + card geometry stable when the keyboard opens; the card is
+      // inset from the bottom by [keyboardInset] and its body scrolls instead.
       resizeToAvoidBottomInset: false,
       body: ClipRect(
         child: OverflowBox(
@@ -251,11 +357,18 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
               width: layoutMediaQuery.size.width,
               child: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
+          // Never navigate to home from the phone-entry screen.
+          // Home is only reachable after AuthOTPVerified on OTPPage.
           if (state is AuthOTPSent) {
             setState(() => _isSendingOtp = false);
             _stopSendingProgress();
-            if (state.otp != null && state.otp!.isNotEmpty) {
-              _showOtpDialog(state.otp!, state.mobile);
+            // Resend from the OTP screen also emits this state. Only the visible phone page should navigate.
+            if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
+            // Flutter web → Dev OTP popup; Android/iOS → production SMS only.
+            if (isWebDevOtpEnabled &&
+                state.otp != null &&
+                state.otp!.isNotEmpty) {
+              _showWebDevOtpDialog(state.otp!, state.mobile);
             } else {
               _openOtpPage(state.mobile);
             }
@@ -316,8 +429,10 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
             Positioned(
               left: 0,
               right: 0,
-              top: cardTop,
-              bottom: 0,
+              top: effectiveCardTop,
+              // Lift the panel above the keyboard so fields stay visible on
+              // compact devices (e.g. Galaxy S25) without changing closed layout.
+              bottom: keyboardInset,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _kPanel,
@@ -328,18 +443,29 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                   clipBehavior: Clip.hardEdge,
                   child: SafeArea(
                     top: false,
+                    // Bottom safe padding is already handled via keyboardInset /
+                    // scroll padding; avoid double insets when the IME is open.
+                    bottom: keyboardInset <= 0,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final squeeze = (constraints.maxHeight / 640).clamp(0.72, 1.0);
+                        // Scale from the closed-keyboard card height so opening
+                        // the IME does not collapse control sizes.
+                        final layoutCardHeight =
+                            (layoutHeight - cardTop - layoutMediaQuery.padding.bottom)
+                                .clamp(1.0, layoutHeight);
+                        final squeeze = (layoutCardHeight / 640).clamp(0.72, 1.0);
                         final horizontalPad = (constraints.maxWidth * 0.1).clamp(16.0, 44.0);
-                        final topPad = (constraints.maxHeight * 0.06 * squeeze).clamp(8.0, 48.0);
-                        final verticalGapXs = constraints.maxHeight * 0.012 * squeeze;
-                        final verticalGapSm = constraints.maxHeight * 0.02 * squeeze;
-                        final verticalGapMd = constraints.maxHeight * 0.032 * squeeze;
-                        final verticalGapLg = constraints.maxHeight * 0.05 * squeeze;
-                        final controlHeight = constraints.maxHeight * 0.082 * squeeze;
-                        final iconTileSize = constraints.maxWidth * 0.13;
-                        return Padding(
+                        final topPad = (layoutCardHeight * 0.10 * squeeze).clamp(24.0, 72.0);
+                        final verticalGapXs = layoutCardHeight * 0.012 * squeeze;
+                        final verticalGapSm = layoutCardHeight * 0.02 * squeeze;
+                        final verticalGapMd = layoutCardHeight * 0.032 * squeeze;
+                        // final verticalGapLg = layoutCardHeight * 0.05 * squeeze;
+                        final controlHeight = layoutCardHeight * 0.082 * squeeze;
+                        // final iconTileSize = constraints.maxWidth * 0.13;
+                        return SingleChildScrollView(
+                          physics: const ClampingScrollPhysics(),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
                           padding: EdgeInsets.fromLTRB(
                             horizontalPad,
                             topPad,
@@ -403,7 +529,9 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               final total = constraints.maxWidth - inputGap;
                               final codeWidth = total * 0.32;
                               final phoneWidth = total - codeWidth;
-                              return Row(
+                              return KeyedSubtree(
+                                key: _phoneFieldKey,
+                                child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   SizedBox(
@@ -491,9 +619,12 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                             child: TextField(
                                               controller: _phoneController,
                                               focusNode: _phoneFocusNode,
+                                              autofocus: false,
                                               keyboardType: TextInputType.phone,
                                               textAlignVertical: TextAlignVertical.center,
-                                              scrollPadding: EdgeInsets.zero,
+                                              scrollPadding: const EdgeInsets.only(
+                                                bottom: 80,
+                                              ),
                                               maxLength: _maxNationalDigits,
                                               inputFormatters: [
                                                 FilteringTextInputFormatter.digitsOnly,
@@ -532,6 +663,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                                     ),
                                   ),
                                 ],
+                              ),
                               );
                             },
                           ),
@@ -595,49 +727,50 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               ),
                             ),
                           ),
-                          SizedBox(height: verticalGapLg.clamp(12.0, 34.0)),
-                          Row(
-                            children: [
-                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: (constraints.maxWidth * 0.07).clamp(12.0, 30.0),
-                                ),
-                                child: Text(
-                                  'or Sign Up with',
-                                  style: GoogleFonts.montserrat(
-                                    color: const Color(0x33000000),
-                                    fontSize: fieldTextSize,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                              const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                            ],
-                          ),
-                          SizedBox(height: verticalGapSm.clamp(22.0, 38.0)),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: (constraints.maxWidth * 0.14).clamp(16.0, 48.0),
-                            runSpacing: verticalGapSm.clamp(8.0, 18.0),
-                            children: [
-                              _SocialIconTile(
-                                assetPath: _kAuthFacebookIcon,
-                                contentInset: 6,
-                                innerScale: 1.0,
-                                tileSize: iconTileSize.clamp(36.0, 48.0),
-                              ),
-                              _SocialIconTile(
-                                assetPath: _kAuthGoogleIcon,
-                                tileSize: iconTileSize.clamp(36.0, 48.0),
-                              ),
-                              _SocialIconTile(
-                                assetPath: _kAuthAppleIcon,
-                                tileSize: iconTileSize.clamp(36.0, 48.0),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: verticalGapLg.clamp(30.0, 50.0)),
+                          // Social sign-up (Facebook, Google, Apple) is not needed for now.
+                          // SizedBox(height: verticalGapLg.clamp(12.0, 34.0)),
+                          // Row(
+                          //   children: [
+                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                          //     Padding(
+                          //       padding: EdgeInsets.symmetric(
+                          //         horizontal: (constraints.maxWidth * 0.07).clamp(12.0, 30.0),
+                          //       ),
+                          //       child: Text(
+                          //         'or Sign Up with',
+                          //         style: GoogleFonts.montserrat(
+                          //           color: const Color(0x33000000),
+                          //           fontSize: fieldTextSize,
+                          //           fontWeight: FontWeight.w400,
+                          //         ),
+                          //       ),
+                          //     ),
+                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                          //   ],
+                          // ),
+                          // SizedBox(height: verticalGapSm.clamp(22.0, 38.0)),
+                          // Wrap(
+                          //   alignment: WrapAlignment.center,
+                          //   spacing: (constraints.maxWidth * 0.14).clamp(16.0, 48.0),
+                          //   runSpacing: verticalGapSm.clamp(8.0, 18.0),
+                          //   children: [
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthFacebookIcon,
+                          //       contentInset: 6,
+                          //       innerScale: 1.0,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthGoogleIcon,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthAppleIcon,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //   ],
+                          // ),
+                          SizedBox(height: verticalGapMd.clamp(8.0, 16.0)),
                         LayoutBuilder(
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
@@ -771,7 +904,7 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                           ),
                         ],
                       ),
-                    );
+                        );
                       },
                     ),
                   ),
@@ -829,6 +962,7 @@ class _WelcomeRichText extends StatelessWidget {
   }
 }
 
+/*
 class _SocialIconTile extends StatelessWidget {
   const _SocialIconTile({
     this.assetPath,
@@ -900,6 +1034,7 @@ class _SocialIconTile extends StatelessWidget {
     );
   }
 }
+*/
 
 class _SendingOtpProgress extends StatelessWidget {
   const _SendingOtpProgress({required this.progress});
@@ -1020,6 +1155,7 @@ class _CountryCodePickerSheetState extends State<_CountryCodePickerSheet> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: TextField(
                 controller: _search,
+                autofocus: false,
                 decoration: InputDecoration(
                   hintText: 'Search country or dial code',
                   hintStyle: GoogleFonts.montserrat(

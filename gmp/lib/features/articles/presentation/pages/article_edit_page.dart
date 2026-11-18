@@ -6,17 +6,22 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/widgets/app_dropdown.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/app_gradient_next_style_button.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/greyed_button_shell.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
+import 'package:gmp/features/articles/data/article_categories.dart';
+import 'package:gmp/features/articles/data/footwear_brands.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
 import 'package:gmp/features/articles/domain/usecases/update_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_colour_picker.dart';
 import 'footwear_camera_capture_page.dart';
 import 'upload_footwear_page.dart';
 
@@ -42,33 +47,25 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   final _formKey = GlobalKey<FormState>();
   final _modelController = TextEditingController();
   final _brandController = TextEditingController();
-  final _customColorController = TextEditingController();
 
   Article? _article;
   bool _loading = true;
   bool _submitting = false;
   String? _error;
 
-  String _category = 'sports_shoe';
+  String _category = 'formal_shoes';
   String _condition = 'good';
   String _sizeRegion = 'UK';
   String? _selectedSizeNumber;
-  String? _selectedColorName;
+  String? _selectedColorHex;
   int? _purchaseYear;
 
   final List<Map<String, dynamic>> _materials = [];
   final List<File> _imageFiles = [];
   List<String> _existingImageUrls = [];
 
-  static const List<Map<String, String>> _categories = [
-    {'value': 'sports_shoe', 'label': 'Sports shoe'},
-    {'value': 'casual', 'label': 'Casual'},
-    {'value': 'formal', 'label': 'Formal'},
-    {'value': 'sandal', 'label': 'Sandal'},
-    {'value': 'boot', 'label': 'Boot'},
-    {'value': 'slipper', 'label': 'Slipper'},
-    {'value': 'other', 'label': 'Other'},
-  ];
+  List<Map<String, String>> _categories =
+      List<Map<String, String>>.from(kDefaultArticleCategories);
 
   static const List<String> _ukSizes = [
     '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14',
@@ -79,23 +76,7 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   static const List<String> _euSizes = [
     '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
   ];
-  static const List<String> _sizeRegions = ['UK', 'US', 'EU'];
-  static const List<String> _colorNames = [
-    'Black',
-    'White',
-    'Brown',
-    'Navy',
-    'Denim',
-    'Grey',
-    'Green',
-    'Red',
-    'Blue',
-    'Tan',
-    'Pink',
-    'Yellow',
-    'Orange',
-    'Other',
-  ];
+  static const List<String> _sizeRegions = ['UK', 'US', 'EU', 'Bha'];
 
   static const List<String> _materialTypes = [
     'Leather',
@@ -131,12 +112,9 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   }
 
   String? get _resolvedColor {
-    if (_selectedColorName == null) return null;
-    if (_selectedColorName == 'Other') {
-      final custom = _customColorController.text.trim();
-      return custom.isEmpty ? null : custom;
-    }
-    return _selectedColorName;
+    final hex = _selectedColorHex?.trim();
+    if (hex == null || hex.isEmpty) return null;
+    return hex;
   }
 
   bool get _hasPhotos =>
@@ -163,21 +141,43 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     }
     _modelController.addListener(onFieldChanged);
     _brandController.addListener(onFieldChanged);
-    _customColorController.addListener(onFieldChanged);
 
     final seed = widget.initialArticle;
     if (seed != null && seed.id == widget.articleId) {
       _applyArticle(seed);
       _loading = false;
     }
+    _loadCategories();
     _load();
+  }
+
+  Future<void> _loadCategories() async {
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {},
+      (token) async {
+        final items = await fetchArticleCategories(token);
+        if (!mounted || items.isEmpty) return;
+        setState(() {
+          _categories = items;
+          final values = items.map((e) => e['value']).whereType<String>();
+          if (_category.isNotEmpty && !values.contains(_category)) {
+            // Keep current article category even if inactive; append for display.
+            _categories = [
+              ...items,
+              {'value': _category, 'label': _category},
+            ];
+          }
+        });
+      },
+    );
   }
 
   @override
   void dispose() {
     _modelController.dispose();
     _brandController.dispose();
-    _customColorController.dispose();
     super.dispose();
   }
 
@@ -204,17 +204,9 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     _existingImageUrls = List<String>.from(article.images);
     _imageFiles.clear();
 
-    _selectedColorName = null;
-    _customColorController.clear();
     final color = article.color.trim();
-    if (color.isNotEmpty) {
-      if (_colorNames.contains(color)) {
-        _selectedColorName = color;
-      } else {
-        _selectedColorName = 'Other';
-        _customColorController.text = color;
-      }
-    }
+    _selectedColorHex =
+        color.isEmpty ? null : footwearColourDisplayName(color);
 
     _selectedSizeNumber = null;
     _parseShoeSize(article.shoeSize);
@@ -229,6 +221,10 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   }
 
   void _setSizeRegion(String region) {
+    if (region == 'Bha') {
+      showComingSoon(context, feature: 'Bha size');
+      return;
+    }
     setState(() {
       _sizeRegion = region;
       if (_selectedSizeNumber != null &&
@@ -363,12 +359,15 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
             imageUrls = _existingImageUrls;
           }
 
+          final brand = _brandController.text.trim();
+          final footwearType = FootwearBrands.footwearTypeFor(brand);
           await sl<UpdateArticle>().call(
             token,
             _article!.id,
-            brand: _brandController.text.trim(),
+            brand: brand,
             model: _modelController.text.trim(),
             category: _category,
+            footwearType: footwearType,
             color: _resolvedColor!,
             purchaseYear: _purchaseYear,
             condition: _condition,
@@ -394,8 +393,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
   Widget build(BuildContext context) {
     if (_article == null && _loading) {
       return _buildWithBg(
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+        body: const AppSkeletonCards(
+          color: Color(0x66FFFFFF),
         ),
       );
     }
@@ -468,7 +467,9 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
 
     if (_article == null) {
       return _buildWithBg(
-        body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: const AppSkeletonCards(
+          color: Color(0x66FFFFFF),
+        ),
       );
     }
 
@@ -530,7 +531,6 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
               _field(
                 _modelController,
                 'Name your footwear',
-                placeholder: 'Nike Shoes',
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 20),
@@ -763,136 +763,12 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     );
   }
 
-  Future<void> _openColorPickerSheet() async {
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF0D5B68),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Text(
-                  'Select colour',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 320,
-                child: ListView.builder(
-                  itemCount: _colorNames.length,
-                  itemBuilder: (context, index) {
-                    final name = _colorNames[index];
-                    final selected = _selectedColorName == name;
-                    return ListTile(
-                      title: Text(
-                        name,
-                        style: GoogleFonts.montserrat(
-                          color: Colors.white,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                      trailing: selected
-                          ? const Icon(Icons.check, color: Color(0xFF09DFFF))
-                          : null,
-                      onTap: () => Navigator.pop(ctx, name),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    if (picked != null && mounted) {
-      setState(() => _selectedColorName = picked);
-    }
-  }
-
   Widget _colorDropdown() {
-    final presetSelected = _selectedColorName != null &&
-        _colorNames.contains(_selectedColorName);
-    final displayLabel = _selectedColorName == 'Other'
-        ? (_customColorController.text.trim().isEmpty
-            ? 'Other (type below)'
-            : _customColorController.text.trim())
-        : _selectedColorName;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            'Colour',
-            style: GoogleFonts.montserrat(
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        _glassInputShell(
-          child: InkWell(
-            onTap: _submitting ? null : _openColorPickerSheet,
-            borderRadius: BorderRadius.circular(100),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      displayLabel ?? 'Select colour',
-                      style: _inputTextStyle(
-                        color: displayLabel != null
-                            ? Colors.white
-                            : Colors.white70,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (_selectedColorName == 'Other') ...[
-          const SizedBox(height: 10),
-          _glassInputShell(
-            child: TextFormField(
-              controller: _customColorController,
-              enabled: !_submitting,
-              style: _inputTextStyle(),
-              textCapitalization: TextCapitalization.words,
-              decoration: _glassInputDecoration(
-                hintText: 'Type colour name',
-              ),
-            ),
-          ),
-        ] else if (presetSelected) ...[
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 2),
-            child: Text(
-              'Selected: $_selectedColorName',
-              style: GoogleFonts.montserrat(
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.75),
-              ),
-            ),
-          ),
-        ],
-      ],
+    return FootwearColourPicker(
+      value: _selectedColorHex,
+      enabled: !_submitting,
+      glassShell: (child) => _glassInputShell(child: child),
+      onChanged: (hex) => setState(() => _selectedColorHex = hex),
     );
   }
 

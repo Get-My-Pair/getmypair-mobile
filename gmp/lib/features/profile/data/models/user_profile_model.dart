@@ -12,18 +12,42 @@ class UserProfileModel extends UserProfile {
     required super.addresses,
     super.householdType = 'just_me',
     super.familyMembers = const [],
+    super.activeProfileId = kSelfProfileId,
     required super.createdAt,
     required super.updatedAt,
   });
 
   static String _stringId(dynamic v) {
     if (v == null) return '';
-    if (v is String) return v;
+    if (v is String) return v.trim();
     if (v is Map) {
-      final o = v[r'$oid'] ?? v['oid'];
+      final o = v[r'$oid'] ?? v['oid'] ?? v['_id'] ?? v['id'];
+      if (o != null && !identical(o, v)) return _stringId(o);
       if (o != null) return o.toString();
     }
     return v.toString();
+  }
+
+  static DateTime? _parseDate(dynamic v) {
+    if (v == null) return null;
+    return DateTime.tryParse(v.toString());
+  }
+
+  static FamilyMember familyMemberFromJson(Map<String, dynamic> map) {
+    final image = map['profileImage'] ?? map['profile_image'] ?? map['image'];
+    final imageStr = image?.toString().trim();
+    return FamilyMember(
+      id: _stringId(map['_id'] ?? map['id']),
+      name: map['name']?.toString() ?? '',
+      relation: map['relation']?.toString() ?? '',
+      gender: map['gender']?.toString(),
+      dateOfBirth: _parseDate(map['dateOfBirth']),
+      profileImage: (imageStr == null ||
+              imageStr.isEmpty ||
+              imageStr == 'null')
+          ? null
+          : imageStr,
+    );
   }
 
   factory UserProfileModel.fromJson(Map<String, dynamic> json) {
@@ -31,16 +55,9 @@ class UserProfileModel extends UserProfile {
         .map((a) => AddressModel.fromJson(a as Map<String, dynamic>))
         .toList();
     final familyMemberList = (json['familyMembers'] as List<dynamic>? ?? [])
-        .map((m) {
-          final map = m as Map<String, dynamic>;
-          return FamilyMember(
-            id: _stringId(map['_id'] ?? map['id']),
-            name: map['name']?.toString() ?? '',
-            relation: map['relation']?.toString() ?? '',
-            profileImage: map['profileImage']?.toString(),
-          );
-        })
+        .map((m) => familyMemberFromJson(m as Map<String, dynamic>))
         .toList();
+    final active = (json['activeProfileId'] ?? kSelfProfileId).toString();
 
     return UserProfileModel(
       id: _stringId(json['_id'] ?? json['id']),
@@ -52,6 +69,7 @@ class UserProfileModel extends UserProfile {
       addresses: addressList,
       householdType: (json['householdType'] ?? 'just_me').toString(),
       familyMembers: familyMemberList,
+      activeProfileId: active.isEmpty ? kSelfProfileId : active,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'].toString())
           : DateTime.now(),
@@ -70,11 +88,14 @@ class UserProfileModel extends UserProfile {
       'email': email,
       'profileImage': profileImage,
       'householdType': householdType,
+      'activeProfileId': activeProfileId,
       'familyMembers': familyMembers
           .map((m) => {
                 '_id': m.id,
                 'name': m.name,
                 'relation': m.relation,
+                'gender': m.gender,
+                'dateOfBirth': m.dateOfBirth?.toIso8601String(),
                 'profileImage': m.profileImage,
               })
           .toList(),

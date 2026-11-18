@@ -1,7 +1,7 @@
 class AppConstants {
   // App Info (align with pubspec.yaml version)
   static const String appName = 'GetMyPair';
-  static const String appVersion = '2.1.0';
+  static const String appVersion = '3.0.4';
 
   /// Sent as X-App-Source to backend for role assignment (USER_APP -> user role).
   static const String appSourceForApi = 'USER_APP';
@@ -10,6 +10,12 @@ class AppConstants {
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userKey = 'user_data';
+  /// Stable install/device id — survives logout so trusted re-login works.
+  static const String deviceIdKey = 'device_id';
+  /// Trusted-device credential issued after first successful OTP on this phone.
+  static const String deviceAuthTokenKey = 'device_auth_token';
+  static const String deviceAuthMobileKey = 'device_auth_mobile';
+  static const String deviceAuthExpiresAtKey = 'device_auth_expires_at';
   
   // Validation
   static const int minNameLength = 2;

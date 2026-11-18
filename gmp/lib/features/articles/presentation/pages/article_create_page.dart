@@ -7,12 +7,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_dropdown.dart';
+import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/greyed_button_shell.dart';
 import 'package:gmp/core/utils/responsive.dart';
+import 'package:gmp/features/articles/data/article_categories.dart';
+import 'package:gmp/features/articles/data/footwear_brands.dart';
 import 'package:gmp/features/articles/domain/usecases/create_article.dart';
 import 'package:gmp/features/articles/domain/usecases/upload_article_image.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:gmp/features/articles/presentation/widgets/footwear_colour_picker.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_cutout_preview.dart';
 
 import 'article_details_page.dart';
@@ -32,14 +36,14 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   static const String _headingFontFamily = 'Boldonse';
   static const String _contentFontFamily = 'Montserrat';
   final _formKey = GlobalKey<FormState>();
-  final _modelController = TextEditingController(text: 'Air Max');
-  final _brandController = TextEditingController(text: 'Nike');
+  final _modelController = TextEditingController();
 
-  String _category = 'sports_shoe';
+  String _category = 'formal_shoes';
+  String? _selectedBrand;
+  String _footwearType = 'everyday';
   String _sizeRegion = 'UK';
   String? _selectedSizeNumber;
-  String? _selectedColorName;
-  final _customColorController = TextEditingController();
+  String? _selectedColorHex;
 
   static const List<String> _ukSizes = [
     '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14',
@@ -50,23 +54,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   static const List<String> _euSizes = [
     '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
   ];
-  static const List<String> _sizeRegions = ['UK', 'US', 'EU'];
-  static const List<String> _colorNames = [
-    'Black',
-    'White',
-    'Brown',
-    'Navy',
-    'Denim',
-    'Grey',
-    'Green',
-    'Red',
-    'Blue',
-    'Tan',
-    'Pink',
-    'Yellow',
-    'Orange',
-    'Other',
-  ];
+  static const List<String> _sizeRegions = ['UK', 'US', 'EU', 'Bha'];
   String _condition = 'good';
   int? _purchaseYear;
   static const List<String> _materialTypes = [
@@ -87,15 +75,8 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   bool _submitting = false;
   String? _errorMessage;
 
-  static const List<Map<String, String>> _categories = [
-    {'value': 'sports_shoe', 'label': 'Sports shoe'},
-    {'value': 'casual', 'label': 'Casual'},
-    {'value': 'formal', 'label': 'Formal'},
-    {'value': 'sandal', 'label': 'Sandal'},
-    {'value': 'boot', 'label': 'Boot'},
-    {'value': 'slipper', 'label': 'Slipper'},
-    {'value': 'other', 'label': 'Other'},
-  ];
+  List<Map<String, String>> _categories =
+      List<Map<String, String>>.from(kDefaultArticleCategories);
   static const List<Map<String, String>> _conditions = [
     {'value': 'excellent', 'label': 'Excellent'},
     {'value': 'good', 'label': 'Good'},
@@ -106,11 +87,36 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   @override
   void initState() {
     super.initState();
-    void onFieldChanged() {
+    _modelController.addListener(() {
       if (mounted) setState(() {});
-    }
-    _modelController.addListener(onFieldChanged);
-    _brandController.addListener(onFieldChanged);
+    });
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {},
+      (token) async {
+        final items = await fetchArticleCategories(token);
+        if (!mounted || items.isEmpty) return;
+        setState(() {
+          _categories = items;
+          final values = items.map((e) => e['value']).whereType<String>();
+          if (!values.contains(_category)) {
+            _category = values.isNotEmpty ? values.first : _category;
+          }
+        });
+      },
+    );
+  }
+
+  void _selectBrand(String brandName) {
+    setState(() {
+      _selectedBrand = brandName;
+      _footwearType = FootwearBrands.footwearTypeFor(brandName);
+    });
   }
 
   List<String> get _sizesForRegion {
@@ -131,6 +137,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   }
 
   void _setSizeRegion(String region) {
+    if (region == 'Bha') {
+      showComingSoon(context, feature: 'Bha size');
+      return;
+    }
     setState(() {
       _sizeRegion = region;
       if (_selectedSizeNumber != null &&
@@ -141,19 +151,14 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   }
 
   String? get _resolvedColor {
-    if (_selectedColorName == null) return null;
-    if (_selectedColorName == 'Other') {
-      final custom = _customColorController.text.trim();
-      return custom.isEmpty ? null : custom;
-    }
-    return _selectedColorName;
+    final hex = _selectedColorHex?.trim();
+    if (hex == null || hex.isEmpty) return null;
+    return hex;
   }
 
   @override
   void dispose() {
     _modelController.dispose();
-    _brandController.dispose();
-    _customColorController.dispose();
     super.dispose();
   }
 
@@ -163,19 +168,26 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
   bool get _canSave =>
       !_submitting &&
       _modelController.text.trim().isNotEmpty &&
-      _brandController.text.trim().isNotEmpty &&
+      (_selectedBrand?.trim().isNotEmpty ?? false) &&
       _resolvedColor != null &&
       _selectedSizeNumber != null &&
       _imageFiles.length >= _minFootwearPhotos &&
       _imageFiles.length <= _maxFootwearPhotos;
 
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   Future<void> _openUploadFootwear() async {
+    _dismissKeyboard();
     final files = await Navigator.of(context).push<List<File>>(
       MaterialPageRoute(
         builder: (_) => UploadFootwearPage(initialFiles: List<File>.from(_imageFiles)),
       ),
     );
     if (!mounted) return;
+    // Returning from camera/gallery often restores text focus — keep keyboard closed.
+    _dismissKeyboard();
     if (files == null || files.isEmpty) return;
     setState(() {
       _imageFiles
@@ -222,9 +234,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
 
           // Create article first (API requires article to exist before upload-image)
           final article = await sl<CreateArticle>().call(token,
-            brand: _brandController.text.trim(),
+            brand: _selectedBrand!.trim(),
             model: _modelController.text.trim(),
             category: _category,
+            footwearType: _footwearType,
             color: _resolvedColor!,
             purchaseYear: _purchaseYear,
             condition: _condition,
@@ -284,13 +297,17 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     final horizontal = Responsive.horizontalPaddingOf(context);
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
+      body: GestureDetector(
+        onTap: _dismissKeyboard,
+        behavior: HitTestBehavior.deferToChild,
+        child: Stack(
         children: [
           ...BgTheme.background(),
           SafeArea(
             child: Form(
               key: _formKey,
               child: ListView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 28),
                 children: [
                 Row(
@@ -342,16 +359,10 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
                 _field(
                   _modelController,
                   'Name your footwear',
-                  placeholder: 'Nike Shoes',
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 20),
-                _field(
-                  _brandController,
-                  'Brand',
-                  placeholder: 'Nike',
-                  textCapitalization: TextCapitalization.words,
-                ),
+                _brandSelector(),
                 const SizedBox(height: 20),
                 _purchaseYearDropdown(),
                 const SizedBox(height: 20),
@@ -372,6 +383,7 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -413,7 +425,72 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     );
   }
 
+  Future<void> _openBrandPicker() async {
+    _dismissKeyboard();
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0D5B68),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => const _BrandPickerSheet(),
+    );
+    if (!mounted) return;
+    _dismissKeyboard();
+    if (selected != null) {
+      _selectBrand(selected);
+    }
+  }
+
+  Widget _brandSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 6),
+          child: Text(
+            'Brand',
+            style: GoogleFonts.montserrat(
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        _glassInputShell(
+          child: InkWell(
+            onTap: _submitting ? null : _openBrandPicker,
+            borderRadius: BorderRadius.circular(100),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _selectedBrand ?? 'Select brand',
+                      style: _inputTextStyle(
+                        color: _selectedBrand != null
+                            ? Colors.white
+                            : Colors.white70,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _openPurchaseYearPicker() async {
+    _dismissKeyboard();
     final now = DateTime.now();
     final initial = _purchaseYear != null
         ? DateTime(_purchaseYear!, 6, 1)
@@ -694,137 +771,12 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
     );
   }
 
-  Future<void> _openColorPickerSheet() async {
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF0D5B68),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Text(
-                  'Select colour',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 320,
-                child: ListView.builder(
-                  itemCount: _colorNames.length,
-                  itemBuilder: (context, index) {
-                    final name = _colorNames[index];
-                    final selected = _selectedColorName == name;
-                    return ListTile(
-                      title: Text(
-                        name,
-                        style: GoogleFonts.montserrat(
-                          color: Colors.white,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                      trailing: selected
-                          ? const Icon(Icons.check, color: Color(0xFF09DFFF))
-                          : null,
-                      onTap: () => Navigator.pop(ctx, name),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    if (picked != null && mounted) {
-      setState(() => _selectedColorName = picked);
-    }
-  }
-
   Widget _colorDropdown() {
-    final presetSelected = _selectedColorName != null &&
-        _colorNames.contains(_selectedColorName);
-    final displayLabel = _selectedColorName == 'Other'
-        ? (_customColorController.text.trim().isEmpty
-            ? 'Other (type below)'
-            : _customColorController.text.trim())
-        : _selectedColorName;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 6),
-          child: Text(
-            'Colour',
-            style: GoogleFonts.montserrat(
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        _glassInputShell(
-          child: InkWell(
-            onTap: _submitting ? null : _openColorPickerSheet,
-            borderRadius: BorderRadius.circular(100),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      displayLabel ?? 'Select colour',
-                      style: _inputTextStyle(
-                        color: displayLabel != null
-                            ? Colors.white
-                            : Colors.white70,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (_selectedColorName == 'Other') ...[
-          const SizedBox(height: 10),
-          _glassInputShell(
-            child: TextFormField(
-              controller: _customColorController,
-              enabled: !_submitting,
-              style: _inputTextStyle(),
-              textCapitalization: TextCapitalization.words,
-              decoration: _glassInputDecoration(
-                hintText: 'Type colour name',
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-        ] else if (presetSelected) ...[
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 2),
-            child: Text(
-              'Selected: $_selectedColorName',
-              style: GoogleFonts.montserrat(
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.75),
-              ),
-            ),
-          ),
-        ],
-      ],
+    return FootwearColourPicker(
+      value: _selectedColorHex,
+      enabled: !_submitting,
+      glassShell: (child) => _glassInputShell(child: child),
+      onChanged: (hex) => setState(() => _selectedColorHex = hex),
     );
   }
 
@@ -1043,6 +995,130 @@ class _ArticleCreatePageState extends State<ArticleCreatePage> {
             fontSize: 14,
             fontWeight: FontWeight.w400,
             color: teal,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandPickerSheet extends StatefulWidget {
+  const _BrandPickerSheet();
+
+  @override
+  State<_BrandPickerSheet> createState() => _BrandPickerSheetState();
+}
+
+class _BrandPickerSheetState extends State<_BrandPickerSheet> {
+  final _searchController = TextEditingController();
+  late List<FootwearBrand> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = FootwearBrands.all;
+    _searchController.addListener(_onSearch);
+  }
+
+  void _onSearch() {
+    setState(() {
+      _filtered = FootwearBrands.search(_searchController.text);
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottom),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.72,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white38,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Text(
+                  'Select brand',
+                  style: GoogleFonts.boldonse(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _searchController,
+                  // Keyboard only when user taps search — don't open on sheet open.
+                  autofocus: false,
+                  style: GoogleFonts.montserrat(color: Colors.white, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'Search brands',
+                    hintStyle: GoogleFonts.montserrat(color: Colors.white60),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.1),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(100),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _filtered.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No brands found',
+                          style: GoogleFonts.montserrat(color: Colors.white70),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _filtered.length,
+                        itemBuilder: (context, index) {
+                          final brand = _filtered[index];
+                          return ListTile(
+                            title: Text(
+                              brand.name,
+                              style: GoogleFonts.montserrat(
+                                color: Colors.white,
+                                fontSize: 15,
+                              ),
+                            ),
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              Navigator.of(context).pop(brand.name);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
         ),
       ),

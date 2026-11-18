@@ -34,5 +34,6 @@ abstract class PaymentRepository {
   Future<Payment?> getPaymentByServiceRequest({
     required String accessToken,
     required String serviceRequestId,
+    bool refreshFromZoho = false,
   });
 }

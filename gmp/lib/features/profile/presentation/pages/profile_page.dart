@@ -6,7 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/bgtheme.dart';
+import '../../../../routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../core/widgets/chevron_screen_back_button.dart';
 import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
@@ -23,14 +25,12 @@ import '../bloc/profile_state.dart';
 import '../profile_screen_system_ui.dart';
 import 'edit_profile_page.dart';
 import 'saved_addresses_page.dart';
-// MVP: single profile only — restore for family / multi-profile.
-// import 'family_profile_page.dart';
 import 'notifications_page.dart';
 import 'manage_devices_page.dart';
 import 'faq_page.dart';
 import 'license_page.dart';
 import '../../../auth/presentation/pages/terms_of_service_page.dart';
-import '../../../service/presentation/pages/service_request_list_page.dart';
+import '../../../service/presentation/pages/active_services_page.dart';
 import '../../../payment/presentation/bloc/payment_bloc.dart';
 import '../../../payment/presentation/pages/payment_history_page.dart';
 
@@ -72,7 +72,16 @@ class _ProfilePageState extends State<ProfilePage> {
       (token) async {
         if (!mounted) return;
         setState(() => _accessToken = token);
-        context.read<ProfileBloc>().add(ProfileLoadRequested(token));
+        final current = context.read<ProfileBloc>().state;
+        final alreadyLoaded = current is ProfileLoaded ||
+            current is ProfileUpdating ||
+            current is ProfileImageUploading ||
+            current is AddressActionLoading ||
+            current is ProfileSwitching ||
+            (current is ProfileError && current.profile != null);
+        if (!alreadyLoaded) {
+          context.read<ProfileBloc>().add(ProfileLoadRequested(token));
+        }
       },
     );
   }
@@ -114,11 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  String _subtitleLine(UserProfile profile) {
-    final e = profile.email?.trim();
-    if (e != null && e.isNotEmpty) return e;
-    return profile.phone;
-  }
+  String _subtitleLine(UserProfile profile) => profile.activeSubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -142,12 +147,26 @@ class _ProfilePageState extends State<ProfilePage> {
           }
         },
         builder: (context, state) {
-          if (state is ProfileLoading || state is ProfileInitial) {
-            return const AnnotatedRegion<SystemUiOverlayStyle>(
-              value: kProfileLightScaffoldSystemUi,
+          if (state is ProfileLoading ||
+              state is ProfileInitial ||
+              state is ProfileSwitching) {
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: kProfileGradientHeaderSystemUi,
               child: Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
+                body: Container(
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage(BgTheme.backgroundImageAsset),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: AppSkeletonList(
+                      itemCount: 6,
+                      color: Colors.white.withValues(alpha: 0.38),
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+                    ),
+                  ),
                 ),
               ),
             );
@@ -160,6 +179,8 @@ class _ProfilePageState extends State<ProfilePage> {
               : state is ProfileImageUploading
               ? state.profile
               : state is AddressActionLoading
+              ? state.profile
+              : state is ProfileSwitching
               ? state.profile
               : state is ProfileError && state.profile != null
               ? state.profile!
@@ -209,8 +230,6 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           final token = _accessToken ?? '';
-          // MVP: single profile only — restore householdType branching later.
-          // final isJustMe = profile.householdType == 'just_me';
 
           final statusTop = MediaQuery.paddingOf(context).top;
           final deviceTextScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -317,7 +336,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              profile.name,
+                                              profile.activeDisplayName,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: GoogleFonts.boldonse(
@@ -395,20 +414,18 @@ class _ProfilePageState extends State<ProfilePage> {
                                                   token,
                                                 ),
                                               ),
-                                              // MVP: family profile — restore when multi-profile ships.
-                                              // _GradientMenuTile(
-                                              //   iconAssetPath:
-                                              //       'assets/images/icons/profile/familyprofile.svg',
-                                              //   title: isJustMe ? 'Profile' : 'Family Profile',
-                                              //   scale: layoutScale,
-                                              //   onTap: () {
-                                              //     if (isJustMe) {
-                                              //       _openEditProfile(context, profile, token);
-                                              //       return;
-                                              //     }
-                                              //     _openFamilyProfile(context, profile, token);
-                                              //   },
-                                              // ),
+                                              _GradientMenuTile(
+                                                iconAssetPath:
+                                                    'assets/images/icons/profile/familyprofile.svg',
+                                                title: 'Family Profile',
+                                                scale: layoutScale,
+                                                onTap: () =>
+                                                    _openFamilyProfile(
+                                                  context,
+                                                  profile,
+                                                  token,
+                                                ),
+                                              ),
                                               _GradientMenuTile(
                                                 iconAssetPath:
                                                     'assets/images/icons/profile/bell.svg',
@@ -552,22 +569,21 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // MVP: single profile only — restore for family / multi-profile.
-  // void _openFamilyProfile(
-  //   BuildContext context,
-  //   UserProfile profile,
-  //   String token,
-  // ) {
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder: (_) => BlocProvider.value(
-  //         value: context.read<ProfileBloc>(),
-  //         child: FamilyProfilePage(profile: profile, accessToken: token),
-  //       ),
-  //     ),
-  //   );
-  // }
+  void _openFamilyProfile(
+    BuildContext context,
+    UserProfile profile,
+    String token,
+  ) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.familyProfile,
+      arguments: <String, dynamic>{
+        'profile': profile,
+        'accessToken': token,
+        'bloc': context.read<ProfileBloc>(),
+      },
+    );
+  }
 
   void _openSavedAddresses(
     BuildContext context,
@@ -595,7 +611,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void _openServiceRequests(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const ServiceRequestListPage()),
+      MaterialPageRoute(builder: (_) => const ActiveServicesPage()),
     );
   }
 
@@ -642,85 +658,63 @@ class _OverlappingAvatarCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Single profile avatar — family ring icons hidden (see family profile module).
+    final all = switchableProfilesOf(profile);
+    final activeId =
+        profile.isSelfActive ? kSelfProfileId : profile.activeProfileId;
+    final current = all.firstWhere(
+      (p) => p.id == activeId,
+      orElse: () => all.first,
+    );
+    final others = all.where((p) => p.id != current.id).take(2).toList();
+
+    final clusterW = others.isEmpty
+        ? (79 * scale).clamp(56.0, 79.0)
+        : (156 * scale).clamp(112.0, 156.0);
+    final clusterH = (92 * scale).clamp(68.0, 92.0);
     final mainRadius = (39.5 * scale).clamp(28.0, 39.5);
-    const border = BorderSide.none;
+    final smallRadius = (22 * scale).clamp(16.0, 22.0);
+    const border = BorderSide(color: Colors.white, width: 2);
 
     final cluster = SizedBox(
-      width: mainRadius * 2,
-      height: mainRadius * 2,
-      child: _RingAvatar(
-        radius: mainRadius,
-        border: border,
-        child: profile.profileImage != null
-            ? ClipOval(
-                child: Image.network(
-                  profile.profileImage!,
-                  width: mainRadius * 2,
-                  height: mainRadius * 2,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _initialsAvatar(profile, mainRadius),
-                ),
-              )
-            : _initialsAvatar(profile, mainRadius),
+      width: clusterW,
+      height: clusterH,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Small avatars behind (drawn first).
+          if (others.isNotEmpty)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: _RingAvatar(
+                radius: smallRadius,
+                border: border,
+                child: _profileFill(others[0], smallRadius),
+              ),
+            ),
+          if (others.length > 1)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: _RingAvatar(
+                radius: smallRadius,
+                border: border,
+                child: _profileFill(others[1], smallRadius),
+              ),
+            ),
+          // Large active avatar in front (drawn last).
+          Positioned(
+            right: others.isEmpty ? 0 : (31 * scale).clamp(20.0, 31.0),
+            top: (6 * scale).clamp(3.0, 6.0),
+            child: _RingAvatar(
+              radius: mainRadius,
+              border: BorderSide.none,
+              child: _profileFill(current, mainRadius),
+            ),
+          ),
+        ],
       ),
     );
-
-    // Family emoji cluster — commented out; one profile only.
-    // final clusterW = (156 * scale).clamp(112.0, 156.0);
-    // final clusterH = (92 * scale).clamp(68.0, 92.0);
-    // final smallRadius = (22 * scale).clamp(16.0, 22.0);
-    // final cluster = SizedBox(
-    //   width: clusterW,
-    //   height: clusterH,
-    //   child: Stack(
-    //     clipBehavior: Clip.none,
-    //     children: [
-    //       Positioned(
-    //         right: 0,
-    //         top: 0,
-    //         child: _RingAvatar(
-    //           radius: smallRadius,
-    //           border: border,
-    //           child: _smallFill(Icons.person, (14 * scale).clamp(10.0, 14.0)),
-    //         ),
-    //       ),
-    //       Positioned(
-    //         right: (31 * scale).clamp(20.0, 31.0),
-    //         top: (6 * scale).clamp(3.0, 6.0),
-    //         child: _RingAvatar(
-    //           radius: mainRadius,
-    //           border: BorderSide.none,
-    //           child: profile.profileImage != null
-    //               ? ClipOval(
-    //                   child: Image.network(
-    //                     profile.profileImage!,
-    //                     width: mainRadius * 2,
-    //                     height: mainRadius * 2,
-    //                     fit: BoxFit.cover,
-    //                     errorBuilder: (context, error, stackTrace) =>
-    //                         _initialsAvatar(profile, mainRadius),
-    //                   ),
-    //                 )
-    //               : _initialsAvatar(profile, mainRadius),
-    //         ),
-    //       ),
-    //       Positioned(
-    //         right: 0,
-    //         bottom: 0,
-    //         child: _RingAvatar(
-    //           radius: smallRadius,
-    //           border: border,
-    //           child: _smallFill(
-    //             Icons.child_care_outlined,
-    //             (18 * scale).clamp(12.0, 18.0),
-    //           ),
-    //         ),
-    //       ),
-    //     ],
-    //   ),
-    // );
 
     if (onTap == null) return cluster;
 
@@ -734,10 +728,25 @@ class _OverlappingAvatarCluster extends StatelessWidget {
     );
   }
 
-  Widget _initialsAvatar(UserProfile profile, double radius) {
-    final letter = profile.name.isNotEmpty
-        ? profile.name[0].toUpperCase()
-        : 'U';
+  Widget _profileFill(SwitchableAppProfile person, double radius) {
+    final url = person.imageUrl;
+    if (url != null && url.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          url,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              _letterFill(person.name, radius),
+        ),
+      );
+    }
+    return _letterFill(person.name, radius);
+  }
+
+  Widget _letterFill(String name, double radius) {
+    final letter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
     return Container(
       width: radius * 2,
       height: radius * 2,
@@ -753,14 +762,6 @@ class _OverlappingAvatarCluster extends StatelessWidget {
       ),
     );
   }
-
-  // Widget _smallFill(IconData icon, double size) {
-  //   return Container(
-  //     color: Colors.white.withValues(alpha: 0.22),
-  //     alignment: Alignment.center,
-  //     child: Icon(icon, color: Colors.white, size: size),
-  //   );
-  // }
 }
 
 class _RingAvatar extends StatelessWidget {

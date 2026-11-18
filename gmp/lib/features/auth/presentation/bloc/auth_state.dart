@@ -31,7 +31,8 @@ class AuthUnauthenticated extends AuthState {
 
 class AuthOTPSent extends AuthState {
   final String mobile;
-  final String? otp; // OTP code (only in development mode)
+  /// Present in dummy / no-DLT mode when the API returns the code.
+  final String? otp;
 
   const AuthOTPSent(this.mobile, {this.otp});
 

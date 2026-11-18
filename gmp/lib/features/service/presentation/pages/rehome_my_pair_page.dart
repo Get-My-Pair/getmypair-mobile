@@ -1,17 +1,29 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
-import 'package:gmp/core/theme/app_colors.dart';
-import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/constants/api_endpoints.dart';
+import 'package:gmp/features/articles/domain/entities/article.dart';
+import 'package:gmp/features/articles/domain/usecases/get_my_articles.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/rent/presentation/pages/available_rent_footwear_page.dart';
+import 'package:gmp/features/rent/presentation/pages/rent_my_pair_page.dart';
+import 'package:gmp/features/sell/presentation/pages/sell_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'donate_my_pair_page.dart';
-
-/// Rehome hub — same shell as [CareMyPairPage]: search, service cards, media rows.
-/// Donate opens [DonateMyPairPage] (article grid, then [DonateMyPairDetailsPage] / pickup / summary).
-class RehomeMyPairPage extends StatelessWidget {
+class RehomeMyPairPage extends StatefulWidget {
   const RehomeMyPairPage({super.key});
+
+  @override
+  State<RehomeMyPairPage> createState() => _RehomeMyPairPageState();
+}
+
+class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
+  static const bool _showStaticMedia = true;
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -20,232 +32,467 @@ class RehomeMyPairPage extends StatelessWidget {
     bottomRight: Radius.circular(50),
   );
 
-  static const List<_VideoCardData> _journeyVideos = [
-    _VideoCardData(
-      title: 'Suede Saver: How to Clean and Protect Suede Shoes',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
-    _VideoCardData(
-      title: 'Everyday Shoe Care Hacks Using Household Items',
-      image: 'assets/images/img/caremypair/vid2.png',
-    ),
-    _VideoCardData(
-      title: 'Odor-Free Feet: How to De-Stink Your Shoes Naturally',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
+  static const List<_RentalStyleData> _fallbackStyles = [
+    _RentalStyleData(label: 'Statement Heels'),
+    _RentalStyleData(label: 'Designer Boots'),
+    _RentalStyleData(label: 'Trail Shoes'),
   ];
 
-  static const List<_VideoCardData> _sellingVideos = [
-    _VideoCardData(
-      title: 'Selling Made Simple: Prep Your Pair',
-      image: 'assets/images/img/caremypair/vid2.png',
-    ),
-    _VideoCardData(
-      title: 'Price It Right: Second-Hand Footwear Tips',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
-    _VideoCardData(
-      title: 'Photo Tips for a Quick Sale',
-      image: 'assets/images/img/caremypair/vid2.png',
-    ),
-  ];
+  bool _loadingStyles = true;
+  List<_RentalStyleData> _rentalStyles = _fallbackStyles;
+  String _searchQuery = '';
 
-  static const List<_ArticleCardData> _articles = [
-    _ArticleCardData(
-      title: 'Give Back: Where Donated Shoes Go',
-      summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image: 'assets/images/img/caremypair/air1.png',
-    ),
-    _ArticleCardData(
-      title: 'Extend the Life of Every Pair',
-      summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image: 'assets/images/img/caremypair/air23.png',
-    ),
-    _ArticleCardData(
-      title: 'Community Impact Stories',
-      summary: 'Lorem ipsum dolor sit amet consectetur. Tristique fringilla...',
-      image: 'assets/images/img/caremypair/air23.png',
-    ),
-  ];
+  List<HubSearchHit> _rehomeSearchHits(BuildContext context) {
+    final hits = <HubSearchHit>[
+      HubSearchHit(
+        title: 'SellMyPair',
+        subtitle: 'List footwear for sale',
+        keywords: [
+          'sell',
+          'listing',
+          'marketplace',
+          'rehome',
+          'rehomemypair',
+          'service',
+        ],
+        icon: Icons.sell_outlined,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SellMyPairPage()),
+          );
+        },
+      ),
+      HubSearchHit(
+        title: 'RentMyPair',
+        subtitle: 'Rent pairs from the community',
+        keywords: [
+          'rent',
+          'rental',
+          'rehome',
+          'rehomemypair',
+          'service',
+        ],
+        icon: Icons.event_available_outlined,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const RentMyPairPage()),
+          );
+        },
+      ),
+    ];
+
+    for (final style in _rentalStyles) {
+      hits.add(
+        HubSearchHit(
+          title: style.label,
+          subtitle: 'Requested rental style',
+          keywords: [
+            'style',
+            'rental',
+            'rent',
+            'rehome',
+            ...style.label.toLowerCase().split(' '),
+          ],
+          icon: Icons.ice_skating_outlined,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AvailableRentFootwearPage()),
+            );
+          },
+        ),
+      );
+    }
+
+    return hits;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRentalStyles();
+  }
+
+  static String _imageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    final base = ApiEndpoints.baseUrl;
+    if (path.startsWith('/')) return '$base$path';
+    return '$base/uploads/$path';
+  }
+
+  static String _styleLabel(Article article) {
+    final category = article.category.trim();
+    if (category.isNotEmpty) return category;
+    final brand = article.brand.trim();
+    if (brand.isNotEmpty) return brand;
+    final model = article.model.trim();
+    if (model.isNotEmpty) return model;
+    return 'Style';
+  }
+
+  Future<void> _loadRentalStyles() async {
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+
+    await tokenResult.fold(
+      (_) async {
+        setState(() {
+          _loadingStyles = false;
+          _rentalStyles = _fallbackStyles;
+        });
+      },
+      (token) async {
+        try {
+          final articles = await sl<GetMyArticles>().call(token);
+          if (!mounted) return;
+
+          final byCategory = <String, Article>{};
+          for (final article in articles) {
+            final key = article.category.trim().toLowerCase();
+            if (key.isEmpty) continue;
+            byCategory.putIfAbsent(key, () => article);
+            if (byCategory.length >= 6) break;
+          }
+
+          final source = byCategory.isNotEmpty
+              ? byCategory.values.toList()
+              : articles.take(6).toList();
+
+          final styles = source
+              .map(
+                (a) => _RentalStyleData(
+                  label: _styleLabel(a),
+                  imageUrl: _imageUrl(a.rackHeroImagePath),
+                ),
+              )
+              .toList();
+
+          setState(() {
+            _loadingStyles = false;
+            _rentalStyles = styles.isNotEmpty ? styles : _fallbackStyles;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _loadingStyles = false;
+            _rentalStyles = _fallbackStyles;
+          });
+        }
+      },
+    );
+  }
+
+  Widget _buildRentalStylesRow({required double height}) {
+    if (_loadingStyles) {
+      return SizedBox(
+        height: height,
+        child: const Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF0E7C8A),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_rentalStyles.length <= 3) {
+      return SizedBox(
+        height: height,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final style in _rentalStyles)
+              Expanded(child: _RentalStyle(data: style)),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: height,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _rentalStyles.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (_, i) => SizedBox(
+          width: 110,
+          child: _RentalStyle(data: _rentalStyles[i]),
+        ),
+      ),
+    );
+  }
+
+  TextStyle _sectionTitle(double fontSize) {
+    return GoogleFonts.boldonse(
+      color: const Color(0xFF062F35),
+      fontSize: fontSize,
+      fontWeight: FontWeight.w400,
+    );
+  }
+
+  TextStyle _subsectionLabel(double fontSize) {
+    return GoogleFonts.montserrat(
+      color: Colors.black,
+      fontSize: fontSize,
+      fontWeight: FontWeight.w500,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-    final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
-    const topInset = 52.0;
+    // Same width / edge packing as SellMyPair (SellFlowScaffold).
+    final uiScale = (width / 390).clamp(0.84, 1.2).toDouble();
+    final horizontalInset = (10.0 * uiScale).clamp(8.0, 20.0);
+    final topInset = (40.0 * uiScale).clamp(28.0, 52.0);
+    final contentPadH = (14.0 * uiScale).clamp(10.0, 20.0);
+    final contentPadTop = (12.0 * uiScale).clamp(10.0, 16.0);
+    final bottomNavH = dashboardLinkedBottomNavStackHeight(context);
+    final contentPadBottom = bottomNavH + (12.0 * uiScale).clamp(8.0, 16.0);
+    final searching = _searchQuery.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
-        clipBehavior: Clip.none,
+        clipBehavior: Clip.hardEdge,
         children: [
           ...BgTheme.background(),
           Positioned.fill(
             child: SafeArea(
               bottom: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalInset,
-                  topInset,
-                  horizontalInset,
-                  0,
-                ),
-                child: DecoratedBox(
-                  decoration: const ShapeDecoration(
-                    color: Color(0xFFF0F0F0),
-                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
-                    shadows: [
-                      BoxShadow(
-                        color: Color(0x19000000),
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalInset,
+                    topInset,
+                    horizontalInset,
+                    0,
                   ),
-                  child: ClipRRect(
-                    borderRadius: _panelRadius,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
-                      children: [
-                      _Header(onBack: () => Navigator.maybePop(context)),
-                      const SizedBox(height: 24),
-                      const _SearchBar(),
-                      const SizedBox(height: 28),
-                      Text(
-                        'Our Services',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 720),
+                    child: DecoratedBox(
+                      decoration: const ShapeDecoration(
+                        color: Color(0xFFF0F0F0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: _panelRadius,
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _PrimaryDonateCard(
-                              onTap: () => _openDonateFlow(context),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: _SecondaryServiceCard(
-                              label: 'Sell\nMyPair',
-                              iconAsset:
-                                  'assets/images/noun-shoes-cleaning-7675732 1.svg',
-                              iconSize: 64,
-                              labelFontSize: 15,
-                              onTap: () => showComingSoon(
-                                context,
-                                feature: 'Sell MyPair',
-                              ),
-                            ),
+                        shadows: [
+                          BoxShadow(
+                            color: Color(0x19000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'The Journey of a Pair: How We Give Back',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                      child: ClipRRect(
+                        borderRadius: _panelRadius,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final available = (constraints.maxHeight -
+                                    contentPadTop -
+                                    contentPadBottom)
+                                .clamp(0.0, double.infinity);
+                            // Pack like SellMyPair: scale gaps/blocks, no vertical scroll.
+                            const designH = 560.0;
+                            final hScale =
+                                (available / 640).clamp(0.68, 1.0);
+                            final s = uiScale * hScale;
+                            final isTall = available > designH + 24;
+                            final distribute = isTall && !searching;
+
+                            final sectionSize =
+                                (16.0 * s).clamp(13.0, 18.0);
+                            final subSize =
+                                (15.0 * s).clamp(12.0, 15.0);
+                            final gapSm =
+                                (10.0 * s).clamp(6.0, 12.0);
+                            final gapMd =
+                                (14.0 * s).clamp(8.0, 16.0);
+                            final gapLg =
+                                (18.0 * s).clamp(10.0, 24.0);
+                            final cardGap =
+                                (8.0 * uiScale).clamp(6.0, 12.0);
+                            final brandH =
+                                (105.0 * hScale).clamp(72.0, 105.0);
+                            final stylesH =
+                                (96.0 * hScale).clamp(68.0, 96.0);
+                            final brandScale = brandH / 105.0;
+
+                            return Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                contentPadH,
+                                contentPadTop,
+                                contentPadH,
+                                contentPadBottom,
+                              ),
+                              child: SizedBox(
+                                height: available,
+                                width: double.infinity,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _Header(
+                                      onBack: () =>
+                                          Navigator.maybePop(context),
+                                      uiScale: uiScale,
+                                    ),
+                                    SizedBox(height: gapLg),
+                                    HubGradientSearchBar(
+                                      hintText: 'Search RehomeMyPair',
+                                      showClear: true,
+                                      onChanged: (value) => setState(
+                                        () => _searchQuery = value,
+                                      ),
+                                    ),
+                                    SizedBox(height: gapLg),
+                                    if (searching)
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          keyboardDismissBehavior:
+                                              ScrollViewKeyboardDismissBehavior
+                                                  .onDrag,
+                                          physics:
+                                              const ClampingScrollPhysics(),
+                                          child: HubScopedSearchResults(
+                                            query: _searchQuery,
+                                            hubName: 'RehomeMyPair',
+                                            hits: _rehomeSearchHits(
+                                              context,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    else ...[
+                                      Text(
+                                        'Our Services',
+                                        style: _sectionTitle(sectionSize),
+                                      ),
+                                      SizedBox(height: gapMd),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _PrimaryDonateCard(
+                                              onTap: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const SellMyPairPage(),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          SizedBox(width: cardGap),
+                                          Expanded(
+                                            child: _SecondaryServiceCard(
+                                              onTap: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const RentMyPairPage(),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (_showStaticMedia) ...[
+                                        if (distribute)
+                                          const Spacer(flex: 2)
+                                        else
+                                          SizedBox(height: gapLg),
+                                        Text(
+                                          'In Demand Right Now',
+                                          style:
+                                              _sectionTitle(sectionSize),
+                                        ),
+                                        SizedBox(height: gapSm),
+                                        Text(
+                                          'Top Bidded Brands',
+                                          style:
+                                              _subsectionLabel(subSize),
+                                        ),
+                                        SizedBox(height: gapSm),
+                                        SizedBox(
+                                          height: brandH,
+                                          child: SingleChildScrollView(
+                                            scrollDirection:
+                                                Axis.horizontal,
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                            ),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                _DemandBrandImage(
+                                                  asset:
+                                                      'assets/images/rehome1 (2).png',
+                                                  width: 184 * brandScale,
+                                                  height: brandH * 0.98,
+                                                ),
+                                                SizedBox(
+                                                  width: 14 * brandScale,
+                                                ),
+                                                _DemandBrandImage(
+                                                  asset:
+                                                      'assets/images/rehome1 (1).png',
+                                                  width: 129 * brandScale,
+                                                  height: brandH,
+                                                ),
+                                                SizedBox(
+                                                  width: 14 * brandScale,
+                                                ),
+                                                _DemandBrandImage(
+                                                  asset:
+                                                      'assets/images/rehome1 (3).png',
+                                                  width: 187 * brandScale,
+                                                  height: brandH,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        if (distribute)
+                                          const Spacer(flex: 2)
+                                        else
+                                          SizedBox(height: gapMd),
+                                        Text(
+                                          'Most Requested Rental Styles',
+                                          style:
+                                              _subsectionLabel(subSize),
+                                        ),
+                                        SizedBox(height: gapSm),
+                                        _buildRentalStylesRow(
+                                          height: stylesH,
+                                        ),
+                                        if (distribute)
+                                          const Spacer(flex: 1),
+                                      ],
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Videos',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 113,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _journeyVideos.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 14),
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'DIY videos',
-                            ),
-                            child: _VideoCard(data: _journeyVideos[i]),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Selling Made Simple',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Videos',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 113,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _sellingVideos.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 14),
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'Selling videos',
-                            ),
-                            child: _VideoCard(data: _sellingVideos[i]),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Articles',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 172,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _articles.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 13),
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'Rehome articles',
-                            ),
-                            child: _ArticleCard(data: _articles[i]),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           ),
           const Positioned(
             left: 0,
@@ -257,42 +504,68 @@ class RehomeMyPairPage extends StatelessWidget {
       ),
     );
   }
-
-  void _openDonateFlow(BuildContext context) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const DonateMyPairPage(),
-      ),
-    );
-  }
 }
 
 class _Header extends StatelessWidget {
   final VoidCallback onBack;
+  final double uiScale;
 
-  const _Header({required this.onBack});
+  const _Header({required this.onBack, this.uiScale = 1});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final titleSize = (24.0 * uiScale).clamp(20.0, 28.0);
+    final subtitleSize = (14.0 * uiScale).clamp(12.0, 16.0);
+    final iconSize = (22.0 * uiScale).clamp(18.0, 24.0);
+    final backBox = (26.0 * uiScale).clamp(24.0, 30.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        IconButton(
-          onPressed: onBack,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFF062F35),
-            size: 24,
-          ),
+        Row(
+          children: [
+            IconButton(
+              onPressed: onBack,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                width: backBox,
+                height: backBox,
+              ),
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: const Color(0xFF062F35),
+                size: iconSize,
+              ),
+            ),
+            SizedBox(width: (4.0 * uiScale).clamp(2.0, 6.0)),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'RehomeMyPair',
+                  maxLines: 1,
+                  style: GoogleFonts.boldonse(
+                    color: const Color(0xFF062F35),
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.w400,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 6),
-        Text(
-          'RehomeMyPair',
-          style: GoogleFonts.boldonse(
-            color: const Color(0xFF062F35),
-            fontSize: 24,
-            fontWeight: FontWeight.w400,
+        SizedBox(height: (4.0 * uiScale).clamp(2.0, 6.0)),
+        Padding(
+          padding: EdgeInsets.only(left: (backBox + 8).clamp(28.0, 40.0)),
+          child: Text(
+            'Give Your Pair a Second Life!!',
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFF0E7C8A),
+              fontSize: subtitleSize,
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
       ],
@@ -300,218 +573,116 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+class _ServiceCardMetrics {
+  final double height;
+  final double padH;
+  final double padV;
+  final double iconSize;
+  final double gap;
+  final double fontSize;
+  final double lineGap;
 
-  @override
-  Widget build(BuildContext context) {
-    const searchHeight = 42.0;
-    final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+  const _ServiceCardMetrics({
+    required this.height,
+    required this.padH,
+    required this.padV,
+    required this.iconSize,
+    required this.gap,
+    required this.fontSize,
+    required this.lineGap,
+  });
 
-    return Container(
-      height: searchHeight,
-      padding: const EdgeInsets.all(1.2),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
-        ),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(100),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Row(
-            children: [
-              SvgPicture.asset(
-                'assets/images/search.svg',
-                width: 22,
-                height: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  textAlignVertical: TextAlignVertical.center,
-                  style: GoogleFonts.montserrat(
-                    fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    isCollapsed: false,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search',
-                    hintStyle: GoogleFonts.montserrat(
-                      color: Colors.black.withValues(alpha: 0.34),
-                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  /// Same content metrics as home hub action cards — scales with card/screen.
+  static _ServiceCardMetrics fromWidth(double cardWidth) {
+    final height = (cardWidth / 2.25).clamp(64.0, 100.0);
+    final padH = (cardWidth * 0.08).clamp(8.0, 16.0);
+    final padV = (height * 0.08).clamp(4.0, 10.0);
+    final innerH = (height - padV * 2).clamp(18.0, height);
+    final innerW = (cardWidth - padH * 2).clamp(18.0, cardWidth);
+    // Sell / Rent shoe icons — larger, still leave room for labels.
+    final iconSize = math
+        .min(innerH * 0.95, innerW * 0.48)
+        .clamp(36.0, 72.0)
+        .toDouble();
+    final gap = (innerW * 0.05).clamp(6.0, 12.0);
+    final fontSize = (innerH * 0.30).clamp(11.0, 17.0);
+    final lineGap = (innerH * 0.08).clamp(4.0, 12.0);
+    return _ServiceCardMetrics(
+      height: height,
+      padH: padH,
+      padV: padV,
+      iconSize: iconSize,
+      gap: gap,
+      fontSize: fontSize,
+      lineGap: lineGap,
     );
   }
 }
 
 class _PrimaryDonateCard extends StatelessWidget {
-  static const double _cardHeight = 86;
   final VoidCallback onTap;
 
   const _PrimaryDonateCard({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          height: _cardHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF09DFFF), Color(0xFF063035)],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
-            ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 4,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/images/icons/caremypair/rmp.svg',
-                width: 40,
-                height: 40,
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  'Donate\nMyPair',
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.boldonse(
-                    color: Colors.white,
-                    fontSize: 16,
-                    height: 1.9,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SecondaryServiceCard extends StatelessWidget {
-  static const double _cardHeight = 86;
-  final String label;
-  final String iconAsset;
-  final double iconSize;
-  final double labelFontSize;
-  final VoidCallback onTap;
-
-  const _SecondaryServiceCard({
-    required this.label,
-    required this.iconAsset,
-    this.iconSize = 38,
-    this.labelFontSize = 16,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const radius = BorderRadius.all(Radius.circular(10));
-    const borderSide = BorderSide(color: AppColors.greyedButtonLabel);
-
-    return RepaintBoundary(
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          borderRadius: radius,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x19000000),
-              blurRadius: 4,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: AppColors.greyedButtonFill,
-          shape: const RoundedRectangleBorder(
-            borderRadius: radius,
-            side: borderSide,
-          ),
-          clipBehavior: Clip.antiAlias,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final m = _ServiceCardMetrics.fromWidth(constraints.maxWidth);
+        return Material(
+          color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: radius,
-            child: SizedBox(
-              height: _cardHeight,
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: m.height,
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: m.padH,
+                vertical: m.padV,
+              ),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF09DFFF), Color(0xFF063035)],
+                  begin: Alignment.bottomRight,
+                  end: Alignment.topLeft,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Align(
+                alignment: Alignment.center,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SvgPicture.asset(
-                      iconAsset,
-                      width: iconSize,
-                      height: iconSize,
-                      colorFilter: const ColorFilter.mode(
-                        AppColors.greyedButtonLabel,
-                        BlendMode.srcIn,
+                    SizedBox(
+                      width: m.iconSize * 1.12,
+                      height: m.iconSize * 1.12,
+                      child: const Image(
+                        image: AssetImage(
+                          'assets/images/icons/rehomemypair/sellmypair.png',
+                        ),
+                        fit: BoxFit.contain,
+                        color: Colors.white,
+                        colorBlendMode: BlendMode.srcIn,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: m.gap),
                     Flexible(
-                      child: Text(
-                        label,
-                        maxLines: 2,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.boldonse(
-                          color: AppColors.greyedButtonLabel,
-                          fontSize: labelFontSize,
-                    height: 1.9,
-                          fontWeight: FontWeight.w400,
-                        ),
+                      fit: FlexFit.loose,
+                      child: _TwoLineLabel(
+                        first: 'Sell',
+                        second: 'MyPair',
+                        color: Colors.white,
+                        fontSize: m.fontSize,
+                        lineGap: m.lineGap,
                       ),
                     ),
                   ],
@@ -519,183 +690,290 @@ class _SecondaryServiceCard extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-class _VideoCardData {
-  final String title;
-  final String image;
+class _TwoLineLabel extends StatelessWidget {
+  final String first;
+  final String second;
+  final Color color;
+  final double fontSize;
+  final double lineGap;
 
-  const _VideoCardData({required this.title, required this.image});
-}
-
-class _VideoCard extends StatelessWidget {
-  final _VideoCardData data;
-
-  const _VideoCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 174,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            data.image.startsWith('http')
-                ? Image.network(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
-                  )
-                : Image.asset(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
-                  ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xCC000000)],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: Text(
-                data.title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.montserrat(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ArticleCardData {
-  final String title;
-  final String summary;
-  final String image;
-
-  const _ArticleCardData({
-    required this.title,
-    required this.summary,
-    required this.image,
+  const _TwoLineLabel({
+    required this.first,
+    required this.second,
+    required this.color,
+    this.fontSize = 15,
+    this.lineGap = 5,
   });
-}
-
-class _ArticleCard extends StatelessWidget {
-  final _ArticleCardData data;
-
-  const _ArticleCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 160,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFFE2E2E2)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 4,
-            offset: Offset(2, 2),
-            spreadRadius: 0,
+    final style = GoogleFonts.boldonse(
+      color: color,
+      fontSize: fontSize,
+      height: 1.28,
+      fontWeight: FontWeight.w400,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(first, maxLines: 1, softWrap: false, style: style),
+        ),
+        SizedBox(height: lineGap),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(second, maxLines: 1, softWrap: false, style: style),
+        ),
+      ],
+    );
+  }
+}
+
+class _RentTaggedShoe extends StatelessWidget {
+  final double size;
+
+  const _RentTaggedShoe({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final tagFont = (size * 0.20).clamp(7.0, 10.0);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: const Image(
+              image: AssetImage(
+                'assets/images/icons/rehomemypair/rentmypair_shoe.png',
+              ),
+              fit: BoxFit.contain,
+            ),
+          ),
+          Positioned(
+            right: -2,
+            bottom: size * 0.06,
+            child: Transform.rotate(
+              angle: -0.27,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF062F35),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: tagFont * 0.45,
+                    vertical: tagFont * 0.15,
+                  ),
+                  child: Text(
+                    'RENT',
+                    style: GoogleFonts.boldonse(
+                      color: Colors.white,
+                      fontSize: tagFont,
+                      height: 1,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(5),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(5)),
-                  child: data.image.startsWith('http')
-                      ? Image.network(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        )
-                      : Image.asset(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(9, 9, 9, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+}
+
+class _SecondaryServiceCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _SecondaryServiceCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const radius = BorderRadius.all(Radius.circular(10));
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final m = _ServiceCardMetrics.fromWidth(constraints.maxWidth);
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            borderRadius: radius,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x19000000),
+                blurRadius: 4,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: const Color(0xFFDFE7E9),
+            shape: const RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(
+                width: 1,
+                color: Color(0xFF0F6876),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: SizedBox(
+                height: m.height,
+                width: double.infinity,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: m.padH,
+                    vertical: m.padV,
+                  ),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          data.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.montserrat(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Expanded(
-                          child: Text(
-                            data.summary,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFF929292),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
+                        _RentTaggedShoe(size: m.iconSize),
+                        SizedBox(width: m.gap),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: _TwoLineLabel(
+                            first: 'Rent',
+                            second: 'MyPair',
+                            color: const Color(0xFF062F35),
+                            fontSize: m.fontSize,
+                            lineGap: m.lineGap,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DemandBrandImage extends StatelessWidget {
+  final String asset;
+  final double width;
+  final double height;
+
+  const _DemandBrandImage({
+    required this.asset,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Image.asset(
+        asset,
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+      ),
+    );
+  }
+}
+
+class _RentalStyleData {
+  final String label;
+  final String imageUrl;
+
+  const _RentalStyleData({
+    required this.label,
+    this.imageUrl = '',
+  });
+}
+
+class _RentalStyle extends StatelessWidget {
+  final _RentalStyleData data;
+
+  const _RentalStyle({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxH = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 96.0;
+        final labelH = math.min(28.0, maxH * 0.28);
+        final gap = math.min(6.0, maxH * 0.06);
+        final imageH = math.max(36.0, maxH - labelH - gap);
+
+        Widget shoeImage({required double height}) {
+          if (data.imageUrl.isNotEmpty) {
+            return Image.network(
+              data.imageUrl,
+              height: height,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Image.asset(
+                'assets/images/icons/myrack/shoe.png',
+                height: height,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.ice_skating,
+                  size: height * 0.66,
+                  color: const Color(0xFF0E7C8A),
+                ),
+              ),
+            );
+          }
+          return Image.asset(
+            'assets/images/icons/myrack/shoe.png',
+            height: height,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Icon(
+              Icons.ice_skating,
+              size: height * 0.66,
+              color: const Color(0xFF0E7C8A),
+            ),
+          );
+        }
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(height: imageH, child: shoeImage(height: imageH)),
+            SizedBox(height: gap),
+            SizedBox(
+              height: labelH,
+              child: Text(
+                data.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.montserrat(
+                  fontSize: (12.0 * (imageH / 72)).clamp(9.0, 12.0),
+                  color: Colors.black87,
+                ),
+              ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

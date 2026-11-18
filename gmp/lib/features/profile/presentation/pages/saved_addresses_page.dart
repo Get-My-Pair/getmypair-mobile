@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
@@ -32,16 +33,171 @@ class SavedAddressesPage extends StatefulWidget {
   State<SavedAddressesPage> createState() => _SavedAddressesPageState();
 }
 
-class _SavedAddressesPageState extends State<SavedAddressesPage> {
+class _SavedAddressesPageState extends State<SavedAddressesPage>
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _showAllAddresses = false;
+  String _searchQuery = '';
+
+  /// Real phone GPS + app permission status (not a dummy toggle).
+  bool _deviceLocationOn = false;
+  bool _checkingDeviceLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _searchController.addListener(_onSearchChanged);
+    _refreshDeviceLocationStatus();
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final next = _searchController.text.trim();
+    if (next == _searchQuery) return;
+    setState(() {
+      _searchQuery = next;
+      // Searching shows all matches; reset collapse when query clears.
+      if (_searchQuery.isNotEmpty) {
+        _showAllAddresses = true;
+      }
+    });
+  }
+
+  List<Address> _filterAddresses(List<Address> addresses) {
+    final query = _searchQuery.toLowerCase();
+    if (query.isEmpty) return addresses;
+
+    return addresses.where((address) {
+      final label = address == addresses.first ? 'home' : 'other';
+      final haystack = [
+        label,
+        address.addressLine1,
+        address.city,
+        address.state,
+        address.pincode,
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    }).toList(growable: false);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshDeviceLocationStatus();
+    }
+  }
+
+  Future<void> _refreshDeviceLocationStatus() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final permission = await Geolocator.checkPermission();
+      final granted = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+      if (!mounted) return;
+      setState(() {
+        _deviceLocationOn = serviceEnabled && granted;
+        _checkingDeviceLocation = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _deviceLocationOn = false;
+        _checkingDeviceLocation = false;
+      });
+    }
+  }
+
+  Future<void> _onDeviceLocationTap() async {
+    if (_checkingDeviceLocation) return;
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      var permission = await Geolocator.checkPermission();
+      final granted = permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+
+      // Already on — open phone location settings so user can turn GPS off.
+      if (serviceEnabled && granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Location is on. Use phone settings to turn it off.',
+            ),
+          ),
+        );
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      // Device GPS / location services off → open system settings.
+      if (!serviceEnabled) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Turn on Location in your phone settings.'),
+          ),
+        );
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      // Services on but app permission missing.
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location permission is required to continue.'),
+          ),
+        );
+        await _refreshDeviceLocationStatus();
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Allow location for GetMyPair in app settings.',
+            ),
+          ),
+        );
+        await Geolocator.openAppSettings();
+        return;
+      }
+
+      await _refreshDeviceLocationStatus();
+      if (!mounted) return;
+      if (_deviceLocationOn) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location is on.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -67,9 +223,17 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
         final isLoading = state is AddressActionLoading;
 
         final allAddresses = currentProfile.addresses;
-        final visibleAddresses = _showAllAddresses
-            ? allAddresses
-            : allAddresses.take(2).toList(growable: false);
+        final filteredAddresses = _filterAddresses(allAddresses);
+        final isSearching = _searchQuery.isNotEmpty;
+        final visibleAddresses = (isSearching || _showAllAddresses)
+            ? filteredAddresses
+            : filteredAddresses.take(2).toList(growable: false);
+
+        final locationLabel = _checkingDeviceLocation
+            ? 'Checking…'
+            : _deviceLocationOn
+                ? 'Location On'
+                : 'Turn on Location';
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: kProfileGradientHeaderSystemUi,
@@ -138,13 +302,14 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                               children: [
                                 Expanded(
                                   child: _ActionCard(
-                                    iconAsset:
-                                        'assets/images/icons/profile/toggle-left.svg',
-                                    label: 'Turn on Location',
-                                    onTap: () => showComingSoon(
-                                      context,
-                                      feature: 'Turn on location',
-                                    ),
+                                    icon: _deviceLocationOn
+                                        ? Icons.location_on_rounded
+                                        : Icons.location_off_rounded,
+                                    label: locationLabel,
+                                    highlighted: _deviceLocationOn,
+                                    onTap: _checkingDeviceLocation
+                                        ? null
+                                        : _onDeviceLocationTap,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -172,6 +337,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             const SizedBox(height: 12),
                             if (allAddresses.isEmpty)
                               _buildEmptyState()
+                            else if (filteredAddresses.isEmpty)
+                              _buildNoSearchResults()
                             else ...[
                               ...visibleAddresses.map(
                                 (address) => _AddressRow(
@@ -186,7 +353,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                   isHome: address == allAddresses.first,
                                 ),
                               ),
-                              if (allAddresses.length > 2)
+                              if (!isSearching && filteredAddresses.length > 2)
                                 Center(
                                   child: InkWell(
                                     onTap: () => setState(
@@ -263,7 +430,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
           Expanded(
             child: TextField(
               controller: _searchController,
-              readOnly: true,
+              textInputAction: TextInputAction.search,
               style: GoogleFonts.montserrat(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -289,6 +456,17 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
               ),
             ),
           ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+              },
+              child: const Icon(
+                Icons.close_rounded,
+                size: 20,
+                color: Color(0x99000000),
+              ),
+            ),
         ],
       ),
     );
@@ -305,6 +483,26 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
       ),
       child: Text(
         'No saved addresses yet. Tap Add New Address to continue.',
+        style: GoogleFonts.montserrat(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoSearchResults() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        'No addresses match "$_searchQuery".',
         style: GoogleFonts.montserrat(
           fontSize: 14,
           fontWeight: FontWeight.w400,
@@ -364,15 +562,19 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
 }
 
 class _ActionCard extends StatelessWidget {
-  final String iconAsset;
+  final String? iconAsset;
+  final IconData? icon;
   final String label;
   final VoidCallback? onTap;
+  final bool highlighted;
 
   const _ActionCard({
-    required this.iconAsset,
+    this.iconAsset,
+    this.icon,
     required this.label,
     required this.onTap,
-  });
+    this.highlighted = false,
+  }) : assert(iconAsset != null || icon != null);
 
   @override
   Widget build(BuildContext context) {
@@ -382,24 +584,33 @@ class _ActionCard extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 74),
         decoration: BoxDecoration(
-          color: const Color(0x33D9D9D9),
+          color: highlighted
+              ? const Color(0x550F6876)
+              : const Color(0x33D9D9D9),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+          border: Border.all(
+            color: highlighted
+                ? const Color(0xFF7FD4E0)
+                : Colors.white.withValues(alpha: 0.28),
+          ),
         ),
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SvgPicture.asset(
-              iconAsset,
-              width: 20,
-              height: 20,
-              colorFilter: const ColorFilter.mode(
-                Colors.white,
-                BlendMode.srcIn,
+            if (icon != null)
+              Icon(icon, size: 20, color: Colors.white)
+            else
+              SvgPicture.asset(
+                iconAsset!,
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
               ),
-            ),
             const SizedBox(height: 6),
             Text(
               label,

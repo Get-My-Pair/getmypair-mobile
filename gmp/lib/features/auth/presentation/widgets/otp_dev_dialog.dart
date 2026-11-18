@@ -3,10 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/features/auth/utils/web_dev_otp_log.dart';
+
+export 'package:gmp/features/auth/utils/web_dev_otp_log.dart'
+    show isWebDevOtpEnabled, logWebDevOtpToTerminal;
 
 const Color _kOtpDevPrimary = Color(0xFF062F35);
 
-/// Development OTP popup shown when the API returns the code in the response.
+/// Development OTP popup when the API returns the code (web / debug).
 Future<void> showDevOtpDialog({
   required BuildContext context,
   required String otp,
@@ -14,7 +18,9 @@ Future<void> showDevOtpDialog({
   String primaryActionLabel = 'Continue',
   String? secondaryActionLabel,
   Future<void> Function(BuildContext dialogContext)? onSecondary,
+  String? mobile,
 }) {
+  logWebDevOtpToTerminal(otp, mobile: mobile);
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -30,7 +36,7 @@ Future<void> showDevOtpDialog({
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                'OTP Code (Development)',
+                'OTP Code (Dev)',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.boldonse(
                   fontSize: 18,
@@ -110,7 +116,6 @@ Future<void> showDevOtpDialog({
   );
 }
 
-/// Copy OTP, close dialog, show feedback, then run [onAfterCopy].
 Future<void> copyOtpAndCloseDialog({
   required BuildContext dialogContext,
   required BuildContext hostContext,

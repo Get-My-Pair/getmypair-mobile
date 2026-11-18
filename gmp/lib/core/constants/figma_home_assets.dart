@@ -21,9 +21,11 @@ abstract final class FigmaHomeAssets {
   static const String rehome =
       'https://www.figma.com/api/mcp/asset/94221a3d-53f3-4bf6-88cc-2831fcc37546';
 
-  /// Bottom navigation (node `335:1687` tab bar). When `null`, [FloatingGradientBottomNav]
-  /// falls back to Material icons.
+  /// Bottom navigation (node `335:1687` tab bar).
+  /// Favorites → `assets/images/heart.svg`, cart → `assets/images/shopping-cart.svg`.
   static const String? tabHomeIcon = null;
+  static const String tabFavoritesIcon = 'assets/images/heart.svg';
   static const String? tabServicesIcon = null;
+  static const String tabCartIcon = 'assets/images/shopping-cart.svg';
   static const String? tabProfileIcon = null;
 }

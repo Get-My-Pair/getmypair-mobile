@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/user_facing_error.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/usecases/check_auth_status.dart';
 import '../../domain/usecases/clear_session_locally.dart';
@@ -20,6 +21,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final GetCurrentUser getCurrentUser;
   final Logout logout;
   final CheckAuthStatus checkAuthStatus;
+  // Kept for DI compatibility; auto-logout no longer clears session.
+  // ignore: unused_field
   final ClearSessionLocally clearSessionLocally;
 
   AuthBloc({
@@ -48,12 +51,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
 
-    // Login state is governed by ONLY two events:
-    //   1. Refresh token expired / rejected by backend (AuthenticationFailure)
-    //   2. Manual logout (handled by AuthLogout)
-    // Any other failure (network down, backend 5xx, parse error, etc.) must
-    // NOT log the user out. We keep them on the dashboard with cached data
-    // and let a later launch / API call refresh once connectivity returns.
+    // Login state is governed by local session + manual logout only.
+    // Token expiry / refresh rejection must NOT auto-logout.
     final result = await checkAuthStatus();
     final isAuthenticated = result.fold((_) => false, (value) => value);
     if (!isAuthenticated) {
@@ -64,15 +63,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final userResult = await getCurrentUser();
     userResult.fold(
       (failure) {
-        if (failure is AuthenticationFailure) {
-          // Refresh token truly invalid – treat as logged out.
-          emit(const AuthUnauthenticated());
-          return;
-        }
-        // Transient failure with no cached user available. Do NOT clear the
-        // refresh token here; surface as unauthenticated only because we have
-        // no User entity to render. Tokens stay in local storage so the next
-        // launch can recover the session automatically.
+        // Still considered logged in locally, but we have no User to render.
+        // Do not clear tokens — next launch / API call can recover.
         emit(const AuthUnauthenticated());
       },
       (user) => emit(AuthAuthenticated(user)),
@@ -85,16 +77,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
 
-    final result = await sendOTP(event.mobile);
+    // OTP is mandatory on every mobile login — never skip to home/session
+    // via trusted-device (or any other) silent login from this path.
+    final result = await sendOTP(
+      event.mobile,
+      androidSmsHash: event.androidSmsHash,
+    );
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
       (data) {
-        // Extract OTP from response if available (development mode only)
-        // OTP might come as int or String from backend
+        // Datasource strips OTP in production release builds.
         final otpValue = data['otp'];
         String? otp;
         if (otpValue != null) {
           otp = otpValue is String ? otpValue : otpValue.toString();
+          if (otp.trim().isEmpty) otp = null;
         }
         emit(AuthOTPSent(event.mobile, otp: otp));
       },
@@ -199,8 +196,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSessionExpired event,
     Emitter<AuthState> emit,
   ) async {
-    await clearSessionLocally();
-    emit(const AuthUnauthenticated());
+    // Auto-logout disabled: keep local session. User must tap Logout.
+    // Re-check status so UI stays authenticated when cached user exists.
+    add(const AuthCheckStatus());
   }
 
   Future<void> _onClearError(
@@ -213,20 +211,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   String _mapFailureToMessage(Failure failure) {
-    switch (failure.runtimeType) {
-      case ServerFailure:
-        return failure.message;
-      case NetworkFailure:
-        return failure.message;
-      case CacheFailure:
-        return failure.message;
-      case ValidationFailure:
-        return failure.message;
-      case AuthenticationFailure:
-        return failure.message;
-      default:
-        return 'Unexpected error occurred';
+    // Prefer typed network failures; otherwise classify from message text.
+    if (failure is NetworkFailure) {
+      return UserFacingError.networkMessage;
     }
+    // UI never shows raw backend/API payloads.
+    return UserFacingError.sanitize(failure.message);
   }
 }
 

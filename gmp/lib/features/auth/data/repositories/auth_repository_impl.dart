@@ -7,13 +7,18 @@ import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_datasource.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../models/login_response_model.dart';
 
-/// Session: user stays logged in until they tap Logout or refresh token expires.
-/// Access token is refreshed automatically; only on refresh failure do we clear session and show login.
+/// Session: user stays logged in until they tap Logout.
+/// Access token is refreshed automatically when possible; refresh failure never
+/// clears the local session or forces login.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
   final NetworkInfo networkInfo;
+
+  /// Serializes concurrent refresh calls so rotated refresh tokens are not raced.
+  Future<Either<Failure, void>>? _refreshInFlight;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
@@ -21,32 +26,51 @@ class AuthRepositoryImpl implements AuthRepository {
     required this.networkInfo,
   });
 
+  Future<bool> _hasLocalSession() async {
+    final refreshToken = await localDataSource.getRefreshToken();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      return true;
+    }
+    final accessToken = await localDataSource.getAccessToken();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      return true;
+    }
+    final cachedUser = await localDataSource.getUser();
+    return cachedUser != null;
+  }
+
   Future<bool> _hasUsableRefreshToken() async {
     final refreshToken = await localDataSource.getRefreshToken();
-    if (refreshToken == null || refreshToken.isEmpty) {
-      return false;
-    }
+    // Presence alone is enough — never treat JWT `exp` as auto-logout.
+    return refreshToken != null && refreshToken.isNotEmpty;
+  }
 
-    // Do not auto-clear session here. The app should keep the user logged in
-    // unless they explicitly log out.
-    //
-    // If refresh token is a JWT and expired, report unusable so callers can
-    // decide whether to use cached user data, but keep local session intact.
-    if (JwtHelper.isTokenExpired(refreshToken)) {
-      final exp = JwtHelper.getTokenExpiration(refreshToken);
-      if (exp != null) {
-        return false;
-      }
+  Future<void> _persistDeviceAuth(String mobile, LoginResponseModel response) async {
+    final auth = response.data?.deviceAuth;
+    if (auth == null ||
+        auth.deviceId.isEmpty ||
+        auth.deviceAuthToken.isEmpty) {
+      return;
     }
-
-    return true;
+    await localDataSource.saveDeviceAuth(
+      mobile: mobile,
+      deviceId: auth.deviceId,
+      deviceAuthToken: auth.deviceAuthToken,
+      expiresAt: auth.expiresAt,
+    );
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> sendOTP(String mobile) async {
+  Future<Either<Failure, Map<String, dynamic>>> sendOTP(
+    String mobile, {
+    String? androidSmsHash,
+  }) async {
     if (await networkInfo.isConnected) {
       try {
-        final response = await remoteDataSource.sendOTP(mobile);
+        final response = await remoteDataSource.sendOTP(
+          mobile,
+          androidSmsHash: androidSmsHash,
+        );
         return Right(response);
       } on ServerException catch (e) {
         return Left(ServerFailure(e.message));
@@ -69,7 +93,12 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, Map<String, dynamic>>> verifyOTP(String mobile, String otp) async {
     if (await networkInfo.isConnected) {
       try {
-        final response = await remoteDataSource.verifyOTP(mobile, otp);
+        final deviceId = await localDataSource.getOrCreateDeviceId();
+        final response = await remoteDataSource.verifyOTP(
+          mobile,
+          otp,
+          deviceId: deviceId,
+        );
         
         // If existing user, save tokens and user data
         if (response.data?.tokens != null) {
@@ -77,6 +106,7 @@ class AuthRepositoryImpl implements AuthRepository {
           if (response.data?.user != null) {
             await localDataSource.saveUser(response.data!.user!);
           }
+          await _persistDeviceAuth(mobile, response);
         }
 
         return Right({
@@ -102,6 +132,61 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, Map<String, dynamic>>> loginWithTrustedDevice(
+    String mobile,
+  ) async {
+    try {
+      final cred = await localDataSource.getDeviceAuthForMobile(mobile);
+      if (cred == null) {
+        return const Left(AuthenticationFailure('DEVICE_REAUTH_REQUIRED'));
+      }
+
+      if (!await networkInfo.isConnected) {
+        return const Left(NetworkFailure(
+          'No internet connection. Please check:\n'
+          '1. Your device is connected to Wi-Fi or mobile data\n'
+          '2. Backend server is accessible\n'
+          '3. Firewall/VPN is not blocking connections',
+        ));
+      }
+
+      try {
+        final response = await remoteDataSource.loginWithTrustedDevice(
+          mobile: mobile,
+          deviceId: cred.deviceId,
+          deviceAuthToken: cred.deviceAuthToken,
+        );
+
+        if (response.data?.tokens == null || response.data?.user == null) {
+          await localDataSource.clearDeviceAuth();
+          return const Left(AuthenticationFailure('DEVICE_REAUTH_REQUIRED'));
+        }
+
+        await localDataSource.saveTokens(response.data!.tokens!);
+        await localDataSource.saveUser(response.data!.user!);
+        await _persistDeviceAuth(mobile, response);
+
+        return Right({
+          'requiresProfileCompletion': false,
+          'user': response.data!.user,
+          'tokens': response.data!.tokens,
+          'trustedLogin': true,
+        });
+      } on ServerException catch (e) {
+        // Credential rejected — clear and fall back to OTP.
+        await localDataSource.clearDeviceAuth();
+        return Left(AuthenticationFailure(e.message));
+      } on NetworkException catch (e) {
+        return Left(NetworkFailure(e.message));
+      } catch (e) {
+        return Left(ServerFailure('Unexpected error: ${e.toString()}'));
+      }
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
+    }
+  }
+
+  @override
   Future<Either<Failure, Map<String, dynamic>>> loginWithEmail({
     required String email,
     required String password,
@@ -122,6 +207,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     if (await networkInfo.isConnected) {
       try {
+        final deviceId = await localDataSource.getOrCreateDeviceId();
         final response = await remoteDataSource.completeProfile(
           mobile: mobile,
           name: name,
@@ -129,6 +215,7 @@ class AuthRepositoryImpl implements AuthRepository {
           gender: gender,
           householdType: householdType,
           location: location,
+          deviceId: deviceId,
         );
 
         // Save tokens if provided in response
@@ -139,6 +226,7 @@ class AuthRepositoryImpl implements AuthRepository {
         // Save user data
         if (response.data?.user != null) {
           await localDataSource.saveUser(response.data!.user!);
+          await _persistDeviceAuth(mobile, response);
           return Right(response.data!.user!);
         } else {
           return const Left(ServerFailure('User data not found in response'));
@@ -177,14 +265,13 @@ class AuthRepositoryImpl implements AuthRepository {
 
         final refreshResult = await refreshToken();
         if (refreshResult.isLeft()) {
+          // Never auto-logout on refresh failure — prefer cached profile.
+          if (cachedUser != null) {
+            return Right(cachedUser);
+          }
           return refreshResult.fold(
             (l) => Left(l),
-            (_) {
-              if (cachedUser != null) {
-                return Right(cachedUser);
-              }
-              return const Left(AuthenticationFailure('Refresh failed'));
-            },
+            (_) => const Left(AuthenticationFailure('Refresh failed')),
           );
         }
         accessToken = await localDataSource.getAccessToken();
@@ -227,19 +314,12 @@ class AuthRepositoryImpl implements AuthRepository {
                 }
               }
             }
-            // Refresh failed. Distinguish *why* it failed so we only end the
-            // session for genuine refresh-token rejection. Network / server
-            // errors are transient and must NOT log the user out.
+            // Refresh failed — keep local session; never force logout.
+            if (cachedUser != null) {
+              return Right(cachedUser);
+            }
             return refreshResult.fold(
-              (failure) {
-                if (failure is AuthenticationFailure) {
-                  return Left(failure);
-                }
-                if (cachedUser != null) {
-                  return Right(cachedUser);
-                }
-                return Left(failure);
-              },
+              (failure) => Left(failure),
               (_) => Left(ServerFailure(e.message)),
             );
           }
@@ -295,8 +375,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, bool>> isAuthenticated() async {
     try {
-      final hasRefreshToken = await _hasUsableRefreshToken();
-      return Right(hasRefreshToken);
+      // Logged in = local session present. Only manual logout clears it.
+      return Right(await _hasLocalSession());
     } on CacheException catch (e) {
       return Left(CacheFailure(e.message));
     } catch (e) {
@@ -306,6 +386,21 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, void>> refreshToken() async {
+    final inFlight = _refreshInFlight;
+    if (inFlight != null) return inFlight;
+
+    final future = _refreshTokenUnlocked();
+    _refreshInFlight = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_refreshInFlight, future)) {
+        _refreshInFlight = null;
+      }
+    }
+  }
+
+  Future<Either<Failure, void>> _refreshTokenUnlocked() async {
     try {
       final refreshToken = await localDataSource.getRefreshToken();
       if (refreshToken == null) {
@@ -315,11 +410,12 @@ class AuthRepositoryImpl implements AuthRepository {
       if (await networkInfo.isConnected) {
         try {
           // Get new access token from backend
-          final newAccessToken = await remoteDataSource.refreshToken(refreshToken);
-          
+          final newAccessToken =
+              await remoteDataSource.refreshToken(refreshToken);
+
           // Save the new access token
           await localDataSource.saveAccessToken(newAccessToken);
-          
+
           return const Right(null);
         } on ServerException catch (e) {
           final message = e.message.toLowerCase();

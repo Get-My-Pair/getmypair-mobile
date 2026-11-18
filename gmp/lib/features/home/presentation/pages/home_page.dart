@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'dart:async';
 
@@ -13,26 +12,37 @@ import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/pages/mobile_otp_page.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/constants/figma_home_assets.dart';
+import '../../../../core/navigation/customer_dashboard_tab_index.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../auth/domain/usecases/get_valid_access_token.dart';
+import '../../../profile/domain/entities/user_profile.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/presentation/bloc/profile_event.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../profile/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../profile/presentation/utils/user_notifications.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
+import '../../../profile/presentation/pages/saved_addresses_page.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'select_location_page.dart';
 import '../../../articles/domain/entities/article.dart';
 import '../../../articles/domain/usecases/get_my_articles.dart';
 import '../../../articles/presentation/pages/article_details_page.dart';
-import '../../../articles/presentation/pages/article_list_page.dart';
 import '../../../service/presentation/pages/care_my_pair_page.dart';
+import '../../../service/presentation/pages/maintain_my_pair_page.dart';
 import '../../../service/presentation/pages/rehome_my_pair_page.dart';
+import '../../../service/presentation/pages/repair_my_pair_page.dart';
+import '../../../service/presentation/pages/save_my_pair_page.dart';
+import '../../../service/presentation/pages/wash_my_pair_page.dart';
+import '../../../sell/presentation/pages/sell_my_pair_page.dart';
+import '../../../rent/presentation/pages/rent_my_pair_page.dart';
+import '../../../donate/presentation/pages/donate_request_page.dart';
+import '../../../recycle/presentation/pages/recycle_slideshow_page.dart';
+import '../../../thrift/presentation/pages/thrift_store_page.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../../../injection_container.dart';
 
 /// Header copy on teal gradient — white for legibility (avoid washed-out light gray).
@@ -74,7 +84,6 @@ BorderRadius _rackCardClipRadius() => BorderRadius.only(
 const Color _kRackCardBg = Color(0xFFE6E6E6);
 /// Secondary copy on light rack panel — darker than [AppColors.textTertiary].
 const Color _kRackMutedText = Color(0xFF4E7F8A);
-const Color _kSearchHintColor = Color(0xFF5C6E73);
 const Color _kHeaderIconTint = Color(0xFFFFFFFF);
 const String _kNotificationBellSvgAsset =
     'assets/images/allicons/bell icon.svg';
@@ -83,8 +92,119 @@ const String _kCareMyPairIconAsset = 'assets/images/icons/home/caremypair.svg';
 const String _kRentMyPairIconAsset = 'assets/images/icons/home/rentmypair.svg';
 const String _kRehomeMyPairIconAsset =
     'assets/images/icons/home/rehomemypair.svg';
+const String _kThriftStoreIconAsset =
+    'assets/images/icons/home/thriftstore.png';
+const String _kCarbonCreditsLeafAsset = 'assets/images/Vector.svg';
 const String _kMyRackMaximizeSvgAsset = 'assets/images/allicons/maximize.svg';
 const String _kHomeHeaderBgAsset = 'assets/images/bg/home.png';
+
+enum _HomeServiceKind {
+  careHub,
+  rehomeHub,
+  saveHub,
+  thriftHub,
+  wash,
+  maintain,
+  repair,
+  sell,
+  rent,
+  donate,
+  recycle,
+}
+
+class _HomeServiceItem {
+  final String label;
+  final List<String> keywords;
+  final String iconAsset;
+  final _HomeServiceKind kind;
+  final bool highlight;
+  final bool hubOnly;
+  final bool disabled;
+
+  const _HomeServiceItem({
+    required this.label,
+    required this.keywords,
+    required this.iconAsset,
+    required this.kind,
+    this.highlight = false,
+    this.hubOnly = false,
+    this.disabled = false,
+  });
+}
+
+const List<_HomeServiceItem> _kHomeServiceCatalog = [
+  _HomeServiceItem(
+    label: 'Care\nMyPair',
+    keywords: ['care', 'caremypair', 'service'],
+    iconAsset: _kCareMyPairIconAsset,
+    kind: _HomeServiceKind.careHub,
+    highlight: true,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Rehome\nMyPair',
+    keywords: ['rehome', 'rehomemypair'],
+    iconAsset: _kRehomeMyPairIconAsset,
+    kind: _HomeServiceKind.rehomeHub,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Save\nMyPair',
+    keywords: ['save', 'savemypair', 'storage'],
+    iconAsset: _kRentMyPairIconAsset,
+    kind: _HomeServiceKind.saveHub,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Thrift\nStore',
+    keywords: ['thrift', 'thriftstore', 'store', 'shop', 'marketplace'],
+    iconAsset: _kThriftStoreIconAsset,
+    kind: _HomeServiceKind.thriftHub,
+    hubOnly: true,
+  ),
+  _HomeServiceItem(
+    label: 'Wash\nMyPair',
+    keywords: ['wash', 'washmypair', 'clean', 'cleaning', 'care'],
+    iconAsset: 'assets/images/icons/caremypair/wmp.svg',
+    kind: _HomeServiceKind.wash,
+  ),
+  _HomeServiceItem(
+    label: 'Maintain\nMyPair',
+    keywords: ['maintain', 'maintainmypair', 'maintenance', 'care'],
+    iconAsset: 'assets/images/icons/caremypair/mmp.svg',
+    kind: _HomeServiceKind.maintain,
+  ),
+  _HomeServiceItem(
+    label: 'Repair\nMyPair',
+    keywords: ['repair', 'repairmypair', 'fix', 'cobbler', 'care'],
+    iconAsset: 'assets/images/icons/caremypair/rmp.svg',
+    kind: _HomeServiceKind.repair,
+  ),
+  _HomeServiceItem(
+    label: 'Sell\nMyPair',
+    keywords: ['sell', 'sellmypair', 'listing', 'marketplace', 'rehome'],
+    iconAsset: 'assets/images/icons/rehomemypair/sellmypair.png',
+    kind: _HomeServiceKind.sell,
+  ),
+  _HomeServiceItem(
+    label: 'Rent\nMyPair',
+    keywords: ['rent', 'rentmypair', 'rental', 'rehome'],
+    iconAsset: 'assets/images/icons/rehomemypair/rent.svg',
+    kind: _HomeServiceKind.rent,
+  ),
+  _HomeServiceItem(
+    label: 'Donate\nMyPair',
+    keywords: ['donate', 'donatemypair', 'charity', 'save'],
+    iconAsset: _kRentMyPairIconAsset,
+    kind: _HomeServiceKind.donate,
+  ),
+  _HomeServiceItem(
+    label: 'Recycle\nMyPair',
+    keywords: ['recycle', 'recyclemypair', 'save'],
+    iconAsset: _kRentMyPairIconAsset,
+    kind: _HomeServiceKind.recycle,
+  ),
+];
 
 /// Vertical gaps inside the hero (location → search → stats → bottom).
 const double _kHomeHeaderSearchToStats = 30;
@@ -107,28 +227,26 @@ double _homeWidthScale(BuildContext context) {
   return (w / _kHomeDesignWidth).clamp(0.72, 1.0);
 }
 
-/// Height scale from reference device.
+/// Height scale from reference device (slightly >1 on tall phones).
 double _homeHeightScale(BuildContext context) {
   final h = MediaQuery.sizeOf(context).height;
-  return (h / _kHomeDesignHeight).clamp(0.55, 1.0);
+  return (h / _kHomeDesignHeight).clamp(0.55, 1.18);
 }
 
-/// Unified scale: same proportions as Edge 60 Pro, scaled down on smaller screens.
+/// Unified scale: Edge 60 Pro proportions; can grow a bit on taller phones.
 double _homeLayoutScale(BuildContext context) {
-  return math.min(_homeWidthScale(context), _homeHeightScale(context));
+  final w = _homeWidthScale(context);
+  final h = _homeHeightScale(context);
+  // Prefer width for horizontal density, but let tall devices scale up via height.
+  if (h > 1.0 && w >= 0.95) return h.clamp(1.0, 1.12);
+  return math.min(w, h);
 }
 
 /// Design px at Edge 60 Pro → scaled for current screen.
 double _homeScaled(double designPx, double layoutScale) =>
     designPx * layoutScale;
 
-/// Edge reference heights for dashboard body (logical px @ scale 1.0).
-const double _kHomeDesignMinActionH = 84.0;
-const double _kHomeDesignMaxActionH = 116.0;
-const double _kHomeDesignMinActionHCramped = 68.0;
-const double _kHomeDesignMinRackH = 80.0;
 const double _kHomeDesignRackContentH = 128.0;
-const double _kHomeDesignRackHeaderH = 24.0;
 
 /// Vertical gap between the location row and the search field: design scale plus a
 /// fraction of screen height so tall/narrow devices keep similar visual balance.
@@ -138,10 +256,9 @@ double _homeLocationToSearchGap(BuildContext context, double s) {
   return ((16 * s) + (h * 0.01)).clamp(16.0, 28.0);
 }
 
-/// Search bar height: scales with [s] and grows slightly on taller viewports.
+/// Search bar height — matches CareMyPair `_SearchBar` (42) with light scale.
 double _homeSearchBarHeight(BuildContext context, double s) {
-  final h = MediaQuery.sizeOf(context).height;
-  return ((48 * s) + (h * 0.006)).clamp(36.0, 58.0);
+  return (42 * s).clamp(36.0, 48.0);
 }
 
 /// Responsive horizontal crop for header image to avoid side seams/gaps.
@@ -160,155 +277,26 @@ double _homeHeaderScaleXForWidth(double width) {
   return 1.06;
 }
 
-/// Space above the floating bottom nav so Rent / Rehome are not covered.
+/// Space above the floating bottom nav so action cards are not covered.
+/// Tall phones get a little extra air so the walking shoe keeps full size.
 double _homeViewportBottomReserve(BuildContext context) {
-  return dashboardLinkedBottomNavStackHeight(context);
-}
-
-/// Vertical gap between My Rack and Rent/Rehome row.
-double _homeSectionGap(double layoutScale) =>
-    (10 * layoutScale).clamp(8.0, 12.0);
-
-/// Slightly larger gap above and below CareMyPair (Figma breathing room).
-double _homeCareSectionGap(double layoutScale) =>
-    (14 * layoutScale).clamp(12.0, 18.0);
-
-/// Scales icons/text inside action cards vs Edge reference cell height.
-double _homeActionContentScale(double actionBlockH, double layoutScale) =>
-    (actionBlockH / (_kQuickActionCellHeight * layoutScale))
-        .clamp(0.72, 1.38);
-
-const _kRentRehomeActionLabels = ['Rent\nMyPair', 'Rehome\nMyPair'];
-const _kPairActionLineHeight = 1.35;
-
-/// One font size for Rent + Rehome: each line must fit width; both lines fit height.
-double _homeTwoLineActionLabelSize({
-  required BuildContext context,
-  required double contentScale,
-  required double layoutScale,
-  required double textMaxWidth,
-  required double textMaxHeight,
-}) {
-  final base = ((MediaQuery.sizeOf(context).width < _kHomeDesignWidth * 0.88
-              ? 14.0
-              : 16.0) *
-          contentScale)
-      .clamp(
-    _homeScaled(10, layoutScale),
-    _homeScaled(20, layoutScale),
+  final full = dashboardLinkedBottomNavStackHeight(
+    context,
+    showWalkingShoe: true,
   );
-  if (textMaxWidth <= 0 || textMaxHeight <= 0) return base;
-
-  var size = base;
-  final minSize = _homeScaled(12, layoutScale).clamp(10.0, 12.0);
-  final textDirection = Directionality.of(context);
-  while (size >= minSize) {
-    final style = GoogleFonts.boldonse(
-      fontSize: size,
-      fontWeight: FontWeight.w400,
-      height: _kPairActionLineHeight,
-    );
-    var fits = true;
-    for (final label in _kRentRehomeActionLabels) {
-      final lines = label.split('\n');
-      if (lines.length < 2) {
-        fits = false;
-        break;
-      }
-      var blockHeight = 0.0;
-      for (final line in lines) {
-        final painter = TextPainter(
-          text: TextSpan(text: line, style: style),
-          maxLines: 1,
-          textDirection: textDirection,
-        )..layout(maxWidth: textMaxWidth);
-        if (painter.didExceedMaxLines ||
-            painter.size.width > textMaxWidth + 0.5) {
-          fits = false;
-          break;
-        }
-        blockHeight += painter.height;
-      }
-      if (!fits) break;
-      if (blockHeight > textMaxHeight + 0.5) {
-        fits = false;
-        break;
-      }
-    }
-    if (fits) return size;
-    size -= 0.5;
-  }
-  return minSize;
+  final h = MediaQuery.sizeOf(context).height;
+  // Extra clearance above shoe on taller viewports (iPhone 16 Pro / Edge 60+).
+  final tallBreath = ((h - 850) / 200).clamp(0.0, 1.0) * 18.0;
+  return full + 6 + tallBreath;
 }
+
+/// Horizontal gap between the two cards in each action row.
+double _homeSectionGap(double layoutScale) =>
+    (14 * layoutScale).clamp(10.0, 16.0);
 
 /// Scales My Rack inner content (title, thumbs, icons) vs Edge reference.
 double _homeRackContentScale(double rackHeight, double layoutScale) =>
-    (rackHeight / (_kHomeDesignRackContentH * layoutScale)).clamp(0.72, 1.38);
-
-double _clampSafe(double value, double lower, double upper) {
-  final lo = math.min(lower, upper);
-  final hi = math.max(lower, upper);
-  return value.clamp(lo, hi);
-}
-
-/// My Rack taller; CareMyPair and Rent/Rehome share equal [actionBlockH].
-({double rackHeight, double actionBlockH}) _homeFigmaBodyHeights({
-  required double bodyHeight,
-  required double headerToRackGap,
-  required double sectionGap,
-  required double rackMinHeight,
-  required double layoutScale,
-}) {
-  const rackOverAction = 1.26;
-  final minActionH = _homeScaled(_kHomeDesignMinActionH, layoutScale);
-  final maxActionH = _homeScaled(_kHomeDesignMaxActionH, layoutScale);
-  final minActionCramped = _homeScaled(_kHomeDesignMinActionHCramped, layoutScale);
-  final minRackCramped = _homeScaled(_kHomeDesignMinRackH, layoutScale);
-  final slack = math.max(
-    0.0,
-    bodyHeight - headerToRackGap - (sectionGap * 2),
-  );
-
-  if (slack < minActionH * 2 + _homeScaled(80, layoutScale)) {
-    final actionBlockH =
-        _clampSafe(slack * 0.34, minActionCramped, maxActionH);
-    final rackHeight = _clampSafe(
-      slack - actionBlockH * 2,
-      minRackCramped,
-      slack - actionBlockH * 2,
-    );
-    return (rackHeight: rackHeight, actionBlockH: actionBlockH);
-  }
-
-  final cappedRackMin = math.min(rackMinHeight * 1.07, slack * 0.45);
-
-  // Care + Rent/Rehome: equal height, scaled from Edge reference.
-  var actionBlockH = _clampSafe(slack * 0.315, minActionH, maxActionH);
-  final rackCap = math.max(cappedRackMin, actionBlockH * 1.38);
-  var rackHeight = _clampSafe(
-    actionBlockH * rackOverAction,
-    cappedRackMin,
-    rackCap,
-  );
-
-  var remaining = slack - rackHeight - (actionBlockH * 2);
-  if (remaining > 0) {
-    actionBlockH = _clampSafe(actionBlockH + remaining / 2, minActionH, maxActionH);
-    remaining = slack - rackHeight - (actionBlockH * 2);
-    if (remaining > 0) {
-      rackHeight = _clampSafe(
-        rackHeight + math.min(remaining, _homeScaled(14, layoutScale)),
-        cappedRackMin,
-        rackCap,
-      );
-    }
-  } else if (remaining < 0) {
-    rackHeight = _clampSafe(rackHeight + remaining, cappedRackMin, rackCap);
-    actionBlockH = _clampSafe((slack - rackHeight) / 2, minActionH, maxActionH);
-  }
-
-  return (rackHeight: rackHeight, actionBlockH: actionBlockH);
-}
+    (rackHeight / (_kHomeDesignRackContentH * layoutScale)).clamp(0.72, 1.72);
 
 /// Home Page — Figma `335:1687`; icons from [FigmaHomeAssets].
 /// This is the landing tab shown to authenticated users on the main dashboard.
@@ -326,37 +314,57 @@ class _HomePageState extends State<HomePage> {
   String? _rackError;
   AddressParts? _detectedLocationParts;
   bool _locationSavePromptHandled = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  String _searchQuery = '';
 
+  /// Home header stats — filled only from API (articles + service requests).
+  bool _statsLoading = true;
+  int _pairsDonated = 0;
+  int _pairsSold = 0;
+  int _pairsInCare = 0;
+  String? _lastActiveProfileId;
+  int _switchLoadGen = 0;
+
+  /// True from the moment a profile switch starts until rack and stats
+  /// for that profile have both finished loading.
+  bool _profileDataLoading = false;
+
+  /// Tracks leaving Home so returning from My Rack can refresh preview/stats.
+  bool _leftHomeTab = false;
+
+  /// Short place label for the home header (one row). Prefer area / city.
   static String _formatPlacemarkForHomeHeader(Placemark p) {
-    final subLocality = p.subLocality?.trim();
-    final locality = p.locality?.trim();
-    final administrativeArea = p.administrativeArea?.trim();
-
-    // If we have a neighborhood (e.g. Mylapore), show only that.
-    if (subLocality != null && subLocality.isNotEmpty) {
-      final sLower = subLocality.toLowerCase();
-      if (sLower == 'mylapore' || sLower == 'mylapur') {
-        return '📍 Mylapur';
-      }
-      return '📍 $subLocality';
+    final area = [
+      p.subLocality,
+      p.locality,
+      p.subAdministrativeArea,
+      p.administrativeArea,
+    ]
+        .where((e) => e != null && e.toString().trim().isNotEmpty)
+        .map((e) => e!.trim())
+        .toList();
+    if (area.isEmpty) {
+      final street = [
+        p.thoroughfare,
+        p.locality,
+      ]
+          .where((e) => e != null && e.toString().trim().isNotEmpty)
+          .map((e) => e!.trim())
+          .toList();
+      if (street.isEmpty) return _fallbackAddress;
+      return '📍 ${street.take(2).join(', ')}';
     }
-
-    // Otherwise show only the main area name (e.g. Chennai).
-    if (locality != null && locality.isNotEmpty) {
-      return '📍 $locality';
-    }
-
-    if (administrativeArea != null && administrativeArea.isNotEmpty) {
-      return '📍 $administrativeArea';
-    }
-
-    return _fallbackAddress;
+    return '📍 ${area.take(2).join(', ')}';
   }
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onHomeSearchChanged);
+    customerDashboardTabIndex.addListener(_onDashboardTabChanged);
     _loadRackPreview();
+    _loadHomeStats();
     _getCurrentLocation();
     // If we ever show coords (e.g. from map), convert to address on load
     if (_looksLikeLatLong(_currentAddress)) {
@@ -366,6 +374,84 @@ class _HomePageState extends State<HomePage> {
         }
       });
     }
+  }
+
+  @override
+  void dispose() {
+    customerDashboardTabIndex.removeListener(_onDashboardTabChanged);
+    _searchController.removeListener(_onHomeSearchChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onDashboardTabChanged() {
+    final onHome = customerDashboardTabIndex.value == 0;
+    if (!onHome) {
+      _leftHomeTab = true;
+      return;
+    }
+    if (!_leftHomeTab || !mounted) return;
+    _leftHomeTab = false;
+    _loadRackPreview();
+    _loadHomeStats();
+  }
+
+  void _dismissHomeSearchKeyboard() {
+    if (!_searchFocusNode.hasFocus) return;
+    _searchFocusNode.unfocus();
+  }
+
+  void _onHomeSearchChanged() {
+    final next = _searchController.text.trim();
+    if (next == _searchQuery) return;
+    setState(() => _searchQuery = next);
+  }
+
+  List<Article> get _filteredRackArticles {
+    final list = _rackArticles ?? const <Article>[];
+    final q = _searchQuery.toLowerCase();
+    if (q.isEmpty) return list;
+    return list.where((a) {
+      return a.brand.toLowerCase().contains(q) ||
+          a.model.toLowerCase().contains(q) ||
+          a.color.toLowerCase().contains(q) ||
+          a.category.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  bool _serviceMatches(_HomeServiceItem item, String q) {
+    if (q.isEmpty) return item.hubOnly;
+    final hay = item.label.toLowerCase().replaceAll('\n', ' ');
+    if (hay.contains(q)) return true;
+    return item.keywords.any((k) => k.contains(q) || q.contains(k));
+  }
+
+  List<_HomeServiceItem> get _filteredHomeServices {
+    final q = _searchQuery.toLowerCase();
+    return _kHomeServiceCatalog.where((item) => _serviceMatches(item, q)).toList();
+  }
+
+  Future<void> _openHomeService(_HomeServiceKind kind) async {
+    _dismissHomeSearchKeyboard();
+    final Widget page = switch (kind) {
+      _HomeServiceKind.careHub => const CareMyPairPage(),
+      _HomeServiceKind.rehomeHub => const RehomeMyPairPage(),
+      _HomeServiceKind.saveHub => const SaveMyPairPage(),
+      _HomeServiceKind.thriftHub => const ThriftStorePage(),
+      _HomeServiceKind.wash => const WashMyPairPage(),
+      _HomeServiceKind.maintain => const MaintainMyPairPage(),
+      _HomeServiceKind.repair => const RepairMyPairPage(),
+      _HomeServiceKind.sell => const SellMyPairPage(),
+      _HomeServiceKind.rent => const RentMyPairPage(),
+      _HomeServiceKind.donate => const DonateRequestPage(),
+      _HomeServiceKind.recycle => const RecycleSlideshowPage(),
+    };
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+    if (mounted) _loadHomeStats();
   }
 
   /// Returns true if [text] looks like "lat, long" (e.g. "13.13210, 80.24567").
@@ -393,7 +479,8 @@ class _HomePageState extends State<HomePage> {
     final lat = double.tryParse(parts[0])!;
     final lng = double.tryParse(parts[1])!;
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      List<Placemark> placemarks =
+          await Geocoding().placemarkFromCoordinates(lat, lng);
       if (placemarks.isEmpty) return _fallbackAddress;
       Placemark p = placemarks[0];
       return _formatPlacemarkForHomeHeader(p);
@@ -430,7 +517,7 @@ class _HomePageState extends State<HomePage> {
         ),
       );
 
-      List<Placemark> placemarks = await placemarkFromCoordinates(
+      List<Placemark> placemarks = await Geocoding().placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
@@ -457,6 +544,12 @@ class _HomePageState extends State<HomePage> {
         userProfileFromProfileState(context.read<ProfileBloc>().state);
     if (profile == null) return;
 
+    // Keep showing live GPS on home; saved addresses are edited via tap → page.
+    if (profile.addresses.isNotEmpty) {
+      _locationSavePromptHandled = true;
+      return;
+    }
+
     _locationSavePromptHandled = true;
 
     final tokenResult = await sl<GetValidAccessToken>().call();
@@ -469,6 +562,7 @@ class _HomePageState extends State<HomePage> {
         accessToken: token,
         parts: _detectedLocationParts!,
         addresses: profile.addresses,
+        promptOnlyWhenEmpty: true,
       ),
     );
   }
@@ -490,8 +584,8 @@ class _HomePageState extends State<HomePage> {
 
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
-    tokenResult.fold(
-      (_) {
+    await tokenResult.fold<Future<void>>(
+      (_) async {
         if (!mounted) return;
         setState(() {
           _rackError = 'Sign in to see your rack';
@@ -508,11 +602,12 @@ class _HomePageState extends State<HomePage> {
             _rackLoading = false;
             _rackError = null;
           });
-        } catch (e) {
+        } catch (_) {
           if (!mounted) return;
+          // Keep a friendly empty state in the preview — never dump API errors.
           setState(() {
-            _rackError = e.toString().replaceFirst('Exception: ', '');
-            _rackArticles = null;
+            _rackArticles = const <Article>[];
+            _rackError = null;
             _rackLoading = false;
           });
         }
@@ -550,22 +645,142 @@ class _HomePageState extends State<HomePage> {
   }
 
   String get _pairsInRackDisplay {
-    if (_rackLoading && _rackArticles == null) return '—';
     final n = _rackArticles?.length ?? 0;
     return n.toString().padLeft(2, '0');
   }
 
-  void _openArticleList() {
-    Navigator.of(context)
-        .push<void>(
-          MaterialPageRoute<void>(builder: (_) => const ArticleListPage()),
-        )
-        .then((_) {
-          if (mounted) _loadRackPreview();
+  bool get _pairsInRackLoading => _rackLoading && _rackArticles == null;
+
+  String get _pairsDonatedDisplay {
+    return _pairsDonated.toString().padLeft(2, '0');
+  }
+
+  String get _pairsSoldDisplay {
+    return _pairsSold.toString().padLeft(2, '0');
+  }
+
+  String get _pairsInCareDisplay {
+    return _pairsInCare.toString().padLeft(2, '0');
+  }
+
+  Future<void> _openSavedLocationPage() async {
+    final profile =
+        userProfileFromProfileState(context.read<ProfileBloc>().state);
+    if (profile == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading profile… try again in a moment.')),
+      );
+      return;
+    }
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in again to edit location.')),
+        );
+      },
+      (token) async {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider.value(
+              value: context.read<ProfileBloc>(),
+              child: SavedAddressesPage(
+                profile: profile,
+                accessToken: token,
+              ),
+            ),
+          ),
+        );
+        if (!mounted) return;
+        // Home always shows live GPS; refresh after returning from addresses.
+        await _getCurrentLocation();
+      },
+    );
+  }
+
+  Future<void> _loadHomeStats() async {
+    setState(() => _statsLoading = true);
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        setState(() {
+          _pairsDonated = 0;
+          _pairsSold = 0;
+          _pairsInCare = 0;
+          _statsLoading = false;
         });
+      },
+      (token) async {
+        try {
+          final res = await sl<DioClient>().get(
+            ApiEndpoints.serviceMy,
+            accessToken: token,
+          );
+          final list =
+              ((res['data'] as Map<String, dynamic>?)?['requests'] as List?) ??
+                  const [];
+          var donated = 0;
+          var sold = 0;
+          var inCare = 0;
+          for (final raw in list) {
+            if (raw is! Map) continue;
+            final type =
+                (raw['serviceType'] ?? '').toString().trim().toLowerCase();
+            final status =
+                (raw['status'] ?? '').toString().trim().toLowerCase();
+            final cancelled = status == 'cancelled' || status == 'canceled';
+            if (cancelled) continue;
+
+            if (type == 'donate') {
+              donated++;
+            } else if (type == 'sell' ||
+                type == 'sold' ||
+                type == 'rehome' ||
+                type == 'dispose') {
+              // Dispose / sell / rehome requests count toward "Pairs Sold".
+              sold++;
+            } else if (type == 'repair' ||
+                type == 'wash' ||
+                type == 'maintenance' ||
+                type == 'maintain') {
+              if (status != 'completed') {
+                inCare++;
+              }
+            }
+          }
+          if (!mounted) return;
+          setState(() {
+            _pairsDonated = donated;
+            _pairsSold = sold;
+            _pairsInCare = inCare;
+            _statsLoading = false;
+          });
+        } catch (_) {
+          if (!mounted) return;
+          setState(() {
+            _pairsDonated = 0;
+            _pairsSold = 0;
+            _pairsInCare = 0;
+            _statsLoading = false;
+          });
+        }
+      },
+    );
+  }
+
+  void _openArticleList() {
+    _dismissHomeSearchKeyboard();
+    // Dashboard PageView animates Home → My Rack (Reels-style slide).
+    if (customerDashboardTabIndex.value != 1) {
+      customerDashboardTabIndex.value = 1;
+    }
   }
 
   void _openArticleDetails(Article article) {
+    _dismissHomeSearchKeyboard();
     Navigator.of(context)
         .push<void>(
           MaterialPageRoute<void>(
@@ -576,7 +791,10 @@ class _HomePageState extends State<HomePage> {
           ),
         )
         .then((_) {
-          if (mounted) _loadRackPreview();
+          if (mounted) {
+            _loadRackPreview();
+            _loadHomeStats();
+          }
         });
   }
 
@@ -593,25 +811,68 @@ class _HomePageState extends State<HomePage> {
       },
       child: BlocListener<ProfileBloc, ProfileState>(
         listener: (context, state) {
+          if (state is ProfileSwitching) {
+            if (!_profileDataLoading && mounted) {
+              setState(() => _profileDataLoading = true);
+            }
+            return;
+          }
+          if (state is ProfileError && _profileDataLoading) {
+            if (mounted) setState(() => _profileDataLoading = false);
+          }
           if (state is ProfileLoaded || state is AddressActionLoading) {
             _maybePromptSaveDetectedLocation();
+          }
+          if (state is ProfileLoaded) {
+            final activeId = state.profile.isSelfActive
+                ? kSelfProfileId
+                : state.profile.activeProfileId;
+            final changed = _lastActiveProfileId != null &&
+                _lastActiveProfileId != activeId;
+            _lastActiveProfileId = activeId;
+            if (!changed && !_profileDataLoading) return;
+            final gen = ++_switchLoadGen;
+            if (!_profileDataLoading && mounted) {
+              setState(() => _profileDataLoading = true);
+            }
+            () async {
+              try {
+                await Future.wait<void>([
+                  _loadRackPreview(),
+                  _loadHomeStats(),
+                ]);
+              } finally {
+                if (mounted && gen == _switchLoadGen) {
+                  setState(() => _profileDataLoading = false);
+                }
+              }
+            }();
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
-          final userName = state is AuthAuthenticated
+          final authName = state is AuthAuthenticated
               ? state.user.name
               : state is AuthProfileCompleted
               ? state.user.name
               : '';
+          final profile =
+              userProfileFromProfileState(context.read<ProfileBloc>().state);
+          final userName = profile?.activeDisplayName ?? authName;
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle.light.copyWith(
               statusBarColor: Colors.transparent,
               statusBarIconBrightness: Brightness.light,
             ),
             child: Scaffold(
-              backgroundColor: AppColors.background,
-              body: Stack(
+              // Dashboard locks viewport height; don't resize again here or a
+              // light slab covers My Rack / tips when search focuses.
+              resizeToAvoidBottomInset: false,
+              backgroundColor: Colors.transparent,
+              body: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _dismissHomeSearchKeyboard,
+                child: Stack(
                 fit: StackFit.expand,
                 children: [
                   LayoutBuilder(
@@ -626,50 +887,40 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _HomeTopCard(
-                                  userName: userName,
+                            BlocBuilder<ProfileBloc, ProfileState>(
+                              buildWhen: (prev, curr) =>
+                                  curr is ProfileLoaded ||
+                                  curr is ProfileUpdating ||
+                                  curr is ProfileImageUploading ||
+                                  curr is AddressActionLoading,
+                              builder: (context, profileState) {
+                                final liveProfile =
+                                    userProfileFromProfileState(profileState);
+                                return _HomeTopCard(
+                                  userName:
+                                      liveProfile?.activeDisplayName ?? userName,
                                   currentAddress: _currentAddress,
                                   pairsInRackDisplay: _pairsInRackDisplay,
+                                  pairsDonatedDisplay: _pairsDonatedDisplay,
+                                  pairsSoldDisplay: _pairsSoldDisplay,
+                                  pairsInCareDisplay: _pairsInCareDisplay,
+                                  statsLoading:
+                                      _statsLoading || _profileDataLoading,
+                                  pairsInRackLoading: _pairsInRackLoading ||
+                                      _profileDataLoading,
+                                  contentLoading: _profileDataLoading,
                                   layoutScale: layoutScale,
                                   onLocationTap: () async {
-                                    final profile = userProfileFromProfileState(
-                                      context.read<ProfileBloc>().state,
-                                    );
-                                    final authState = context
-                                        .read<AuthBloc>()
-                                        .state;
-                                    final selected = await Navigator.of(context)
-                                        .push<String>(
-                                          MaterialPageRoute(
-                                            builder: (_) => SelectLocationPage(
-                                              profileBloc: context
-                                                  .read<ProfileBloc>(),
-                                              initialAddress: _currentAddress,
-                                              mapPinDisplayName:
-                                                  mapPinDisplayNameFrom(
-                                                    profile,
-                                                    authState,
-                                                  ),
-                                              mapPinProfileImageRef:
-                                                  profile?.profileImage,
-                                            ),
-                                          ),
-                                        );
-                                    if (selected != null && mounted) {
-                                      final addressText =
-                                          _looksLikeLatLong(selected)
-                                          ? await _latLongToAddress(selected)
-                                          : selected.startsWith('📍')
-                                          ? selected
-                                          : '📍 $selected';
-                                      if (mounted) {
-                                        setState(
-                                          () => _currentAddress = addressText,
-                                        );
-                                      }
-                                    }
+                                    _dismissHomeSearchKeyboard();
+                                    await _openSavedLocationPage();
                                   },
-                              ),
+                                  searchController: _searchController,
+                                  searchFocusNode: _searchFocusNode,
+                                  onSearchDismissKeyboard:
+                                      _dismissHomeSearchKeyboard,
+                                );
+                              },
+                            ),
                               Expanded(
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(
@@ -683,51 +934,177 @@ class _HomePageState extends State<HomePage> {
                                       final bodyH = bodyConstraints.maxHeight;
                                       final headerToRackGap =
                                           (_kHomeHeaderToRackGap * layoutScale)
-                                              .clamp(10.0, 18.0);
-                                      final rackCardTopPaddingLoose =
-                                          (64 * layoutScale).clamp(16.0, 26.0);
+                                              .clamp(6.0, 10.0);
+                                      final rackCardTopPadding =
+                                          (16 * layoutScale).clamp(12.0, 18.0);
                                       final rackCardBottomPadding =
-                                          (7 * layoutScale).clamp(5.0, 7.0);
+                                          (8 * layoutScale).clamp(6.0, 10.0);
                                       final showRackThumbs = !_rackLoading &&
                                           _rackError == null &&
                                           _rackArticles != null &&
                                           _rackArticles!.isNotEmpty;
-                                      final rackCardTopPadding = showRackThumbs
-                                          ? ((20 * layoutScale).clamp(14.0, 23.0))
-                                          : rackCardTopPaddingLoose;
                                       final sectionGap =
                                           _homeSectionGap(layoutScale);
-                                      final careSectionGap =
-                                          _homeCareSectionGap(layoutScale);
+                                      final gridGap = (8 * layoutScale).clamp(
+                                        6.0,
+                                        10.0,
+                                      );
+                                      // Must match the SizedBox heights below —
+                                      // packing used plain gridGap before and
+                                      // short phones overflowed (~17px).
+                                      final rackToGridGap = gridGap + 6;
+                                      final actionRowGap = gridGap + 12;
                                       final rackThumbGap = showRackThumbs
-                                          ? (10 * layoutScale).clamp(8.0, 14.0)
+                                          ? (10 * layoutScale).clamp(8.0, 12.0)
                                           : (8 * layoutScale).clamp(6.0, 10.0);
-                                      final rackThumbRowMin =
-                                          (62 * layoutScale).clamp(54.0, 70.0);
-                                      final rackMinHeight = rackCardTopPadding +
-                                          _homeScaled(
-                                            _kHomeDesignRackHeaderH,
-                                            layoutScale,
-                                          ) +
+                                      final availableBody = math.max(
+                                        0.0,
+                                        bodyH -
+                                            headerToRackGap -
+                                            rackToGridGap -
+                                            actionRowGap -
+                                            2,
+                                      );
+                                      final cardWidth =
+                                          (bodyConstraints.maxWidth -
+                                              sectionGap) /
+                                          2;
+                                      // Wide rectangle: about 2.25× as wide as tall.
+                                      final rectangleH =
+                                          (cardWidth / 2.25).clamp(
+                                        _homeScaled(68, layoutScale),
+                                        _homeScaled(84, layoutScale),
+                                      );
+                                      final minEqualBlockH =
+                                          _homeScaled(56, layoutScale);
+                                      // Tall phones may grow cards past the
+                                      // width-based rectangle so empty space
+                                      // above the nav is covered.
+                                      final maxEqualBlockH = math.min(
+                                        availableBody * 0.38,
+                                        _homeScaled(128, layoutScale),
+                                      );
+                                      var equalBlockH = math.min(
+                                        rectangleH,
+                                        availableBody * 0.275,
+                                      ).clamp(minEqualBlockH, maxEqualBlockH).toDouble();
+                                      final rackHeaderH =
+                                          _homeScaled(22, layoutScale).clamp(
+                                        20.0,
+                                        24.0,
+                                      );
+                                      final rackThumbRowH =
+                                          _homeScaled(60, layoutScale).clamp(
+                                        52.0,
+                                        68.0,
+                                      );
+                                      final rackContentH = rackCardTopPadding +
+                                          rackHeaderH +
                                           rackThumbGap +
-                                          rackThumbRowMin +
-                                          rackCardBottomPadding +
-                                          _homeScaled(4, layoutScale);
-                                      final figmaHeights = _homeFigmaBodyHeights(
-                                        bodyHeight: bodyH,
-                                        headerToRackGap: headerToRackGap,
-                                        sectionGap: careSectionGap,
-                                        rackMinHeight: rackMinHeight,
-                                        layoutScale: layoutScale,
+                                          rackThumbRowH +
+                                          rackCardBottomPadding;
+                                      final minRackH = math.max(
+                                        48.0,
+                                        rackHeaderH +
+                                            rackCardTopPadding +
+                                            rackCardBottomPadding,
                                       );
-                                      final rackHeight = figmaHeights.rackHeight;
-                                      // CareMyPair + Rent/Rehome: same height, scaled together.
-                                      final equalBlockH = figmaHeights.actionBlockH;
-                                      final actionContentScale =
-                                          _homeActionContentScale(
-                                        equalBlockH,
-                                        layoutScale,
+                                      final maxRackH = math.min(
+                                        availableBody * 0.55,
+                                        rackContentH + _homeScaled(96, layoutScale),
                                       );
+                                      final rackMaxFit = math.max(
+                                        0.0,
+                                        availableBody - equalBlockH * 2,
+                                      );
+                                      var rackHeight = math.min(
+                                        rackContentH,
+                                        rackMaxFit,
+                                      ).clamp(minRackH, maxRackH).toDouble();
+                                      // Slightly stretch gaps on tall bodies so
+                                      // spacing grows with the phone, not a void.
+                                      var liveHeaderToRack = headerToRackGap;
+                                      var liveRackToGrid = rackToGridGap;
+                                      var liveActionRowGap = actionRowGap;
+                                      double packedHeight() =>
+                                          liveHeaderToRack +
+                                          rackHeight +
+                                          liveRackToGrid +
+                                          liveActionRowGap +
+                                          equalBlockH * 2;
+                                      var packedH = packedHeight();
+                                      // Short phones: shrink so content fits
+                                      // without vertical scroll.
+                                      var overflow = packedH - bodyH;
+                                      if (overflow > 0) {
+                                        final shrinkBlocks = math.min(
+                                          overflow,
+                                          math.max(
+                                            0.0,
+                                            (equalBlockH - minEqualBlockH) * 2,
+                                          ),
+                                        );
+                                        equalBlockH -= shrinkBlocks / 2;
+                                        overflow -= shrinkBlocks;
+                                        if (overflow > 0) {
+                                          rackHeight = math.max(
+                                            minRackH,
+                                            rackHeight - overflow,
+                                          );
+                                        }
+                                        packedH = packedHeight();
+                                      }
+                                      // Tall phones: grow cards/rack/gaps, but
+                                      // leave a small bottom breath so the nav
+                                      // walking shoe is not crowded / shrunk.
+                                      final bottomBreath =
+                                          (bodyH * 0.018).clamp(10.0, 20.0);
+                                      var leftover = math.max(
+                                        0.0,
+                                        bodyH - packedH - bottomBreath,
+                                      );
+                                      if (leftover > 6) {
+                                        final grow = leftover;
+                                        final roomBlocks = math.max(
+                                          0.0,
+                                          (maxEqualBlockH - equalBlockH) * 2,
+                                        );
+                                        final roomRack = math.max(
+                                          0.0,
+                                          maxRackH - rackHeight,
+                                        );
+                                        // Prefer content growth (same UI, bigger).
+                                        final toBlocks = math.min(
+                                          grow * 0.52,
+                                          roomBlocks,
+                                        );
+                                        equalBlockH += toBlocks / 2;
+                                        final toRack = math.min(
+                                          grow * 0.38,
+                                          roomRack,
+                                        );
+                                        rackHeight += toRack;
+                                        var rem = grow - toBlocks - toRack;
+                                        // Leftover after size caps → section gaps.
+                                        if (rem > 0) {
+                                          liveHeaderToRack += rem * 0.22;
+                                          liveRackToGrid += rem * 0.28;
+                                          liveActionRowGap += rem * 0.50;
+                                          rem = 0;
+                                        }
+                                        packedH = packedHeight();
+                                        leftover = math.max(
+                                          0.0,
+                                          bodyH - packedH - bottomBreath,
+                                        );
+                                        // Fill most remaining space, keep breath.
+                                        if (leftover > 4) {
+                                          equalBlockH += leftover * 0.30;
+                                          rackHeight += leftover * 0.40;
+                                          liveActionRowGap += leftover * 0.30;
+                                          packedH = packedHeight();
+                                        }
+                                      }
                                       final rackContentScale =
                                           _homeRackContentScale(
                                         rackHeight,
@@ -748,23 +1125,26 @@ class _HomePageState extends State<HomePage> {
                                         _homeScaled(9, layoutScale),
                                         _homeScaled(15, layoutScale),
                                       );
-                                      final rackHeaderH = rackMaximizeSize.clamp(
-                                        _homeScaled(20, layoutScale),
-                                        _homeScaled(30, layoutScale),
-                                      );
                                       final rackHorizontalPad =
                                           _homeScaled(14, layoutScale);
                                       final rackThumbStripGap =
                                           _homeScaled(10, layoutScale);
                                       final rackClipRadius = _rackCardClipRadius();
-                                      return Column(
+                                      // When search returns many service rows the
+                                      // fixed pack can exceed the viewport — scroll
+                                      // instead of BOTTOM OVERFLOWED.
+                                      final searching =
+                                          _searchQuery.trim().isNotEmpty;
+                                      final bodyColumn = Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         mainAxisAlignment: MainAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          SizedBox(height: headerToRackGap),
+                                          SizedBox(height: liveHeaderToRack),
                                           SizedBox(
                                             height: rackHeight,
+                                            width: double.infinity,
                                             child: ClipRRect(
                                               borderRadius: rackClipRadius,
                                               clipBehavior: Clip.hardEdge,
@@ -857,24 +1237,11 @@ class _HomePageState extends State<HomePage> {
                                                           SizedBox(
                                                               height: rackThumbGap),
                                                           Expanded(
-                                                            child: _rackLoading &&
-                                                                  _rackArticles ==
-                                                                      null
-                                                              ? Center(
-                                                                  child: SizedBox(
-                                                                    width: 24 *
-                                                                        rackContentScale,
-                                                                    height: 24 *
-                                                                        rackContentScale,
-                                                                    child:
-                                                                        CircularProgressIndicator(
-                                                                      strokeWidth:
-                                                                          2,
-                                                                      color: AppColors
-                                                                          .primary,
-                                                                    ),
-                                                                  ),
-                                                                )
+                                                            child: _profileDataLoading ||
+                                                                    (_rackLoading &&
+                                                                        _rackArticles ==
+                                                                            null)
+                                                              ? const _RackThumbSkeleton()
                                                               : _rackError !=
                                                                       null
                                                                   ? Center(
@@ -898,14 +1265,17 @@ class _HomePageState extends State<HomePage> {
                                                                         ),
                                                                       ),
                                                                     )
-                                                                  : _rackArticles ==
-                                                                              null ||
-                                                                          _rackArticles!
-                                                                              .isEmpty
-                                                                      ? Center(
+                                                                  : () {
+                                                                      final filtered =
+                                                                          _filteredRackArticles;
+                                                                      if ((_rackArticles ==
+                                                  null ||
+                                              _rackArticles!.isEmpty) &&
+                                          _searchQuery.isEmpty) {
+                                                                        return Center(
                                                                           child:
                                                                               Text(
-                                                                            'No pairs yet — tap ↗ to open your rack',
+                                                                            'Add your first pair to get started!',
                                                                             textAlign:
                                                                                 TextAlign.center,
                                                                             style:
@@ -918,22 +1288,44 @@ class _HomePageState extends State<HomePage> {
                                                                                   _kRackMutedText,
                                                                             ),
                                                                           ),
-                                                                        )
-                                                                      : Center(
+                                                                        );
+                                                                      }
+                                                                      if (filtered
+                                                                          .isEmpty) {
+                                                                        return Center(
                                                                           child:
-                                                                              _RackThumbStrip(
-                                                                            articles: _rackArticles!
-                                                                                .take(3)
-                                                                                .toList(),
-                                                                            gap: rackThumbStripGap,
-                                                                            onOpen:
-                                                                                _openArticleDetails,
-                                                                            articleImageUrl:
-                                                                                _articleImageUrl,
-                                                                            articleThumb:
-                                                                                _articleThumb,
+                                                                              Text(
+                                                                            'No pairs match "$_searchQuery"',
+                                                                            textAlign:
+                                                                                TextAlign.center,
+                                                                            style:
+                                                                                TextStyle(
+                                                                              fontSize:
+                                                                                  rackMutedFontSize,
+                                                                              fontWeight:
+                                                                                  FontWeight.w500,
+                                                                              color:
+                                                                                  _kRackMutedText,
+                                                                            ),
                                                                           ),
+                                                                        );
+                                                                      }
+                                                                      return Center(
+                                                                        child:
+                                                                            _RackThumbStrip(
+                                                                          articles: filtered
+                                                                              .take(3)
+                                                                              .toList(),
+                                                                          gap: rackThumbStripGap,
+                                                                          onOpen:
+                                                                              _openArticleDetails,
+                                                                          articleImageUrl:
+                                                                              _articleImageUrl,
+                                                                          articleThumb:
+                                                                              _articleThumb,
                                                                         ),
+                                                                      );
+                                                                    }(),
                                                           ),
                                                         ],
                                                       ),
@@ -944,145 +1336,113 @@ class _HomePageState extends State<HomePage> {
                                               ),
                                             ),
                                           ),
-                                          SizedBox(height: careSectionGap),
-                                          SizedBox(
-                                            height: equalBlockH,
-                                            width: double.infinity,
-                                            child: _QuickActionCard(
-                                              label: 'CareMyPair',
-                                              highlight: true,
-                                              fullWidth: true,
-                                              iconAssetUrl: _kCareMyPairIconAsset,
-                                              layoutScale: layoutScale,
-                                              iconWidth: (48 * actionContentScale)
-                                                  .clamp(
-                                                _homeScaled(34, layoutScale),
-                                                _homeScaled(58, layoutScale),
-                                              ),
-                                              iconHeight: (48 * actionContentScale)
-                                                  .clamp(
-                                                _homeScaled(34, layoutScale),
-                                                _homeScaled(58, layoutScale),
-                                              ),
-                                              cellHeight: equalBlockH,
-                                              onTap: () =>
-                                                  Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const CareMyPairPage(),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(height: careSectionGap),
-                                          SizedBox(
-                                            height: equalBlockH,
-                                            width: double.infinity,
-                                            child: LayoutBuilder(
-                                              builder: (context, constraints) {
-                                                // Shared icon box so both cards leave equal room for text.
-                                                final pairIconW =
-                                                    (44 * actionContentScale)
-                                                        .clamp(
-                                                  _homeScaled(28, layoutScale),
-                                                  _homeScaled(50, layoutScale),
-                                                );
-                                                final pairIconH =
-                                                    (42 * actionContentScale)
-                                                        .clamp(
-                                                  _homeScaled(26, layoutScale),
-                                                  _homeScaled(48, layoutScale),
-                                                );
-                                                final rentIconW = pairIconW;
-                                                final rentIconH = pairIconH;
-                                                final rehomeIconW = pairIconW;
-                                                final rehomeIconH = pairIconH;
-                                                final halfCardW =
-                                                    (constraints.maxWidth -
-                                                            sectionGap) /
-                                                        2;
-                                                final horizontalPad =
-                                                    _homeScaled(10, layoutScale);
-                                                final iconGap =
-                                                    _homeScaled(12, layoutScale);
-                                                final maxIconW = pairIconW;
-                                                final maxIconH = pairIconH;
-                                                final verticalPad =
-                                                    ((equalBlockH - maxIconH) *
-                                                            0.2)
-                                                        .clamp(
-                                                  _homeScaled(8, layoutScale),
-                                                  _homeScaled(20, layoutScale),
-                                                );
-                                                final textMaxW = halfCardW -
-                                                    horizontalPad * 2 -
-                                                    maxIconW -
-                                                    iconGap;
-                                                final textMaxH =
-                                                    equalBlockH -
-                                                        verticalPad * 2;
-                                                final pairLabelSize =
-                                                    _homeTwoLineActionLabelSize(
-                                                  context: context,
-                                                  contentScale: actionContentScale,
-                                                  layoutScale: layoutScale,
-                                                  textMaxWidth: textMaxW,
-                                                  textMaxHeight: textMaxH,
-                                                );
-
-                                                return Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .stretch,
-                                                  children: [
-                                                    Expanded(
-                                                      child: _QuickActionCard(
-                                                        label: 'Rent\nMyPair',
-                                                        grayed: true,
-                                                        iconAssetUrl:
-                                                            _kRentMyPairIconAsset,
-                                                        iconWidth: rentIconW,
-                                                        iconHeight: rentIconH,
-                                                        cellHeight: equalBlockH,
-                                                        layoutScale: layoutScale,
-                                                        labelFontSize:
-                                                            pairLabelSize,
-                                                        onTap: () =>
-                                                            showComingSoon(
-                                                          context,
-                                                          feature: 'Rent MyPair',
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    SizedBox(
-                                                      width: sectionGap,
-                                                    ),
-                                                    Expanded(
-                                                      child: _QuickActionCard(
-                                                        label: 'Rehome\nMyPair',
-                                                        iconAssetUrl:
-                                                            _kRehomeMyPairIconAsset,
-                                                        iconWidth: rehomeIconW,
-                                                        iconHeight: rehomeIconH,
-                                                        cellHeight: equalBlockH,
-                                                        layoutScale: layoutScale,
-                                                        labelFontSize:
-                                                            pairLabelSize,
-                                                        onTap: () =>
-                                                            Navigator.of(context).push(
-                                                          MaterialPageRoute<void>(
-                                                            builder: (_) =>
-                                                                const RehomeMyPairPage(),
+                                          SizedBox(height: liveRackToGrid),
+                                          Builder(
+                                            builder: (context) {
+                                              final matched =
+                                                  _filteredHomeServices;
+                                              final actionCards = matched
+                                                  .map(
+                                                    (item) => _QuickActionCard(
+                                                      label: item.label,
+                                                      highlight: item.highlight,
+                                                      disabled: item.disabled,
+                                                      iconAssetUrl:
+                                                          item.iconAsset,
+                                                      layoutScale: layoutScale,
+                                                      cellHeight: equalBlockH,
+                                                      onTap: item.disabled
+                                                          ? null
+                                                          : () =>
+                                                              _openHomeService(
+                                                            item.kind,
                                                           ),
-                                                        ),
-                                                      ),
                                                     ),
-                                                  ],
+                                                  )
+                                                  .toList();
+
+                                              if (actionCards.isEmpty) {
+                                                return Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical:
+                                                        (12 * layoutScale)
+                                                            .clamp(8.0, 16.0),
+                                                  ),
+                                                  child: Text(
+                                                    'No services match "$_searchQuery"',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          rackMutedFontSize,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: _kRackMutedText,
+                                                    ),
+                                                  ),
                                                 );
-                                              },
-                                            ),
+                                              }
+
+                                              final rows = <Widget>[];
+                                              for (var i = 0;
+                                                  i < actionCards.length;
+                                                  i += 2) {
+                                                if (rows.isNotEmpty) {
+                                                  rows.add(
+                                                    SizedBox(
+                                                      height: liveActionRowGap,
+                                                    ),
+                                                  );
+                                                }
+                                                final left = actionCards[i];
+                                                final right =
+                                                    i + 1 < actionCards.length
+                                                        ? actionCards[i + 1]
+                                                        : const SizedBox
+                                                            .shrink();
+                                                rows.add(
+                                                  SizedBox(
+                                                    height: equalBlockH,
+                                                    width: double.infinity,
+                                                    child: _HomeActionPairRow(
+                                                      gap: sectionGap,
+                                                      left: left,
+                                                      right: right,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                              return Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: rows,
+                                              );
+                                            },
                                           ),
                                         ],
+                                      );
+                                      if (!searching) {
+                                        // Short: scale down if still slightly over.
+                                        // Tall: packed heights already ate leftover.
+                                        final stillOver = packedHeight() > bodyH + 0.5;
+                                        if (stillOver) {
+                                          return FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.topCenter,
+                                            child: SizedBox(
+                                              width: bodyConstraints.maxWidth,
+                                              height: packedHeight(),
+                                              child: bodyColumn,
+                                            ),
+                                          );
+                                        }
+                                        return SizedBox(
+                                          height: bodyH,
+                                          width: double.infinity,
+                                          child: bodyColumn,
+                                        );
+                                      }
+                                      return SingleChildScrollView(
+                                        physics: const ClampingScrollPhysics(),
+                                        child: bodyColumn,
                                       );
                                     },
                                   ),
@@ -1144,6 +1504,7 @@ class _HomePageState extends State<HomePage> {
                   //   ),
                   // ),
                 ],
+              ),
               ),
             ),
           );
@@ -1275,7 +1636,7 @@ class _HomeNotificationBellSectionState
               MaterialPageRoute(
                 builder: (_) => BlocProvider.value(
                   value: profileBloc,
-                  child: const NotificationsPage(),
+                  child: const NotificationsPage(selectedTabIndex: 0),
                 ),
               ),
             );
@@ -1306,13 +1667,8 @@ class _HomeHeaderBell extends StatelessWidget {
     final bellIconW = (18.0 * s).clamp(16.0, 22.0);
     final bellIconH = bellIconW * (16 / 14);
 
-    // Glass chrome — scaled from header scale [s] so blur, rim, and lift stay proportional.
-    final blurSigma = (14.0 * s).clamp(11.0, 18.0);
     final rimW = (1.0 * s).clamp(0.85, 1.25);
-    final liftBlur = (9.0 * s).clamp(7.0, 12.0);
     final liftY = (3.0 * s).clamp(2.5, 4.5);
-    final haloBlur = (6.0 * s).clamp(4.5, 9.0);
-    final rimHighlightBlur = (2.0 * s).clamp(1.0, 3.0);
 
     return GestureDetector(
       onTap: onTap,
@@ -1321,157 +1677,49 @@ class _HomeHeaderBell extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Container(
-          width: bellSize,
-          height: bellSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              // Primary float — cool-tinted shadow reads on gradients and light UI.
-              BoxShadow(
-                color: const Color(0xFF0A2540).withValues(alpha: 0.20),
-                blurRadius: liftBlur,
-                offset: Offset(0, liftY),
-              ),
-              // Soft ambient pool — separates control from background.
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: haloBlur,
-                offset: Offset(0, liftY * 0.45),
-              ),
-              // Tight top catch-light — glass edge lift (inset feel from spread).
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.32),
-                blurRadius: rimHighlightBlur,
-                spreadRadius: -(1.1 * s).clamp(0.75, 1.45),
-                offset: Offset(0, -(0.9 * s).clamp(0.45, 1.15)),
-              ),
-            ],
-          ),
-          child: ClipOval(
-            clipBehavior: Clip.antiAlias,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 1) Base body tint — radial bias keeps icon legible on dark + light headers.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.22, -0.32),
-                        radius: 1.05,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.26),
-                          Colors.white.withValues(alpha: 0.11),
-                          Colors.white.withValues(alpha: 0.07),
-                        ],
-                        stops: const [0.0, 0.52, 1.0],
-                      ),
-                    ),
-                  ),
-                  // 2) Diagonal frosted film — main glass read; restrained alphas.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.34),
-                          Colors.white.withValues(alpha: 0.07),
-                          Colors.white.withValues(alpha: 0.16),
-                        ],
-                        stops: const [0.0, 0.48, 1.0],
-                      ),
-                    ),
-                  ),
-                  // 3) Top specular band — iOS-style polished highlight.
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: FractionallySizedBox(
-                      heightFactor: 0.40,
-                      widthFactor: 1,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.white.withValues(alpha: 0.20),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 4) Bottom depth wash — anchors hierarchy without muddying blur.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          const Color(0xFF0A1628).withValues(alpha: 0.07),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // 5) Inner rim glow — subtle inner edge light.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        radius: 1.0,
-                        colors: [
-                          Colors.transparent,
-                          Colors.white.withValues(alpha: 0.0),
-                          Colors.white.withValues(alpha: 0.09),
-                        ],
-                        stops: const [0.0, 0.78, 1.0],
-                      ),
-                    ),
-                  ),
-                  // 6) Glass rim stroke — full-bleed ring; does not consume bell padding.
-                  IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          width: rimW,
-                          color: Colors.white.withValues(alpha: 0.40),
-                        ),
-                      ),
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
-                  // 7) Bell icon.
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: bellPadH,
-                      vertical: bellPadV,
-                    ),
-                    child: Center(
-                      child: SvgPicture.asset(
-                        _kNotificationBellSvgAsset,
-                        width: bellIconW,
-                        height: bellIconH,
-                        fit: BoxFit.contain,
-                        colorFilter: const ColorFilter.mode(
-                          _kHeaderIconTint,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ),
+              width: bellSize,
+              height: bellSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.34),
+                    Colors.white.withValues(alpha: 0.12),
+                  ],
+                ),
+                border: Border.all(
+                  width: rimW,
+                  color: Colors.white.withValues(alpha: 0.40),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0A2540).withValues(alpha: 0.18),
+                    blurRadius: 8,
+                    offset: Offset(0, liftY),
                   ),
                 ],
               ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: bellPadH,
+                  vertical: bellPadV,
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    _kNotificationBellSvgAsset,
+                    width: bellIconW,
+                    height: bellIconH,
+                    fit: BoxFit.contain,
+                    colorFilter: const ColorFilter.mode(
+                      _kHeaderIconTint,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
             if (notificationCount > 0)
               Positioned(
                 right: -2,
@@ -1506,32 +1754,249 @@ class _HomeHeaderBell extends StatelessWidget {
   }
 }
 
-/// Profile avatar beside location — single ring; family members live in profile module.
-class _HomeProfileAvatarStack extends StatelessWidget {
-  final String? imageUrl;
-  final VoidCallback onTap;
+/// Figma Frame 241 (2559:289) — profile picker when 3+ switchable profiles.
+class _HomeProfileSelectMenu extends StatelessWidget {
+  static const double menuWidth = 108;
+  static const Color borderTeal = Color(0xFF0F6876);
+  static const Color divider = Color.fromRGBO(0, 0, 0, 0.5);
 
-  const _HomeProfileAvatarStack({required this.imageUrl, required this.onTap});
+  final List<SwitchableAppProfile> profiles;
+  final ValueChanged<String> onSelect;
+
+  const _HomeProfileSelectMenu({
+    required this.profiles,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final s = _homeHeaderChromeScale(context);
-    final narrow = MediaQuery.sizeOf(context).width < 360;
-    final rLarge = ((narrow ? 28.0 : 30.0) * s).clamp(26.0, 32.0);
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: _avatarRing(radius: rLarge, imageUrl: imageUrl),
+    return Material(
+      color: Colors.transparent,
+      elevation: 8,
+      shadowColor: Colors.black26,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: menuWidth,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderTeal, width: 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < profiles.length; i++) ...[
+              _HomeProfileSelectRow(
+                profile: profiles[i],
+                showDivider: i < profiles.length - 1,
+                onTap: () => onSelect(profiles[i].id),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
+}
 
-  Widget _avatarRing({required double radius, required String? imageUrl}) {
+class _HomeProfileSelectRow extends StatelessWidget {
+  final SwitchableAppProfile profile;
+  final bool showDivider;
+  final VoidCallback onTap;
+
+  const _HomeProfileSelectRow({
+    required this.profile,
+    required this.showDivider,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage =
+        profile.imageUrl != null && profile.imageUrl!.isNotEmpty;
+    final letter =
+        profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'U';
+    // Figma: 24px avatars on first rows, 26px on later — use 24 for consistency.
+    const avatarSize = 24.0;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: showDivider
+                ? const Border(
+                    bottom: BorderSide(
+                      color: _HomeProfileSelectMenu.divider,
+                      width: 1,
+                    ),
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: avatarSize,
+                height: avatarSize,
+                child: CircleAvatar(
+                  radius: avatarSize / 2,
+                  backgroundColor: const Color(0xFFE8F4F6),
+                  backgroundImage:
+                      hasImage ? NetworkImage(profile.imageUrl!) : null,
+                  child: hasImage
+                      ? null
+                      : Text(
+                          letter,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _HomeProfileSelectMenu.borderTeal,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  profile.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Profile avatar beside location — current large, up to 2 others small.
+/// With 3+ profiles, tapping the cluster opens Figma Frame 241 picker.
+class _HomeProfileAvatarStack extends StatefulWidget {
+  final UserProfile? profile;
+  final bool loading;
+  final VoidCallback onTapCurrent;
+  final void Function(String profileId)? onTapOther;
+
+  const _HomeProfileAvatarStack({
+    required this.profile,
+    required this.onTapCurrent,
+    this.loading = false,
+    this.onTapOther,
+  });
+
+  @override
+  State<_HomeProfileAvatarStack> createState() =>
+      _HomeProfileAvatarStackState();
+}
+
+class _HomeProfileAvatarStackState extends State<_HomeProfileAvatarStack> {
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _menuEntry;
+
+  bool get _menuOpen => _menuEntry != null;
+
+  @override
+  void didUpdateWidget(covariant _HomeProfileAvatarStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.loading && _menuOpen) _removeMenu();
+  }
+
+  @override
+  void dispose() {
+    _removeMenu();
+    super.dispose();
+  }
+
+  void _removeMenu() {
+    _menuEntry?.remove();
+    _menuEntry = null;
+  }
+
+  void _closeMenu() {
+    if (!_menuOpen) return;
+    _removeMenu();
+    if (mounted) setState(() {});
+  }
+
+  void _openMenu({
+    required List<SwitchableAppProfile> profiles,
+    required String activeId,
+  }) {
+    _removeMenu();
+    final overlay = Overlay.of(context);
+    _menuEntry = OverlayEntry(
+      builder: (context) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _closeMenu,
+                child: const ColoredBox(color: Colors.transparent),
+              ),
+            ),
+            CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              targetAnchor: Alignment.bottomRight,
+              followerAnchor: Alignment.topRight,
+              offset: const Offset(4, 8),
+              child: _HomeProfileSelectMenu(
+                profiles: profiles,
+                onSelect: (profileId) {
+                  _closeMenu();
+                  if (profileId == activeId) {
+                    widget.onTapCurrent();
+                    return;
+                  }
+                  widget.onTapOther?.call(profileId);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    overlay.insert(_menuEntry!);
+    setState(() {});
+  }
+
+  void _toggleMenu({
+    required List<SwitchableAppProfile> profiles,
+    required String activeId,
+  }) {
+    if (_menuOpen) {
+      _closeMenu();
+    } else {
+      _openMenu(profiles: profiles, activeId: activeId);
+    }
+  }
+
+  Widget _avatarRing({
+    required double radius,
+    required String? imageUrl,
+    required String name,
+  }) {
     final url = imageUrl;
     final hasImage = url != null && url.isNotEmpty;
+    final letter = name.isNotEmpty ? name[0].toUpperCase() : 'U';
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
@@ -1546,11 +2011,149 @@ class _HomeProfileAvatarStack extends StatelessWidget {
         backgroundImage: hasImage ? NetworkImage(url) : null,
         child: hasImage
             ? null
-            : Icon(
-                Icons.person_rounded,
-                size: (radius * 1.25).clamp(32.0, 42.0),
-                color: Colors.white,
+            : Text(
+                letter,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: (radius * 0.85).clamp(10.0, 18.0),
+                ),
               ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _homeHeaderChromeScale(context);
+    final narrow = MediaQuery.sizeOf(context).width < 360;
+    final rLarge = ((narrow ? 22.0 : 24.0) * s).clamp(20.0, 26.0);
+    final rSmall = ((narrow ? 10.0 : 11.0) * s).clamp(9.0, 13.0);
+
+    if (widget.loading) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _HomeSkeletonBone(
+            width: rLarge * 2,
+            height: rLarge * 2,
+            radius: rLarge,
+            color: Colors.white.withValues(alpha: 0.28),
+          ),
+          const SizedBox(width: 6),
+          _HomeSkeletonBone(
+            width: rSmall * 2,
+            height: rSmall * 2,
+            radius: rSmall,
+            color: Colors.white.withValues(alpha: 0.28),
+          ),
+        ],
+      );
+    }
+
+    if (widget.profile == null) {
+      return GestureDetector(
+        onTap: widget.onTapCurrent,
+        behavior: HitTestBehavior.opaque,
+        child: _avatarRing(radius: rLarge, imageUrl: null, name: ''),
+      );
+    }
+
+    final all = switchableProfilesOf(widget.profile!);
+    final activeId = widget.profile!.isSelfActive
+        ? kSelfProfileId
+        : widget.profile!.activeProfileId;
+    final current = all.firstWhere(
+      (p) => p.id == activeId,
+      orElse: () => all.first,
+    );
+    final others = all.where((p) => p.id != current.id).take(2).toList();
+    final useSelectMenu = all.length >= 3;
+
+    void onClusterTap() {
+      if (useSelectMenu) {
+        _toggleMenu(profiles: all, activeId: current.id);
+      } else {
+        widget.onTapCurrent();
+      }
+    }
+
+    void onOtherTap(String id) {
+      if (useSelectMenu) {
+        _toggleMenu(profiles: all, activeId: current.id);
+      } else {
+        widget.onTapOther?.call(id);
+      }
+    }
+
+    if (others.isEmpty) {
+      return CompositedTransformTarget(
+        link: _layerLink,
+        child: GestureDetector(
+          onTap: onClusterTap,
+          behavior: HitTestBehavior.opaque,
+          child: _avatarRing(
+            radius: rLarge,
+            imageUrl: current.imageUrl,
+            name: current.name,
+          ),
+        ),
+      );
+    }
+
+    final width = rLarge * 2 + rSmall * 1.15;
+    final height = rLarge * 2 + 6;
+
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Transform.translate(
+        offset: const Offset(-8, 6),
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                right: -10,
+                top: 2,
+                child: GestureDetector(
+                  onTap: () => onOtherTap(others[0].id),
+                  child: _avatarRing(
+                    radius: rSmall,
+                    imageUrl: others[0].imageUrl,
+                    name: others[0].name,
+                  ),
+                ),
+              ),
+              if (others.length > 1)
+                Positioned(
+                  right: -12,
+                  bottom: -2,
+                  child: GestureDetector(
+                    onTap: () => onOtherTap(others[1].id),
+                    child: _avatarRing(
+                      radius: rSmall,
+                      imageUrl: others[1].imageUrl,
+                      name: others[1].name,
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: onClusterTap,
+                  child: _avatarRing(
+                    radius: rLarge,
+                    imageUrl: current.imageUrl,
+                    name: current.name,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1560,17 +2163,36 @@ class _HomeTopCard extends StatelessWidget {
   final String userName;
   final String currentAddress;
   final String pairsInRackDisplay;
+  final String pairsDonatedDisplay;
+  final String pairsSoldDisplay;
+  final String pairsInCareDisplay;
+  final bool statsLoading;
+  final bool pairsInRackLoading;
+  final bool contentLoading;
   final Future<void> Function() onLocationTap;
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final VoidCallback onSearchDismissKeyboard;
   final double layoutScale;
 
   const _HomeTopCard({
     required this.userName,
     required this.currentAddress,
     required this.pairsInRackDisplay,
+    required this.pairsDonatedDisplay,
+    required this.pairsSoldDisplay,
+    required this.pairsInCareDisplay,
+    required this.statsLoading,
+    required this.pairsInRackLoading,
+    required this.contentLoading,
     required this.onLocationTap,
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.onSearchDismissKeyboard,
     this.layoutScale = 1.0,
   });
 
+  /// Single-line location for the home header (extra address parts hidden).
   static String _addressLineForHome(String raw) {
     final s = raw.replaceFirst(RegExp(r'^📍\s*'), '').trim();
     final cleanedSegments = s
@@ -1578,11 +2200,14 @@ class _HomeTopCard extends StatelessWidget {
         .map((e) => e.trim())
         .where(
           (e) =>
-              e.isNotEmpty && e.toLowerCase() != 'null' && e.toLowerCase() != 'undefined',
+              e.isNotEmpty &&
+              e.toLowerCase() != 'null' &&
+              e.toLowerCase() != 'undefined',
         )
         .toList();
-    if (cleanedSegments.isEmpty) return 'HSR Layout, Bangalore';
-    return cleanedSegments.join(', ');
+    if (cleanedSegments.isEmpty) return 'Fetching location…';
+    // One row: show at most the first two short parts; rest stay hidden.
+    return cleanedSegments.take(2).join(', ');
   }
 
   @override
@@ -1666,19 +2291,28 @@ class _HomeTopCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Text(
-                            'Hello, $greetingName!',
-                            textAlign: TextAlign.left,
-                            style: GoogleFonts.boldonse(
-                              fontSize: ((compact ? 46.0 : 48.0) * s).clamp(
-                                13.0,
-                                23.0,
-                              ),
-                              fontWeight: FontWeight.w400,
-                              color: _kOnHeaderText,
-                              height: 1.1,
-                            ),
-                          ),
+                          child: contentLoading
+                              ? Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: _HomeSkeletonBone(
+                                    width: 168,
+                                    height: ((compact ? 46.0 : 48.0) * s)
+                                        .clamp(13.0, 23.0),
+                                    radius: 8,
+                                    color: Colors.white.withValues(alpha: 0.28),
+                                  ),
+                                )
+                              : Text(
+                                  'Hello, $greetingName!',
+                                  textAlign: TextAlign.left,
+                                  style: GoogleFonts.boldonse(
+                                    fontSize: ((compact ? 46.0 : 48.0) * s)
+                                        .clamp(13.0, 23.0),
+                                    fontWeight: FontWeight.w400,
+                                    color: _kOnHeaderText,
+                                    height: 1.1,
+                                  ),
+                                ),
                         ),
                         const _HomeNotificationBellSection(),
                       ],
@@ -1692,17 +2326,22 @@ class _HomeTopCard extends StatelessWidget {
                             onTap: onLocationTap,
                             behavior: HitTestBehavior.opaque,
                             child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SizedBox(
-                                  width: locationIconSize,
-                                  height: locationIconSize,
-                                  child: SvgPicture.asset(
-                                    _kHomeMapPinSvgAsset,
-                                    fit: BoxFit.contain,
-                                    colorFilter: const ColorFilter.mode(
-                                      _kHeaderIconTint,
-                                      BlendMode.srcIn,
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    top: (1.5 * s).clamp(1.0, 3.0),
+                                  ),
+                                  child: SizedBox(
+                                    width: locationIconSize,
+                                    height: locationIconSize,
+                                    child: SvgPicture.asset(
+                                      _kHomeMapPinSvgAsset,
+                                      fit: BoxFit.contain,
+                                      colorFilter: const ColorFilter.mode(
+                                        _kHeaderIconTint,
+                                        BlendMode.srcIn,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1713,8 +2352,11 @@ class _HomeTopCard extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      // Line 1: Home + arrow
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
                                         children: [
                                           Text(
                                             'Home',
@@ -1751,20 +2393,34 @@ class _HomeTopCard extends StatelessWidget {
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: (4 * s).clamp(2.0, 6.0)),
-                                      Text(
-                                        addressLine,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.montserrat(
-                                          fontSize:
-                                              ((compact ? 14.0 : 16.0) * s)
-                                                  .clamp(10.0, 16.0),
-                                          fontWeight: FontWeight.w400,
-                                          color: _kOnHeaderTextMuted,
-                                          height: 1.2,
-                                        ),
-                                      ),
+                                      SizedBox(height: (3 * s).clamp(2.0, 5.0)),
+                                      // Line 2: location only (single row)
+                                      contentLoading
+                                          ? _HomeSkeletonBone(
+                                              width: 140,
+                                              height: ((compact ? 13.0 : 14.0) *
+                                                      s)
+                                                  .clamp(10.0, 15.0),
+                                              radius: 6,
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.28),
+                                            )
+                                          : Text(
+                                              addressLine,
+                                              maxLines: 1,
+                                              softWrap: false,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.left,
+                                              style: GoogleFonts.montserrat(
+                                                fontSize:
+                                                    ((compact ? 13.0 : 14.0) *
+                                                            s)
+                                                        .clamp(10.0, 15.0),
+                                                fontWeight: FontWeight.w400,
+                                                color: _kOnHeaderTextMuted,
+                                                height: 1.2,
+                                              ),
+                                            ),
                                     ],
                                   ),
                                 ),
@@ -1773,11 +2429,12 @@ class _HomeTopCard extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: (4 * s).clamp(3.0, 8.0)),
-                        BlocBuilder<ProfileBloc, ProfileState>(
-                          buildWhen: (prev, curr) =>
-                              curr is ProfileLoaded ||
-                              curr is ProfileUpdating ||
-                              curr is ProfileImageUploading,
+                            BlocBuilder<ProfileBloc, ProfileState>(
+                              buildWhen: (prev, curr) =>
+                                  curr is ProfileLoaded ||
+                                  curr is ProfileUpdating ||
+                                  curr is ProfileImageUploading ||
+                                  curr is AddressActionLoading,
                           builder: (context, profileState) {
                             final profile = profileState is ProfileLoaded
                                 ? profileState.profile
@@ -1785,11 +2442,13 @@ class _HomeTopCard extends StatelessWidget {
                                 ? profileState.profile
                                 : profileState is ProfileImageUploading
                                 ? profileState.profile
+                                : profileState is AddressActionLoading
+                                ? profileState.profile
                                 : null;
-                            final imageUrl = profile?.profileImage;
                             return _HomeProfileAvatarStack(
-                              imageUrl: imageUrl,
-                              onTap: () {
+                              profile: profile,
+                              loading: contentLoading,
+                              onTapCurrent: () {
                                 final profileBloc = context.read<ProfileBloc>();
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -1800,53 +2459,130 @@ class _HomeTopCard extends StatelessWidget {
                                   ),
                                 );
                               },
+                              onTapOther: (profileId) async {
+                                final tokenResult =
+                                    await sl<GetValidAccessToken>().call();
+                                if (!context.mounted) return;
+                                tokenResult.fold(
+                                  (_) {},
+                                  (token) {
+                                    context.read<ProfileBloc>().add(
+                                          ActiveProfileSwitchRequested(
+                                            accessToken: token,
+                                            profileId: profileId,
+                                          ),
+                                        );
+                                  },
+                                );
+                              },
                             );
                           },
                         ),
                       ],
                     ),
                     SizedBox(height: _homeLocationToSearchGap(context, s)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: (1 * s).clamp(0.0, 3.0),
-                      ),
-                      child: Container(
-                        height: searchBarH,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: (16 * s).clamp(12.0, 20.0),
+                    // Same chrome as CareMyPair `_SearchBar` (gradient ring +
+                    // soft shadow + white pill) — home keeps clear + filter only.
+                    Container(
+                      height: searchBarH,
+                      padding: const EdgeInsets.all(1.2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
                         ),
+                        borderRadius: BorderRadius.circular(100),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x22000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(searchBarH / 2),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: Colors.black.withValues(alpha: 0.06),
-                          //     blurRadius: 8,
-                          //     offset: const Offset(0, 2),
-                          //   ),
-                          // ],
+                          borderRadius: BorderRadius.circular(100),
                         ),
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/images/search.svg',
-                              width: 22,
-                              height: 22,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Search an area or address',
-                                style: GoogleFonts.montserrat(
-                                  fontSize: (16 * s).clamp(10.0, 16.0),
-                                  fontWeight: FontWeight.w400,
-                                  color: _kSearchHintColor,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: Row(
+                            children: [
+                              SvgPicture.asset(
+                                'assets/images/search.svg',
+                                width: 22,
+                                height: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: searchController,
+                                  focusNode: searchFocusNode,
+                                  autofocus: false,
+                                  textInputAction: TextInputAction.search,
+                                  textAlignVertical: TextAlignVertical.center,
+                                  // Don't scroll the hero away when IME opens.
+                                  scrollPadding: EdgeInsets.zero,
+                                  // Keyboard only while this field is focused;
+                                  // Enter / outside tap closes it.
+                                  onSubmitted: (_) => onSearchDismissKeyboard(),
+                                  onTapOutside: (_) =>
+                                      onSearchDismissKeyboard(),
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: (16.0 * s).clamp(13.0, 17.0),
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    isCollapsed: false,
+                                    filled: false,
+                                    fillColor: Colors.transparent,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 9,
+                                    ),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                    hintText: 'Search',
+                                    hintStyle: GoogleFonts.montserrat(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.34,
+                                      ),
+                                      fontSize: (16.0 * s).clamp(13.0, 17.0),
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: searchController,
+                                builder: (_, value, _) {
+                                  if (value.text.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return GestureDetector(
+                                    onTap: () {
+                                      searchController.clear();
+                                      onSearchDismissKeyboard();
+                                    },
+                                    child: Icon(
+                                      Icons.close_rounded,
+                                      size: 18,
+                                      color: Colors.black.withValues(
+                                        alpha: 0.34,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -1866,6 +2602,7 @@ class _HomeTopCard extends StatelessWidget {
                               value: pairsInRackDisplay,
                               labelLine1: 'Pairs in',
                               labelLine2: 'your rack',
+                              loading: pairsInRackLoading,
                             ),
                           ),
                         ),
@@ -1874,10 +2611,11 @@ class _HomeTopCard extends StatelessWidget {
                             padding: EdgeInsets.symmetric(
                               horizontal: (5 * s).clamp(3.0, 8.0),
                             ),
-                            child: const _StatItem(
-                              value: '05',
+                            child: _StatItem(
+                              value: pairsDonatedDisplay,
                               labelLine1: 'Pairs',
                               labelLine2: 'Donated',
+                              loading: statsLoading,
                             ),
                           ),
                         ),
@@ -1886,10 +2624,11 @@ class _HomeTopCard extends StatelessWidget {
                             padding: EdgeInsets.symmetric(
                               horizontal: (5 * s).clamp(3.0, 8.0),
                             ),
-                            child: const _StatItem(
-                              value: '00',
+                            child: _StatItem(
+                              value: pairsSoldDisplay,
                               labelLine1: 'Pairs',
                               labelLine2: 'Sold',
+                              loading: statsLoading,
                             ),
                           ),
                         ),
@@ -1898,16 +2637,20 @@ class _HomeTopCard extends StatelessWidget {
                             padding: EdgeInsets.only(
                               left: (5 * s).clamp(3.0, 8.0),
                             ),
-                            child: const _StatItem(
-                              value: '02',
+                            child: _StatItem(
+                              value: pairsInCareDisplay,
                               labelLine1: 'Pairs in',
                               labelLine2: 'Care',
+                              loading: statsLoading,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    
+                    SizedBox(
+                      height: (_kHomeHeaderStatsToBottom * s).clamp(10.0, 18.0),
+                    ),
+                    const Center(child: _CarbonCreditsChip()),
                   ],
                 ),
               ),
@@ -1922,11 +2665,13 @@ class _StatItem extends StatelessWidget {
   final String value;
   final String labelLine1;
   final String labelLine2;
+  final bool loading;
 
   const _StatItem({
     required this.value,
     required this.labelLine1,
     required this.labelLine2,
+    this.loading = false,
   });
 
   @override
@@ -1952,16 +2697,24 @@ class _StatItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  value,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.boldonse(
-                    fontSize: valueSize,
-                    fontWeight: FontWeight.w400,
-                    color: _kOnHeaderText,
-                    height: 1,
+                if (loading)
+                  _HomeSkeletonBone(
+                    width: (valueSize * 1.35).clamp(28.0, 40.0),
+                    height: valueSize * 0.85,
+                    radius: 6,
+                    color: Colors.white.withValues(alpha: 0.28),
+                  )
+                else
+                  Text(
+                    value,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.boldonse(
+                      fontSize: valueSize,
+                      fontWeight: FontWeight.w400,
+                      color: _kOnHeaderText,
+                      height: 1,
+                    ),
                   ),
-                ),
                 SizedBox(height: (7 * s).clamp(4.0, 10.0)),
                 Text(
                   labelLine1,
@@ -1979,6 +2732,102 @@ class _StatItem extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Soft pulsing placeholder used instead of circular loaders while API data loads.
+class _HomeSkeletonBone extends StatefulWidget {
+  final double width;
+  final double height;
+  final double radius;
+  final Color color;
+
+  const _HomeSkeletonBone({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+    this.color = const Color(0xFFB7C9CE),
+  });
+
+  @override
+  State<_HomeSkeletonBone> createState() => _HomeSkeletonBoneState();
+}
+
+class _HomeSkeletonBoneState extends State<_HomeSkeletonBone>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.35, end: 0.85).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      ),
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: widget.color,
+          borderRadius: BorderRadius.circular(widget.radius),
+        ),
+      ),
+    );
+  }
+}
+
+/// My Rack preview skeleton — matches thumb strip layout (no spinner).
+class _RackThumbSkeleton extends StatelessWidget {
+  const _RackThumbSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.hasBoundedWidth
+            ? math.max(0.0, constraints.maxWidth)
+            : 0.0;
+        final maxH = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight)
+            : 0.0;
+        if (maxW <= 0 || maxH <= 0) return const SizedBox.shrink();
+
+        final gap = math.min((maxW * 0.04).clamp(4.0, 14.0).toDouble(), maxW / 4);
+        final thumbW =
+            math.max(0.0, (maxW - (gap * 2)) / 3).clamp(0.0, 120.0).toDouble();
+        final thumbH = math.min(maxH, 96.0);
+        return Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < 3; i++) ...[
+                if (i > 0) SizedBox(width: gap),
+                _HomeSkeletonBone(
+                  width: thumbW,
+                  height: thumbH,
+                  radius: 10,
+                  color: const Color(0xFFB7C9CE),
+                ),
+              ],
+            ],
           ),
         );
       },
@@ -2013,54 +2862,81 @@ class _RackThumbStrip extends StatelessWidget {
       builder: (context, constraints) {
         final fitCount = articles.length <= 3 ? articles.length : 3;
         final visible = articles.take(fitCount).toList();
-        final safeGap = gap.clamp(4.0, 14.0);
-        final radius = BorderRadius.circular((12 * (gap / 10)).clamp(8.0, 12.0));
-        final cellW =
-            (constraints.maxWidth - safeGap * (visible.length - 1)) /
-            visible.length;
-        final cellH = constraints.maxHeight;
+        final maxW = constraints.hasBoundedWidth
+            ? math.max(0.0, constraints.maxWidth)
+            : 0.0;
+        final maxH = constraints.hasBoundedHeight
+            ? math.max(0.0, constraints.maxHeight)
+            : 0.0;
+        if (maxW <= 0 || maxH <= 0 || visible.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            for (int i = 0; i < visible.length; i++) ...[
-              if (i > 0) SizedBox(width: safeGap),
-              SizedBox(
-                width: cellW,
-                height: cellH,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => onOpen(visible[i]),
-                    borderRadius: radius,
-                    child: ClipRRect(
-                      borderRadius: radius,
-                      child: articleThumb(
-                        articleImageUrl(visible[i].thumbnailImage),
+        final gapSlots = math.max(0, visible.length - 1);
+        final safeGap = gapSlots == 0
+            ? 0.0
+            : math.min(gap.clamp(4.0, 14.0).toDouble(), maxW / gapSlots);
+        final radius = BorderRadius.circular(
+          (12 * (gap / 10)).clamp(8.0, 12.0).toDouble(),
+        );
+        final cellW = gapSlots == 0
+            ? maxW
+            : math.max(0.0, (maxW - safeGap * gapSlots) / visible.length);
+        // Keep thumbs shorter than the strip so they don’t fill the card edge-to-edge.
+        // Floor at 40 only when the slot is at least that tall — clamp throws if
+        // the lower bound is above the available height (short Chrome windows).
+        final preferred = math.min(maxH * 0.82, cellW * 0.78);
+        final cellH = preferred.clamp(math.min(40.0, maxH), maxH).toDouble();
+
+        return Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            height: cellH,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                for (int i = 0; i < visible.length; i++) ...[
+                  if (i > 0) SizedBox(width: safeGap),
+                  SizedBox(
+                    width: cellW,
+                    height: cellH,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => onOpen(visible[i]),
+                        borderRadius: radius,
+                        child: ClipRRect(
+                          borderRadius: radius,
+                          child: articleThumb(
+                            articleImageUrl(visible[i].thumbnailImage),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          ],
+                ],
+              ],
+            ),
+          ),
         );
       },
     );
   }
 }
 
-/// Rent / Rehome labels: fixed two lines, no soft-wrap or ellipsis.
+/// Rent / Rehome labels: two lines that scale down instead of overflowing.
 class _PairActionLabel extends StatelessWidget {
   const _PairActionLabel({
     required this.label,
     required this.fontSize,
     required this.color,
+    this.lineGap = 2,
   });
 
   final String label;
   final double fontSize;
   final Color color;
+  final double lineGap;
 
   @override
   Widget build(BuildContext context) {
@@ -2071,7 +2947,7 @@ class _PairActionLabel extends StatelessWidget {
       fontSize: fontSize,
       fontWeight: FontWeight.w400,
       color: color,
-      height: _kPairActionLineHeight,
+      height: 1.28,
     );
 
     return Column(
@@ -2082,18 +2958,217 @@ class _PairActionLabel extends StatelessWidget {
           line1,
           maxLines: 1,
           softWrap: false,
-          overflow: TextOverflow.visible,
+          overflow: TextOverflow.ellipsis,
           style: style,
         ),
-        if (line2.isNotEmpty)
+        if (line2.isNotEmpty) ...[
+          SizedBox(height: lineGap),
           Text(
             line2,
             maxLines: 1,
             softWrap: false,
-            overflow: TextOverflow.visible,
+            overflow: TextOverflow.ellipsis,
             style: style,
           ),
+        ],
       ],
+    );
+  }
+}
+
+class _HomeActionPairRow extends StatelessWidget {
+  const _HomeActionPairRow({
+    required this.gap,
+    required this.left,
+    required this.right,
+  });
+
+  final double gap;
+  final Widget left;
+  final Widget right;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: left),
+        SizedBox(width: gap.clamp(8.0, 16.0)),
+        Expanded(child: right),
+      ],
+    );
+  }
+}
+
+class _CarbonCreditsChip extends StatelessWidget {
+  const _CarbonCreditsChip();
+
+  Future<void> _openCarbonCreditsPopup(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => const _CarbonCreditsPopup(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _homeLayoutScale(context);
+    final labelSize = (14 * s).clamp(11.0, 15.0);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openCarbonCreditsPopup(context),
+        borderRadius: BorderRadius.circular(100),
+        child: Ink(
+          padding: EdgeInsets.fromLTRB(
+            (12 * s).clamp(10.0, 16.0),
+            (4 * s).clamp(3.0, 6.0),
+            (16 * s).clamp(12.0, 20.0),
+            (4 * s).clamp(3.0, 6.0),
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(100),
+            gradient: const LinearGradient(
+              begin: Alignment(0.85, 0.41),
+              end: Alignment(-0.30, 1.29),
+              colors: [Color(0xFFAFEDD6), Color(0xFF09DFFF)],
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: (16 * s).clamp(14.0, 20.0),
+                height: (20 * s).clamp(16.0, 24.0),
+                child: SvgPicture.asset(
+                  _kCarbonCreditsLeafAsset,
+                  fit: BoxFit.contain,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.black,
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+              SizedBox(width: (8 * s).clamp(6.0, 10.0)),
+              Text(
+                'Eco credit',
+                style: GoogleFonts.montserrat(
+                  color: Colors.black,
+                  fontSize: labelSize,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CarbonCreditsPopup extends StatelessWidget {
+  const _CarbonCreditsPopup();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment(0.85, 0.41),
+                  end: Alignment(-0.30, 1.29),
+                  colors: [Color(0xFFAFEDD6), Color(0xFF09DFFF)],
+                ),
+              ),
+              alignment: Alignment.center,
+              child: SvgPicture.asset(
+                _kCarbonCreditsLeafAsset,
+                width: 28,
+                height: 32,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF062F35),
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Eco credit',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.boldonse(
+                color: const Color(0xFF062F35),
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Earn eco credits by caring for, repairing, and giving your footwear a second life with GetMyPair.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.montserrat(
+                color: const Color(0xFF5C6E73),
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(100),
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Color(0xFF063239), Color(0xFF0CADC5)],
+                  ),
+                ),
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                  ),
+                  child: Text(
+                    'Got it',
+                    style: GoogleFonts.boldonse(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -2101,195 +3176,181 @@ class _PairActionLabel extends StatelessWidget {
 class _QuickActionCard extends StatelessWidget {
   final String label;
   final String? iconAssetUrl;
-  final double iconWidth;
-  final double iconHeight;
   final double? cellHeight;
-  final double? labelFontSize;
   final double layoutScale;
   final bool highlight;
-  final bool grayed;
+  final bool disabled;
   final VoidCallback? onTap;
-  final bool fullWidth;
 
   const _QuickActionCard({
     required this.label,
     this.iconAssetUrl,
-    this.iconWidth = 24,
-    this.iconHeight = 24,
     this.cellHeight,
-    this.labelFontSize,
     this.layoutScale = 1.0,
     this.highlight = false,
-    this.grayed = false,
+    this.disabled = false,
     this.onTap,
-    this.fullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final widthScale = _homeWidthScale(context);
-    final heightScale = cellHeight != null
-        ? (cellHeight! / (_kQuickActionCellHeight * layoutScale))
-            .clamp(0.72, 1.38)
-        : 1.0;
-    final contentScale = widthScale * heightScale;
     final isTwoLine = label.contains('\n');
-    final textColor = highlight
-        ? Colors.white
-        : grayed
-            ? AppColors.greyedButtonLabel
+    final textColor = disabled
+        ? const Color(0xFF9AABB0)
+        : highlight
+            ? Colors.white
             : _kQuickActionMutedText;
-    final iconColor = grayed ? AppColors.greyedButtonLabel : textColor;
-    final resolvedHeight =
-        cellHeight ??
-        (isTwoLine
-            ? (_kQuickActionCellHeight + 28) * contentScale
-            : _kQuickActionCellHeight * contentScale);
-    // Same vertical inset for CareMyPair and Rent/Rehome when heights are paired.
-    final verticalPad = cellHeight != null
-        ? ((cellHeight! - iconHeight) * 0.2).clamp(
-            _homeScaled(8, layoutScale),
-            _homeScaled(20, layoutScale),
-          )
-        : (isTwoLine ? 18 : 8) * contentScale;
-    final padding = highlight
-        ? EdgeInsets.fromLTRB(
-            _homeScaled(18, layoutScale),
-            verticalPad,
-            _homeScaled(18, layoutScale),
-            verticalPad,
-          )
-        : EdgeInsets.symmetric(
-            horizontal: _homeScaled(
-              labelFontSize != null ? 10 : 12,
-              layoutScale,
-            ),
-            vertical: verticalPad,
-          );
     final cardRadius = _homeScaled(12, layoutScale);
-    final labelSize = ((MediaQuery.sizeOf(context).width <
-                _kHomeDesignWidth * 0.88
-            ? 14.0
-            : 16.0) *
-        contentScale)
-        .clamp(
-      _homeScaled(10, layoutScale),
-      _homeScaled(20, layoutScale),
-    );
-    final resolvedLabelSize = labelFontSize ?? labelSize;
-
-    final cardBody = Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: iconWidth,
-          height: iconHeight,
-          child: _buildActionIcon(iconColor),
-        ),
-        SizedBox(
-          width: _homeScaled(fullWidth ? 20 : 14, layoutScale),
-        ),
-        if (isTwoLine)
-          Expanded(
-            child: _PairActionLabel(
-              label: label,
-              fontSize: resolvedLabelSize,
-              color: textColor,
-            ),
-          )
-        else
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.center,
-              child: Text(
-                label,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.boldonse(
-                  fontSize: labelSize,
-                  fontWeight: FontWeight.w400,
-                  color: textColor,
-                  height: 1.08,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
 
     return Material(
       color: Colors.transparent,
+      clipBehavior: Clip.antiAlias,
+      borderRadius: BorderRadius.circular(cardRadius),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(cardRadius),
-        child: grayed && !highlight
-            ? Container(
-                height: cellHeight ?? resolvedHeight,
-                width: double.infinity,
-                padding: padding,
-                decoration: BoxDecoration(
-                  color: AppColors.greyedButtonFill,
-                  borderRadius: BorderRadius.circular(cardRadius),
-                  border: Border.all(
-                    color: AppColors.greyedButtonLabel,
-                    width: 1,
+        child: Ink(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: _kQuickActionMutedBg,
+            gradient: highlight
+                ? const LinearGradient(
+                    begin: Alignment(1, 0.5),
+                    end: Alignment(0, 0.5),
+                    colors: [
+                      Color(0xFF0CADC5),
+                      Color(0xFF063239),
+                    ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(cardRadius),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final h = constraints.maxHeight > 0
+                  ? constraints.maxHeight
+                  : (cellHeight ?? 0);
+              final w = constraints.maxWidth;
+              if (h <= 0 || w <= 0) return const SizedBox.shrink();
+
+              // Responsive to card/screen: icon & type scale with available space.
+              final padH = (w * 0.10).clamp(10.0, 20.0);
+              final padV = (h * 0.12).clamp(6.0, 14.0);
+              final innerH = math.max(18.0, h - padV * 2);
+              final innerW = math.max(18.0, w - padH * 2);
+              final iconMin = _homeScaled(28, layoutScale).clamp(26.0, 34.0);
+              final iconMax = _homeScaled(56, layoutScale).clamp(48.0, 64.0);
+              final iconSize = math
+                  .min(innerH * 0.82, innerW * 0.42)
+                  .clamp(iconMin, iconMax)
+                  .toDouble();
+              final gap = (innerW * 0.06).clamp(6.0, 14.0);
+              final fontMin = _homeScaled(11, layoutScale).clamp(10.0, 13.0);
+              final fontMax = _homeScaled(17, layoutScale).clamp(15.0, 18.0);
+              final fontSize =
+                  (innerH * 0.30).clamp(fontMin, fontMax).toDouble();
+              final lineGap = (innerH * 0.08).clamp(4.0, 12.0);
+
+              return Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: padH,
+                  vertical: padV,
+                ),
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: iconSize,
+                        height: iconSize,
+                        child: _buildActionIcon(textColor, iconSize),
+                      ),
+                      SizedBox(width: gap),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: math.max(48.0, innerW - iconSize - gap),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: isTwoLine
+                              ? _PairActionLabel(
+                                  label: label,
+                                  fontSize: fontSize,
+                                  color: textColor,
+                                  lineGap: lineGap,
+                                )
+                              : Text(
+                                  label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.boldonse(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.w400,
+                                    color: textColor,
+                                    height: 1.08,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                alignment: Alignment.center,
-                child: cardBody,
-              )
-            : Container(
-                height: cellHeight ?? resolvedHeight,
-                width: double.infinity,
-                padding: padding,
-                decoration: BoxDecoration(
-                  color: _kQuickActionMutedBg,
-                  gradient: highlight
-                      ? const LinearGradient(
-                          begin: Alignment(1, 0.5),
-                          end: Alignment(0, 0.5),
-                          colors: [
-                            AppColors.primaryLight,
-                            AppColors.footwearHeroStart,
-                          ],
-                        )
-                      : null,
-                  borderRadius: BorderRadius.circular(cardRadius),
-                  border: highlight
-                      ? null
-                      : Border.all(
-                          color: const Color(0xFF062F35).withValues(alpha: 0.22),
-                          width: 1,
-                        ),
-                ),
-                alignment: Alignment.center,
-                child: cardBody,
-              ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildActionIcon(Color textColor) {
+  Widget _buildActionIcon(Color textColor, double size) {
     final source = iconAssetUrl;
     if (source == null || source.isEmpty) {
-      return Icon(Icons.widgets_outlined, size: 24, color: textColor);
+      return Icon(
+        Icons.widgets_outlined,
+        size: size * 0.85,
+        color: textColor,
+      );
     }
 
     if (source.startsWith('http://') || source.startsWith('https://')) {
       return Image.network(
         source,
+        width: size,
+        height: size,
         fit: BoxFit.contain,
         color: textColor,
         colorBlendMode: BlendMode.srcIn,
         errorBuilder: (_, _, _) =>
-            Icon(Icons.widgets_outlined, size: 24, color: textColor),
+            Icon(Icons.widgets_outlined, size: size * 0.85, color: textColor),
+      );
+    }
+
+    final lower = source.toLowerCase();
+    if (lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.webp')) {
+      return Image.asset(
+        source,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        color: textColor,
+        colorBlendMode: BlendMode.srcIn,
+        errorBuilder: (_, _, _) =>
+            Icon(Icons.widgets_outlined, size: size * 0.85, color: textColor),
       );
     }
 
     return SvgPicture.asset(
       source,
+      width: size,
+      height: size,
       fit: BoxFit.contain,
       colorFilter: ColorFilter.mode(textColor, BlendMode.srcIn),
     );

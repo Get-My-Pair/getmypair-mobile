@@ -1,25 +1,31 @@
 import 'package:url_launcher/url_launcher.dart';
 
 /// Opens UPI / Google Pay / wallet apps from Zoho Checkout WebView navigations.
+///
+/// Only allowlisted schemes are launched. Arbitrary `intent:` schemes from a
+/// remote page are rejected so they cannot open unexpected apps.
 class PaymentExternalLauncher {
   PaymentExternalLauncher._();
+
+  static const Set<String> allowedSchemes = {
+    'upi',
+    'tez',
+    'gpay',
+    'googlepay',
+    'paytmmp',
+    'phonepe',
+    'bhim',
+    'credpay',
+  };
 
   static bool shouldLaunchExternally(String url) {
     final lower = url.trim().toLowerCase();
     if (lower.isEmpty) return false;
 
-    if (lower.startsWith('intent:') ||
-        lower.startsWith('tez:') ||
-        lower.startsWith('gpay:') ||
-        lower.startsWith('googlepay:') ||
-        lower.startsWith('upi:') ||
-        lower.startsWith('paytmmp:') ||
-        lower.startsWith('phonepe:') ||
-        lower.startsWith('bhim:') ||
-        lower.startsWith('credpay:') ||
-        lower.startsWith('amazonpay:') ||
-        lower.startsWith('android-app:')) {
-      return true;
+    if (lower.startsWith('intent:')) return true;
+
+    for (final scheme in allowedSchemes) {
+      if (lower.startsWith('$scheme:')) return true;
     }
 
     return lower.contains('pay.google.com') ||
@@ -32,7 +38,7 @@ class PaymentExternalLauncher {
 
     if (trimmed.toLowerCase().startsWith('intent:')) {
       final scheme = _extractIntentScheme(trimmed);
-      if (scheme != null) {
+      if (scheme != null && allowedSchemes.contains(scheme.toLowerCase())) {
         final direct = _intentToAppUrl(trimmed, scheme);
         if (direct != null && await _tryLaunch(Uri.parse(direct))) {
           return true;
@@ -40,14 +46,27 @@ class PaymentExternalLauncher {
       }
 
       final fallback = _extractIntentFallback(trimmed);
-      if (fallback != null && await _tryLaunch(Uri.parse(fallback))) {
-        return true;
+      if (fallback != null) {
+        final fallbackUri = Uri.tryParse(fallback);
+        if (fallbackUri != null &&
+            (fallbackUri.scheme == 'https' || fallbackUri.scheme == 'http') &&
+            await _tryLaunch(fallbackUri)) {
+          return true;
+        }
       }
 
-      return _tryLaunch(Uri.parse(trimmed));
+      // Do not launch raw intent: or unknown schemes.
+      return false;
     }
 
-    return _tryLaunch(Uri.parse(trimmed));
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null) return false;
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme == 'https' || scheme == 'http') {
+      return _tryLaunch(uri);
+    }
+    if (!allowedSchemes.contains(scheme)) return false;
+    return _tryLaunch(uri);
   }
 
   static Future<bool> _tryLaunch(Uri uri) async {

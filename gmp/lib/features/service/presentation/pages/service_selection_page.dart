@@ -1,39 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:gmp/core/bgtheme.dart';
+import 'package:gmp/core/constants/api_endpoints.dart';
+import 'package:gmp/core/network/dio_client.dart';
 import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/utils/responsive.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
-import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/core/widgets/gradient_page_shell.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/home/presentation/pages/select_location_page.dart';
 import 'package:gmp/features/profile/domain/entities/address.dart';
+import 'package:gmp/features/profile/domain/entities/user_profile.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:gmp/features/profile/presentation/bloc/profile_state.dart';
+import 'package:gmp/features/profile/presentation/pages/saved_addresses_page.dart';
 import 'package:gmp/features/profile/domain/usecases/get_user_profile.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-
 import '../utils/service_flow_article.dart';
 import '../utils/service_flow_layout.dart';
 import '../widgets/service_flow_pickup_pill.dart';
 import 'request_summary_page.dart';
 import 'select_address_page.dart';
 
-/// Maintenance subscription plan shown when user selects Maintenance service.
+/// Care option shown on MaintainMyPair / WashMyPair after article selection.
 class MaintenancePlanData {
   final String id;
   final String label;
+  final String description;
   final int priceRupees;
+  /// Article category codes this tile applies to (empty = all categories).
+  final List<String> categoryCodes;
 
   const MaintenancePlanData({
     required this.id,
     required this.label,
+    this.description = '',
     required this.priceRupees,
+    this.categoryCodes = const [],
   });
 }
 
@@ -49,12 +59,14 @@ class ServiceSelectionPage extends StatefulWidget {
     this.allowedServiceTypes,
     String? articleName,
     String? articleImageUrl,
+    String? articleCategory,
     this.flowPageTitle,
   }) : selectedArticles = [
           ServiceFlowArticle(
             id: articleId,
             name: articleName ?? '',
             imageUrl: articleImageUrl ?? '',
+            category: (articleCategory ?? '').trim().toLowerCase(),
           ),
         ];
 
@@ -74,20 +86,110 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   static const BorderRadius _repairFlowPanelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
-    bottomLeft: Radius.circular(50),
-    bottomRight: Radius.circular(50),
   );
 
   static const int kMaxProofImages = 5;
+  /// Max photos per RepairMyPair option (camera badge shows n/3).
+  static const int kMaxOptionProofImages = 3;
   static const int kMaxProofVideos = 3;
   static const int kRepairEstimateRupees = 1000;
-  static const int kWashEstimateRupees = 300;
+  static const int kWashEstimateRupees = 236;
 
-  static const List<MaintenancePlanData> _maintenancePlans = [
-    MaintenancePlanData(id: '1m', label: '1 month', priceRupees: 299),
-    MaintenancePlanData(id: '3m', label: '3 months', priceRupees: 999),
-    MaintenancePlanData(id: '6m', label: '6 months', priceRupees: 1500),
+  /// Fallback tiles when API is offline — Masteradmin CareMyPair DB is source of truth.
+  /// Same service list for every article (not filtered by footwear category).
+  static const List<MaintenancePlanData> _defaultRepairPlans = [
+    MaintenancePlanData(
+      id: 'sole_bottom_construction',
+      label: 'Sole & Bottom Construction Repairs',
+      description:
+          'Complete bottom-up sole restoration, from re-gluing delaminated outsoles and replacing worn heels to full resoles and midsole rebuilds.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'upper_seam_restoration',
+      label: 'Upper Material & Seam Restoration',
+      description:
+          'Full upper and interior restoration to patch tears, fix split seams, rebuild heel linings, and replace damaged panels.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'hardware_fastener',
+      label: 'Hardware & Fastener Repairs',
+      description:
+          'Complete hardware and fastener replacement for eyelets, zippers, straps, buckles, velcro, and snaps.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'fit_structural',
+      label: 'Fit & Structural Adjustments',
+      description:
+          'Fixes squeaks, shaky support inside your shoes, and stretches tight spots for a comfortable fit.',
+      priceRupees: 236,
+    ),
   ];
+
+  static const List<MaintenancePlanData> _defaultMaintenancePlans = [
+    MaintenancePlanData(
+      id: 'protection_conditioning',
+      label: 'Protection & Conditioning',
+      description:
+          'Protect and revive your footwear with hydrophobic weatherproofing, UV shielding, and deep-leather conditioning to keep your shoes soft, vibrant, and dirt-resistant.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'surface_care_polishing',
+      label: 'Preventive Surface Care & Polishing',
+      description:
+          'Restore your footwear\'s original shine with material-specific brushing, premium polishing, and precise edge detailing to eliminate buildup and yellowing.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'structural_shape',
+      label: 'Structural & Shape Maintenance',
+      description:
+          'Refresh your shoes inside and out with professional steam reshaping, antimicrobial lining sanitization, and factory-fresh lace care.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'storage_preservation',
+      label: 'Storage & Preservation Prep',
+      description:
+          'Safeguard your footwear from long-term wear with custom sole protection and humidity-controlled seasonal storage prep.',
+      priceRupees: 236,
+    ),
+  ];
+
+  static const List<MaintenancePlanData> _defaultWashPlans = [
+    MaintenancePlanData(
+      id: 'exterior_surface_deep_clean',
+      label: 'Exterior & Surface Deep Cleaning',
+      description:
+          'Comprehensive deep cleaning that lifts dirt from uppers, scrubs soles clean, and restores yellowed midsoles across all materials.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'interior_care_sanitization',
+      label: 'Interior Care & Sanitization',
+      description:
+          'Deep interior extraction wash and antibacterial treatment to eliminate trapped sweat, dirt, and odor-causing bacteria.',
+      priceRupees: 236,
+    ),
+    MaintenancePlanData(
+      id: 'detailing_finishing',
+      label: 'Detailing & Finishing',
+      description:
+          'Targeted stain treatment, deep lace soaking, and controlled moisture extraction for a spot-free, safe finish.',
+      priceRupees: 236,
+    ),
+  ];
+
+  List<MaintenancePlanData> _maintenancePlans = List.unmodifiable(
+    _defaultMaintenancePlans,
+  );
+  List<MaintenancePlanData> _washPlans = List.unmodifiable(_defaultWashPlans);
+  List<MaintenancePlanData> _repairPlans = List.unmodifiable(_defaultRepairPlans);
+
+  bool _careOptionsScrollbarNeeded = false;
 
   bool _loading = true;
   bool _submitting = false;
@@ -98,6 +200,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   ServiceOptionData? _selectedService;
   MaintenancePlanData? _selectedMaintenancePlan;
+  final Set<String> _selectedCareOptionIds = {};
+  late List<ServiceFlowArticle> _flowArticles;
+  int _focusedArticleIndex = 0;
   int _repairStep = 0;
   bool _homePickup = true;
   bool _pickupModeChosen = false;
@@ -107,12 +212,31 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   final ScrollController _repairStep0ScrollController = ScrollController();
   int _selectedPickupDay = 0;
   int _selectedPickupSlot = -1;
+  int _selectedDropOffIndex = -1;
+  int _expandedDropOffIndex = -1;
+  bool _showDropOffSchedule = false;
+  int _selectedDropOffTimeWindow = -1; // 0 Morning, 1 Afternoon, 2 Evening
+  static const List<String> _dropOffTimeWindows = [
+    'Morning',
+    'Afternoon',
+    'Evening',
+  ];
   /// When user picks a place on the map for [cobbler_nearby], shown on the summary.
   String? _cobblerNearbyLocationSummary;
+
+  /// Self Drop off locations: active nearby cobblers + Masteradmin hubs.
+  List<_DropOffLocation> _dropOffLocations = const [];
+  bool _dropOffLoading = false;
+  String? _dropOffError;
+  bool _dropOffLoadAttempted = false;
   final TextEditingController _problemController = TextEditingController();
 
   final List<XFile> _proofImages = [];
   final List<XFile> _proofVideos = [];
+  /// RepairMyPair: selected option ids per shoe article.
+  final Map<String, Set<String>> _repairArticleOptionIds = {};
+  /// RepairMyPair: photos per shoe article → option id.
+  final Map<String, Map<String, List<XFile>>> _repairArticleOptionImages = {};
   final ImagePicker _picker = ImagePicker();
 
   String get _singleFlowType {
@@ -156,11 +280,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   List<DateTime> get _pickupDays {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
-    return List.generate(3, (index) => start.add(Duration(days: index)));
+    return List.generate(5, (index) => start.add(Duration(days: index)));
   }
 
   List<String> get _pickupDayLabels =>
       _pickupDays.map((d) => '${d.day}${_dayOrdinal(d.day)} ${DateFormat('EEEE').format(d)}').toList();
+
+  List<String> get _pickupDayShortLabels =>
+      _pickupDays.map((d) => DateFormat('EEE').format(d)).toList();
 
   List<DateTime> get _pickupSlotDateTimes {
     final selectedDay = _pickupDays[_selectedPickupDay.clamp(0, _pickupDays.length - 1)];
@@ -238,33 +365,240 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   bool get _isSingleServiceFlow => _visibleOptions.length == 1;
 
+  bool get _isMaintenanceFlow => _singleFlowType == 'maintenance';
+
+  bool get _isWashFlow => _singleFlowType == 'wash';
+
+  bool get _isRepairFlow => _singleFlowType == 'repair';
+
+  /// Repair + Maintain + Wash: per-shoe options, camera upload, Finalizing Services.
+  bool get _isPerShoePhotoFlow =>
+      _isRepairFlow || _isMaintenanceFlow || _isWashFlow;
+
+  /// RepairMyPair / MaintainMyPair / WashMyPair share the checkbox options UI.
+  bool get _isCareOptionsFlow =>
+      _isMaintenanceFlow || _isWashFlow || _isRepairFlow;
+
   bool get _repairStep0ProblemValid =>
       _problemController.text.trim().isNotEmpty;
 
   bool get _repairStep0PhotosValid => _proofImages.isNotEmpty;
 
+  bool get _repairStep0CareOptionsValid {
+    if (_isPerShoePhotoFlow) {
+      if (_flowArticles.isEmpty) return false;
+      // Every shoe must have ≥1 service, and each selected service needs a photo.
+      for (final article in _flowArticles) {
+        final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+        if (opts.isEmpty) return false;
+        final byOption = _repairArticleOptionImages[article.id] ?? const {};
+        for (final optionId in opts) {
+          if (byOption[optionId]?.isNotEmpty != true) return false;
+        }
+      }
+      return true;
+    }
+    return _selectedCareOptionIds.isNotEmpty;
+  }
+
+  // Kept for pickup UI (commented out below); re-enable in `_repairStep0Complete`.
+  // ignore: unused_element
   bool get _repairStep0PickupValid => _pickupModeChosen;
 
-  bool get _repairStep0Complete =>
-      _repairStep0ProblemValid &&
-      _repairStep0PhotosValid &&
-      _repairStep0PickupValid;
+  // Pickup mode UI is temporarily commented out (future); do not require it yet.
+  // MaintainMyPair / WashMyPair step 0: select care options (Figma 2851-4014).
+  // RepairMyPair: per-shoe options + upload image for each selected option.
+  bool get _repairStep0Complete => _isCareOptionsFlow
+      ? _repairStep0CareOptionsValid
+      : (_repairStep0ProblemValid && _repairStep0PhotosValid);
+
+  String? get _focusedArticleId {
+    if (_flowArticles.isEmpty) return null;
+    final i = _focusedArticleIndex.clamp(0, _flowArticles.length - 1);
+    return _flowArticles[i].id;
+  }
+
+  Set<String> _optionIdsForFocusedArticle() {
+    final articleId = _focusedArticleId;
+    if (articleId == null) return <String>{};
+    return _repairArticleOptionIds.putIfAbsent(articleId, () => <String>{});
+  }
+
+  /// Options shown as selected in the current UI (focused shoe for repair/maintain).
+  Set<String> get _uiSelectedOptionIds =>
+      _isPerShoePhotoFlow ? _optionIdsForFocusedArticle() : _selectedCareOptionIds;
+
+  List<XFile> _imagesForOption(String optionId) {
+    if (!_isPerShoePhotoFlow) return const <XFile>[];
+    final articleId = _focusedArticleId;
+    if (articleId == null) return const <XFile>[];
+    return _repairArticleOptionImages[articleId]?[optionId] ?? const <XFile>[];
+  }
+
+  List<XFile> _mutableImagesForOption(String optionId) {
+    final articleId = _focusedArticleId;
+    if (articleId == null) return <XFile>[];
+    final byOption = _repairArticleOptionImages.putIfAbsent(
+      articleId,
+      () => <String, List<XFile>>{},
+    );
+    return byOption.putIfAbsent(optionId, () => <XFile>[]);
+  }
+
+  List<XFile> get _allOptionProofImages {
+    final out = <XFile>[];
+    for (final article in _flowArticles) {
+      final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+      final byOption = _repairArticleOptionImages[article.id] ?? const {};
+      for (final optionId in opts) {
+        final list = byOption[optionId];
+        if (list != null) out.addAll(list);
+      }
+    }
+    return out;
+  }
+
+  String? get _repairSelectionsDescription {
+    final plans = _allCarePlansForFlow;
+    final lines = <String>[];
+    for (final article in _flowArticles) {
+      final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+      if (opts.isEmpty) continue;
+      final labels = plans
+          .where((p) => opts.contains(p.id))
+          .map((p) => p.label)
+          .join(', ');
+      if (labels.isEmpty) continue;
+      final name = article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
+      lines.add('$name: $labels');
+    }
+    if (lines.isEmpty) return null;
+    return lines.join('\n');
+  }
+
+  int get _repairSelectionsTotalRupees {
+    final plans = _allCarePlansForFlow;
+    var sum = 0;
+    for (final article in _flowArticles) {
+      final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+      for (final plan in plans) {
+        if (opts.contains(plan.id)) sum += plan.priceRupees;
+      }
+    }
+    return sum;
+  }
+
+  List<MaintenancePlanData> get _allCarePlansForFlow {
+    if (_isWashFlow) return _washPlans;
+    if (_isRepairFlow) return _repairPlans;
+    return _maintenancePlans;
+  }
+
+  /// Same service problems for every shoe. Categories stay in Masteradmin only.
+  List<MaintenancePlanData> get _activeCarePlans => _allCarePlansForFlow;
+
+  List<MaintenancePlanData> get _selectedCareOptions => _activeCarePlans
+      .where((p) => _uiSelectedOptionIds.contains(p.id))
+      .toList(growable: false);
+
+  MaintenancePlanData? get _resolvedCarePlan {
+    if (_isPerShoePhotoFlow) {
+      final total = _repairSelectionsTotalRupees;
+      final desc = _repairSelectionsDescription;
+      if (total <= 0 || desc == null) return _selectedMaintenancePlan;
+      return MaintenancePlanData(
+        id: _isRepairFlow
+            ? 'repair_multi'
+            : _isWashFlow
+                ? 'wash_multi'
+                : 'maintenance_multi',
+        label: desc,
+        description: desc,
+        priceRupees: total,
+      );
+    }
+    final selected = _selectedCareOptions;
+    if (selected.isEmpty) return _selectedMaintenancePlan;
+    if (selected.length == 1) return selected.first;
+    return MaintenancePlanData(
+      id: selected.map((p) => p.id).join(','),
+      label: selected.map((p) => p.label).join(', '),
+      description: selected.map((p) => p.description).join('\n'),
+      priceRupees: selected.fold<int>(0, (sum, p) => sum + p.priceRupees),
+    );
+  }
+
+  void _toggleCareOption(String id) {
+    if (_submitting) return;
+    setState(() {
+      final selected = _uiSelectedOptionIds;
+      if (selected.contains(id)) {
+        selected.remove(id);
+      } else {
+        selected.add(id);
+      }
+      _selectedMaintenancePlan =
+          _isPerShoePhotoFlow ? _resolvedCarePlan : null;
+      _showRepairStep0FieldErrors = true;
+    });
+  }
+
+  void _ensureOptionSelected(String optionId) {
+    final selected = _uiSelectedOptionIds;
+    if (!selected.contains(optionId)) {
+      selected.add(optionId);
+      _selectedMaintenancePlan =
+          _isPerShoePhotoFlow ? _resolvedCarePlan : null;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _flowArticles = List<ServiceFlowArticle>.of(widget.selectedArticles);
     if (_isSingleServiceFlow) {
       _selectedService = _visibleOptions.first;
     }
     _problemController.addListener(_onRepairStep0FieldsChanged);
     _problemFocusNode.addListener(_onProblemFocusChanged);
+    _repairStep0ScrollController.addListener(_updateCareOptionsScrollbarNeeded);
     _load();
+  }
+
+  void _focusArticle(int index) {
+    if (_submitting || index < 0 || index >= _flowArticles.length) return;
+    setState(() {
+      _focusedArticleIndex = index;
+    });
+  }
+
+  void _removeFlowArticle(int index) {
+    if (_submitting || index < 0 || index >= _flowArticles.length) return;
+    setState(() {
+      final removedId = _flowArticles[index].id;
+      _flowArticles.removeAt(index);
+      _repairArticleOptionIds.remove(removedId);
+      _repairArticleOptionImages.remove(removedId);
+      if (_flowArticles.isEmpty) {
+        _focusedArticleIndex = 0;
+      } else if (_focusedArticleIndex >= _flowArticles.length) {
+        _focusedArticleIndex = _flowArticles.length - 1;
+      } else if (_focusedArticleIndex > index) {
+        _focusedArticleIndex -= 1;
+      }
+      _selectedMaintenancePlan =
+          _isPerShoePhotoFlow ? _resolvedCarePlan : _selectedMaintenancePlan;
+    });
+    if (_flowArticles.isEmpty && mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
+    _scheduleCareOptionsScrollbarCheck();
     if (_problemFocusNode.hasFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future<void>.delayed(const Duration(milliseconds: 150), () {
@@ -272,6 +606,22 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         });
       });
     }
+  }
+
+  void _updateCareOptionsScrollbarNeeded() {
+    if (!mounted || !_isCareOptionsFlow) return;
+    if (!_repairStep0ScrollController.hasClients) return;
+    final needed =
+        _repairStep0ScrollController.position.maxScrollExtent > 0.5;
+    if (needed != _careOptionsScrollbarNeeded) {
+      setState(() => _careOptionsScrollbarNeeded = needed);
+    }
+  }
+
+  void _scheduleCareOptionsScrollbarCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateCareOptionsScrollbarNeeded();
+    });
   }
 
   void _onRepairStep0FieldsChanged() {
@@ -308,6 +658,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     WidgetsBinding.instance.removeObserver(this);
     _problemController.removeListener(_onRepairStep0FieldsChanged);
     _problemFocusNode.removeListener(_onProblemFocusChanged);
+    _repairStep0ScrollController
+        .removeListener(_updateCareOptionsScrollbarNeeded);
     _problemFocusNode.dispose();
     _repairStep0ScrollController.dispose();
     _problemController.dispose();
@@ -322,23 +674,43 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     return true;
   }
 
+  static const String _alertCircleSvg = '''
+<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g clip-path="url(#clip0_alert_circle)">
+    <path d="M12.8333 7.00033C12.8333 10.222 10.2216 12.8337 6.99996 12.8337C3.7783 12.8337 1.16663 10.222 1.16663 7.00033C1.16663 3.77866 3.7783 1.16699 6.99996 1.16699C10.2216 1.16699 12.8333 3.77866 12.8333 7.00033Z" stroke-width="1.16667" stroke-linecap="round" stroke-linejoin="round" stroke="#FF0000"/>
+    <path d="M7 4.66699V7.00033" stroke-width="1.16667" stroke-linecap="round" stroke-linejoin="round" stroke="#FF0000"/>
+    <path d="M7 9.33301H7.00625" stroke-width="1.16667" stroke-linecap="round" stroke-linejoin="round" stroke="#FF0000"/>
+  </g>
+  <defs>
+    <clipPath id="clip0_alert_circle">
+      <rect width="14" height="14" fill="white"/>
+    </clipPath>
+  </defs>
+</svg>
+''';
+
   Widget _repairStep0InlineError(String message, double layoutScale) {
+    const errorRed = Color(0xFFFF0000);
+    final iconSize = (14 * layoutScale).clamp(12.0, 16.0);
     return Padding(
       padding: EdgeInsets.only(top: 4 * layoutScale),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            size: (16 * layoutScale).clamp(14.0, 18.0),
-            color: const Color(0xFFB00020),
+          Padding(
+            padding: EdgeInsets.only(top: 1 * layoutScale),
+            child: SvgPicture.string(
+              _alertCircleSvg,
+              width: iconSize,
+              height: iconSize,
+            ),
           ),
           SizedBox(width: 4 * layoutScale),
           Expanded(
             child: Text(
               message,
               style: GoogleFonts.montserrat(
-                color: const Color(0xFFB00020),
+                color: errorRed,
                 fontSize: (12 * layoutScale).clamp(10.0, 13.0),
                 fontWeight: FontWeight.w500,
               ),
@@ -350,6 +722,34 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   }
 
   Future<bool> _validateRepairStep1() async {
+    if (!_homePickup) {
+      if (_selectedDropOffIndex < 0 ||
+          _selectedDropOffIndex >= _dropOffLocations.length) {
+        await showAppFeedbackAlert(
+          context,
+          message: 'Please select a drop-off location',
+          type: AppFeedbackType.warning,
+        );
+        return false;
+      }
+      if (!_showDropOffSchedule) {
+        await showAppFeedbackAlert(
+          context,
+          message: 'Please book a drop-off location',
+          type: AppFeedbackType.warning,
+        );
+        return false;
+      }
+      if (_selectedDropOffTimeWindow < 0) {
+        await showAppFeedbackAlert(
+          context,
+          message: 'Please select a preferred time window',
+          type: AppFeedbackType.warning,
+        );
+        return false;
+      }
+      return true;
+    }
     if (_selectedPickupSlot < 0) {
       await showAppFeedbackAlert(
         context,
@@ -387,9 +787,25 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       },
       (token) async {
         try {
-          final profile = await sl<GetUserProfile>().call(token);
+          // Parallelize profile + care options so the repair screen opens faster.
+          final profileFuture = sl<GetUserProfile>().call(token);
+          final careFuture = _isCareOptionsFlow
+              ? _fetchCareOptions(token)
+              : Future<List<MaintenancePlanData>?>.value(null);
+          final results = await Future.wait([profileFuture, careFuture]);
           if (!mounted) return;
+          final profile = results[0] as UserProfile;
+          final plans = results[1] as List<MaintenancePlanData>?;
           setState(() {
+            if (plans != null && plans.isNotEmpty) {
+              if (_isWashFlow) {
+                _washPlans = List.unmodifiable(plans);
+              } else if (_isRepairFlow) {
+                _repairPlans = List.unmodifiable(plans);
+              } else {
+                _maintenancePlans = List.unmodifiable(plans);
+              }
+            }
             _addresses = profile.addresses;
             _selectedAddress = profile.addresses.isNotEmpty
                 ? profile.addresses.first
@@ -410,6 +826,59 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
+  /// Loads CareMyPair service tiles (same list for every article).
+  Future<List<MaintenancePlanData>?> _fetchCareOptions(String token) async {
+    final type = _isWashFlow
+        ? 'wash'
+        : _isRepairFlow
+            ? 'repair'
+            : 'maintenance';
+    try {
+      final json = await sl<DioClient>().get(
+        ApiEndpoints.serviceCareOptions(type),
+        accessToken: token,
+      );
+      final data = (json['data'] is Map<String, dynamic>)
+          ? json['data'] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final list =
+          (data['items'] ?? json['items']) as List<dynamic>? ?? const [];
+      final plans = <MaintenancePlanData>[];
+      for (final raw in list.whereType<Map>()) {
+        final map = Map<String, dynamic>.from(raw);
+        final id =
+            (map['code'] ?? map['_id'] ?? map['id'] ?? '').toString().trim();
+        final label = (map['name'] ?? map['label'] ?? '').toString().trim();
+        if (id.isEmpty || label.isEmpty) continue;
+        if (map['isActive'] == false) continue;
+        final price = (map['priceRupees'] as num?)?.round() ?? 0;
+        final catsRaw = map['categoryCodes'];
+        final cats = <String>[];
+        if (catsRaw is List) {
+          for (final c in catsRaw) {
+            final code = c.toString().trim().toLowerCase();
+            if (code.isNotEmpty) cats.add(code);
+          }
+        }
+        // Category-assigned tiles stay in Masteradmin. User app shows service problems only.
+        if (cats.isNotEmpty) continue;
+        plans.add(
+          MaintenancePlanData(
+            id: id,
+            label: label,
+            description: (map['description'] ?? '').toString().trim(),
+            priceRupees: price < 0 ? 0 : price,
+            categoryCodes: List.unmodifiable(cats),
+          ),
+        );
+      }
+      return plans.isEmpty ? null : plans;
+    } catch (_) {
+      // Keep hardcoded defaults when API is unavailable.
+      return null;
+    }
+  }
+
   Future<void> _pickAddress() async {
     final picked = await Navigator.of(context).push<Address>(
       MaterialPageRoute(
@@ -421,8 +890,125 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     if (picked != null && mounted) setState(() => _selectedAddress = picked);
   }
 
-  Future<void> _pickImages() async {
-    if (_proofImages.length >= kMaxProofImages) return;
+  UserProfile? _profileFromBlocOrNull() {
+    try {
+      final state = BlocProvider.of<ProfileBloc>(context).state;
+      if (state is ProfileLoaded) return state.profile;
+      if (state is AddressActionLoading) return state.profile;
+      if (state is ProfileError) return state.profile;
+    } catch (_) {}
+    return null;
+  }
+
+  /// Opens Location (Saved Addresses) sliding in from the top; back returns here.
+  Future<void> _openEditLocationPage() async {
+    if (_submitting || !mounted) return;
+
+    var profile = _profileFromBlocOrNull();
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+
+    await tokenResult.fold(
+      (_) async {
+        await showAppFeedbackAlert(
+          context,
+          message: 'Please sign in again to edit location.',
+          type: AppFeedbackType.warning,
+        );
+      },
+      (token) async {
+        if (profile == null) {
+          try {
+            profile = await sl<GetUserProfile>().call(token);
+          } catch (_) {
+            profile = null;
+          }
+        }
+        if (!mounted) return;
+        if (profile == null) {
+          await showAppFeedbackAlert(
+            context,
+            message: 'Could not load location. Try again.',
+            type: AppFeedbackType.warning,
+          );
+          return;
+        }
+
+        ProfileBloc profileBloc;
+        try {
+          profileBloc = BlocProvider.of<ProfileBloc>(context);
+        } catch (_) {
+          profileBloc = sl<ProfileBloc>();
+        }
+
+        await Navigator.of(context).push<void>(
+          PageRouteBuilder<void>(
+            pageBuilder: (context, animation, secondaryAnimation) {
+              return BlocProvider.value(
+                value: profileBloc,
+                child: SavedAddressesPage(
+                  profile: profile!,
+                  accessToken: token,
+                ),
+              );
+            },
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              final curved = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+                reverseCurve: Curves.easeInCubic,
+              );
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -1),
+                  end: Offset.zero,
+                ).animate(curved),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 380),
+            reverseTransitionDuration: const Duration(milliseconds: 320),
+          ),
+        );
+
+        if (!mounted) return;
+        // Refresh addresses after returning from Location page.
+        try {
+          final refreshed = await sl<GetUserProfile>().call(token);
+          if (!mounted) return;
+          setState(() {
+            _addresses = refreshed.addresses;
+            if (_selectedAddress != null) {
+              final match = refreshed.addresses
+                  .where((a) => a.id == _selectedAddress!.id)
+                  .toList(growable: false);
+              _selectedAddress = match.isNotEmpty
+                  ? match.first
+                  : (refreshed.addresses.isNotEmpty
+                      ? refreshed.addresses.first
+                      : null);
+            } else if (refreshed.addresses.isNotEmpty) {
+              _selectedAddress = refreshed.addresses.first;
+            }
+          });
+        } catch (_) {}
+        if (!_homePickup) {
+          await _loadDropOffLocations(force: true);
+        }
+      },
+    );
+  }
+
+  int _maxImagesForTarget({String? optionId}) =>
+      optionId == null ? kMaxProofImages : kMaxOptionProofImages;
+
+  Future<void> _pickImages({String? optionId}) async {
+    final target = optionId == null
+        ? _proofImages
+        : _mutableImagesForOption(optionId);
+    final maxImages = _maxImagesForTarget(optionId: optionId);
+    if (target.length >= maxImages) return;
     try {
       final list = await _picker.pickMultiImage(imageQuality: 85);
       if (!mounted) return;
@@ -432,9 +1018,11 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       }
       setState(() {
         for (final f in list) {
-          if (_proofImages.length >= kMaxProofImages) break;
-          _proofImages.add(f);
+          if (target.length >= maxImages) break;
+          target.add(f);
         }
+        if (optionId != null) _ensureOptionSelected(optionId);
+        _showRepairStep0FieldErrors = true;
       });
     } catch (_) {
       final single = await _picker.pickImage(
@@ -442,8 +1030,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         imageQuality: 85,
       );
       if (!mounted) return;
-      if (single != null && _proofImages.length < kMaxProofImages) {
-        setState(() => _proofImages.add(single));
+      if (single != null && target.length < maxImages) {
+        setState(() {
+          target.add(single);
+          if (optionId != null) _ensureOptionSelected(optionId);
+          _showRepairStep0FieldErrors = true;
+        });
       } else if (single == null) {
         setState(() => _showRepairStep0FieldErrors = true);
       }
@@ -465,8 +1057,12 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     }
   }
 
-  Future<void> _takePicture() async {
-    if (_proofImages.length >= kMaxProofImages) return;
+  Future<void> _takePicture({String? optionId}) async {
+    final target = optionId == null
+        ? _proofImages
+        : _mutableImagesForOption(optionId);
+    final maxImages = _maxImagesForTarget(optionId: optionId);
+    if (target.length >= maxImages) return;
     final photo = await _picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 85,
@@ -474,13 +1070,216 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     if (!mounted) return;
     if (photo != null) {
       setState(() {
-        if (_proofImages.length < kMaxProofImages) {
-          _proofImages.add(photo);
+        if (target.length < maxImages) {
+          target.add(photo);
         }
+        if (optionId != null) _ensureOptionSelected(optionId);
+        _showRepairStep0FieldErrors = true;
       });
     } else {
       setState(() => _showRepairStep0FieldErrors = true);
     }
+  }
+
+  Future<void> _showPhotoSourceSheet({String? optionId}) async {
+    if (_submitting) return;
+    final existing =
+        optionId == null ? _proofImages : _imagesForOption(optionId);
+    final maxImages = _maxImagesForTarget(optionId: optionId);
+    if (existing.length >= maxImages && existing.isEmpty) return;
+
+    if (optionId != null && existing.isNotEmpty) {
+      await _showOptionPhotosSheet(optionId);
+      return;
+    }
+
+    if (existing.length >= maxImages) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFFF0F0F0),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined,
+                      color: Color(0xFF11899B)),
+                  title: Text(
+                    'Upload Photos',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(ctx, 'gallery'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined,
+                      color: Color(0xFF11899B)),
+                  title: Text(
+                    'Take Pictures',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF062F35),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(ctx, 'camera'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'camera') {
+      await _takePicture(optionId: optionId);
+    } else {
+      await _pickImages(optionId: optionId);
+    }
+  }
+
+  Future<void> _showOptionPhotosSheet(String optionId) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFFF0F0F0),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (ctx, setModalState) {
+              final images = _imagesForOption(optionId);
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Uploaded photos (${images.length}/$kMaxOptionProofImages)',
+                      style: GoogleFonts.boldonse(
+                        color: const Color(0xFF062F35),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (images.isEmpty)
+                      Text(
+                        'No photos yet.',
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF062F35),
+                          fontSize: 13,
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 88,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: images.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 10),
+                          itemBuilder: (_, i) {
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: FutureBuilder(
+                                    future: images[i].readAsBytes(),
+                                    builder: (context, snap) {
+                                      if (!snap.hasData) {
+                                        return Container(
+                                          width: 80,
+                                          height: 80,
+                                          color: const Color(0xFFE8E8E8),
+                                        );
+                                      }
+                                      return Image.memory(
+                                        snap.data!,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                  ),
+                                ),
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _mutableImagesForOption(optionId)
+                                            .removeAt(i);
+                                      });
+                                      setModalState(() {});
+                                    },
+                                    child: SvgPicture.asset(
+                                      'assets/images/icons/repairmypair/close_selected.svg',
+                                      width: 22,
+                                      height: 22,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    if (images.length < kMaxOptionProofImages) ...[
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.photo_library_outlined,
+                            color: Color(0xFF11899B)),
+                        title: Text(
+                          'Upload more',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF062F35),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await _pickImages(optionId: optionId);
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.photo_camera_outlined,
+                            color: Color(0xFF11899B)),
+                        title: Text(
+                          'Take another',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF062F35),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          await _takePicture(optionId: optionId);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   void _removeImage(int index) {
@@ -495,12 +1294,20 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     setState(() {
       _selectedService = opt;
       _repairStep = 0;
-      if (opt.value != 'maintenance') {
+      _repairArticleOptionIds.clear();
+      _repairArticleOptionImages.clear();
+      if (opt.value != 'maintenance' && opt.value != 'wash') {
+        _selectedMaintenancePlan = null;
+        _selectedCareOptionIds.clear();
+      } else {
+        _selectedCareOptionIds.clear();
         _selectedMaintenancePlan = null;
       }
     });
   }
 
+  // Kept for map-based nearby selection if Self Drop off gains live shops later.
+  // ignore: unused_element
   Future<void> _openNearbyCobblers() async {
     if (_submitting || !mounted) return;
     ProfileBloc profileBloc;
@@ -520,7 +1327,6 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       return;
     }
     setState(() => _cobblerNearbyLocationSummary = selectedLocation.trim());
-    await _submit();
   }
 
   void _selectPickupMode(bool homePickup) {
@@ -528,28 +1334,465 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     setState(() {
       _homePickup = homePickup;
       _pickupModeChosen = true;
+      if (homePickup) {
+        _selectedDropOffIndex = -1;
+        _expandedDropOffIndex = -1;
+        _showDropOffSchedule = false;
+        _selectedDropOffTimeWindow = -1;
+      } else {
+        _selectedPickupSlot = -1;
+      }
     });
+    if (!homePickup) {
+      _loadDropOffLocations();
+    }
+  }
+
+  String _formatDropOffDistance(double meters) {
+    if (meters < 1000) return '${meters.round()} m';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  static const List<String> _weekDayKeys = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+
+  static const Map<String, String> _weekDayLabels = {
+    'monday': 'Monday',
+    'tuesday': 'Tuesday',
+    'wednesday': 'Wednesday',
+    'thursday': 'Thursday',
+    'friday': 'Friday',
+    'saturday': 'Saturday',
+    'sunday': 'Sunday',
+  };
+
+  List<_DayHours> _defaultWeeklyHours() {
+    return _weekDayKeys
+        .map(
+          (d) => _DayHours(
+            day: d,
+            openTime: '09:00',
+            closeTime: '18:00',
+            isClosed: false,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<_DayHours> _parseWeeklyHours(dynamic raw) {
+    final defaults = _defaultWeeklyHours();
+    if (raw is! List) return defaults;
+    final byDay = <String, _DayHours>{};
+    for (final item in raw.whereType<Map>()) {
+      final map = Map<String, dynamic>.from(item);
+      final day = (map['day'] ?? '').toString().trim().toLowerCase();
+      if (!_weekDayKeys.contains(day)) continue;
+      byDay[day] = _DayHours(
+        day: day,
+        openTime: _normalizeHhMm(map['openTime'], '09:00'),
+        closeTime: _normalizeHhMm(map['closeTime'], '18:00'),
+        isClosed: map['isClosed'] == true,
+      );
+    }
+    return _weekDayKeys
+        .map((d) => byDay[d] ?? defaults.firstWhere((e) => e.day == d))
+        .toList(growable: false);
+  }
+
+  String _normalizeHhMm(dynamic raw, String fallback) {
+    final s = (raw ?? '').toString().trim().toUpperCase();
+    if (s.isEmpty) return fallback;
+    final ampm = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$').firstMatch(s);
+    if (ampm == null) return fallback;
+    var h = int.tryParse(ampm.group(1)!) ?? 9;
+    final m = int.tryParse(ampm.group(2)!) ?? 0;
+    final mer = (ampm.group(3) ?? '').toUpperCase();
+    if (mer == 'PM' && h < 12) h += 12;
+    if (mer == 'AM' && h == 12) h = 0;
+    if (h > 23 || m > 59) return fallback;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  }
+
+  String _formatAmPm(String hhmm) {
+    final parts = hhmm.split(':');
+    if (parts.length < 2) return hhmm;
+    var h = int.tryParse(parts[0]) ?? 0;
+    final m = parts[1];
+    final mer = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h == 0) h = 12;
+    return '${h.toString().padLeft(2, '0')}:$m$mer';
+  }
+
+  _DayHours _todayHours(List<_DayHours> hours) {
+    // Dart weekday: Mon=1 … Sun=7 → map to our monday-first keys.
+    final idx = DateTime.now().weekday - 1;
+    final key = _weekDayKeys[idx.clamp(0, 6)];
+    return hours.firstWhere(
+      (h) => h.day == key,
+      orElse: () => hours.first,
+    );
+  }
+
+  String _todayCloseLabel(List<_DayHours> hours) {
+    final today = _todayHours(hours);
+    if (today.isClosed) return 'Closed today';
+    return _formatAmPm(today.closeTime);
+  }
+
+  bool _isOpenFromHours(List<_DayHours> hours) {
+    final today = _todayHours(hours);
+    if (today.isClosed) return false;
+    final now = DateTime.now();
+    final nowMins = now.hour * 60 + now.minute;
+    final openParts = today.openTime.split(':');
+    final closeParts = today.closeTime.split(':');
+    if (openParts.length < 2 || closeParts.length < 2) return true;
+    final openMins =
+        (int.tryParse(openParts[0]) ?? 9) * 60 + (int.tryParse(openParts[1]) ?? 0);
+    final closeMins = (int.tryParse(closeParts[0]) ?? 18) * 60 +
+        (int.tryParse(closeParts[1]) ?? 0);
+    if (closeMins <= openMins) {
+      return nowMins >= openMins || nowMins < closeMins;
+    }
+    return nowMins >= openMins && nowMins < closeMins;
+  }
+
+  Future<Position?> _resolveUserPosition() async {
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) return null;
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        return null;
+      }
+      return Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Loads Masteradmin hubs + online nearby cobblers for Self Drop off.
+  Future<void> _loadDropOffLocations({bool force = false}) async {
+    if (_dropOffLoading) return;
+    if (_dropOffLoadAttempted && !force && _dropOffLocations.isNotEmpty) return;
+
+    setState(() {
+      _dropOffLoading = true;
+      _dropOffError = null;
+      _dropOffLoadAttempted = true;
+    });
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+
+    await tokenResult.fold(
+      (_) async {
+        setState(() {
+          _dropOffLoading = false;
+          _dropOffError = 'Please sign in again to load drop-off locations.';
+          _dropOffLocations = const [];
+        });
+      },
+      (token) async {
+        final userPos = await _resolveUserPosition();
+        final locations = <_DropOffLocation>[];
+
+        // 1) Masteradmin-created hubs
+        try {
+          final json = await sl<DioClient>().get(
+            ApiEndpoints.serviceHubLocations,
+            accessToken: token,
+          );
+          final data = (json['data'] is Map<String, dynamic>)
+              ? json['data'] as Map<String, dynamic>
+              : <String, dynamic>{};
+          final list = (data['items'] ?? data['hubs'] ?? json['items'])
+                  as List<dynamic>? ??
+              const [];
+          for (final raw in list.whereType<Map>()) {
+            final map = Map<String, dynamic>.from(raw);
+            final id = (map['_id'] ?? map['id'] ?? '').toString();
+            final name = (map['name'] ?? 'GetMyPair Hub').toString().trim();
+            final line = (map['line'] ?? '').toString().trim();
+            final address = line.isNotEmpty
+                ? line
+                : [
+                    map['address'],
+                    map['city'],
+                    map['state'],
+                    map['pincode'],
+                  ]
+                    .map((e) => (e ?? '').toString().trim())
+                    .where((s) => s.isNotEmpty)
+                    .join(', ');
+            if (address.isEmpty) continue;
+            final lat = (map['lat'] as num?)?.toDouble();
+            final lng = (map['lng'] as num?)?.toDouble();
+            var distanceLabel = '—';
+            var sortMeters = double.infinity;
+            if (userPos != null && lat != null && lng != null) {
+              sortMeters = Geolocator.distanceBetween(
+                userPos.latitude,
+                userPos.longitude,
+                lat,
+                lng,
+              );
+              distanceLabel = _formatDropOffDistance(sortMeters);
+            }
+            final weeklyHours = _parseWeeklyHours(map['weeklyHours']);
+            final closesAt = (map['closesAt'] ?? '').toString().trim();
+            final isOpenApi = map['isOpen'];
+            locations.add(
+              _DropOffLocation(
+                id: id.isEmpty ? 'hub-${locations.length}' : id,
+                name: name.isEmpty ? 'GetMyPair Hub' : name,
+                address: address,
+                distanceLabel: distanceLabel,
+                phone: '',
+                closesAt: closesAt.isNotEmpty
+                    ? closesAt
+                    : _todayCloseLabel(weeklyHours),
+                isOpen: isOpenApi is bool
+                    ? isOpenApi
+                    : _isOpenFromHours(weeklyHours),
+                kind: _DropOffKind.hub,
+                sortMeters: sortMeters,
+                weeklyHours: weeklyHours,
+              ),
+            );
+          }
+        } catch (_) {
+          // Hubs optional if endpoint unavailable; cobblers may still load.
+        }
+
+        // 2) Active (online) nearby cobblers
+        if (userPos != null) {
+          try {
+            final endpoint = ApiEndpoints.cobblerNearby(
+              lat: userPos.latitude,
+              lng: userPos.longitude,
+              radiusKm: 15,
+            );
+            final json = await sl<DioClient>().get(
+              endpoint,
+              accessToken: token,
+            );
+            final data = (json['data'] is Map<String, dynamic>)
+                ? json['data'] as Map<String, dynamic>
+                : <String, dynamic>{};
+            final list = (data['cobblers'] ??
+                    data['profiles'] ??
+                    data['items'] ??
+                    json['cobblers']) as List<dynamic>? ??
+                const [];
+            for (final raw in list.whereType<Map>()) {
+              final map = Map<String, dynamic>.from(raw);
+              final id = (map['_id'] ?? map['id'] ?? '').toString();
+              final shopName =
+                  (map['shopName'] ?? map['name'] ?? '').toString().trim();
+              final address =
+                  (map['shopAddress'] ?? map['address'] ?? '').toString().trim();
+              if (shopName.isEmpty && address.isEmpty) continue;
+              final phone = (map['phone'] ?? '').toString().trim();
+              final distanceMeters =
+                  (map['distanceMeters'] as num?)?.toDouble();
+              final lastKnown = map['lastKnownLocation'];
+              double? lat;
+              double? lng;
+              if (lastKnown is Map) {
+                final coords = lastKnown['coordinates'];
+                if (coords is List && coords.length >= 2) {
+                  lng = (coords[0] as num?)?.toDouble();
+                  lat = (coords[1] as num?)?.toDouble();
+                }
+              }
+              var sortMeters = distanceMeters ?? double.infinity;
+              if (distanceMeters == null &&
+                  lat != null &&
+                  lng != null) {
+                sortMeters = Geolocator.distanceBetween(
+                  userPos.latitude,
+                  userPos.longitude,
+                  lat,
+                  lng,
+                );
+              }
+              final isOnline = map['isOnline'] == true;
+              // Only show active/online cobblers.
+              if (!isOnline) continue;
+              final cobblerHours = _defaultWeeklyHours();
+              locations.add(
+                _DropOffLocation(
+                  id: id.isEmpty ? 'cobbler-${locations.length}' : id,
+                  name: shopName.isNotEmpty ? shopName : 'Cobbler',
+                  address: address.isNotEmpty ? address : 'Nearby cobbler',
+                  distanceLabel: sortMeters.isFinite
+                      ? _formatDropOffDistance(sortMeters)
+                      : '—',
+                  phone: phone,
+                  closesAt: _todayCloseLabel(cobblerHours),
+                  isOpen: true,
+                  kind: _DropOffKind.cobbler,
+                  sortMeters: sortMeters,
+                  weeklyHours: cobblerHours,
+                ),
+              );
+            }
+          } catch (_) {
+            // Ignore cobbler fetch errors; hubs may still show.
+          }
+        }
+
+        locations.sort((a, b) => a.sortMeters.compareTo(b.sortMeters));
+
+        if (!mounted) return;
+        setState(() {
+          _dropOffLoading = false;
+          _dropOffLocations = List.unmodifiable(locations);
+          if (locations.isEmpty) {
+            _dropOffError = userPos == null
+                ? 'Enable location to see nearby cobblers. Hubs will appear when available.'
+                : 'No drop-off locations nearby right now.';
+          }
+          // Reset selection if index is out of range after refresh.
+          if (_selectedDropOffIndex >= _dropOffLocations.length) {
+            _selectedDropOffIndex = -1;
+            _showDropOffSchedule = false;
+            _selectedDropOffTimeWindow = -1;
+          }
+        });
+      },
+    );
+  }
+
+  void _openDropOffSchedule(int index) {
+    if (_submitting || !mounted) return;
+    if (index < 0 || index >= _dropOffLocations.length) return;
+    final loc = _dropOffLocations[index];
+    setState(() {
+      _selectedDropOffIndex = index;
+      _homePickup = false;
+      _pickupModeChosen = true;
+      _showDropOffSchedule = true;
+      _selectedDropOffTimeWindow = -1;
+      _selectedPickupDay = 0;
+      _cobblerNearbyLocationSummary =
+          '${loc.name} · ${loc.distanceLabel}\n${loc.address}';
+    });
+  }
+
+  void _backToDropOffList() {
+    if (_submitting || !mounted) return;
+    setState(() {
+      _showDropOffSchedule = false;
+      _selectedDropOffTimeWindow = -1;
+    });
+  }
+
+  void _handleRepairFlowBack() {
+    if (_submitting || !mounted) return;
+    if (!_homePickup && _showDropOffSchedule) {
+      _backToDropOffList();
+      return;
+    }
+    if (_repairStep > 0) {
+      setState(() => _repairStep -= 1);
+      return;
+    }
+    Navigator.pop(context);
   }
 
   Future<void> _onRepairStepZeroNext() async {
     if (_submitting || !mounted) return;
     if (!await _validateRepairStep0()) return;
-    if (_homePickup) {
-      setState(() => _repairStep = 1);
-      return;
+    if (!_pickupModeChosen) {
+      setState(() {
+        _homePickup = true;
+        _pickupModeChosen = true;
+      });
     }
-    await _openNearbyCobblers();
+    // Repair / Maintain: review selections on Finalizing Services before pickup.
+    // Wash: go to delivery / drop-off step (step 1 is address).
+    setState(() => _repairStep = 1);
+  }
+
+  Future<void> _onFinalizingNext() async {
+    if (_submitting || !mounted) return;
+    if (!_pickupModeChosen) {
+      setState(() {
+        _homePickup = true;
+        _pickupModeChosen = true;
+      });
+    }
+    setState(() => _repairStep = 2);
+    // Prefetch Self Drop locations so hubs/cobblers are ready if toggled.
+    _loadDropOffLocations();
+  }
+
+  /// One summary card per shoe × selected care/repair service.
+  List<({ServiceFlowArticle article, MaintenancePlanData plan, List<XFile> photos})>
+      get _finalizingCards {
+    final plans = _allCarePlansForFlow;
+    final cards = <({
+      ServiceFlowArticle article,
+      MaintenancePlanData plan,
+      List<XFile> photos,
+    })>[];
+    for (final article in _flowArticles) {
+      final opts = _repairArticleOptionIds[article.id] ?? const <String>{};
+      final byOption = _repairArticleOptionImages[article.id] ?? const {};
+      for (final plan in plans) {
+        if (!opts.contains(plan.id)) continue;
+        cards.add((
+          article: article,
+          plan: plan,
+          photos: List<XFile>.from(byOption[plan.id] ?? const <XFile>[]),
+        ));
+      }
+    }
+    return cards;
   }
 
   int? _resolvedEstimatedRupees() {
     final s = _selectedService?.value;
     switch (s) {
       case 'repair':
-        return kRepairEstimateRupees;
+        final total = _repairSelectionsTotalRupees;
+        return total > 0 ? total : kRepairEstimateRupees;
       case 'wash':
+        if (_isPerShoePhotoFlow) {
+          final total = _repairSelectionsTotalRupees;
+          if (total > 0) return total;
+        }
+        if (_selectedCareOptions.isNotEmpty) {
+          return _selectedCareOptions.fold<int>(
+            0,
+            (sum, p) => sum + p.priceRupees,
+          );
+        }
         return kWashEstimateRupees;
       case 'maintenance':
-        return (_selectedMaintenancePlan ?? _maintenancePlans.first).priceRupees;
+        if (_isPerShoePhotoFlow) {
+          final total = _repairSelectionsTotalRupees;
+          if (total > 0) return total;
+        }
+        return (_resolvedCarePlan ?? _maintenancePlans.first).priceRupees;
       case 'donate':
       case 'dispose':
         return 0;
@@ -560,7 +1803,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
 
   Future<void> _submit() async {
     if (_submitting) return;
-    if (_isSingleServiceFlow && _repairStep == 1) {
+    final addressStep = _isPerShoePhotoFlow ? 2 : 1;
+    if (_isSingleServiceFlow && _repairStep == addressStep) {
       if (!await _validateRepairStep1()) return;
     }
     if (_selectedService == null) {
@@ -571,25 +1815,37 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       );
       return;
     }
-    if (_selectedService!.value == 'maintenance' &&
-        _selectedMaintenancePlan == null &&
+    if ((_selectedService!.value == 'maintenance' ||
+            _selectedService!.value == 'wash' ||
+            _selectedService!.value == 'repair') &&
+        !_repairStep0CareOptionsValid &&
         !_isSingleServiceFlow) {
       await showAppFeedbackAlert(
         context,
-        message: 'Please select a maintenance plan',
+        message: _selectedService!.value == 'repair'
+            ? 'Please select services and upload photos for each shoe'
+            : 'Please select at least one option',
         type: AppFeedbackType.warning,
       );
       return;
     }
-    if (_homePickup) {
-      if (!await _validateRepairStep1()) return;
-    } else if (_selectedAddress == null) {
+    if (!await _validateRepairStep1()) return;
+    if (_selectedAddress == null) {
       await showAppFeedbackAlert(
         context,
-        message: 'Please select a pickup address',
+        message: _homePickup
+            ? 'Please select a pickup address'
+            : 'Please set your location via Edit location',
         type: AppFeedbackType.warning,
       );
       return;
+    }
+    if (!_homePickup &&
+        _selectedDropOffIndex >= 0 &&
+        _selectedDropOffIndex < _dropOffLocations.length) {
+      final drop = _dropOffLocations[_selectedDropOffIndex];
+      _cobblerNearbyLocationSummary =
+          '${drop.name} · ${drop.distanceLabel}\n${drop.address}';
     }
 
     final est = _resolvedEstimatedRupees();
@@ -607,23 +1863,63 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       MaterialPageRoute(
         builder: (_) => RequestSummaryPage(
           articleIds:
-              widget.selectedArticles.map((a) => a.id).toList(growable: false),
+              _flowArticles.map((a) => a.id).toList(growable: false),
           service: _selectedService!,
           address: _selectedAddress!,
-          proofImages: List<XFile>.from(_proofImages),
+          proofImages: List<XFile>.from(
+            _isPerShoePhotoFlow && _allOptionProofImages.isNotEmpty
+                ? _allOptionProofImages
+                : _proofImages,
+          ),
           proofVideos: List<XFile>.from(_proofVideos),
           estimatedCostRupees: est,
-          problemDescription: _problemController.text.trim().isEmpty
-              ? null
-              : _problemController.text.trim(),
-          pickupModeLabel: _homePickup ? 'Home Pickup' : 'Cobblers Nearby',
-          pickupScheduleLabel: !_homePickup && _cobblerNearbyLocationSummary != null
-              ? _cobblerNearbyLocationSummary
+          problemDescription: () {
+            if (_isPerShoePhotoFlow &&
+                (_selectedService!.value == 'repair' ||
+                    _selectedService!.value == 'maintenance' ||
+                    _selectedService!.value == 'wash')) {
+              return _repairSelectionsDescription;
+            }
+            if (_selectedService!.value == 'maintenance' ||
+                _selectedService!.value == 'wash') {
+              final labels =
+                  _selectedCareOptions.map((p) => p.label).join(', ');
+              return labels.isEmpty ? null : labels;
+            }
+            final text = _problemController.text.trim();
+            return text.isEmpty ? null : text;
+          }(),
+          pickupModeLabel:
+              _homePickup ? 'Delivery Pick up' : 'Self Drop off',
+          pickupScheduleLabel: !_homePickup
+              ? () {
+                  final locSummary = _cobblerNearbyLocationSummary;
+                  final day = _pickupDayLabels[
+                      _selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)];
+                  final window = _selectedDropOffTimeWindow >= 0 &&
+                          _selectedDropOffTimeWindow <
+                              _dropOffTimeWindows.length
+                      ? _dropOffTimeWindows[_selectedDropOffTimeWindow]
+                      : null;
+                  final schedule = [
+                    if (locSummary != null && locSummary.trim().isNotEmpty)
+                      locSummary.trim(),
+                    if (window != null) '$day · $window',
+                  ].join('\n');
+                  return schedule.isEmpty ? null : schedule;
+                }()
               : _selectedPickupSlot < 0
                   ? null
                   : '${_pickupDayLabels[_selectedPickupDay.clamp(0, _pickupDayLabels.length - 1)]}, ${_pickupSlotLabels[_selectedPickupSlot.clamp(0, _pickupSlotLabels.length - 1)]}',
-          maintenancePlan: _selectedService!.value == 'maintenance'
-              ? (_selectedMaintenancePlan ?? _maintenancePlans.first)
+          maintenancePlan: (_selectedService!.value == 'maintenance' ||
+                  _selectedService!.value == 'repair' ||
+                  _selectedService!.value == 'wash')
+              ? (_resolvedCarePlan ??
+                  (_isRepairFlow
+                      ? _repairPlans.first
+                      : _isWashFlow
+                          ? _washPlans.first
+                          : _maintenancePlans.first))
               : null,
           homePickup: _homePickup,
           requestedPickupAt: _homePickup &&
@@ -664,8 +1960,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           automaticallyImplyLeading: false,
           centerTitle: false,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+        body: const AppSkeletonCards(
+          color: Color(0x66FFFFFF),
         ),
       );
     }
@@ -680,8 +1976,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
           onPressed: _submitting
               ? null
               : () {
-                  if (_isSingleServiceFlow && _repairStep > 0) {
-                    setState(() => _repairStep -= 1);
+                  if (_isSingleServiceFlow) {
+                    _handleRepairFlowBack();
                     return;
                   }
                   Navigator.pop(context);
@@ -808,6 +2104,32 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
+    final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
+    final pillH = (48 * layoutScale).clamp(40.0, 52.0);
+    final fs = (16 * layoutScale).clamp(12.0, 16.0);
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final dockH = 14 + pillH + 14 + bottomSafe;
+    final step0CanNext = _repairStep0Complete && !_submitting;
+    final finalizeCanNext = !_submitting && _finalizingCards.isNotEmpty;
+    final addressCanNext = !_submitting &&
+        (_homePickup
+            ? (_selectedPickupSlot >= 0 && _selectedAddress != null)
+            : (_showDropOffSchedule &&
+                _selectedDropOffIndex >= 0 &&
+                _selectedDropOffIndex < _dropOffLocations.length &&
+                _selectedDropOffTimeWindow >= 0));
+    final bool canNext;
+    final VoidCallback? onNext;
+    if (_repairStep == 0) {
+      canNext = step0CanNext;
+      onNext = _onRepairStepZeroNext;
+    } else if (_isPerShoePhotoFlow && _repairStep == 1) {
+      canNext = finalizeCanNext;
+      onNext = _onFinalizingNext;
+    } else {
+      canNext = addressCanNext;
+      onNext = _submit;
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -826,7 +2148,7 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   horizontalInset,
                   kServiceFlowTopInset,
                   horizontalInset,
-                  0,
+                  dockH - 12,
                 ),
                 child: DecoratedBox(
                   decoration: const ShapeDecoration(
@@ -845,28 +2167,121 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                   child: ClipRRect(
                     borderRadius: _repairFlowPanelRadius,
                     child: _loading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF11999E),
-                            ),
-                          )
+                        ? const AppSkeletonCards()
                         : _buildRepairSingleServicePanel(context),
                   ),
                 ),
               ),
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Offstage(
-              offstage: MediaQuery.viewInsetsOf(context).bottom > 0,
-              child: const DashboardLinkedBottomNav(selectedTabIndex: 1),
+          if (!_loading)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _repairFlowNextButton(
+                enabled: canNext,
+                height: pillH,
+                fontSize: fs,
+                onPressed: onNext,
+              ),
             ),
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _repairFlowNextButton({
+    required bool enabled,
+    required double height,
+    required double fontSize,
+    required VoidCallback? onPressed,
+  }) {
+    const pillW = 168.0;
+    final button = !enabled
+        ? SizedBox(
+            width: pillW,
+            height: height,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFFBDBDBD),
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Center(
+                child: Text(
+                  'Next',
+                  style: GoogleFonts.boldonse(
+                    color: const Color(0xFF4A4A4A),
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+            ),
+          )
+        : SizedBox(
+            width: pillW,
+            height: height,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xFF063239),
+                    Color(0xFF0CADC5),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(100),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextButton(
+                onPressed: onPressed,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Next',
+                        style: GoogleFonts.boldonse(
+                          color: Colors.white,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+              ),
+            ),
+          );
+
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomInset),
+      child: Center(child: button),
     );
   }
 
@@ -874,30 +2289,35 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
   Widget _buildRepairSingleServicePanel(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
-    final navH = dashboardLinkedBottomNavStackHeight(context);
     final layoutScale = serviceFlowLayoutScale(context, uiScale: uiScale);
     final fs = (16 * layoutScale).clamp(12.0, 16.0);
     final titleFs = (24 * layoutScale).clamp(17.0, 24.0);
-    final pillH = (48 * layoutScale).clamp(40.0, 52.0);
-    final pillFs = (14 * layoutScale).clamp(11.0, 14.0);
+    // final pillH = (48 * layoutScale).clamp(40.0, 52.0); // pickup UI (future)
+    // final pillFs = (14 * layoutScale).clamp(11.0, 14.0); // pickup UI (future)
     final actionFs = (14 * layoutScale).clamp(11.0, 14.0);
     final iconSz = (58 * layoutScale).clamp(36.0, 58.0);
     final uploadTapH = (96 * layoutScale).clamp(70.0, 112.0);
     final effectiveUploadH = uploadTapH;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    // resizeToAvoidBottomInset already shrinks the body; do not add keyboard
-    // height again or the column overflows (~59px).
-    final panelBottomPad = keyboardInset > 0 ? 8.0 : navH + 6;
+    // Match Figma side inset — left was tighter than right; bump slightly.
+    final contentHPadLeft = (16 * layoutScale).clamp(14.0, 18.0);
+    final contentHPadRight = (20 * layoutScale).clamp(16.0, 22.0);
 
-    final title = widget.flowPageTitle ?? 'RepairMyPair';
-    final selectedArticles = widget.selectedArticles;
+    final title = _isPerShoePhotoFlow && _repairStep == 1
+        ? 'Finalizing Services'
+        : (widget.flowPageTitle ?? 'RepairMyPair');
+    final selectedArticles = _flowArticles;
+    final appBarTitleFs = _isPerShoePhotoFlow && _repairStep == 1
+        ? (18 * layoutScale).clamp(16.0, 18.0)
+        : titleFs;
 
+    // Next dock is rendered full-bleed in [_buildRepairOnlyPage] Stack.
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        (12 * layoutScale).clamp(10.0, 14.0),
+        contentHPadLeft,
         16,
-        20,
-        panelBottomPad,
+        contentHPadRight,
+        keyboardInset > 0 ? 8.0 : 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -909,16 +2329,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 context,
                 title: title,
                 layoutScale: layoutScale,
-                titleFontSize: titleFs,
-                onBack: _submitting
-                    ? null
-                    : () {
-                        if (_repairStep > 0) {
-                          setState(() => _repairStep -= 1);
-                          return;
-                        }
-                        Navigator.pop(context);
-                      },
+                titleFontSize: appBarTitleFs,
+                onBack: _submitting ? null : _handleRepairFlowBack,
               ),
             ),
           if (_error != null)
@@ -936,44 +2348,108 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             Expanded(
               child: ColoredBox(
                 color: const Color(0xFFF0F0F0),
-                child: SingleChildScrollView(
-                  controller: _repairStep0ScrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildRepairFlowAppBar(
-                        context,
-                        title: title,
-                        layoutScale: layoutScale,
-                        titleFontSize: titleFs,
-                        onBack: _submitting
-                            ? null
-                            : () {
-                                if (_repairStep > 0) {
-                                  setState(() => _repairStep -= 1);
-                                  return;
-                                }
-                                Navigator.pop(context);
-                              },
+                child: NotificationListener<ScrollMetricsNotification>(
+                  onNotification: (_) {
+                    _updateCareOptionsScrollbarNeeded();
+                    return false;
+                  },
+                  child: RawScrollbar(
+                    controller: _repairStep0ScrollController,
+                    // Show only when content overflows (when scroll is needed).
+                    thumbVisibility: _isCareOptionsFlow
+                        ? _careOptionsScrollbarNeeded
+                        : false,
+                    trackVisibility: _isCareOptionsFlow &&
+                        _careOptionsScrollbarNeeded,
+                    interactive: true,
+                    radius: const Radius.circular(4),
+                    thickness: _isCareOptionsFlow ? 6 : 4,
+                    thumbColor: const Color(0xFF6B6B6B),
+                    trackColor: const Color(0x336B6B6B),
+                    trackRadius: const Radius.circular(4),
+                    padding: EdgeInsets.only(
+                      right: 2,
+                      // Start near article/shoe image center — not from the top.
+                      top: _isCareOptionsFlow
+                          ? (_isPerShoePhotoFlow
+                              ? (168 * layoutScale).clamp(140.0, 200.0)
+                              : (36 * layoutScale).clamp(28.0, 44.0))
+                          : (8 * layoutScale).clamp(4.0, 10.0),
+                      // Keep thumb clear of the Next dock / card bottom (Figma).
+                      bottom: _isCareOptionsFlow
+                          ? (72 * layoutScale).clamp(56.0, 88.0)
+                          : (8 * layoutScale).clamp(4.0, 10.0),
+                    ),
+                    child: SingleChildScrollView(
+                      controller: _repairStep0ScrollController,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.only(
+                        // Extra room so the last options clear the Next dock.
+                        bottom: _isCareOptionsFlow
+                            ? (120 * layoutScale).clamp(96.0, 140.0)
+                            : 16,
+                        right: _isCareOptionsFlow &&
+                                _careOptionsScrollbarNeeded
+                            ? 14
+                            : 0,
                       ),
-                      SizedBox(
-                        height: keyboardInset > 0
-                            ? 8
-                            : (26 * layoutScale).clamp(20.0, 36.0),
-                      ),
-                      if (selectedArticles.isNotEmpty) ...[
-                        _buildSelectedFootwearHeader(
-                          selectedArticles,
-                          layoutScale: layoutScale,
-                          fontSize: fs,
-                          iconSize: iconSz,
-                        ),
-                        SizedBox(height: 8 * layoutScale),
-                      ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildRepairFlowAppBar(
+                            context,
+                            title: title,
+                            layoutScale: layoutScale,
+                            titleFontSize: titleFs,
+                            onBack: _submitting ? null : _handleRepairFlowBack,
+                          ),
+                          SizedBox(
+                            height: keyboardInset > 0
+                                ? 8
+                                : (26 * layoutScale).clamp(20.0, 36.0),
+                          ),
+                          if (selectedArticles.isNotEmpty) ...[
+                            _buildSelectedFootwearHeader(
+                              selectedArticles,
+                              layoutScale: layoutScale,
+                              fontSize: fs,
+                              iconSize: iconSz,
+                              compact: _isCareOptionsFlow && !_isPerShoePhotoFlow,
+                              carousel: _isPerShoePhotoFlow ||
+                                  (_isCareOptionsFlow &&
+                                      selectedArticles.length > 1),
+                            ),
+                            SizedBox(
+                              height: _isCareOptionsFlow
+                                  ? (12 * layoutScale).clamp(8.0, 16.0)
+                                  : 8 * layoutScale,
+                            ),
+                          ],
+                          if (_isCareOptionsFlow) ...[
+                          Text(
+                            'How can we help you today?',
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF062F35),
+                              fontSize:
+                                  (16 * layoutScale).clamp(14.0, 16.0),
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          if (_showRepairStep0FieldErrors &&
+                              !_repairStep0CareOptionsValid)
+                            _repairStep0InlineError(
+                              _isPerShoePhotoFlow
+                                  ? 'Please upload at least one proof image'
+                                  : 'Please select at least one option.',
+                              layoutScale,
+                            ),
+                          SizedBox(
+                            height: (18 * layoutScale).clamp(12.0, 24.0),
+                          ),
+                          _buildCareOptionsList(layoutScale),
+                        ] else ...[
                       KeyedSubtree(
                         key: _problemFieldKey,
                         child: Column(
@@ -987,346 +2463,284 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
+                            if (_showRepairStep0FieldErrors &&
+                                !_repairStep0ProblemValid)
+                              _repairStep0InlineError(
+                                'Please fill out this field.',
+                                layoutScale,
+                              ),
                             SizedBox(height: 4 * layoutScale),
                             TextField(
-                      controller: _problemController,
-                      focusNode: _problemFocusNode,
-                      keyboardType: TextInputType.multiline,
-                      minLines: 4,
-                      maxLines: 8,
-                      scrollPadding: const EdgeInsets.only(
-                        top: 72,
-                        bottom: 24,
-                      ),
-                      textAlignVertical: TextAlignVertical.top,
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF062F35),
-                        fontSize: fs,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: _issueHint,
-                        hintStyle: GoogleFonts.montserrat(
-                          color: const Color(0xFFABABAB),
-                          fontSize: fs,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white.withValues(alpha: 0.10),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: (12 * layoutScale).clamp(8.0, 14.0),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 1,
-                            color: Color(0x7F12899B),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            width: 1,
-                            color: Color(0x7F12899B),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            width: 1.2,
-                            color: const Color(0xFF12899B),
-                          ),
-                        ),
-                      ),
-                    ),
+                              controller: _problemController,
+                              focusNode: _problemFocusNode,
+                              keyboardType: TextInputType.multiline,
+                              minLines: 4,
+                              maxLines: 8,
+                              scrollPadding: const EdgeInsets.only(
+                                top: 72,
+                                bottom: 24,
+                              ),
+                              textAlignVertical: TextAlignVertical.top,
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF062F35),
+                                fontSize: fs,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: _issueHint,
+                                hintStyle: GoogleFonts.montserrat(
+                                  color: const Color(0xFFABABAB),
+                                  fontSize: fs,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                filled: false,
+                                fillColor: Colors.transparent,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical:
+                                      (12 * layoutScale).clamp(8.0, 14.0),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    width: 1,
+                                    color: Color(0x7F12899B),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    width: 1,
+                                    color: Color(0x7F12899B),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    width: 1.2,
+                                    color: Color(0xFF12899B),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    if (_showRepairStep0FieldErrors && !_repairStep0ProblemValid)
-                      _repairStep0InlineError(
-                        'Please fill out this field.',
-                        layoutScale,
-                      ),
-                    SizedBox(height: 8 * layoutScale),
-                    Text(
-                      _uploadPrompt,
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF062F35),
-                        fontSize: fs,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    SizedBox(height: 4 * layoutScale),
-                    SizedBox(
-                      height: effectiveUploadH,
-                      child: InkWell(
-                        onTap: _submitting ? null : _pickImages,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: ShapeDecoration(
-                            color: Colors.white.withValues(alpha: 0.10),
-                            shape: RoundedRectangleBorder(
-                              side: const BorderSide(
-                                width: 1,
-                                color: Color(0x7F12899B),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              GestureDetector(
-                                onTap: _submitting ? null : _pickImages,
-                                child: Text(
-                                  'Upload Photos ',
-                                  style: GoogleFonts.boldonse(
-                                    color: const Color(0xFF12899B),
-                                    fontSize: actionFs,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'or',
-                                style: GoogleFonts.boldonse(
-                                  color: const Color(0xFFABABAB),
-                                  fontSize: actionFs,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _submitting ? null : _takePicture,
-                                child: Text(
-                                  ' Take Pictures',
-                                  style: GoogleFonts.boldonse(
-                                    color: const Color(0xFF12899B),
-                                    fontSize: actionFs,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_showRepairStep0FieldErrors && !_repairStep0PhotosValid)
-                      _repairStep0InlineError(
-                        'Please upload images.',
-                        layoutScale,
-                      ),
-                    if (_proofImages.isNotEmpty) ...[
                       SizedBox(height: 8 * layoutScale),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '${_proofImages.length}/$kMaxProofImages photo(s) added',
-                          style: GoogleFonts.montserrat(
-                            color: const Color(0xFF12899B),
-                            fontSize: (12 * layoutScale).clamp(10.0, 13.0),
-                            fontWeight: FontWeight.w600,
-                          ),
+                      Text(
+                        _uploadPrompt,
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF062F35),
+                          fontSize: fs,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(height: 6 * layoutScale),
+                      if (_showRepairStep0FieldErrors &&
+                          !_repairStep0PhotosValid)
+                        _repairStep0InlineError(
+                          'Please upload images.',
+                          layoutScale,
+                        ),
+                      SizedBox(height: 4 * layoutScale),
                       SizedBox(
-                        height: (76 * layoutScale).clamp(60.0, 92.0),
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          clipBehavior: Clip.hardEdge,
-                          itemCount: _proofImages.length,
-                          separatorBuilder: (_, _) =>
-                              SizedBox(width: 8 * layoutScale),
-                          itemBuilder: (_, i) {
-                            final thumb = (72 * layoutScale).clamp(56.0, 88.0);
-                            return SizedBox(
-                              width: thumb,
-                              height: thumb,
-                              child: Stack(
-                                clipBehavior: Clip.hardEdge,
-                                children: [
-                                  Positioned.fill(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: FutureBuilder(
-                                        future: _proofImages[i].readAsBytes(),
-                                        builder: (context, snap) {
-                                          if (!snap.hasData) {
-                                            return Container(
-                                              color: const Color(0xFFDFE7E9),
-                                              child: const Center(
-                                                child: SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    color: Color(0xFF11999E),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                          return Image.memory(
-                                            snap.data!,
-                                            fit: BoxFit.cover,
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 2,
-                                    right: 2,
-                                    child: Material(
-                                      color: const Color(0xFFB00020),
-                                      shape: const CircleBorder(),
-                                      child: InkWell(
-                                        customBorder: const CircleBorder(),
-                                        onTap: _submitting
-                                            ? null
-                                            : () => _removeImage(i),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(3),
-                                          child: Icon(
-                                            Icons.close,
-                                            size: (14 * layoutScale)
-                                                .clamp(12.0, 16.0),
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                        height: effectiveUploadH,
+                        child: InkWell(
+                          onTap: _submitting ? null : _showPhotoSourceSheet,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: ShapeDecoration(
+                              color: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                side: const BorderSide(
+                                  width: 1,
+                                  color: Color(0x7F12899B),
+                                ),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    SizedBox(height: 8 * layoutScale),
-                    Text(
-                      'How would you like to send us your footwear?',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.montserrat(
-                        color: const Color(0xFF062F35),
-                        fontSize: fs,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    SizedBox(height: 6 * layoutScale),
-                    SizedBox(
-                      height: pillH,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ServiceFlowPickupPill(
-                              label: 'Home Pickup',
-                              selected:
-                                  _pickupModeChosen && _homePickup,
-                              height: pillH,
-                              fontSize: pillFs,
-                              onTap: () => _selectPickupMode(true),
                             ),
-                          ),
-                          SizedBox(width: 12 * layoutScale),
-                          Expanded(
-                            child: ServiceFlowPickupPill(
-                              label: 'Cobblers Nearby',
-                              selected:
-                                  _pickupModeChosen && !_homePickup,
-                              height: pillH,
-                              fontSize: pillFs,
-                              onTap: () => _selectPickupMode(false),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_showRepairStep0FieldErrors && !_repairStep0PickupValid)
-                      _repairStep0InlineError(
-                        'Please choose an option.',
-                        layoutScale,
-                      ),
-                    if (_repairStep0Complete) ...[
-                      SizedBox(height: 10 * layoutScale),
-                      Center(
-                        child: SizedBox(
-                          width: (164 * layoutScale).clamp(132.0, 180.0),
-                          height: pillH,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.centerRight,
-                                end: Alignment.centerLeft,
-                                colors: [
-                                  Color(0xFF0CADC5),
-                                  Color(0xFF063239),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(100),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x19000000),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 4),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.photo_camera_outlined,
+                                  color: const Color(0xFF8D8D8D),
+                                  size: (28 * layoutScale).clamp(22.0, 30.0),
+                                ),
+                                SizedBox(height: 8 * layoutScale),
+                                Text(
+                                  'Upload Photos or Take Pictures',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF8D8D8D),
+                                    fontSize: actionFs,
+                                    fontWeight: FontWeight.w400,
+                                  ),
                                 ),
                               ],
                             ),
-                            child: TextButton(
-                              onPressed:
-                                  _submitting ? null : _onRepairStepZeroNext,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                              ),
-                              child: _submitting
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Next',
-                                          style: GoogleFonts.boldonse(
-                                            color: Colors.white,
-                                            fontSize: fs,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                        SizedBox(width: 20 * layoutScale),
-                                        Icon(
-                                          Icons.arrow_forward_ios_rounded,
-                                          color: Colors.white,
-                                          size: (16 * layoutScale)
-                                              .clamp(13.0, 16.0),
-                                        ),
-                                      ],
-                                    ),
-                            ),
                           ),
                         ),
                       ),
+                      if (_proofImages.isNotEmpty) ...[
+                        SizedBox(height: 8 * layoutScale),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${_proofImages.length}/$kMaxProofImages photo(s) added',
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize:
+                                  (12 * layoutScale).clamp(10.0, 13.0),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 6 * layoutScale),
+                        SizedBox(
+                          height: (76 * layoutScale).clamp(60.0, 92.0),
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            clipBehavior: Clip.hardEdge,
+                            itemCount: _proofImages.length,
+                            separatorBuilder: (_, _) =>
+                                SizedBox(width: 8 * layoutScale),
+                            itemBuilder: (_, i) {
+                              final thumb =
+                                  (72 * layoutScale).clamp(56.0, 88.0);
+                              return SizedBox(
+                                width: thumb,
+                                height: thumb,
+                                child: Stack(
+                                  clipBehavior: Clip.hardEdge,
+                                  children: [
+                                    Positioned.fill(
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(10),
+                                        child: FutureBuilder(
+                                          future: _proofImages[i]
+                                              .readAsBytes(),
+                                          builder: (context, snap) {
+                                            if (!snap.hasData) {
+                                              return Container(
+                                                color: const Color(
+                                                    0xFFDFE7E9),
+                                                child: const Center(
+                                                  child: SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Color(
+                                                          0xFF11999E),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                            return Image.memory(
+                                              snap.data!,
+                                              fit: BoxFit.cover,
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 2,
+                                      right: 2,
+                                      child: Material(
+                                        color: const Color(0xFFB00020),
+                                        shape: const CircleBorder(),
+                                        child: InkWell(
+                                          customBorder:
+                                              const CircleBorder(),
+                                          onTap: _submitting
+                                              ? null
+                                              : () => _removeImage(i),
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsets.all(3),
+                                            child: Icon(
+                                              Icons.close,
+                                              size: (14 * layoutScale)
+                                                  .clamp(12.0, 16.0),
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                      // ------------------------------------------------------------------
+                      // Pickup section — keep for future implement; do not remove.
+                      // ------------------------------------------------------------------
+                      // SizedBox(height: 8 * layoutScale),
+                      // Text(
+                      //   'How would you like to send us your footwear?',
+                      //   maxLines: 2,
+                      //   overflow: TextOverflow.ellipsis,
+                      //   style: GoogleFonts.montserrat(
+                      //     color: const Color(0xFF062F35),
+                      //     fontSize: fs,
+                      //     fontWeight: FontWeight.w400,
+                      //   ),
+                      // ),
+                      // SizedBox(height: 6 * layoutScale),
+                      // SizedBox(
+                      //   height: pillH,
+                      //   child: Row(
+                      //     children: [
+                      //       Expanded(
+                      //         child: ServiceFlowPickupPill(
+                      //           label: 'Home Pickup',
+                      //           selected:
+                      //               _pickupModeChosen && _homePickup,
+                      //           height: pillH,
+                      //           fontSize: pillFs,
+                      //           onTap: () => _selectPickupMode(true),
+                      //         ),
+                      //       ),
+                      //       SizedBox(width: 12 * layoutScale),
+                      //       Expanded(
+                      //         child: ServiceFlowPickupPill(
+                      //           label: 'Cobblers Nearby',
+                      //           selected:
+                      //               _pickupModeChosen && !_homePickup,
+                      //           height: pillH,
+                      //           fontSize: pillFs,
+                      //           onTap: () => _selectPickupMode(false),
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+                      // if (_showRepairStep0FieldErrors &&
+                      //     !_repairStep0PickupValid)
+                      //   _repairStep0InlineError(
+                      //     'Please choose an option.',
+                      //     layoutScale,
+                      //   ),
+                      ],
                     ],
-                  ],
+                  ),
+                ),
+                ),
                 ),
               ),
             ),
-          ),
+          ] else if (_isPerShoePhotoFlow && _repairStep == 1) ...[
+            Expanded(
+              child: _buildFinalizingServicesPanel(layoutScale),
+            ),
           ] else
             Expanded(
               child: ClipRect(
@@ -1338,325 +2752,1618 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SizedBox(
-                        height: (26 * layoutScale).clamp(20.0, 36.0),
+                        height: (18 * layoutScale).clamp(12.0, 24.0),
                       ),
-                      Text(
-                        'Home Pickup',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
-                          fontSize: fs,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      SizedBox(height: (16 * layoutScale).clamp(12.0, 20.0)),
-                      if (_proofImages.isNotEmpty) ...[
-                        SizedBox(height: 8 * layoutScale),
-                        Text(
-                          'Your uploaded photos (${_proofImages.length})',
-                          style: GoogleFonts.montserrat(
-                            color: const Color(0xFF4E7F8A),
-                            fontSize: (12 * layoutScale).clamp(10.0, 13.0),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: 6 * layoutScale),
-                        SizedBox(
-                          height: (52 * layoutScale).clamp(44.0, 60.0),
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _proofImages.length,
-                            separatorBuilder: (_, _) =>
-                                SizedBox(width: 6 * layoutScale),
-                            itemBuilder: (_, i) {
-                              final w =
-                                  (48 * layoutScale).clamp(40.0, 56.0);
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: SizedBox(
-                                  width: w,
-                                  height: w,
-                                  child: FutureBuilder(
-                                    future: _proofImages[i].readAsBytes(),
-                                    builder: (context, snap) {
-                                      if (!snap.hasData) {
-                                        return Container(
-                                          color: const Color(0xFFDFE7E9),
-                                        );
-                                      }
-                                      return Image.memory(
-                                        snap.data!,
-                                        fit: BoxFit.cover,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                      SizedBox(height: 8 * layoutScale),
-                      Text(
-                        'Please choose a time slot from the options below',
-                        style: GoogleFonts.montserrat(
-                          color: const Color(0xFF062F35),
-                          fontSize: fs,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      SizedBox(height: 20 * layoutScale),
+                      _buildDeliveryDropOffToggle(layoutScale),
+                      SizedBox(height: (24 * layoutScale).clamp(18.0, 28.0)),
+                      if (_homePickup)
+                        _buildDeliveryPickupPanel(layoutScale, fs)
+                      else if (_showDropOffSchedule)
+                        _buildSelfDropOffSchedulePanel(layoutScale, fs)
+                      else
+                        _buildSelfDropOffPanel(layoutScale),
+                    ],
+                  ),
+                ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Segmented control — Delivery Pick up | Self Drop off (Figma).
+  Widget _buildDeliveryDropOffToggle(double layoutScale) {
+    final h = (28 * layoutScale).clamp(26.0, 32.0);
+    final labelFs = (12 * layoutScale).clamp(11.0, 13.0);
+    Widget segment({
+      required String label,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _submitting ? null : onTap,
+            borderRadius: BorderRadius.circular(20),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              height: h,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFF12899B) : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.boldonse(
+                  color: selected
+                      ? const Color(0xFFF0F0F0)
+                      : const Color(0xFFABABAB),
+                  fontSize: labelFs,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: h,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          width: 1,
+          color: const Color(0x7F062F35),
+        ),
+      ),
+      child: Row(
+        children: [
+          segment(
+            label: 'Delivery Pick up',
+            selected: _homePickup,
+            onTap: () => _selectPickupMode(true),
+          ),
+          segment(
+            label: 'Self Drop off',
+            selected: !_homePickup,
+            onTap: () => _selectPickupMode(false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeliveryPickupPanel(double layoutScale, double fs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
                       Row(
                         children: [
-                          Text(
-                            _pickupDayLabels[_selectedPickupDay.clamp(
-                              0,
-                              _pickupDayLabels.length - 1,
-                            )],
-                            style: GoogleFonts.boldonse(
-                              color: const Color(0xFF12899B),
-                              fontSize: pillFs,
-                              fontWeight: FontWeight.w400,
+                          Expanded(
+                            child: Text(
+                              'Pickup address',
+                              style: GoogleFonts.boldonse(
+                                color: const Color(0xFF062F35),
+                                fontSize: fs,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
                           ),
-                          SizedBox(width: 8 * layoutScale),
-                          SvgPicture.asset(
-                            'assets/images/calendar.svg',
-                            width: (18 * layoutScale).clamp(16.0, 20.0),
-                            height: (18 * layoutScale).clamp(16.0, 20.0),
+                          InkWell(
+                            onTap: _submitting ? null : _pickAddress,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: SvgPicture.asset(
+                                'assets/images/icons/profile/edit.svg',
+                                width: (22 * layoutScale).clamp(18.0, 24.0),
+                                height: (22 * layoutScale).clamp(18.0, 24.0),
+                                colorFilter: const ColorFilter.mode(
+                                  Color(0xFF062F35),
+                                  BlendMode.srcIn,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 14 * layoutScale),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _pickupSlotLabels.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 14 * layoutScale,
-                          mainAxisSpacing: 16 * layoutScale,
-                          childAspectRatio: 2.1,
-                        ),
-                        itemBuilder: (_, index) {
-                          final selected = _selectedPickupSlot == index;
-                          return InkWell(
-                            onTap: _submitting
-                                ? null
-                                : () => setState(() {
-                                      _selectedPickupSlot =
-                                          selected ? -1 : index;
-                                    }),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                gradient: selected
-                                    ? const LinearGradient(
-                                        begin: Alignment.centerRight,
-                                        end: Alignment.centerLeft,
-                                        colors: [
-                                          Color(0xFF0CADC5),
-                                          Color(0xFF063239),
-                                        ],
-                                      )
-                                    : null,
-                                color: selected
-                                    ? null
-                                    : const Color(0xFFDFE7E9),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  width: 1,
-                                  color: selected
-                                      ? Colors.transparent
-                                      : const Color(0xFF0F6876),
-                                ),
-                              ),
-                              child: Text(
-                                _pickupSlotLabels[index],
-                                style: GoogleFonts.boldonse(
-                                  color: selected
-                                      ? Colors.white
-                                      : const Color(0xFF12899B),
-                                  fontSize: (13 * layoutScale).clamp(11.0, 13.0),
-                                  fontWeight: FontWeight.w400,
-                                ),
+                      SizedBox(height: (8 * layoutScale).clamp(6.0, 10.0)),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: (38 * layoutScale).clamp(32.0, 42.0),
+                            height: (38 * layoutScale).clamp(32.0, 42.0),
+                            decoration: BoxDecoration(
+                              color: const Color(0x33D9D9D9),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: const Color(0xFF12899B),
+                                width: 1.2,
                               ),
                             ),
-                          );
-                        },
-                      ),
-                      SizedBox(height: 24 * layoutScale),
-                      Text(
-                        'Pickup Address',
-                        style: GoogleFonts.boldonse(
-                          color: const Color(0xFF062F35),
-                          fontSize: fs,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      SizedBox(height: 10 * layoutScale),
-                      Container(
-                        padding: EdgeInsets.fromLTRB(
-                          8 * layoutScale,
-                          6 * layoutScale,
-                          8 * layoutScale,
-                          10 * layoutScale,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: (30 * layoutScale).clamp(26.0, 34.0),
-                              height: (30 * layoutScale).clamp(26.0, 34.0),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: const Color(0xFF11899B),
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.home_outlined,
-                                color: const Color(0xFF11899B),
-                                size: (17 * layoutScale).clamp(14.0, 18.0),
+                            alignment: Alignment.center,
+                            child: SvgPicture.asset(
+                              'assets/images/icons/profile/home.svg',
+                              width: (18 * layoutScale).clamp(15.0, 20.0),
+                              height: (18 * layoutScale).clamp(15.0, 20.0),
+                              colorFilter: const ColorFilter.mode(
+                                Color(0xFF12899B),
+                                BlendMode.srcIn,
                               ),
                             ),
-                            SizedBox(width: 10 * layoutScale),
-                            Expanded(
+                          ),
+                          SizedBox(width: (14 * layoutScale).clamp(12.0, 16.0)),
+                          Expanded(
+                            child: Transform.translate(
+                              offset: Offset(0, (-3 * layoutScale).clamp(-4.0, -2.0)),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _selectedAddress?.addressLine1
-                                                .isNotEmpty ==
-                                            true
-                                        ? _selectedAddress!.addressLine1
-                                        : 'Home',
+                                    'Home',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.montserrat(
                                       color: const Color(0xFF12899B),
                                       fontSize:
-                                          (13 * layoutScale).clamp(11.0, 13.0),
+                                          (14 * layoutScale).clamp(12.0, 15.0),
                                       fontWeight: FontWeight.w600,
+                                      height: 1.15,
                                     ),
                                   ),
-                                  SizedBox(height: 2 * layoutScale),
+                                  SizedBox(
+                                    height: (4 * layoutScale).clamp(3.0, 6.0),
+                                  ),
                                   Text(
                                     _selectedAddress == null
                                         ? 'No address selected'
                                         : '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city}, ${_selectedAddress!.state}',
-                                    maxLines: 2,
+                                    maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.montserrat(
                                       color: const Color(0xFF4E7F8A),
                                       fontSize:
-                                          (13 * layoutScale).clamp(11.0, 13.0),
+                                          (13 * layoutScale).clamp(11.0, 14.0),
                                       fontWeight: FontWeight.w400,
+                                      height: 1.25,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            SizedBox(width: 8 * layoutScale),
-                            InkWell(
-                              onTap: _submitting ? null : _pickAddress,
-                              borderRadius: BorderRadius.circular(100),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: (10 * layoutScale).clamp(8.0, 12.0),
-                                  vertical: (4 * layoutScale).clamp(3.0, 6.0),
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF11899B),
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                                child: Text(
-                                  'Change',
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize:
-                                        (11 * layoutScale).clamp(10.0, 12.0),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: (28 * layoutScale).clamp(22.0, 32.0)),
+                      Text(
+                        'Select a date',
+                        style: GoogleFonts.boldonse(
+                          color: const Color(0xFF062F35),
+                          fontSize: fs,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(height: 24 * layoutScale),
-                      Center(
-                        child: SizedBox(
-                          width: (164 * layoutScale).clamp(132.0, 180.0),
-                          height: pillH,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.centerRight,
-                                end: Alignment.centerLeft,
-                                colors: [
-                                  Color(0xFF0CADC5),
-                                  Color(0xFF063239),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(100),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x19000000),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: TextButton(
-                              onPressed: _submitting ? null : _submit,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                              ),
-                              child: _submitting
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
+                      SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
+                      SizedBox(
+                        height: (88 * layoutScale).clamp(78.0, 98.0),
+                        child: Row(
+                          // Flush with section titles: first/last at edges.
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(_pickupDays.length, (index) {
+                            final selected = _selectedPickupDay == index;
+                            final day = _pickupDays[index];
+                            final box =
+                                (44 * layoutScale).clamp(38.0, 50.0);
+                            return InkWell(
+                              onTap: _submitting
+                                  ? null
+                                  : () => setState(() {
+                                        _selectedPickupDay = index;
+                                        _selectedPickupSlot = -1;
+                                      }),
+                              borderRadius: BorderRadius.circular(5),
+                              child: SizedBox(
+                                width: box,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _pickupDayShortLabels[index],
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.montserrat(
+                                        color: const Color(0xFF12899B),
+                                        fontSize: (14 * layoutScale)
+                                            .clamp(13.0, 15.0),
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Next',
-                                          style: GoogleFonts.boldonse(
-                                            color: Colors.white,
-                                            fontSize: fs,
-                                            fontWeight: FontWeight.w400,
+                                    ),
+                                    SizedBox(height: 8 * layoutScale),
+                                    Container(
+                                      width: box,
+                                      height: box,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: selected
+                                            ? const Color(0xFF12899B)
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: const Color(0xFF12899B),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${day.day}',
+                                        style: GoogleFonts.montserrat(
+                                          color: selected
+                                              ? Colors.white
+                                              : const Color(0xFF12899B),
+                                          fontSize: (17 * layoutScale)
+                                              .clamp(15.0, 18.0),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      SizedBox(height: (28 * layoutScale).clamp(22.0, 32.0)),
+                      Text(
+                        'Select a time slot',
+                        style: GoogleFonts.boldonse(
+                          color: const Color(0xFF062F35),
+                          fontSize: fs,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          // Same side inset as titles/dates: spaceBetween edges.
+                          final chipH =
+                              (44 * layoutScale).clamp(40.0, 48.0);
+                          final rowGap =
+                              (14 * layoutScale).clamp(12.0, 18.0);
+                          // Keep chips compact; leftover width becomes mid gaps.
+                          final chipW = ((constraints.maxWidth - 72) / 3)
+                              .clamp(70.0, 86.0);
+                          const radius = 5.0;
+                          final labels = _pickupSlotLabels;
+                          final rows = <Widget>[];
+                          for (var r = 0; r < 3; r++) {
+                            final rowChildren = <Widget>[];
+                            for (var c = 0; c < 3; c++) {
+                              final index = r * 3 + c;
+                              if (index >= labels.length) break;
+                              final selected = _selectedPickupSlot == index;
+                              rowChildren.add(
+                                SizedBox(
+                                  width: chipW,
+                                  height: chipH,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: _submitting
+                                          ? null
+                                          : () => setState(() {
+                                                _selectedPickupSlot =
+                                                    selected ? -1 : index;
+                                              }),
+                                      borderRadius:
+                                          BorderRadius.circular(radius),
+                                      child: Ink(
+                                        decoration: BoxDecoration(
+                                          gradient: selected
+                                              ? const LinearGradient(
+                                                  begin: Alignment.centerLeft,
+                                                  end: Alignment.centerRight,
+                                                  colors: [
+                                                    Color(0xFF063239),
+                                                    Color(0xFF0CADC5),
+                                                  ],
+                                                )
+                                              : null,
+                                          color: selected
+                                              ? null
+                                              : Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(radius),
+                                          border: Border.all(
+                                            width: 1,
+                                            color: selected
+                                                ? Colors.transparent
+                                                : const Color(0xFF12899B),
                                           ),
                                         ),
-                                        SizedBox(width: 20 * layoutScale),
-                                        Icon(
-                                          Icons.arrow_forward_ios_rounded,
-                                          color: Colors.white,
-                                          size: (16 * layoutScale)
-                                              .clamp(13.0, 16.0),
+                                        child: Center(
+                                          child: Text(
+                                            labels[index],
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.montserrat(
+                                              color: selected
+                                                  ? Colors.white
+                                                  : const Color(0xFF12899B),
+                                              fontSize: (14 * layoutScale)
+                                                  .clamp(13.0, 15.0),
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
                                         ),
-                                      ],
+                                      ),
                                     ),
-                            ),
+                                  ),
+                                ),
+                              );
+                            }
+                            rows.add(
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: rowChildren,
+                              ),
+                            );
+                            if (r < 2) {
+                              rows.add(SizedBox(height: rowGap));
+                            }
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: rows,
+                          );
+                        },
+                      ),
+      ],
+    );
+  }
+
+  /// Figma 3079:8144 / 3076:7081 — schedule after Book on a drop-off.
+  Widget _buildSelfDropOffSchedulePanel(double layoutScale, double fs) {
+    if (_dropOffLocations.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 24 * layoutScale),
+        child: Text(
+          'No drop-off location selected.',
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF5A5A5A),
+            fontSize: fs,
+          ),
+        ),
+      );
+    }
+    final loc = (_selectedDropOffIndex >= 0 &&
+            _selectedDropOffIndex < _dropOffLocations.length)
+        ? _dropOffLocations[_selectedDropOffIndex]
+        : _dropOffLocations.first;
+    final noteFs = (13 * layoutScale).clamp(12.0, 14.0);
+    final windowH = (50 * layoutScale).clamp(44.0, 54.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          loc.name,
+                          style: GoogleFonts.boldonse(
+                            color: const Color(0xFF062F35),
+                            fontSize: (14 * layoutScale).clamp(12.0, 15.0),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        SizedBox(height: (5 * layoutScale).clamp(4.0, 8.0)),
+                        Text(
+                          loc.distanceLabel,
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF12899B),
+                            fontSize: (16 * layoutScale).clamp(13.0, 16.0),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: _submitting ? null : _backToDropOffList,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: SvgPicture.asset(
+                        'assets/images/icons/profile/edit.svg',
+                        width: (28 * layoutScale).clamp(24.0, 30.0),
+                        height: (28 * layoutScale).clamp(24.0, 30.0),
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF062F35),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: (10 * layoutScale).clamp(8.0, 12.0)),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: Color(0xFFE0E0E0),
+              ),
+              SizedBox(height: (10 * layoutScale).clamp(8.0, 12.0)),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/icons/repairmypair/walk.svg',
+                    width: (18 * layoutScale).clamp(16.0, 20.0),
+                    height: (26 * layoutScale).clamp(24.0, 30.0),
+                  ),
+                  SizedBox(width: (10 * layoutScale).clamp(8.0, 12.0)),
+                  Expanded(
+                    child: Text(
+                      'This is a self drop booking. You will have to drop your pairs to the drop location.',
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFFABABAB),
+                        fontSize: noteFs,
+                        fontWeight: FontWeight.w400,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: (28 * layoutScale).clamp(22.0, 32.0)),
+        Text(
+          'Select a date',
+          style: GoogleFonts.boldonse(
+            color: const Color(0xFF062F35),
+            fontSize: fs,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
+        SizedBox(
+          height: (88 * layoutScale).clamp(78.0, 98.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(_pickupDays.length, (index) {
+              final selected = _selectedPickupDay == index;
+              final day = _pickupDays[index];
+              final box = (44 * layoutScale).clamp(38.0, 50.0);
+              return InkWell(
+                onTap: _submitting
+                    ? null
+                    : () => setState(() => _selectedPickupDay = index),
+                borderRadius: BorderRadius.circular(5),
+                child: SizedBox(
+                  width: box,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _pickupDayShortLabels[index],
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF12899B),
+                          fontSize: (14 * layoutScale).clamp(13.0, 15.0),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 8 * layoutScale),
+                      Container(
+                        width: box,
+                        height: box,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? const Color(0xFF12899B)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: const Color(0xFF12899B),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          '${day.day}',
+                          style: GoogleFonts.montserrat(
+                            color: selected
+                                ? Colors.white
+                                : const Color(0xFF12899B),
+                            fontSize: (17 * layoutScale).clamp(15.0, 18.0),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
+              );
+            }),
+          ),
+        ),
+        SizedBox(height: (28 * layoutScale).clamp(22.0, 32.0)),
+        Text(
+          'Your preferred time window',
+          style: GoogleFonts.boldonse(
+            color: const Color(0xFF062F35),
+            fontSize: fs,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        SizedBox(height: (14 * layoutScale).clamp(12.0, 18.0)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(_dropOffTimeWindows.length, (index) {
+            final selected = _selectedDropOffTimeWindow == index;
+            final label = _dropOffTimeWindows[index];
+            return Flexible(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: index == 0 ? 0 : (6 * layoutScale).clamp(4.0, 8.0),
+                  right: index == _dropOffTimeWindows.length - 1
+                      ? 0
+                      : (6 * layoutScale).clamp(4.0, 8.0),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _submitting
+                        ? null
+                        : () => setState(
+                              () => _selectedDropOffTimeWindow =
+                                  selected ? -1 : index,
+                            ),
+                    borderRadius: BorderRadius.circular(5),
+                    child: Ink(
+                      height: windowH,
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? const Color(0xFF12899B)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          width: 1,
+                          color: const Color(0xFF12899B),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          label,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.montserrat(
+                            color: selected
+                                ? Colors.white
+                                : const Color(0xFF12899B),
+                            fontSize: (14 * layoutScale).clamp(13.0, 15.0),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelfDropOffPanel(double layoutScale) {
+    if (!_dropOffLoadAttempted && !_dropOffLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadDropOffLocations();
+      });
+    }
+    final titleFs = (16 * layoutScale).clamp(14.0, 17.0);
+    final editFs = (12 * layoutScale).clamp(11.0, 13.0);
+    final cardGap = (28 * layoutScale).clamp(20.0, 32.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Text(
+                'Drop-Offs near your location ',
+                style: GoogleFonts.montserrat(
+                  color: Colors.black,
+                  fontSize: titleFs,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
+            SizedBox(width: (12 * layoutScale).clamp(8.0, 16.0)),
+            InkWell(
+              onTap: _submitting ? null : _openEditLocationPage,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: IntrinsicWidth(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Edit location',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.black,
+                          fontSize: editFs,
+                          fontWeight: FontWeight.w400,
+                          height: 1.2,
+                        ),
+                      ),
+                      SizedBox(height: (5 * layoutScale).clamp(4.0, 7.0)),
+                      Container(
+                        height: 1,
+                        color: Colors.black,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
+          ],
+        ),
+        SizedBox(height: (20 * layoutScale).clamp(16.0, 24.0)),
+        if (_dropOffLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Color(0xFF11899B),
+                ),
+              ),
+            ),
+          )
+        else if (_dropOffLocations.isEmpty)
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 16 * layoutScale),
+            child: Column(
+              children: [
+                Text(
+                  _dropOffError ?? 'No drop-off locations available.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF5A5A5A),
+                    fontSize: (13 * layoutScale).clamp(12.0, 14.0),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                SizedBox(height: (12 * layoutScale).clamp(8.0, 16.0)),
+                TextButton(
+                  onPressed: _submitting
+                      ? null
+                      : () => _loadDropOffLocations(force: true),
+                  child: Text(
+                    'Retry',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF12899B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...List.generate(_dropOffLocations.length, (index) {
+            final loc = _dropOffLocations[index];
+            final selected = _selectedDropOffIndex == index;
+            final hoursExpanded = _expandedDropOffIndex == index;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index == _dropOffLocations.length - 1 ? 0 : cardGap,
+              ),
+              child: _buildDropOffLocationCard(
+                layoutScale: layoutScale,
+                location: loc,
+                selected: selected,
+                hoursExpanded: hoursExpanded,
+                onToggleHours: () {
+                  if (_submitting) return;
+                  setState(() {
+                    _expandedDropOffIndex =
+                        _expandedDropOffIndex == index ? -1 : index;
+                  });
+                },
+                onBook: () => _openDropOffSchedule(index),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _buildDropOffLocationCard({
+    required double layoutScale,
+    required _DropOffLocation location,
+    required bool selected,
+    required bool hoursExpanded,
+    required VoidCallback onToggleHours,
+    required VoidCallback onBook,
+  }) {
+    final nameFs = (15 * layoutScale).clamp(13.0, 16.0);
+    final addressFs = (16 * layoutScale).clamp(14.0, 17.0);
+    final metaFs = (13 * layoutScale).clamp(12.0, 14.0);
+    final bookH = (34 * layoutScale).clamp(32.0, 38.0);
+    final distW = (58 * layoutScale).clamp(52.0, 64.0);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          width: selected ? 1.5 : 0,
+          color: selected ? const Color(0xFF12899B) : Colors.transparent,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            location.name,
+                            style: GoogleFonts.boldonse(
+                              color: const Color(0xFF062F35),
+                              fontSize: nameFs,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: location.kind == _DropOffKind.cobbler
+                                ? const Color(0xFFE8F7FA)
+                                : const Color(0xFFEEF2F3),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            location.kindLabel,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: (10 * layoutScale).clamp(9.0, 11.0),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: (5 * layoutScale).clamp(4.0, 8.0)),
+                    Text(
+                      location.address,
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF12899B),
+                        fontSize: addressFs,
+                        fontWeight: FontWeight.w400,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: (9 * layoutScale).clamp(6.0, 12.0)),
+              SizedBox(
+                width: distW,
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      height: (36 * layoutScale).clamp(32.0, 38.0),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD8D8D8),
+                        border: Border.all(
+                          width: 1,
+                          color: const Color(0xFFABABAB),
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(5),
+                          topRight: Radius.circular(5),
+                        ),
+                      ),
+                      child: SvgPicture.asset(
+                        'assets/images/icons/profile/navigation.svg',
+                        width: (20 * layoutScale).clamp(18.0, 22.0),
+                        height: (20 * layoutScale).clamp(18.0, 22.0),
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF062F35),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: double.infinity,
+                      height: (28 * layoutScale).clamp(24.0, 30.0),
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFD8D8D8),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(5),
+                          bottomRight: Radius.circular(5),
+                        ),
+                      ),
+                      child: Text(
+                        location.distanceLabel,
+                        style: GoogleFonts.montserrat(
+                          color: Colors.black,
+                          fontSize: metaFs,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: (15 * layoutScale).clamp(12.0, 18.0)),
+          InkWell(
+            onTap: onToggleHours,
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/images/icons/repairmypair/clock.png',
+                    width: (16 * layoutScale).clamp(14.0, 18.0),
+                    height: (16 * layoutScale).clamp(14.0, 18.0),
+                    color: location.isOpen
+                        ? const Color(0xFF0FB700)
+                        : const Color(0xFFABABAB),
+                  ),
+                  SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                  Text(
+                    location.isOpen ? 'Open' : 'Closed',
+                    style: GoogleFonts.montserrat(
+                      color: location.isOpen
+                          ? const Color(0xFF0FB700)
+                          : const Color(0xFFABABAB),
+                      fontSize: metaFs,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF062F35),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                  Flexible(
+                    child: Text(
+                      location.isOpen
+                          ? 'Closes ${location.closesAt}'
+                          : location.closesAt,
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black,
+                        fontSize: metaFs,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: hoursExpanded ? 0 : -0.25,
+                    duration: const Duration(milliseconds: 180),
+                    child: Image.asset(
+                      'assets/images/icons/repairmypair/chevron_down.png',
+                      width: (18 * layoutScale).clamp(16.0, 20.0),
+                      height: (18 * layoutScale).clamp(16.0, 20.0),
+                      color: const Color(0xFF062F35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: EdgeInsets.only(
+                top: (10 * layoutScale).clamp(8.0, 14.0),
+                left: (4 * layoutScale).clamp(2.0, 8.0),
+                right: (4 * layoutScale).clamp(2.0, 8.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final day in location.weeklyHours) ...[
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: (6 * layoutScale).clamp(4.0, 8.0),
+                      ),
+                      child: Text(
+                        day.isClosed
+                            ? '${_weekDayLabels[day.day] ?? day.day} - Closed'
+                            : '${_weekDayLabels[day.day] ?? day.day} - ${_formatAmPm(day.openTime)} to ${_formatAmPm(day.closeTime)}',
+                        style: GoogleFonts.montserrat(
+                          color: const Color(0xFF062F35),
+                          fontSize: (13 * layoutScale).clamp(12.0, 14.0),
+                          fontWeight: FontWeight.w400,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            crossFadeState: hoursExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+          if (location.phone.trim().isNotEmpty) ...[
+            SizedBox(height: (6 * layoutScale).clamp(4.0, 8.0)),
+            Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/images/phone.svg',
+                  width: (16 * layoutScale).clamp(14.0, 18.0),
+                  height: (16 * layoutScale).clamp(14.0, 18.0),
+                  colorFilter: const ColorFilter.mode(
+                    Colors.black,
+                    BlendMode.srcIn,
+                  ),
+                ),
+                SizedBox(width: (8 * layoutScale).clamp(6.0, 10.0)),
+                Text(
+                  location.phone,
+                  style: GoogleFonts.montserrat(
+                    color: Colors.black,
+                    fontSize: metaFs,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          SizedBox(height: (17 * layoutScale).clamp(12.0, 20.0)),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _submitting ? null : onBook,
+              borderRadius: BorderRadius.circular(100),
+              child: Ink(
+                height: bookH,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    colors: [Color(0xFF0CADC5), Color(0xFF063239)],
+                  ),
+                  borderRadius: BorderRadius.circular(100),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x19000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    'Book',
+                    style: GoogleFonts.boldonse(
+                      color: Colors.white,
+                      fontSize: metaFs,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  /// Care / repair multi-select options — Figma nodes 2851-4014 / 3079-7627.
+  Widget _buildCareOptionsList(double layoutScale) {
+    final plans = _activeCarePlans;
+    final titleFs = (14 * layoutScale).clamp(12.0, 14.0);
+    final bodyFs = (14 * layoutScale).clamp(12.0, 14.0);
+    // Slightly smaller than Figma 38 so rows feel tighter.
+    final box = (28 * layoutScale).clamp(24.0, 30.0);
+    final gap = (22 * layoutScale).clamp(14.0, 22.0);
+    final itemGap = (10 * layoutScale).clamp(8.0, 12.0);
+
+    if (plans.isEmpty) {
+      final emptyLabel = _isWashFlow
+          ? 'wash'
+          : _isRepairFlow
+              ? 'repair'
+              : 'maintenance';
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: (12 * layoutScale).clamp(8.0, 16.0)),
+        child: Text(
+          'No $emptyLabel services available yet. Please try again shortly.',
+          style: GoogleFonts.montserrat(
+            fontSize: bodyFs,
+            height: 1.35,
+            color: const Color(0xFF5A6B6E),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < plans.length; i++) ...[
+          if (i > 0) SizedBox(height: itemGap),
+          _buildCareOptionRow(
+            plan: plans[i],
+            selected: _uiSelectedOptionIds.contains(plans[i].id),
+            layoutScale: layoutScale,
+            titleFs: titleFs,
+            bodyFs: bodyFs,
+            checkboxSize: box,
+            gap: gap,
+            showCamera: _isPerShoePhotoFlow,
+            photoCount: _imagesForOption(plans[i].id).length,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCareOptionRow({
+    required MaintenancePlanData plan,
+    required bool selected,
+    required double layoutScale,
+    required double titleFs,
+    required double bodyFs,
+    required double checkboxSize,
+    required double gap,
+    bool showCamera = false,
+    int photoCount = 0,
+  }) {
+    final cameraSize = (24 * layoutScale).clamp(20.0, 24.0);
+    final priceAmount = plan.priceRupees.toString();
+    final textGap = (6 * layoutScale).clamp(4.0, 8.0);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _submitting ? null : () => _toggleCareOption(plan.id),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.only(bottom: (8 * layoutScale).clamp(6.0, 10.0)),
+          decoration: const BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                width: 1,
+                color: Color(0xFF09E0FF),
+              ),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: checkboxSize,
+                height: checkboxSize,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF12899B)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: const Color(0xFF12899B),
+                    width: 1.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: selected
+                    ? Icon(
+                        Icons.check,
+                        size: (checkboxSize * 0.55).clamp(12.0, 16.0),
+                        color: Colors.white,
+                      )
+                    : null,
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                        right: showCamera ? cameraSize + 10 : 0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '₹',
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize:
+                                        (22 * layoutScale).clamp(18.0, 22.0),
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.25,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: priceAmount,
+                                  style: GoogleFonts.boldonse(
+                                    color: const Color(0xFF062F35),
+                                    fontSize: titleFs,
+                                    fontWeight: FontWeight.w400,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: textGap),
+                          Text(
+                            plan.label,
+                            style: GoogleFonts.boldonse(
+                              color: const Color(0xFF12899B),
+                              fontSize: titleFs,
+                              fontWeight: FontWeight.w400,
+                              height: 1.55,
+                            ),
+                          ),
+                          SizedBox(height: textGap),
+                          Text(
+                            plan.description,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF062F35),
+                              fontSize: bodyFs,
+                              fontStyle: FontStyle.italic,
+                              fontWeight: FontWeight.w300,
+                              height: 1.55,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (showCamera)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _submitting
+                              ? null
+                              : () => _showPhotoSourceSheet(optionId: plan.id),
+                          child: SizedBox(
+                            width: cameraSize + 6,
+                            height: cameraSize + 6,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/images/icons/repairmypair/camera.svg',
+                                  width: cameraSize,
+                                  height: cameraSize,
+                                  fit: BoxFit.contain,
+                                ),
+                                // Count lives on the camera; tap again to add/remove.
+                                if (photoCount > 0)
+                                  Positioned(
+                                    top: -2,
+                                    right: -4,
+                                    child: Container(
+                                      constraints:
+                                          const BoxConstraints(minWidth: 22),
+                                      height: 15,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF22C55E),
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '$photoCount/$kMaxOptionProofImages',
+                                        style: GoogleFonts.montserrat(
+                                          color: Colors.white,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w700,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _removeFinalizingSelection({
+    required String articleId,
+    required String planId,
+  }) {
+    if (_submitting) return;
+    setState(() {
+      _repairArticleOptionIds[articleId]?.remove(planId);
+      _repairArticleOptionImages[articleId]?.remove(planId);
+      _selectedMaintenancePlan = _resolvedCarePlan;
+    });
+    if (_finalizingCards.isEmpty && mounted) {
+      setState(() => _repairStep = 0);
+    }
+  }
+
+  void _removeFinalizingPhoto({
+    required String articleId,
+    required String planId,
+    required int index,
+  }) {
+    if (_submitting) return;
+    setState(() {
+      final list = _repairArticleOptionImages[articleId]?[planId];
+      if (list == null || index < 0 || index >= list.length) return;
+      list.removeAt(index);
+      // No photos left → drop this service selection for the shoe.
+      if (list.isEmpty) {
+        _repairArticleOptionIds[articleId]?.remove(planId);
+        _repairArticleOptionImages[articleId]?.remove(planId);
+      }
+      _selectedMaintenancePlan = _resolvedCarePlan;
+    });
+    if (_finalizingCards.isEmpty && mounted) {
+      setState(() => _repairStep = 0);
+    }
+  }
+
+  Widget _buildFinalizingServicesPanel(double layoutScale) {
+    final cards = _finalizingCards;
+    return ColoredBox(
+      color: const Color(0xFFF0F0F0),
+      child: ListView.separated(
+        physics: const ClampingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          0,
+          (12 * layoutScale).clamp(8.0, 16.0),
+          0,
+          (24 * layoutScale).clamp(16.0, 32.0),
+        ),
+        itemCount: cards.length,
+        separatorBuilder: (_, _) => const SizedBox.shrink(),
+        itemBuilder: (_, i) {
+          final card = cards[i];
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: i == cards.length - 1
+                  ? 0
+                  : (20 * layoutScale).clamp(14.0, 24.0),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all((14 * layoutScale).clamp(10.0, 14.0)),
+              child: _buildFinalizingServiceCard(
+                article: card.article,
+                plan: card.plan,
+                photos: card.photos,
+                layoutScale: layoutScale,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFinalizingServiceCard({
+    required ServiceFlowArticle article,
+    required MaintenancePlanData plan,
+    required List<XFile> photos,
+    required double layoutScale,
+  }) {
+    final name = article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
+    final subtitle = (article.subtitle?.trim().isNotEmpty ?? false)
+        ? article.subtitle!.trim()
+        : name;
+    final nameFs = (14 * layoutScale).clamp(12.0, 14.0);
+    final bodyFs = (14 * layoutScale).clamp(12.0, 14.0);
+    final shoeW = (118 * layoutScale).clamp(96.0, 118.0);
+    final shoeH = (63 * layoutScale).clamp(52.0, 64.0);
+    final thumbW = (149 * layoutScale).clamp(120.0, 149.0);
+    final thumbH = (78 * layoutScale).clamp(64.0, 84.0);
+    final closeSize = (22 * layoutScale).clamp(18.0, 24.0);
+    final closeOutset = closeSize * 0.45;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all((10 * layoutScale).clamp(8.0, 12.0)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.boldonse(
+                            color: const Color(0xFF11899B),
+                            fontSize: nameFs,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.montserrat(
+                            color: Colors.black,
+                            fontSize: bodyFs,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: (12 * layoutScale).clamp(8.0, 16.0)),
+                  SizedBox(
+                    width: shoeW,
+                    height: shoeH,
+                    child: article.imageUrl.isEmpty
+                        ? const ColoredBox(
+                            color: Color(0xFFD9D9D9),
+                            child: Icon(
+                              Icons.checkroom_outlined,
+                              color: Color(0xFF8D8D8D),
+                            ),
+                          )
+                        : ArticleRackShoeImage(
+                            imageUrl: article.imageUrl,
+                            width: shoeW,
+                            height: shoeH,
+                            fit: BoxFit.contain,
+                            placeholder: const ColoredBox(
+                              color: Color(0xFFD9D9D9),
+                              child: Icon(
+                                Icons.checkroom_outlined,
+                                color: Color(0xFF8D8D8D),
+                              ),
+                            ),
+                            errorPlaceholder: const ColoredBox(
+                              color: Color(0xFFD9D9D9),
+                              child: Icon(
+                                Icons.checkroom_outlined,
+                                color: Color(0xFF8D8D8D),
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+              SizedBox(height: (16 * layoutScale).clamp(12.0, 20.0)),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Text(
+                      plan.label,
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black,
+                        fontSize: bodyFs,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: (12 * layoutScale).clamp(8.0, 16.0)),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '...',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.black,
+                            fontSize: bodyFs,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '₹',
+                          style: GoogleFonts.boldonse(
+                            color: Colors.black,
+                            fontSize: bodyFs,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '${plan.priceRupees}',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.black,
+                            fontSize: bodyFs,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (photos.isNotEmpty) ...[
+                SizedBox(height: (14 * layoutScale).clamp(10.0, 18.0)),
+                SizedBox(
+                  // Height includes corner exit icon overhang; scroll stays in card.
+                  height: thumbH + closeOutset,
+                  width: double.infinity,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    clipBehavior: Clip.hardEdge,
+                    padding: EdgeInsets.only(
+                      top: closeOutset,
+                      right: closeOutset,
+                    ),
+                    itemCount: photos.length,
+                    separatorBuilder: (_, _) =>
+                        SizedBox(width: (12 * layoutScale).clamp(8.0, 16.0)),
+                    itemBuilder: (_, i) {
+                      return SizedBox(
+                        width: thumbW,
+                        height: thumbH,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: FutureBuilder(
+                                  future: photos[i].readAsBytes(),
+                                  builder: (context, snap) {
+                                    if (!snap.hasData) {
+                                      return const ColoredBox(
+                                        color: Color(0xFFD9D9D9),
+                                      );
+                                    }
+                                    return Image.memory(
+                                      snap.data!,
+                                      fit: BoxFit.cover,
+                                      width: thumbW,
+                                      height: thumbH,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            // Half-on / half-off top-right corner exit icon.
+                            Positioned(
+                              top: -closeOutset,
+                              right: -closeOutset,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _removeFinalizingPhoto(
+                                  articleId: article.id,
+                                  planId: plan.id,
+                                  index: i,
+                                ),
+                                child: SvgPicture.asset(
+                                  'assets/images/icons/repairmypair/close_selected.svg',
+                                  width: closeSize,
+                                  height: closeSize,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Positioned(
+          top: -closeSize * 0.35,
+          right: -closeSize * 0.2,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _removeFinalizingSelection(
+              articleId: article.id,
+              planId: plan.id,
+            ),
+            child: SvgPicture.asset(
+              'assets/images/icons/repairmypair/close_selected.svg',
+              width: closeSize,
+              height: closeSize,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1704,7 +4411,21 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     required double layoutScale,
     required double fontSize,
     required double iconSize,
+    bool compact = false,
+    bool carousel = false,
   }) {
+    if (articles.isEmpty) return const SizedBox.shrink();
+
+    // RepairMyPair Figma 3079-7627: horizontal selected-shoe cards + focus label.
+    if (carousel) {
+      return _buildFootwearCarouselHeader(
+        articles,
+        layoutScale: layoutScale,
+        fontSize: fontSize,
+        iconSize: iconSize,
+      );
+    }
+
     if (articles.length == 1) {
       final article = articles.first;
       final name = article.name.trim();
@@ -1712,12 +4433,79 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       if (name.isEmpty && subtitle.isEmpty && article.imageUrl.isEmpty) {
         return const SizedBox.shrink();
       }
-      final imgW = (140 * layoutScale).clamp(118.0, 168.0);
-      final imgH = (96 * layoutScale).clamp(80.0, 112.0);
-      final subtitleFs = (fontSize * 0.88).clamp(11.0, 14.0);
+      final nameFs = (fontSize * 1.12).clamp(15.0, 18.0);
+      final subtitleFs = (fontSize * 0.98).clamp(13.0, 16.0);
 
+      // MaintainMyPair Figma: name + subtitle, then centered shoe image below.
+      if (compact) {
+        final imgW = (180 * layoutScale).clamp(140.0, 220.0);
+        final imgH = (120 * layoutScale).clamp(96.0, 148.0);
+        final graySubtitle = subtitle.isNotEmpty ? subtitle : name;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (name.isNotEmpty)
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.boldonse(
+                  color: const Color(0xFF12899B),
+                  fontSize: nameFs,
+                  fontWeight: FontWeight.w400,
+                  height: 1.2,
+                ),
+              ),
+            if (graySubtitle.isNotEmpty) ...[
+              SizedBox(height: (8 * layoutScale).clamp(6.0, 10.0)),
+              Text(
+                graySubtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.montserrat(
+                  color: Colors.black,
+                  fontSize: subtitleFs,
+                  fontWeight: FontWeight.w400,
+                  height: 1.25,
+                ),
+              ),
+            ],
+            if (article.imageUrl.isNotEmpty) ...[
+              SizedBox(height: (10 * layoutScale).clamp(8.0, 14.0)),
+              Center(
+                child: SizedBox(
+                  width: imgW,
+                  height: imgH,
+                  child: ArticleRackShoeImage(
+                    imageUrl: article.imageUrl,
+                    width: imgW,
+                    height: imgH,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    placeholder: Icon(
+                      Icons.checkroom_outlined,
+                      color: const Color(0xFF8D8D8D),
+                      size: iconSize,
+                    ),
+                    errorPlaceholder: Icon(
+                      Icons.checkroom_outlined,
+                      color: const Color(0xFF8D8D8D),
+                      size: iconSize,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      }
+
+      final imgW = (180 * layoutScale).clamp(140.0, 220.0);
+      final imgH = (120 * layoutScale).clamp(96.0, 148.0);
+
+      // Figma: article name + brand first, then centered article image.
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (name.isNotEmpty)
             Text(
@@ -1731,7 +4519,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 height: 1.05,
               ),
             ),
-          if (subtitle.isNotEmpty)
+          if (subtitle.isNotEmpty) ...[
+            SizedBox(height: 4 * layoutScale),
             Text(
               subtitle,
               maxLines: 1,
@@ -1743,8 +4532,9 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
                 height: 1.15,
               ),
             ),
+          ],
           if (article.imageUrl.isNotEmpty) ...[
-            SizedBox(height: 2 * layoutScale),
+            SizedBox(height: 10 * layoutScale),
             Center(
               child: SizedBox(
                 width: imgW,
@@ -1794,7 +4584,8 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             separatorBuilder: (_, _) => SizedBox(width: 10 * layoutScale),
             itemBuilder: (_, i) {
               final article = articles[i];
-              final label = article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
+              final label =
+                  article.name.trim().isEmpty ? 'Shoe' : article.name.trim();
               return SizedBox(
                 width: thumb,
                 child: Column(
@@ -1847,6 +4638,137 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
     );
   }
 
+  Widget _buildFootwearCarouselHeader(
+    List<ServiceFlowArticle> articles, {
+    required double layoutScale,
+    required double fontSize,
+    required double iconSize,
+  }) {
+    final cardW = (144 * layoutScale).clamp(120.0, 144.0);
+    final cardPad = (10 * layoutScale).clamp(8.0, 10.0);
+    final imgH = (66 * layoutScale).clamp(54.0, 72.0);
+    final closeSize = (22 * layoutScale).clamp(18.0, 24.0);
+    final gap = (24 * layoutScale).clamp(16.0, 24.0);
+    final focused = articles[_focusedArticleIndex.clamp(0, articles.length - 1)];
+    final focusedName = focused.name.trim();
+    final focusedSubtitle = focused.subtitle?.trim() ?? '';
+    final nameFs = (18 * layoutScale).clamp(15.0, 18.0);
+    final subtitleFs = (16 * layoutScale).clamp(14.0, 16.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: imgH + (cardPad * 2) + 6,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: articles.length,
+            separatorBuilder: (_, _) => SizedBox(width: gap),
+            itemBuilder: (_, i) {
+              final article = articles[i];
+              final isFocused = i == _focusedArticleIndex;
+              return GestureDetector(
+                onTap: () => _focusArticle(i),
+                child: SizedBox(
+                  width: cardW,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: cardW,
+                        padding: EdgeInsets.all(cardPad),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isFocused
+                                ? const Color(0xFF12899B)
+                                : const Color(0xFFABABAB),
+                            width: isFocused ? 3 : 1,
+                          ),
+                        ),
+                        // Same rack tilt/angle as My Rack / article detail.
+                        child: SizedBox(
+                          height: imgH,
+                          width: double.infinity,
+                          child: article.imageUrl.isEmpty
+                              ? Icon(
+                                  Icons.checkroom_outlined,
+                                  color: const Color(0xFF8D8D8D),
+                                  size: iconSize * 0.7,
+                                )
+                              : ArticleRackShoeImage(
+                                  imageUrl: article.imageUrl,
+                                  width: cardW - cardPad * 2,
+                                  height: imgH,
+                                  fit: BoxFit.contain,
+                                  alignment: Alignment.center,
+                                  placeholder: Icon(
+                                    Icons.checkroom_outlined,
+                                    color: const Color(0xFF8D8D8D),
+                                    size: iconSize * 0.7,
+                                  ),
+                                  errorPlaceholder: Icon(
+                                    Icons.checkroom_outlined,
+                                    color: const Color(0xFF8D8D8D),
+                                    size: iconSize * 0.7,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      Positioned(
+                        top: -closeSize * 0.35,
+                        right: -closeSize * 0.2,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _removeFlowArticle(i),
+                          child: SvgPicture.asset(
+                            isFocused
+                                ? 'assets/images/icons/repairmypair/close_selected.svg'
+                                : 'assets/images/icons/repairmypair/close_unselected.svg',
+                            width: closeSize,
+                            height: closeSize,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: (12 * layoutScale).clamp(8.0, 14.0)),
+        if (focusedName.isNotEmpty)
+          Text(
+            focusedName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFF11899B),
+              fontSize: nameFs,
+              fontWeight: FontWeight.w400,
+              height: 1.2,
+            ),
+          ),
+        if (focusedSubtitle.isNotEmpty) ...[
+          SizedBox(height: (8 * layoutScale).clamp(6.0, 10.0)),
+          Text(
+            focusedSubtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.montserrat(
+              color: Colors.black,
+              fontSize: subtitleFs,
+              fontWeight: FontWeight.w400,
+              height: 1.25,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildRepairFlowBody(double horizontal) {
     return ListView(
       padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
@@ -1866,14 +4788,15 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
             ),
           ),
         ],
-        if (widget.selectedArticles.isNotEmpty) ...[
+        if (_flowArticles.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: _buildSelectedFootwearHeader(
-              widget.selectedArticles,
+              _flowArticles,
               layoutScale: 1,
               fontSize: 16,
               iconSize: 52,
+              carousel: _isPerShoePhotoFlow || _flowArticles.length > 1,
             ),
           ),
         ],
@@ -2128,72 +5051,14 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
         ),
       ];
     }
-    if (s == 'wash') {
+    if (s == 'wash' || s == 'maintenance') {
       return [
-        _estimationCard(
-          title: 'Estimated cost',
-          amountRupees: kWashEstimateRupees,
-          subtitle: 'Estimated wash service charge',
+        _sectionTitle(
+          'How can we help you today?',
+          'Select one or more care options.',
         ),
-      ];
-    }
-    if (s == 'maintenance') {
-      return [
-        _sectionTitle('Choose a plan', 'Select how long you want coverage.'),
-        const SizedBox(height: 10),
-        ..._maintenancePlans.map((p) {
-          final sel = _selectedMaintenancePlan?.id == p.id;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              onTap: _submitting
-                  ? null
-                  : () => setState(() => _selectedMaintenancePlan = p),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: sel
-                      ? AppColors.primary.withOpacity(0.1)
-                      : AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: sel ? AppColors.primary : AppColors.border,
-                    width: sel ? 2 : 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      sel ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: sel ? AppColors.primary : AppColors.textTertiary,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        p.label,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '₹${p.priceRupees}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: sel ? AppColors.primary : AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
+        const SizedBox(height: 14),
+        _buildCareOptionsList(1),
       ];
     }
     if (s == 'donate' || s == 'dispose') {
@@ -2518,6 +5383,50 @@ class _ServiceSelectionPageState extends State<ServiceSelectionPage>
       ),
     );
   }
+}
+
+enum _DropOffKind { hub, cobbler }
+
+class _DayHours {
+  final String day;
+  final String openTime;
+  final String closeTime;
+  final bool isClosed;
+
+  const _DayHours({
+    required this.day,
+    required this.openTime,
+    required this.closeTime,
+    this.isClosed = false,
+  });
+}
+
+class _DropOffLocation {
+  final String id;
+  final String name;
+  final String address;
+  final String distanceLabel;
+  final String phone;
+  final String closesAt;
+  final bool isOpen;
+  final _DropOffKind kind;
+  final double sortMeters;
+  final List<_DayHours> weeklyHours;
+
+  const _DropOffLocation({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.distanceLabel,
+    required this.phone,
+    required this.closesAt,
+    required this.isOpen,
+    this.kind = _DropOffKind.hub,
+    this.sortMeters = double.infinity,
+    this.weeklyHours = const [],
+  });
+
+  String get kindLabel => kind == _DropOffKind.cobbler ? 'Cobbler' : 'Hub';
 }
 
 class ServiceOptionData {

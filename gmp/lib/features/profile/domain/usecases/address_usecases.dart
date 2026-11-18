@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../entities/address.dart';
 import '../entities/user_profile.dart';
 import '../repositories/profile_repository.dart';
@@ -66,11 +68,15 @@ class AddFamilyMember {
     required String accessToken,
     required String name,
     required String relation,
+    required String gender,
+    required DateTime dateOfBirth,
   }) =>
       repository.addFamilyMember(
         accessToken: accessToken,
         name: name,
         relation: relation,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
       );
 }
 
@@ -83,12 +89,16 @@ class UpdateFamilyMember {
     required String memberId,
     String? name,
     String? relation,
+    String? gender,
+    DateTime? dateOfBirth,
   }) =>
       repository.updateFamilyMember(
         accessToken: accessToken,
         memberId: memberId,
         name: name,
         relation: relation,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
       );
 }
 
@@ -103,5 +113,37 @@ class DeleteFamilyMember {
       repository.deleteFamilyMember(
         accessToken: accessToken,
         memberId: memberId,
+      );
+}
+
+class SwitchActiveProfile {
+  final ProfileRepository repository;
+  SwitchActiveProfile(this.repository);
+
+  Future<UserProfile> call({
+    required String accessToken,
+    required String profileId,
+  }) =>
+      repository.switchActiveProfile(
+        accessToken: accessToken,
+        profileId: profileId,
+      );
+}
+
+class UploadFamilyMemberImage {
+  final ProfileRepository repository;
+  UploadFamilyMemberImage(this.repository);
+
+  Future<String> call({
+    required String accessToken,
+    required String memberId,
+    required Uint8List imageBytes,
+    required String fileName,
+  }) =>
+      repository.uploadFamilyMemberImage(
+        accessToken: accessToken,
+        memberId: memberId,
+        imageBytes: imageBytes,
+        fileName: fileName,
       );
 }

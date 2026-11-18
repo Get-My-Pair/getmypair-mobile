@@ -38,11 +38,12 @@ class FootwearOrientationDetector {
   static const double _margin = 0.06;
 
   static Future<FootwearOrientationResult> detect(File file) async {
-    // Only clear right-facing profiles are accepted — unknowns are rejected.
+    // Reject only when we can confidently say the shoe faces left.
+    // Ambiguous / unreadable frames pass so capture is not blocked.
     if (!file.existsSync()) {
       return const FootwearOrientationResult(
         facing: FootwearFacing.unknown,
-        isRightFacing: false,
+        isRightFacing: true,
       );
     }
     try {
@@ -52,7 +53,7 @@ class FootwearOrientationDetector {
       debugPrint('FootwearOrientationDetector: $e');
       return const FootwearOrientationResult(
         facing: FootwearFacing.unknown,
-        isRightFacing: false,
+        isRightFacing: true,
       );
     }
   }
@@ -60,7 +61,7 @@ class FootwearOrientationDetector {
   static FootwearOrientationResult _analyze(Uint8List bytes) {
     const unknown = FootwearOrientationResult(
       facing: FootwearFacing.unknown,
-      isRightFacing: false,
+      isRightFacing: true,
     );
 
     final image = img.decodeImage(bytes);

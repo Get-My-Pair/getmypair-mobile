@@ -31,6 +31,15 @@
 
   <title>gmp</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Google Maps for Flutter web (google_maps_flutter).
+    Keep key in sync with android/local.properties GOOGLE_MAPS_API_KEY.
+    Enable "Maps JavaScript API" for this key in Google Cloud Console.
+  -->
+  <!-- Replace YOUR_GOOGLE_MAPS_API_KEY locally; restrict by HTTP referrer + Maps JavaScript API. -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=marker,geometry"></script>
+
   <style>
     html,
     body {

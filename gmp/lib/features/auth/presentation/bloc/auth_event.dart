@@ -13,11 +13,16 @@ class AuthCheckStatus extends AuthEvent {
 
 class AuthSendOTP extends AuthEvent {
   final String mobile;
+  /// Optional Android SMS Retriever app hash for silent autofill.
+  final String? androidSmsHash;
 
-  const AuthSendOTP(this.mobile);
+  const AuthSendOTP(
+    this.mobile, {
+    this.androidSmsHash,
+  });
 
   @override
-  List<Object?> get props => [mobile];
+  List<Object?> get props => [mobile, androidSmsHash];
 }
 
 class AuthVerifyOTP extends AuthEvent {
@@ -71,7 +76,8 @@ class AuthLogout extends AuthEvent {
   const AuthLogout();
 }
 
-/// Session expired (e.g. refresh token failed). Clear local data only and show login; do not call logout API.
+/// Session refresh failed. Auto-logout is disabled — kept for compatibility;
+/// AuthBloc re-checks local session instead of clearing it.
 class AuthSessionExpired extends AuthEvent {
   const AuthSessionExpired();
 }

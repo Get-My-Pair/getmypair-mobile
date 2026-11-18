@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
@@ -8,13 +10,28 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
+import 'package:gmp/features/service/presentation/pages/active_services_page.dart';
 import 'package:gmp/features/service/presentation/pages/maintain_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/pages/pair_progress_page.dart';
 import 'package:gmp/features/service/presentation/pages/repair_my_pair_page.dart';
-import 'package:gmp/features/service/presentation/pages/service_request_list_page.dart';
+import 'package:gmp/features/service/presentation/pages/service_history_page.dart';
 import 'package:gmp/features/service/presentation/pages/wash_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/utils/care_active_job.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
+import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 
-class CareMyPairPage extends StatelessWidget {
+class CareMyPairPage extends StatefulWidget {
   const CareMyPairPage({super.key});
+
+  @override
+  State<CareMyPairPage> createState() => _CareMyPairPageState();
+}
+
+class _CareMyPairPageState extends State<CareMyPairPage> {
+  /// Flip to `true` when real video/article assets are ready.
+  /// Paths and UI below stay in place — only visibility is gated.
+  static const bool _showStaticMedia = false;
+  String _searchQuery = '';
 
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
@@ -23,6 +40,7 @@ class CareMyPairPage extends StatelessWidget {
     bottomRight: Radius.circular(50),
   );
 
+  // --- Static media paths (placeholder assets; enable via _showStaticMedia) ---
   static const List<_VideoCardData> _repairVideos = [
     _VideoCardData(
       title: 'Fix Scuffs Fast: At-Home Sole & Upper Repair',
@@ -92,15 +110,107 @@ class CareMyPairPage extends StatelessWidget {
     fontWeight: FontWeight.w400,
   );
 
-  static TextStyle _sectionTitle(BuildContext context) =>
+  TextStyle _sectionTitle(BuildContext context) =>
       GoogleFonts.boldonse(textStyle: _sectionTitleStyle);
 
-  static TextStyle _subsectionLabel(BuildContext context) =>
+  TextStyle _subsectionLabel(BuildContext context) =>
       GoogleFonts.montserrat(
         color: Colors.black,
         fontSize: 16,
         fontWeight: FontWeight.w400,
       );
+
+  List<HubSearchHit> _careSearchHits(BuildContext context) {
+    final hits = <HubSearchHit>[
+      HubSearchHit(
+        title: 'RepairMyPair',
+        subtitle: 'Professional repair & restoration',
+        keywords: ['repair', 'fix', 'cobbler', 'care', 'caremypair', 'service'],
+        icon: Icons.build_outlined,
+        onTap: () => _openRepairPage(context),
+      ),
+      HubSearchHit(
+        title: 'MaintainMyPair',
+        subtitle: 'Routine care & maintenance',
+        keywords: [
+          'maintain',
+          'maintenance',
+          'care',
+          'caremypair',
+          'service',
+        ],
+        icon: Icons.handyman_outlined,
+        onTap: () => _openMaintainPage(context),
+      ),
+      HubSearchHit(
+        title: 'WashMyPair',
+        subtitle: 'Deep wash & refresh',
+        keywords: [
+          'wash',
+          'clean',
+          'cleaning',
+          'care',
+          'caremypair',
+          'service',
+        ],
+        icon: Icons.local_laundry_service_outlined,
+        onTap: () => _openWashPage(context),
+      ),
+      HubSearchHit(
+        title: 'Active Service',
+        subtitle: 'Track your current Care request',
+        keywords: ['active', 'track', 'status', 'ongoing', 'care', 'jobs'],
+        icon: Icons.timelapse_rounded,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ActiveServicesPage(),
+            ),
+          );
+        },
+      ),
+      HubSearchHit(
+        title: 'Service History',
+        subtitle: 'Past CareMyPair requests',
+        keywords: ['history', 'past', 'requests', 'orders', 'care', 'review'],
+        icon: Icons.history_rounded,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const ServiceHistoryPage(),
+            ),
+          );
+        },
+      ),
+    ];
+
+    if (_showStaticMedia) {
+      for (final article in _articles) {
+        hits.add(
+          HubSearchHit(
+            title: article.title,
+            subtitle: 'Care article',
+            keywords: ['article', 'guide', 'diy', 'care', ...article.title.toLowerCase().split(' ')],
+            icon: Icons.article_outlined,
+            onTap: () => showComingSoon(context, feature: 'Care articles'),
+          ),
+        );
+      }
+      for (final video in [..._repairVideos, ..._maintainVideos, ..._washVideos]) {
+        hits.add(
+          HubSearchHit(
+            title: video.title,
+            subtitle: 'Care video',
+            keywords: ['video', 'diy', 'care', ...video.title.toLowerCase().split(' ')],
+            icon: Icons.play_circle_outline,
+            onTap: () => showComingSoon(context, feature: 'Care DIY videos'),
+          ),
+        );
+      }
+    }
+
+    return hits;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,10 +218,12 @@ class CareMyPairPage extends StatelessWidget {
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
     const topInset = 52.0;
+    final searching = _searchQuery.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -127,88 +239,111 @@ class CareMyPairPage extends StatelessWidget {
                   horizontalInset,
                   0,
                 ),
-              child: DecoratedBox(
-                decoration: const ShapeDecoration(
-                  color: Color(0xFFF0F0F0),
-                  shape: RoundedRectangleBorder(borderRadius: _panelRadius),
-                  shadows: [
-                    BoxShadow(
-                      color: Color(0x19000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: _panelRadius,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
-                    children: [
-                      _Header(onBack: () => Navigator.maybePop(context)),
-                      const SizedBox(height: 24),
-                      const _SearchBar(),
-                      const SizedBox(height: 28),
-                      Text('Our Services', style: _sectionTitle(context)),
-                      const SizedBox(height: 14),
-                      _PrimaryServiceCard(
-                        label: 'RepairMyPair',
-                        onTap: () => _openRepairPage(context),
+                child: DecoratedBox(
+                  decoration: const ShapeDecoration(
+                    color: Color(0xFFF0F0F0),
+                    shape: RoundedRectangleBorder(borderRadius: _panelRadius),
+                    shadows: [
+                      BoxShadow(
+                        color: Color(0x19000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
                       ),
-                      const SizedBox(height: 19),
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: _SecondaryServiceCard(
-                                label: 'Maintain\nMyPair',
-                                iconAsset:
-                                    'assets/images/icons/caremypair/mmp.svg',
-                                iconSize: 68,
-                                onTap: () => _openMaintainPage(context),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: _panelRadius,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 6, 120),
+                      children: [
+                        _Header(onBack: () => Navigator.maybePop(context)),
+                        const SizedBox(height: 24),
+                        HubGradientSearchBar(
+                          hintText: 'Search CareMyPair',
+                          showClear: true,
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
+                        ),
+                        const SizedBox(height: 28),
+                        if (searching)
+                          HubScopedSearchResults(
+                            query: _searchQuery,
+                            hubName: 'CareMyPair',
+                            hits: _careSearchHits(context),
+                          )
+                        else ...[
+                          Text('Our Services', style: _sectionTitle(context)),
+                          const SizedBox(height: 14),
+                          _PrimaryServiceCard(
+                            label: 'RepairMyPair',
+                            onTap: () => _openRepairPage(context),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _SecondaryServiceCard(
+                                  firstLine: 'Maintain',
+                                  secondLine: 'MyPair',
+                                  iconAsset:
+                                      'assets/images/icons/caremypair/mmp.svg',
+                                  iconScale: 1.12,
+                                  onTap: () => _openMaintainPage(context),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _SecondaryServiceCard(
-                                label: 'Wash\nMyPair',
-                                iconAsset:
-                                    'assets/images/icons/caremypair/wmp.svg',
-                                iconLabelGap: 20,
-                                onTap: () => _openWashPage(context),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _SecondaryServiceCard(
+                                  firstLine: 'Wash',
+                                  secondLine: 'MyPair',
+                                  iconAsset:
+                                      'assets/images/icons/caremypair/wmp.svg',
+                                  onTap: () => _openWashPage(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const _ActiveServiceSection(),
+                          const SizedBox(height: 16),
+                          _ServiceHistoryButton(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const ServiceHistoryPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          if (_showStaticMedia) ...[
+                            const SizedBox(height: 32),
+                            ..._buildVideoSections(context),
+                            const SizedBox(height: 24),
+                            Text('Articles', style: _subsectionLabel(context)),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              height: 172,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _articles.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 13),
+                                itemBuilder: (_, i) => _ArticleCard(
+                                  data: _articles[i],
+                                  onTap: () => showComingSoon(
+                                    context,
+                                    feature: 'Care articles',
+                                  ),
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      const _MyServiceRequestsSection(),
-                      const SizedBox(height: 32),
-                      ..._buildVideoSections(context),
-                      const SizedBox(height: 24),
-                      Text('Articles', style: _subsectionLabel(context)),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        height: 172,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _articles.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(width: 13),
-                          itemBuilder: (_, i) => _ArticleCard(
-                            data: _articles[i],
-                            onTap: () => showComingSoon(
-                              context,
-                              feature: 'Care articles',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
           ),
           const Positioned(
             left: 0,
@@ -222,7 +357,8 @@ class CareMyPairPage extends StatelessWidget {
   }
 
   List<Widget> _buildVideoSections(BuildContext context) {
-    const sections = <({String title, List<_VideoCardData> videos, String feature})>[
+    const sections =
+        <({String title, List<_VideoCardData> videos, String feature})>[
       (
         title: 'Repair at Home: Quick Fixes',
         videos: _repairVideos,
@@ -302,7 +438,11 @@ class _Header extends StatelessWidget {
           onPressed: onBack,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 26, height: 26),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35), size: 24),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF062F35),
+            size: 24,
+          ),
         ),
         const SizedBox(width: 6),
         Text(
@@ -318,88 +458,98 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Same shell as [ArticleListPage] rack search (gradient stroke, white fill); no filter icon.
-class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+/// Matches Rehome Sell/Rent tile proportions (~2.25× wide as tall).
+class _ServiceCardMetrics {
+  final double height;
+  final double padH;
+  final double padV;
+  final double iconSize;
+  final double gap;
+  final double fontSize;
+  final double lineGap;
+
+  const _ServiceCardMetrics({
+    required this.height,
+    required this.padH,
+    required this.padV,
+    required this.iconSize,
+    required this.gap,
+    required this.fontSize,
+    required this.lineGap,
+  });
+
+  /// Same content metrics as home hub action cards — scales with card/screen.
+  static _ServiceCardMetrics fromWidth(double cardWidth) {
+    final height = (cardWidth / 2.25).clamp(64.0, 100.0);
+    final padH = (cardWidth * 0.10).clamp(10.0, 20.0);
+    final padV = (height * 0.12).clamp(6.0, 14.0);
+    final innerH = (height - padV * 2).clamp(18.0, height);
+    final innerW = (cardWidth - padH * 2).clamp(18.0, cardWidth);
+    // Track card size; keep room for the two-line label.
+    final iconSize = math
+        .min(innerH * 0.82, innerW * 0.42)
+        .clamp(28.0, 64.0)
+        .toDouble();
+    final gap = (innerW * 0.06).clamp(6.0, 14.0);
+    final fontSize = (innerH * 0.30).clamp(11.0, 17.0);
+    final lineGap = (innerH * 0.08).clamp(4.0, 12.0);
+    return _ServiceCardMetrics(
+      height: height,
+      padH: padH,
+      padV: padV,
+      iconSize: iconSize,
+      gap: gap,
+      fontSize: fontSize,
+      lineGap: lineGap,
+    );
+  }
+}
+
+class _TwoLineLabel extends StatelessWidget {
+  final String first;
+  final String second;
+  final Color color;
+  final double fontSize;
+  final double lineGap;
+
+  const _TwoLineLabel({
+    required this.first,
+    required this.second,
+    required this.color,
+    this.fontSize = 15,
+    this.lineGap = 5,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const searchHeight = 42.0;
-    final width = MediaQuery.sizeOf(context).width;
-    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final style = GoogleFonts.boldonse(
+      color: color,
+      fontSize: fontSize,
+      height: 1.28,
+      fontWeight: FontWeight.w400,
+    );
 
-    return Container(
-      height: searchHeight,
-      padding: const EdgeInsets.all(1.2),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFF0F6876), Color(0xFF09E0FF)],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(first, maxLines: 1, softWrap: false, style: style),
         ),
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(100),
+        SizedBox(height: lineGap),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(second, maxLines: 1, softWrap: false, style: style),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Row(
-            children: [
-              SvgPicture.asset(
-                'assets/images/search.svg',
-                width: 22,
-                height: 22,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  textAlignVertical: TextAlignVertical.center,
-                  style: GoogleFonts.montserrat(
-                    fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    isCollapsed: false,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    hintText: 'Search',
-                    hintStyle: GoogleFonts.montserrat(
-                      color: Colors.black.withValues(alpha: 0.34),
-                      fontSize: (16.0 * uiScale).clamp(13.0, 17.0),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 }
 
 class _PrimaryServiceCard extends StatelessWidget {
-  static const double _cardHeight = 86;
   final String label;
   final VoidCallback onTap;
 
@@ -407,119 +557,109 @@ class _PrimaryServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          height: _cardHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF09DFFF), Color(0xFF063035)],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Full-width card: use half-width metrics so height matches side tiles.
+        final m = _ServiceCardMetrics.fromWidth(constraints.maxWidth / 2);
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x19000000),
-                blurRadius: 4,
-                offset: Offset(0, 4),
+            child: Container(
+              height: m.height,
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: m.padH,
+                vertical: m.padV,
               ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/images/icons/caremypair/rmp.svg',
-                width: 42,
-                height: 42,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF09DFFF), Color(0xFF063035)],
+                  begin: Alignment.bottomRight,
+                  end: Alignment.topLeft,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x19000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.boldonse(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
+              child: Align(
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: m.iconSize,
+                      height: m.iconSize,
+                      child: SvgPicture.asset(
+                        'assets/images/icons/caremypair/rmp.svg',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    SizedBox(width: m.gap),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          softWrap: false,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.boldonse(
+                            color: Colors.white,
+                            fontSize: m.fontSize,
+                            height: 1.28,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
 class _SecondaryServiceCard extends StatelessWidget {
-  static const double _minCardHeight = 86;
-  final String label;
+  final String firstLine;
+  final String secondLine;
   final String iconAsset;
-  final double iconSize;
-  final double labelFontSize;
-  final double iconLabelGap;
+  final double iconScale;
   final VoidCallback onTap;
 
   const _SecondaryServiceCard({
-    required this.label,
+    required this.firstLine,
+    required this.secondLine,
     required this.iconAsset,
-    this.iconSize = 38,
-    this.labelFontSize = 16,
-    this.iconLabelGap = 12,
+    this.iconScale = 1,
     required this.onTap,
   });
 
-  TextStyle get _labelStyle => GoogleFonts.boldonse(
-        color: const Color(0xFF062F35),
-        fontSize: labelFontSize,
-        height: 1.1,
-        fontWeight: FontWeight.w400,
-      );
-
-  Widget _buildLabelText() {
-    final lines = label.split('\n');
-    if (lines.length >= 2) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(lines[0], textAlign: TextAlign.center, style: _labelStyle),
-          const SizedBox(height: 5),
-          Text(lines[1], textAlign: TextAlign.center, style: _labelStyle),
-        ],
-      );
-    }
-    return Text(
-      label,
-      maxLines: 2,
-      textAlign: TextAlign.center,
-      style: _labelStyle,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      clipBehavior: Clip.none,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: _minCardHeight),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFDFE7E9),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF0F6876)),
-            boxShadow: const [
+    const radius = BorderRadius.all(Radius.circular(10));
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final m = _ServiceCardMetrics.fromWidth(constraints.maxWidth);
+        final iconSize = m.iconSize * iconScale;
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            borderRadius: radius,
+            boxShadow: [
               BoxShadow(
                 color: Color(0x19000000),
                 blurRadius: 4,
@@ -527,50 +667,97 @@ class _SecondaryServiceCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                iconAsset,
-                width: iconSize,
-                height: iconSize,
+          child: Material(
+            color: const Color(0xFFDFE7E9),
+            shape: const RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(
+                width: 1,
+                color: Color(0xFF0F6876),
               ),
-              SizedBox(width: iconLabelGap),
-              Flexible(child: _buildLabelText()),
-            ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: radius,
+              child: SizedBox(
+                height: m.height,
+                width: double.infinity,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: m.padH,
+                    vertical: m.padV,
+                  ),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: iconSize,
+                          height: iconSize,
+                          child: SvgPicture.asset(
+                            iconAsset,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        SizedBox(width: m.gap),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: _TwoLineLabel(
+                            first: firstLine,
+                            second: secondLine,
+                            color: const Color(0xFF062F35),
+                            fontSize: m.fontSize,
+                            lineGap: m.lineGap,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-/// Shows the "My service requests" entry only once the user has at least one
-/// created request. Hidden entirely (including its top spacing) otherwise.
-class _MyServiceRequestsSection extends StatefulWidget {
-  const _MyServiceRequestsSection();
+/// Newest active Care request — delivery ETA or drop-off confirm; opens Active Jobs.
+class _ActiveServiceSection extends StatefulWidget {
+  const _ActiveServiceSection();
 
   @override
-  State<_MyServiceRequestsSection> createState() =>
-      _MyServiceRequestsSectionState();
+  State<_ActiveServiceSection> createState() => _ActiveServiceSectionState();
 }
 
-class _MyServiceRequestsSectionState extends State<_MyServiceRequestsSection> {
-  bool _hasRequests = false;
+class _ActiveServiceSectionState extends State<_ActiveServiceSection> {
+  Map<String, dynamic>? _active;
+  Set<String> _dropOffConfirmed = {};
+  bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadHasRequests();
+    _load();
   }
 
-  Future<void> _loadHasRequests() async {
+  Future<void> _load() async {
+    final confirmed = await CareActiveJob.loadDropOffConfirmedIds();
     final tokenResult = await sl<GetValidAccessToken>().call();
     if (!mounted) return;
 
     await tokenResult.fold(
-      (_) async {},
+      (_) async {
+        setState(() {
+          _dropOffConfirmed = confirmed;
+          _loaded = true;
+          _active = null;
+        });
+      },
       (token) async {
         try {
           final res = await sl<DioClient>().get(
@@ -580,44 +767,364 @@ class _MyServiceRequestsSectionState extends State<_MyServiceRequestsSection> {
           final list =
               ((res['data'] as Map<String, dynamic>?)?['requests'] as List?) ??
                   const [];
+          final active = list
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .where(CareActiveJob.isActiveCareRequest)
+              .toList();
           if (!mounted) return;
-          setState(() => _hasRequests = list.isNotEmpty);
+          setState(() {
+            _dropOffConfirmed = confirmed;
+            _loaded = true;
+            _active = active.isEmpty ? null : active.first;
+          });
         } catch (_) {
-          // Keep hidden on failure.
+          if (!mounted) return;
+          setState(() {
+            _dropOffConfirmed = confirmed;
+            _loaded = true;
+          });
         }
       },
     );
   }
 
+  Future<void> _openActiveJobs() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const ActiveServicesPage(),
+      ),
+    );
+    if (mounted) _load();
+  }
+
+  Future<void> _openProgress() async {
+    final active = _active;
+    if (active == null) {
+      await _openActiveJobs();
+      return;
+    }
+    final id = CareActiveJob.requestId(active);
+    if (id.isEmpty) {
+      await _openActiveJobs();
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            PairProgressPage(requestId: id, initialRequest: active),
+      ),
+    );
+    if (mounted) _load();
+  }
+
+  Future<void> _confirmDroppedOff() async {
+    final active = _active;
+    if (active == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm drop off'),
+        content: const Text(
+          'Have you dropped off your pair at the service location?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not yet'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes, dropped off'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    await CareActiveJob.markDropOffConfirmed(CareActiveJob.requestId(active));
+    if (!mounted) return;
+    await showAppFeedbackAlert(
+      context,
+      message: 'Drop off confirmed',
+      type: AppFeedbackType.success,
+    );
+    if (mounted) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!_hasRequests) return const SizedBox.shrink();
+    if (!_loaded) return const SizedBox.shrink();
+
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final titleSize = (16.0 * uiScale).clamp(14.0, 16.0);
+    final chevronSize = (28.0 * uiScale).clamp(24.0, 28.0);
+    final active = _active;
+    final needsDrop = active != null &&
+        CareActiveJob.needsDropOffConfirm(
+          active,
+          dropOffConfirmedIds: _dropOffConfirmed,
+        );
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 16),
-        _MyServiceRequestsCard(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ServiceRequestListPage(),
-              ),
-            );
-          },
+        const SizedBox(height: 28),
+        InkWell(
+          onTap: _openActiveJobs,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Active Service',
+                    style: GoogleFonts.boldonse(
+                      color: const Color(0xFF062F35),
+                      fontSize: titleSize,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: const Color(0xFF062F35),
+                  size: chevronSize,
+                ),
+              ],
+            ),
+          ),
         ),
+        const SizedBox(height: 12),
+        if (active == null)
+          Text(
+            'No pairs are currently in treatment',
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF9AA4A6),
+              fontSize: (14.0 * uiScale).clamp(12.0, 14.0),
+              fontWeight: FontWeight.w500,
+            ),
+          )
+        else
+          _ActiveServiceCard(
+            serviceLabel: CareActiveJob.serviceLabel(
+              (active['serviceType'] ?? '').toString(),
+            ),
+            needsDropOffConfirm: needsDrop,
+            estimatedDeliveryLabel: CareActiveJob.formatEstimatePretty(
+              CareActiveJob.estimatedDelivery(active),
+            ),
+            onTap: _openProgress,
+            onMarkDroppedOff: _confirmDroppedOff,
+          ),
       ],
     );
   }
 }
 
-class _MyServiceRequestsCard extends StatelessWidget {
-  final VoidCallback onTap;
+class _ActiveServiceCard extends StatelessWidget {
+  static const String _servIcon = 'assets/images/icons/profile/serv.svg';
 
-  const _MyServiceRequestsCard({required this.onTap});
+  final String serviceLabel;
+  final bool needsDropOffConfirm;
+  final String estimatedDeliveryLabel;
+  final VoidCallback onTap;
+  final VoidCallback onMarkDroppedOff;
+
+  const _ActiveServiceCard({
+    required this.serviceLabel,
+    required this.needsDropOffConfirm,
+    required this.estimatedDeliveryLabel,
+    required this.onTap,
+    required this.onMarkDroppedOff,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final iconBox = (46.0 * uiScale).clamp(42.0, 52.0);
+    final iconPad = (11.0 * uiScale).clamp(9.0, 12.0);
+    final iconSize = (iconBox - iconPad * 2).clamp(20.0, 30.0);
+    final labelSize = (14.0 * uiScale).clamp(12.0, 14.0);
+    final valueSize = (16.0 * uiScale).clamp(14.0, 16.0);
+    final gap = (16.0 * uiScale).clamp(12.0, 16.0);
+    final btnH = (24.0 * uiScale).clamp(22.0, 28.0);
+    final btnFs = (10.0 * uiScale).clamp(9.0, 11.0);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: (14.0 * uiScale).clamp(10.0, 14.0),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: iconBox,
+                height: iconBox,
+                padding: EdgeInsets.all(iconPad),
+                decoration: BoxDecoration(
+                  color: const Color(0x33D9D9D9),
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: const Color(0xFF12899B),
+                    width: 1,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  _servIcon,
+                  width: iconSize,
+                  height: iconSize,
+                ),
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Service Type',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: labelSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
+                          Text(
+                            serviceLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF5A5A5A),
+                              fontSize: valueSize,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: (16.0 * uiScale).clamp(12.0, 20.0)),
+                    if (needsDropOffConfirm)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Confirm Drop off',
+                            maxLines: 1,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: labelSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: onMarkDroppedOff,
+                              borderRadius: BorderRadius.circular(50),
+                              child: Ink(
+                                height: btnH,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (9.0 * uiScale).clamp(8.0, 12.0),
+                                  vertical: (4.0 * uiScale).clamp(3.0, 5.0),
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.centerRight,
+                                    end: Alignment.centerLeft,
+                                    colors: [
+                                      Color(0xFF0CADC5),
+                                      Color(0xFF063239),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(50),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x19000000),
+                                      blurRadius: 2,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Mark as Dropped off',
+                                    maxLines: 1,
+                                    style: GoogleFonts.boldonse(
+                                      color: Colors.white,
+                                      fontSize: btnFs,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Estimated Delivery',
+                            maxLines: 1,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: labelSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: (6.0 * uiScale).clamp(4.0, 8.0)),
+                          Text(
+                            estimatedDeliveryLabel,
+                            maxLines: 1,
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF12899B),
+                              fontSize: valueSize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ServiceHistoryButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ServiceHistoryButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
+    final fontSize = (15.0 * uiScale).clamp(13.0, 15.0);
+    final iconSize = (26.0 * uiScale).clamp(22.0, 26.0);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -625,64 +1132,45 @@ class _MyServiceRequestsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: (18.0 * uiScale).clamp(14.0, 18.0),
+            vertical: (14.0 * uiScale).clamp(12.0, 16.0),
+          ),
           decoration: BoxDecoration(
-            color: const Color(0xFFDFE7E9),
+            color: const Color(0xFFE8EEEE),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF0F6876)),
+            border: Border.all(color: const Color(0xFF0F6876), width: 1),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x19000000),
+                color: Color(0x14000000),
                 blurRadius: 4,
-                offset: Offset(0, 4),
+                offset: Offset(0, 3),
               ),
             ],
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F6876).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.assignment_turned_in_outlined,
-                  color: Color(0xFF062F35),
-                  size: 26,
-                ),
+              Icon(
+                Icons.history_rounded,
+                color: const Color(0xFF062F35),
+                size: iconSize,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'My service requests',
-                      style: GoogleFonts.boldonse(
-                        color: const Color(0xFF062F35),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                      ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Service History',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: GoogleFonts.boldonse(
+                      color: const Color(0xFF062F35),
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w400,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'View progress on all your active and past services.',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        fontSize: 12,
-                        height: 1.3,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFF062F35),
-                size: 28,
               ),
             ],
           ),
@@ -715,49 +1203,49 @@ class _VideoCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(6),
           child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            data.image.startsWith('http')
-                ? Image.network(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
-                  )
-                : Image.asset(
-                    data.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.grey.shade400),
+            borderRadius: BorderRadius.circular(6),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                data.image.startsWith('http')
+                    ? Image.network(
+                        data.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            Container(color: Colors.grey.shade400),
+                      )
+                    : Image.asset(
+                        data.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            Container(color: Colors.grey.shade400),
+                      ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0xCC000000)],
+                    ),
                   ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xCC000000)],
                 ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: Text(
-                data.title,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.montserrat(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                Positioned(
+                  left: 8,
+                  right: 8,
+                  bottom: 8,
+                  child: Text(
+                    data.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       ),
@@ -791,91 +1279,93 @@ class _ArticleCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(5),
         child: Container(
-      width: 160,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFFE2E2E2)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 4,
-            offset: Offset(2, 2),
-            spreadRadius: 0,
+          width: 160,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: const Color(0xFFE2E2E2)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 4,
+                offset: Offset(2, 2),
+                spreadRadius: 0,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(5),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-                  child: data.image.startsWith('http')
-                      ? Image.network(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        )
-                      : Image.asset(
-                          data.image,
-                          width: 160,
-                          height: 86,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 160,
-                            height: 86,
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(9, 9, 9, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          data.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.montserrat(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Expanded(
-                          child: Text(
-                            data.summary,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.montserrat(
-                              color: const Color(0xFF929292),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(5),
+                      ),
+                      child: data.image.startsWith('http')
+                          ? Image.network(
+                              data.image,
+                              width: 160,
+                              height: 86,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 160,
+                                height: 86,
+                                color: Colors.grey.shade300,
+                              ),
+                            )
+                          : Image.asset(
+                              data.image,
+                              width: 160,
+                              height: 86,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                width: 160,
+                                height: 86,
+                                color: Colors.grey.shade300,
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(9, 9, 9, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.montserrat(
+                                color: Colors.black,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Expanded(
+                              child: Text(
+                                data.summary,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.montserrat(
+                                  color: const Color(0xFF929292),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
         ),
       ),
     );

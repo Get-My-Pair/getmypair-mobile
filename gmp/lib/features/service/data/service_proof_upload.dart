@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/core/constants/app_constants.dart';
+import 'package:gmp/core/constants/active_profile_header.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -81,6 +82,7 @@ class ServiceProofUpload {
     request.headers['X-App-Source'] = AppConstants.appSourceForApi;
     request.headers['X-App-Version'] = AppConstants.appVersion;
     request.headers['Accept'] = 'application/json';
+    ActiveProfileHeader.applyTo(request.headers);
     request.files.add(
       http.MultipartFile.fromBytes(
         'file',

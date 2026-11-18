@@ -11,7 +11,7 @@ import '../../../../features/payment/presentation/bloc/payment_bloc.dart';
 import '../../../../features/payment/presentation/pages/payment_failed_page.dart';
 import '../../../../features/payment/presentation/pages/payment_request_page.dart';
 import '../../../../features/payment/presentation/pages/transaction_details_page.dart';
-import '../../../../features/service/presentation/pages/service_request_details_page.dart';
+import '../../../../features/service/presentation/pages/pair_progress_page.dart';
 import '../../../../injection_container.dart';
 import 'user_notifications.dart';
 
@@ -22,10 +22,22 @@ Future<void> navigateFromUserNotification(
   final serviceRequestId = item.serviceRequestId;
   if (serviceRequestId == null || serviceRequestId.isEmpty) return;
 
+  // Cost approval / pay prompts → same Purchase Summary as Cart Pay Now
+  // when a payable amount is available; otherwise open request details.
   if (item.isCostApproval) {
+    final amount = item.payableAmount;
+    if (amount != null && amount > 0) {
+      await _openPurchaseSummary(
+        context,
+        serviceRequestId: serviceRequestId,
+        amount: amount,
+        requestLabel: item.title,
+      );
+      return;
+    }
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => ServiceRequestDetailsPage(requestId: serviceRequestId),
+        builder: (_) => PairProgressPage(requestId: serviceRequestId),
       ),
     );
     return;
@@ -38,7 +50,7 @@ Future<void> navigateFromUserNotification(
 
   await Navigator.of(context).push<void>(
     MaterialPageRoute(
-      builder: (_) => ServiceRequestDetailsPage(requestId: serviceRequestId),
+      builder: (_) => PairProgressPage(requestId: serviceRequestId),
     ),
   );
 }
@@ -121,19 +133,36 @@ Future<void> _openPaymentPage(
         return;
       }
 
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => BlocProvider(
-            create: (_) => sl<PaymentBloc>(),
-            child: PaymentRequestPage(
-              serviceRequestId: serviceRequestId,
-              amount: amount,
-              requestLabel: 'Request #${serviceRequestId.substring(0, 8)}…',
-            ),
-          ),
-        ),
+      await _openPurchaseSummary(
+        context,
+        serviceRequestId: serviceRequestId,
+        amount: amount,
+        requestLabel: 'Request #${serviceRequestId.substring(0, 8)}…',
       );
     },
+  );
+}
+
+Future<void> _openPurchaseSummary(
+  BuildContext context, {
+  required String serviceRequestId,
+  required double amount,
+  String? requestLabel,
+  String? serviceType,
+}) async {
+  if (!context.mounted) return;
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => BlocProvider(
+        create: (_) => sl<PaymentBloc>(),
+        child: PaymentRequestPage(
+          serviceRequestId: serviceRequestId,
+          amount: amount,
+          serviceType: serviceType,
+          requestLabel: requestLabel,
+        ),
+      ),
+    ),
   );
 }
 

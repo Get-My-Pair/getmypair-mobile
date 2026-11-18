@@ -40,14 +40,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final TextEditingController _nameController;
   late final TextEditingController _nickNameController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _passwordController;
   late final TextEditingController _usSizeController;
   late final TextEditingController _ukSizeController;
   late final TextEditingController _euroSizeController;
   late final TextEditingController _abnormalityController;
   bool _isPickingImage = false;
-  bool _showPassword = false;
 
   static String _prefsKey(String userId, String field) =>
       'profile_extra_${userId}_$field';
@@ -55,13 +52,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.profile.name);
+    final profile = widget.profile;
+    _nameController = TextEditingController(text: profile.activeDisplayName);
     _nickNameController = TextEditingController(
-      text: _deriveNickname(widget.profile.name),
+      text: _deriveNickname(profile.activeDisplayName),
     );
-    _phoneController = TextEditingController(text: widget.profile.phone);
-    _emailController = TextEditingController(text: widget.profile.email ?? '');
-    _passwordController = TextEditingController();
+    _phoneController = TextEditingController(
+      text: profile.isSelfActive ? profile.phone : '',
+    );
     _usSizeController = TextEditingController(text: '10');
     _ukSizeController = TextEditingController(text: '09');
     _euroSizeController = TextEditingController(text: '41');
@@ -73,7 +71,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final prefs = sl.isRegistered<SharedPreferences>()
         ? sl<SharedPreferences>()
         : await SharedPreferences.getInstance();
-    final id = widget.profile.id;
+    final id = _extrasId(widget.profile);
     if (!mounted) return;
     setState(() {
       _nickNameController.text =
@@ -95,7 +93,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final prefs = sl.isRegistered<SharedPreferences>()
         ? sl<SharedPreferences>()
         : await SharedPreferences.getInstance();
-    final id = widget.profile.id;
+    final id = _extrasId(widget.profile);
     await prefs.setString(
       _prefsKey(id, 'nickname'),
       _nickNameController.text.trim(),
@@ -110,11 +108,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _prefsKey(id, 'abnormality'),
       _abnormalityController.text.trim(),
     );
-    final pwd = _passwordController.text.trim();
-    if (pwd.isNotEmpty && pwd != '........') {
-      // Password change is not supported via API yet — store only a flag for UX.
-      await prefs.setBool(_prefsKey(id, 'password_updated_local'), true);
-    }
   }
 
   @override
@@ -122,8 +115,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _nameController.dispose();
     _nickNameController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
     _usSizeController.dispose();
     _ukSizeController.dispose();
     _euroSizeController.dispose();
@@ -201,9 +192,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
               child: Crop(
                 image: originalBytes,
                 controller: controller,
-                onCropped: (bytes) {
-                  croppedBytes = bytes;
-                  Navigator.of(ctx).pop();
+                onCropped: (result) {
+                  if (result is CropSuccess) {
+                    croppedBytes = result.croppedImage;
+                    Navigator.of(ctx).pop();
+                  }
                 },
               ),
             ),
@@ -240,6 +233,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  String _extrasId(UserProfile profile) =>
+      profile.isSelfActive ? profile.id : profile.activeProfileId;
+
+  void _bindFieldsFrom(UserProfile profile) {
+    _nameController.text = profile.activeDisplayName;
+    if (_nickNameController.text.trim().isEmpty) {
+      _nickNameController.text = _deriveNickname(profile.activeDisplayName);
+    }
+    if (profile.isSelfActive) {
+      _phoneController.text = profile.phone;
+    } else {
+      _phoneController.text = '';
+    }
+  }
+
+  UserProfile _liveProfile() {
+    final state = context.read<ProfileBloc>().state;
+    if (state is ProfileLoaded) return state.profile;
+    if (state is ProfileUpdating) return state.profile;
+    if (state is ProfileImageUploading) return state.profile;
+    if (state is AddressActionLoading) return state.profile;
+    if (state is ProfileSwitching) return state.profile;
+    if (state is ProfileError && state.profile != null) return state.profile!;
+    return widget.profile;
+  }
+
   String _deriveNickname(String fullName) {
     final cleaned = fullName.trim();
     if (cleaned.isEmpty) return '';
@@ -267,11 +286,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final betweenGroups = sx(20, 10, 20);
     final afterPassword = sx(18, 10, 20);
 
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 3; i++) {
       h += labelLineHeight();
       h += labelToField;
       h += fieldBlockHeight(i);
-      h += i < 4 ? betweenGroups : afterPassword;
+      h += i < 2 ? betweenGroups : afterPassword;
     }
 
     h += labelLineHeight();
@@ -281,6 +300,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     h += labelLineHeight();
     h += sx(6, 3, 6);
     h += sx(14, 11, 14) * 1.34;
+    h += sx(12, 8, 16);
     h += sx(50, 44, 52);
 
     return h;
@@ -291,7 +311,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final name = _nameController.text.trim();
     final nick = _nickNameController.text.trim();
     final phone = _phoneController.text.trim();
-    final trimmedEmail = _emailController.text.trim();
     if (name.isEmpty) {
       await showAppFeedbackAlert(
         context,
@@ -325,27 +344,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
       return;
     }
 
-    final nameChanged = name != widget.profile.name.trim();
-    final prevEmail = (widget.profile.email ?? '').trim().toLowerCase();
-    final newEmailNorm =
-        trimmedEmail.isEmpty ? '' : trimmedEmail.toLowerCase();
-    var emailChanged = prevEmail != newEmailNorm;
-    if (trimmedEmail.isEmpty &&
-        widget.profile.email != null &&
-        widget.profile.email!.trim().isNotEmpty) {
-      await showAppFeedbackAlert(
-        context,
-        message:
-            'Removing your email is not supported in the app yet. Leave the field as-is or enter a new email.',
-        type: AppFeedbackType.warning,
-      );
-      emailChanged = false;
-    }
+    final profile = _liveProfile();
+    final member = profile.activeFamilyMember;
+    final currentName = member?.name.trim() ?? profile.name.trim();
+    final nameChanged = name != currentName;
 
     await _persistLocalExtras();
     if (!mounted) return;
 
-    if (!nameChanged && !emailChanged) {
+    if (!nameChanged) {
       await showAppFeedbackAlert(
         context,
         message: 'Profile details saved.',
@@ -354,11 +361,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
       return;
     }
 
+    if (member != null) {
+      context.read<ProfileBloc>().add(
+            FamilyMemberUpdateRequested(
+              accessToken: widget.accessToken,
+              memberId: member.id,
+              name: name,
+              relation: member.relation,
+            ),
+          );
+      return;
+    }
+
     context.read<ProfileBloc>().add(
           ProfileUpdateRequested(
             accessToken: widget.accessToken,
             name: nameChanged ? name : null,
-            email: emailChanged && trimmedEmail.isNotEmpty ? trimmedEmail : null,
           ),
         );
   }
@@ -369,6 +387,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       listenWhen: (previous, current) {
         if (current is ProfileError) return true;
         if (previous is ProfileUpdating && current is ProfileLoaded) return true;
+        if (previous is ProfileImageUploading && current is ProfileLoaded) {
+          return true;
+        }
         return false;
       },
       listener: (context, state) async {
@@ -381,6 +402,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           return;
         }
         if (state is ProfileLoaded) {
+          _bindFieldsFrom(state.profile);
           await showAppFeedbackAlert(
             context,
             message: 'Your profile has been updated.',
@@ -399,10 +421,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ? state.profile
             : widget.profile;
 
+        final avatarUrl = profile.activeProfileImage;
         final avatarImage =
-            profile.profileImage != null && profile.profileImage!.isNotEmpty
-            ? NetworkImage(profile.profileImage!)
+            avatarUrl != null && avatarUrl.isNotEmpty
+            ? NetworkImage(avatarUrl)
             : null;
+        final editingFamily = !profile.isSelfActive;
 
         final statusTop = MediaQuery.paddingOf(context).top;
         final size = MediaQuery.sizeOf(context);
@@ -552,48 +576,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   controller: _phoneController,
                                   keyboardType: TextInputType.phone,
                                   scale: contentScale,
-                                ),
-                                SizedBox(
-                                  height: fieldGroupSpace,
-                                ),
-                                _buildLabel('E-Mail Address', contentScale),
-                                SizedBox(
-                                  height: labelToFieldSpace,
-                                ),
-                                _profileField(
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  scale: contentScale,
-                                ),
-                                SizedBox(
-                                  height: fieldGroupSpace,
-                                ),
-                                _buildLabel('Password', contentScale),
-                                SizedBox(
-                                  height: labelToFieldSpace,
-                                ),
-                                _profileField(
-                                  formFieldKey: ValueKey(_showPassword),
-                                  controller: _passwordController,
-                                  obscureText: !_showPassword,
-                                  obscuringCharacter: '*',
-                                  keyboardType: TextInputType.visiblePassword,
-                                  scale: contentScale,
-                                  suffix: IconButton(
-                                    onPressed: () => setState(
-                                      () => _showPassword = !_showPassword,
-                                    ),
-                                    splashRadius:
-                                        (22 * contentScale).clamp(18.0, 22.0),
-                                    icon: Icon(
-                                      _showPassword
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
-                                      color: const Color(0xCCFFFFFF),
-                                      size: (24 * contentScale)
-                                          .clamp(20.0, 24.0),
-                                    ),
-                                  ),
+                                  readOnly: editingFamily,
+                                  hint: editingFamily
+                                      ? 'Saved on My Profile'
+                                      : null,
                                 ),
                                 SizedBox(
                                   height:
@@ -649,6 +635,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   scale: contentScale,
                                   hint: 'e.g. Wide Foot',
                                 ),
+                                SizedBox(
+                                  height: (12 * contentScale).clamp(8.0, 16.0),
+                                ),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: _buildSaveChangesButton(
@@ -687,7 +676,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         const SizedBox(width: 7),
         Expanded(
           child: Text(
-            'Edit Profile',
+            profile.isSelfActive
+                ? 'Edit Profile'
+                : 'Edit ${familyRelationLabel(profile.activeFamilyMember?.relation ?? '')}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             softWrap: false,
@@ -709,13 +700,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 top: (6 * scale).clamp(3.0, 6.0),
                 right: 0,
                 child: CircleAvatar(
+                  key: ValueKey(
+                    profile.activeProfileImage ?? profile.activeProfileId,
+                  ),
                   radius: (35.0 * scale).clamp(24.0, 35.0),
                   backgroundColor: const Color(0x33FFFFFF),
                   backgroundImage: avatarImage,
                   child: avatarImage == null
                       ? Text(
-                          profile.name.isNotEmpty
-                              ? profile.name[0].toUpperCase()
+                          profile.activeDisplayName.isNotEmpty
+                              ? profile.activeDisplayName[0].toUpperCase()
                               : 'U',
                           style: GoogleFonts.boldonse(
                             fontSize: (18 * scale).clamp(12.0, 18.0),
