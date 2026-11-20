@@ -1,0 +1,15 @@
+What's new in 3.0.5
+
+• Rent My Pair: list your footwear for rent (week, month, 3 months, 6 months, 1 year) and track approval
+• Available Rent Footwear: browse approved pairs and pay to send a rent request to the owner
+• Donate My Pair: upload a photo and send a donation request for review
+• Recycle My Pair: a 5-step guide to recycling footwear
+• Stability and performance improvements
+
+---
+Paste into Play Console → Production → Create release → Release notes
+(Keep under 500 characters; English en-IN / en-US)
+
+Short paste (≤500 chars):
+
+Rent My Pair: list footwear for rent and track approval, or browse approved pairs and send a rent request. Donate My Pair: send a donation request with a photo. Recycle My Pair: a 5-step recycling guide. Stability improvements.
