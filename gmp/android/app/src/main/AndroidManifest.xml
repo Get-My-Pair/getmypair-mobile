@@ -20,6 +20,12 @@
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
+    <!-- Portrait lock must not block devices that don't report this feature
+         (tablets, desktop, Android XR). The activity still prefers portrait. -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false"
+        tools:node="replace" />
     <!--
  Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
