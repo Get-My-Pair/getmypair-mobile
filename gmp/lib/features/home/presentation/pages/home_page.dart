@@ -449,7 +449,12 @@ class _HomePageState extends State<HomePage> {
     };
 
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => page),
+      MaterialPageRoute<void>(
+        settings: RouteSettings(
+          name: kind == _HomeServiceKind.thriftHub ? 'thrift_store' : null,
+        ),
+        builder: (_) => page,
+      ),
     );
     if (mounted) _loadHomeStats();
   }

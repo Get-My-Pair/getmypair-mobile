@@ -14,6 +14,13 @@ class ThriftProductPage extends StatefulWidget {
 }
 
 class _ThriftProductPageState extends State<ThriftProductPage> {
+  /// On [BgTheme] image — use light ink; keep dark ink only on white cards/chips.
+  static const _onBg = Color(0xFFFFFFFF);
+  static const _onBgMuted = Color(0xFFE8F4F6);
+  static const _ink = Color(0xFF062F35);
+  static const _accent = Color(0xFF0F6876);
+  static const _discount = Color(0xFF09E0FF);
+
   final _page = PageController();
   int _index = 0;
 
@@ -42,12 +49,12 @@ class _ThriftProductPageState extends State<ThriftProductPage> {
                     children: [
                       IconButton(
                         onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35)),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _onBg),
                       ),
                       Expanded(
                         child: Text(
                           item.brand,
-                          style: GoogleFonts.boldonse(fontSize: 18, color: const Color(0xFF062F35)),
+                          style: GoogleFonts.boldonse(fontSize: 18, color: _onBg),
                         ),
                       ),
                     ],
@@ -82,17 +89,20 @@ class _ThriftProductPageState extends State<ThriftProductPage> {
                             height: 6,
                             margin: const EdgeInsets.symmetric(horizontal: 3),
                             decoration: BoxDecoration(
-                              color: on ? const Color(0xFF0F6876) : const Color(0xFFB7C9CC),
+                              color: on ? _onBg : _onBg.withValues(alpha: 0.35),
                               borderRadius: BorderRadius.circular(6),
                             ),
                           );
                         }),
                       ),
                       const SizedBox(height: 14),
-                      Text(item.brand, style: GoogleFonts.montserrat(color: const Color(0xFF5A5A5A), fontWeight: FontWeight.w600)),
+                      Text(
+                        item.brand,
+                        style: GoogleFonts.montserrat(color: _onBgMuted, fontWeight: FontWeight.w600),
+                      ),
                       Text(
                         item.title,
-                        style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF062F35)),
+                        style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w700, color: _onBg),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -100,7 +110,7 @@ class _ThriftProductPageState extends State<ThriftProductPage> {
                         children: [
                           Text(
                             thriftMoney(item.price),
-                            style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w800, color: const Color(0xFF062F35)),
+                            style: GoogleFonts.montserrat(fontSize: 24, fontWeight: FontWeight.w800, color: _onBg),
                           ),
                           if (item.discountPercent > 0) ...[
                             const SizedBox(width: 8),
@@ -108,13 +118,13 @@ class _ThriftProductPageState extends State<ThriftProductPage> {
                               thriftMoney(item.mrp),
                               style: GoogleFonts.montserrat(
                                 decoration: TextDecoration.lineThrough,
-                                color: const Color(0xFF8A8A8A),
+                                color: _onBgMuted.withValues(alpha: 0.75),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '${item.discountPercent}% off',
-                              style: GoogleFonts.montserrat(color: const Color(0xFF12899B), fontWeight: FontWeight.w700),
+                              style: GoogleFonts.montserrat(color: _discount, fontWeight: FontWeight.w700),
                             ),
                           ],
                         ],
@@ -133,11 +143,17 @@ class _ThriftProductPageState extends State<ThriftProductPage> {
                       ),
                       if (item.model.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        Text('Model ${item.model}', style: GoogleFonts.montserrat()),
+                        Text(
+                          'Model ${item.model}',
+                          style: GoogleFonts.montserrat(color: _onBgMuted),
+                        ),
                       ],
                       if (item.description.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        Text(item.description, style: GoogleFonts.montserrat(height: 1.4)),
+                        Text(
+                          item.description,
+                          style: GoogleFonts.montserrat(height: 1.4, color: _onBgMuted),
+                        ),
                       ],
                     ],
                   ),
@@ -155,12 +171,15 @@ class _ThriftProductPageState extends State<ThriftProductPage> {
                             );
                           },
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F6876),
+                      backgroundColor: _accent,
+                      foregroundColor: _onBg,
+                      disabledBackgroundColor: _onBg.withValues(alpha: 0.35),
+                      disabledForegroundColor: _onBg,
                       minimumSize: const Size.fromHeight(52),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     child: Text(
-                      item.stock < 1 ? 'Out of stock' : 'Buy now',
+                      item.stock < 1 ? 'Out of stock' : 'Pay now',
                       style: GoogleFonts.montserrat(fontWeight: FontWeight.w700, fontSize: 16),
                     ),
                   ),
@@ -180,7 +199,10 @@ class _ThriftProductPageState extends State<ThriftProductPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(label, style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.w600, color: _ink),
+      ),
     );
   }
 }

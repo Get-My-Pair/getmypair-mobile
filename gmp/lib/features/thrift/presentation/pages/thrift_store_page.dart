@@ -18,6 +18,12 @@ class ThriftStorePage extends StatefulWidget {
 }
 
 class _ThriftStorePageState extends State<ThriftStorePage> {
+  /// Text/icons on [BgTheme] image — dark teal is invisible on the cyan/teal bg.
+  static const _onBg = Color(0xFFFFFFFF);
+  static const _onBgMuted = Color(0xFFE8F4F6);
+  static const _ink = Color(0xFF062F35);
+  static const _accent = Color(0xFF0F6876);
+
   static const _categories = [
     'all',
     'sneakers',
@@ -106,11 +112,11 @@ class _ThriftStorePageState extends State<ThriftStorePage> {
                     children: [
                       IconButton(
                         onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35)),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _onBg),
                       ),
                       Text(
                         'Thrift Store',
-                        style: GoogleFonts.boldonse(fontSize: 22, color: const Color(0xFF062F35)),
+                        style: GoogleFonts.boldonse(fontSize: 22, color: _onBg),
                       ),
                     ],
                   ),
@@ -123,7 +129,7 @@ class _ThriftStorePageState extends State<ThriftStorePage> {
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       hintText: 'Search brand, shoe, size',
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF0F6876)),
+                      prefixIcon: const Icon(Icons.search, color: _accent),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -148,9 +154,11 @@ class _ThriftStorePageState extends State<ThriftStorePage> {
                       return ChoiceChip(
                         label: Text(label),
                         selected: selected,
-                        selectedColor: const Color(0xFF0F6876),
+                        selectedColor: _accent,
+                        backgroundColor: Colors.white,
+                        side: BorderSide(color: selected ? _accent : const Color(0xFFB7C9CC)),
                         labelStyle: GoogleFonts.montserrat(
-                          color: selected ? Colors.white : const Color(0xFF062F35),
+                          color: selected ? _onBg : _ink,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -174,13 +182,17 @@ class _ThriftStorePageState extends State<ThriftStorePage> {
 
   Widget _body() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF0F6876)));
+      return const Center(child: CircularProgressIndicator(color: _onBg));
     }
     if (_error.isNotEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(_error, textAlign: TextAlign.center),
+          child: Text(
+            _error,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.montserrat(color: _onBgMuted, height: 1.4),
+          ),
         ),
       );
     }
@@ -189,7 +201,7 @@ class _ThriftStorePageState extends State<ThriftStorePage> {
         child: Text(
           'No footwear yet.\nAdd pairs from Masteradmin → Thrift Store.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.montserrat(color: const Color(0xFF062F35)),
+          style: GoogleFonts.montserrat(color: _onBgMuted, height: 1.4),
         ),
       );
     }
