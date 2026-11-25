@@ -1,0 +1,15 @@
+What's new in 3.0.6
+
+- Thrift Store checkout: pay using your saved delivery address and profile details, with clear prompts if anything is missing
+- Order confirmation: a new "Order placed!" screen shows your order number, quantity, total and delivery address
+- Thrift Store readability: clearer text and icons on store and product pages
+- Better support for tablets and large-screen devices
+- Stability and performance improvements
+
+---
+Paste into Play Console > Production > Create release > Release notes
+(Keep under 500 characters; English en-IN / en-US)
+
+Short paste (under 500 chars):
+
+Thrift Store: faster checkout using your saved address and profile, plus a new order confirmation screen. Improved text readability across Thrift Store pages. Better support for tablets and large screens. Stability improvements.
