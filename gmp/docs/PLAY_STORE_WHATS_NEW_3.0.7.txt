@@ -1,0 +1,15 @@
+What's new in 3.0.7
+
+- Available Rent Footwear: browse pairs like a shop, open a product, and pay with secure checkout
+- Rent requests appear only after payment is completed
+- Closing checkout keeps the unpaid payment in your cart so you can finish later
+- Save My Pair: Donate and Recycle, with your donation requests shown when you have them
+- Stability and performance improvements
+
+---
+Paste into Play Console > Production > Create release > Release notes
+(Keep under 500 characters; English en-IN / en-US)
+
+Short paste (under 500 chars):
+
+Rent footwear now opens like a shop. Pay with secure checkout, and your request appears only after payment. If you close checkout, the payment stays in your cart. Save My Pair keeps Donate and Recycle, and shows your donation requests when you have them.
