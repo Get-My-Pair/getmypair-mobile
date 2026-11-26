@@ -35,3 +35,26 @@ void openCustomerCartPage(BuildContext context) {
     ),
   );
 }
+
+/// Leaves the current payment screen and opens the cart in its place.
+void replaceWithCustomerCart(BuildContext context) {
+  registerCustomerCartNavigation();
+
+  ProfileBloc? profileBloc;
+  try {
+    profileBloc = context.read<ProfileBloc>();
+  } catch (_) {
+    profileBloc = ProfileBlocAnchor.current;
+  }
+
+  const page = CartPage();
+  Navigator.of(context).pushReplacement(
+    MaterialPageRoute(
+      settings: const RouteSettings(name: '/cart'),
+      builder: (_) {
+        if (profileBloc == null || profileBloc.isClosed) return page;
+        return BlocProvider.value(value: profileBloc, child: page);
+      },
+    ),
+  );
+}

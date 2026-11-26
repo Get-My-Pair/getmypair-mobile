@@ -19,10 +19,11 @@ import '../../domain/usecases/payment_usecases.dart';
 import '../bloc/payment_bloc.dart';
 import '../utils/cart_navigation.dart';
 import '../utils/payment_amount_formatter.dart';
+import 'payment_checkout_page.dart';
 import 'payment_request_page.dart';
 
-/// Cart (4th nav): same light panel + card look as Active Progress / History.
-/// Unpaid → **Pay Now**; already paid → **Payment Paid** (no pay action).
+/// Cart (4th nav): unpaid payment requests only.
+/// Closing Zoho checkout with X lands here so the payment can be finished later.
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -135,11 +136,16 @@ class _CartPageState extends State<CartPage> {
             if (newlyPaid.isNotEmpty) {
               items = [
                 for (final row in items)
-                  newlyPaid.contains(row.id)
-                      ? row.copyWith(isPaid: true)
-                      : row,
+                  if (!newlyPaid.contains(row.id)) row,
               ];
             }
+          }
+
+          items = items.where((row) => !row.isPaid).toList();
+          final open = await _openCheckoutItems(token);
+          final seen = items.map((row) => row.id).toSet();
+          for (final row in open) {
+            if (seen.add(row.id)) items.add(row);
           }
 
           if (!mounted) return;
@@ -158,8 +164,41 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
+  Future<List<_CartPayableItem>> _openCheckoutItems(String token) async {
+    try {
+      final res = await sl<DioClient>().get(
+        ApiEndpoints.paymentOpenCart,
+        accessToken: token,
+      );
+      final raw = ((res['data'] as Map?)?['items'] as List?) ?? const [];
+      return raw
+          .whereType<Map>()
+          .map((row) => _CartPayableItem.fromOpenCheckout(Map<String, dynamic>.from(row)))
+          .whereType<_CartPayableItem>()
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<void> _openPurchaseSummary(_CartPayableItem item) async {
     if (item.isPaid) return;
+    if (item.checkoutUrl.isNotEmpty) {
+      final paid = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => PaymentCheckoutPage(
+            checkoutUrl: item.checkoutUrl,
+            orderId: item.orderId,
+            paymentId: item.paymentId,
+            serviceRequestId: item.id,
+            amount: item.amount,
+          ),
+        ),
+      );
+      if (!mounted) return;
+      if (paid == true) await _load();
+      return;
+    }
     final paid = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => BlocProvider(
@@ -635,6 +674,9 @@ class _CartPayableItem {
   final String imageUrl;
   final double amount;
   final bool isPaid;
+  final String checkoutUrl;
+  final String orderId;
+  final String paymentId;
 
   const _CartPayableItem({
     required this.id,
@@ -647,7 +689,34 @@ class _CartPayableItem {
     required this.imageUrl,
     required this.amount,
     required this.isPaid,
+    this.checkoutUrl = '',
+    this.orderId = '',
+    this.paymentId = '',
   });
+
+  static _CartPayableItem? fromOpenCheckout(Map<String, dynamic> row) {
+    final url = (row['checkoutUrl'] ?? '').toString().trim();
+    final amount = (row['amount'] as num?)?.toDouble() ?? double.tryParse('${row['amount']}') ?? 0;
+    if (url.isEmpty || amount <= 0) return null;
+    final channel = (row['channel'] ?? '').toString();
+    final title = (row['title'] ?? 'Payment').toString();
+    final serviceTitle = channel == 'thrift_store' ? 'Thrift' : 'Rent';
+    return _CartPayableItem(
+      id: (row['paymentId'] ?? row['orderId'] ?? title).toString(),
+      serviceType: channel == 'thrift_store' ? 'thrift' : 'rent',
+      serviceTitle: serviceTitle,
+      requestLabel: (row['orderId'] ?? '').toString(),
+      brand: title,
+      model: (row['subtitle'] ?? '').toString(),
+      option: serviceTitle,
+      imageUrl: (row['imageUrl'] ?? '').toString(),
+      amount: amount,
+      isPaid: false,
+      checkoutUrl: url,
+      orderId: (row['orderId'] ?? '').toString(),
+      paymentId: (row['paymentId'] ?? '').toString(),
+    );
+  }
 
   _CartPayableItem copyWith({bool? isPaid}) {
     return _CartPayableItem(
@@ -701,8 +770,9 @@ class _CartPayableItem {
             .toUpperCase()
             .trim();
 
-    // Keep unpaid cart rows + paid active rows (show Payment Paid).
-    if (!isPaid) {
+    // Cart lists payment requests that are still unpaid.
+    if (isPaid) return null;
+    {
       final needsPay = paymentState.isEmpty ||
           paymentState == 'PAYMENT_PENDING' ||
           paymentState == 'PAYMENT_INITIATED' ||

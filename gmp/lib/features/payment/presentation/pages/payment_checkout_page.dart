@@ -14,6 +14,7 @@ import '../../domain/usecases/payment_usecases.dart';
 import '../bloc/payment_bloc.dart';
 import '../services/payment_analytics.dart';
 import '../services/payment_external_launcher.dart';
+import '../utils/cart_navigation.dart';
 import '../widgets/payment_loader.dart';
 import '../widgets/payment_page_shell.dart';
 import 'payment_failed_page.dart';
@@ -397,11 +398,23 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     super.dispose();
   }
 
+  void _moveToCart() {
+    if (_handledSuccess || !mounted) return;
+    replaceWithCustomerCart(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return PaymentPageShell(
       title: 'Secure checkout',
       subtitle: 'Complete payment in the window below.',
+      actions: [
+        IconButton(
+          tooltip: 'Close',
+          onPressed: _moveToCart,
+          icon: const Icon(Icons.close_rounded, color: PaymentPageTheme.titleColor),
+        ),
+      ],
       body: kIsWeb
           ? Center(
               child: Padding(

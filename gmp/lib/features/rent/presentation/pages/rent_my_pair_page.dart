@@ -74,7 +74,7 @@ class RentMyPairPage extends StatelessWidget {
                         const SizedBox(height: 12),
                         _OptionCard(
                           title: 'Available Rent Footwear',
-                          subtitle: 'See every approved pair. Pay to send a rent request to the owner.',
+                          subtitle: 'Browse approved pairs like a shop. Pay with Zoho. The request shows only after payment.',
                           icon: Icons.inventory_2_outlined,
                           onTap: () {
                             Navigator.of(context).push(

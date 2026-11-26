@@ -4,7 +4,8 @@ import 'package:gmp/features/auth/domain/entities/user.dart';
 import 'package:gmp/features/auth/domain/usecases/get_current_user.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/rent/data/rent_remote_datasource.dart';
-import 'package:gmp/features/rent/presentation/pages/rent_pay_page.dart';
+import 'package:gmp/features/rent/presentation/pages/rent_footwear_detail_page.dart';
+import 'package:gmp/features/thrift/thrift_catalog.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -16,6 +17,9 @@ class AvailableRentFootwearPage extends StatefulWidget {
 }
 
 class _AvailableRentFootwearPageState extends State<AvailableRentFootwearPage> {
+  static const _onBg = Color(0xFFFFFFFF);
+  static const _onBgMuted = Color(0xFFE8F4F6);
+
   bool _loading = true;
   String? _error;
   String? _myId;
@@ -63,113 +67,136 @@ class _AvailableRentFootwearPageState extends State<AvailableRentFootwearPage> {
         children: [
           ...BgTheme.background(),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F0F0),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.maybePop(context),
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF062F35)),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.maybePop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _onBg),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Available Rent Footwear',
+                          style: GoogleFonts.boldonse(fontSize: 18, color: _onBg),
                         ),
-                        Expanded(
-                          child: Text(
-                            'Available Rent Footwear',
-                            style: GoogleFonts.boldonse(color: const Color(0xFF062F35), fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: _body()),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _body() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: _onBg));
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(_error!, textAlign: TextAlign.center, style: GoogleFonts.montserrat(color: _onBgMuted)),
+        ),
+      );
+    }
+    if (_listings.isEmpty) {
+      return Center(
+        child: Text(
+          'No approved footwear is available yet.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserrat(color: _onBgMuted),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: GridView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.62,
+        ),
+        itemCount: _listings.length,
+        itemBuilder: (context, index) {
+          final item = _listings[index];
+          final mine = _myId != null && item.ownerId == _myId;
+          return Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () async {
+                final paid = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => RentFootwearDetailPage(listing: item, mine: mine),
+                  ),
+                );
+                if (paid == true) _load();
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: ThriftImage(url: item.imageUrl)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.ownerName.isEmpty ? 'Community pair' : item.ownerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 11,
+                            color: const Color(0xFF5A5A5A),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF062F35),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          thriftMoney(item.price),
+                          style: GoogleFonts.montserrat(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF062F35),
+                          ),
+                        ),
+                        Text(
+                          mine ? 'Your listing' : item.durationLabel,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 11,
+                            color: const Color(0xFF12899B),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
-                    Expanded(
-                      child: _loading
-                          ? const Center(child: CircularProgressIndicator(color: Color(0xFF0F6876)))
-                          : _error != null
-                              ? Center(child: Text(_error!))
-                              : _listings.isEmpty
-                                  ? const Center(child: Text('No approved footwear is available yet.'))
-                                  : RefreshIndicator(
-                                      onRefresh: _load,
-                                      child: ListView.separated(
-                                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                                        itemCount: _listings.length,
-                                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                                        itemBuilder: (context, index) {
-                                          final item = _listings[index];
-                                          final mine = _myId != null && item.ownerId == _myId;
-                                          return Material(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: InkWell(
-                                              borderRadius: BorderRadius.circular(12),
-                                              onTap: mine
-                                                  ? null
-                                                  : () async {
-                                                      final paid = await Navigator.of(context).push<bool>(
-                                                        MaterialPageRoute(
-                                                          builder: (_) => RentPayPage(listing: item),
-                                                        ),
-                                                      );
-                                                      if (paid == true) _load();
-                                                    },
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(10),
-                                                child: Row(
-                                                  children: [
-                                                    ClipRRect(
-                                                      borderRadius: BorderRadius.circular(8),
-                                                      child: Image.network(
-                                                        item.imageUrl,
-                                                        width: 84,
-                                                        height: 84,
-                                                        fit: BoxFit.cover,
-                                                        errorBuilder: (_, _, _) => const SizedBox(
-                                                          width: 84,
-                                                          height: 84,
-                                                          child: Icon(Icons.image_not_supported),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 12),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(item.title, style: GoogleFonts.montserrat(fontWeight: FontWeight.w600)),
-                                                          Text(item.ownerName.isEmpty ? 'Community pair' : item.ownerName),
-                                                          Text('${item.durationLabel} · ₹${item.price}'),
-                                                          const SizedBox(height: 4),
-                                                          Text(
-                                                            mine ? 'Your listing' : 'Pay to request',
-                                                            style: GoogleFonts.montserrat(
-                                                              color: const Color(0xFF0F6876),
-                                                              fontWeight: FontWeight.w600,
-                                                              fontSize: 13,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

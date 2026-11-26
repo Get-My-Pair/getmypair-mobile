@@ -16,6 +16,7 @@ import '../bloc/payment_event.dart';
 import '../bloc/payment_state.dart';
 import '../services/payment_analytics.dart';
 import '../services/payment_error_handler.dart';
+import '../utils/cart_navigation.dart';
 import '../utils/payment_amount_formatter.dart';
 import '../widgets/pay_now_button.dart';
 import '../widgets/payment_loader.dart';
@@ -367,7 +368,7 @@ class _PaymentRequestPageState extends State<PaymentRequestPage> {
               ),
               IconButton(
                 tooltip: 'Close',
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: () => replaceWithCustomerCart(context),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.tightFor(
                   width: 40,

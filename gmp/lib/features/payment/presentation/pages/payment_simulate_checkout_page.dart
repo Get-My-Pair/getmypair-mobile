@@ -12,6 +12,7 @@ import '../bloc/payment_event.dart';
 import '../bloc/payment_state.dart';
 import '../services/payment_analytics.dart';
 import '../../domain/utils/payment_simulate_utils.dart';
+import '../utils/cart_navigation.dart';
 import '../utils/payment_amount_formatter.dart';
 import '../widgets/payment_loader.dart';
 import '../widgets/payment_page_shell.dart';
@@ -189,6 +190,13 @@ class _PaymentSimulateCheckoutPageState extends State<PaymentSimulateCheckoutPag
       },
       child: PaymentPageShell(
         title: 'Secure checkout',
+        actions: [
+          IconButton(
+            tooltip: 'Close',
+            onPressed: () => replaceWithCustomerCart(context),
+            icon: const Icon(Icons.close_rounded, color: PaymentPageTheme.titleColor),
+          ),
+        ],
         subtitle: widget.zohoFallback
             ? 'Zoho is unreachable — showing a simulated checkout preview.'
             : 'Simulated Zoho checkout — no real charge.',

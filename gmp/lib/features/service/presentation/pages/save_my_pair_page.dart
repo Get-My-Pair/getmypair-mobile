@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gmp/core/bgtheme.dart';
-import 'package:gmp/core/widgets/app_feedback_alert.dart';
+import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
+import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
+import 'package:gmp/features/donate/data/donate_remote_datasource.dart';
 import 'package:gmp/features/donate/presentation/pages/donate_request_page.dart';
 import 'package:gmp/features/recycle/presentation/pages/recycle_slideshow_page.dart';
-import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
-import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
-import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
+import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Save hub — DonateMyPair creates a photo request; RecycleMyPair walks the process.
+/// Save hub — two actions only. Donation requests appear below when any exist.
 class SaveMyPairPage extends StatefulWidget {
   const SaveMyPairPage({super.key});
 
@@ -17,11 +17,6 @@ class SaveMyPairPage extends StatefulWidget {
 }
 
 class _SaveMyPairPageState extends State<SaveMyPairPage> {
-  /// Flip to `true` when real video assets are ready.
-  /// Paths and UI below stay in place — only visibility is gated.
-  static const bool _showStaticMedia = false;
-  String _searchQuery = '';
-
   static const BorderRadius _panelRadius = BorderRadius.only(
     topLeft: Radius.circular(20),
     topRight: Radius.circular(20),
@@ -29,97 +24,40 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
     bottomRight: Radius.circular(50),
   );
 
-  // --- Static media paths (placeholder assets; enable via _showStaticMedia) ---
-  static const List<_VideoCardData> _saveVideos = [
-    _VideoCardData(
-      title: 'Give a Pair a Second Life',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
-    _VideoCardData(
-      title: 'What to Donate and What to Recycle',
-      image: 'assets/images/img/caremypair/vid2.png',
-    ),
-    _VideoCardData(
-      title: 'Prep Footwear Before You Pass It On',
-      image: 'assets/images/img/caremypair/vid13.png',
-    ),
-  ];
+  List<DonateRequestItem> _requests = const [];
 
-  static const TextStyle _sectionTitleStyle = TextStyle(
-    color: Color(0xFF062F35),
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
-  );
+  @override
+  void initState() {
+    super.initState();
+    _loadRequests();
+  }
 
-  TextStyle _sectionTitle(BuildContext context) =>
-      GoogleFonts.boldonse(textStyle: _sectionTitleStyle);
-
-  TextStyle _subsectionLabel(BuildContext context) =>
-      GoogleFonts.montserrat(
-        color: Colors.black,
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-      );
-
-  List<HubSearchHit> _saveSearchHits(BuildContext context) {
-    final hits = <HubSearchHit>[
-      HubSearchHit(
-        title: 'DonateMyPair',
-        subtitle: 'Give pairs a second life',
-        keywords: [
-          'donate',
-          'charity',
-          'give',
-          'save',
-          'savemypair',
-          'service',
-        ],
-        icon: Icons.volunteer_activism_outlined,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const DonateRequestPage()),
-          );
-        },
-      ),
-      HubSearchHit(
-        title: 'RecycleMyPair',
-        subtitle: 'Responsible footwear recycling',
-        keywords: [
-          'recycle',
-          'recycling',
-          'save',
-          'savemypair',
-          'service',
-        ],
-        icon: Icons.recycling_outlined,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const RecycleSlideshowPage()),
-          );
-        },
-      ),
-    ];
-
-    if (_showStaticMedia) {
-      for (final video in _saveVideos) {
-        hits.add(
-          HubSearchHit(
-            title: video.title,
-            subtitle: 'Save video',
-            keywords: [
-              'video',
-              'diy',
-              'save',
-              ...video.title.toLowerCase().split(' '),
-            ],
-            icon: Icons.play_circle_outline,
-            onTap: () => showComingSoon(context, feature: 'Save DIY videos'),
-          ),
-        );
-      }
+  Future<void> _loadRequests() async {
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    final token = tokenResult.fold<String?>((_) => null, (value) => value);
+    if (token == null) return;
+    try {
+      final requests = await sl<DonateRemoteDataSource>().getMine(token);
+      if (!mounted) return;
+      setState(() => _requests = requests);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _requests = const []);
     }
+  }
 
-    return hits;
+  Future<void> _openDonate() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DonateRequestPage()),
+    );
+    if (mounted) await _loadRequests();
+  }
+
+  String _statusLabel(String status) {
+    if (status == 'approved') return 'Approved';
+    if (status == 'rejected') return 'Rejected';
+    return 'Waiting for review';
   }
 
   @override
@@ -127,13 +65,10 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
     final width = MediaQuery.sizeOf(context).width;
     final uiScale = (width / 390).clamp(0.84, 1.12).toDouble();
     final horizontalInset = (10.0 * uiScale).clamp(8.0, 16.0);
-    const topInset = 52.0;
-    final searching = _searchQuery.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -143,12 +78,7 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalInset,
-                  topInset,
-                  horizontalInset,
-                  0,
-                ),
+                padding: EdgeInsets.fromLTRB(horizontalInset, 52, horizontalInset, 0),
                 child: DecoratedBox(
                   decoration: const ShapeDecoration(
                     color: Color(0xFFF0F0F0),
@@ -168,83 +98,96 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
                       children: [
                         _Header(onBack: () => Navigator.maybePop(context)),
                         const SizedBox(height: 24),
-                        HubGradientSearchBar(
-                          hintText: 'Search SaveMyPair',
-                          showClear: true,
-                          onChanged: (value) =>
-                              setState(() => _searchQuery = value),
-                        ),
-                        const SizedBox(height: 28),
-                        if (searching)
-                          HubScopedSearchResults(
-                            query: _searchQuery,
-                            hubName: 'SaveMyPair',
-                            hits: _saveSearchHits(context),
-                          )
-                        else ...[
-                          Text('Our Services', style: _sectionTitle(context)),
-                          const SizedBox(height: 14),
-                          IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: _ServiceCard(
-                                    label: 'Donate\nMyPair',
-                                    icon: Icons.volunteer_activism_outlined,
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => const DonateRequestPage(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _ServiceCard(
-                                    label: 'Recycle\nMyPair',
-                                    icon: Icons.recycling_outlined,
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              const RecycleSlideshowPage(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_showStaticMedia) ...[
-                            const SizedBox(height: 32),
-                            Text(
-                              'Pass It On',
-                              style: _sectionTitle(context),
-                            ),
-                            const SizedBox(height: 14),
-                            Text('Videos', style: _subsectionLabel(context)),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              height: 113,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _saveVideos.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(width: 14),
-                                itemBuilder: (_, index) => _VideoCard(
-                                  data: _saveVideos[index],
-                                  onTap: () => showComingSoon(
-                                    context,
-                                    feature: 'Save DIY videos',
-                                  ),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _ServiceCard(
+                                  label: 'Donate\nMyPair',
+                                  icon: Icons.volunteer_activism_outlined,
+                                  onTap: _openDonate,
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _ServiceCard(
+                                  label: 'Recycle\nMyPair',
+                                  icon: Icons.recycling_outlined,
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const RecycleSlideshowPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_requests.isNotEmpty) ...[
+                          const SizedBox(height: 28),
+                          Text(
+                            'Your requests',
+                            style: GoogleFonts.boldonse(
+                              color: const Color(0xFF062F35),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 12),
+                          for (final item in _requests)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      item.imageUrl,
+                                      width: 64,
+                                      height: 64,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, _, _) => const SizedBox(
+                                        width: 64,
+                                        height: 64,
+                                        child: Icon(Icons.image_not_supported),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _statusLabel(item.status),
+                                          style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+                                        ),
+                                        if (item.note.isNotEmpty)
+                                          Text(
+                                            item.note,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        if (item.status == 'rejected' &&
+                                            (item.rejectReason ?? '').isNotEmpty)
+                                          Text(
+                                            item.rejectReason!,
+                                            style: const TextStyle(color: Colors.red, fontSize: 12),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ],
                     ),
@@ -263,7 +206,6 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
       ),
     );
   }
-
 }
 
 class _Header extends StatelessWidget {
@@ -369,72 +311,6 @@ class _ServiceCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VideoCardData {
-  final String title;
-  final String image;
-
-  const _VideoCardData({required this.title, required this.image});
-}
-
-class _VideoCard extends StatelessWidget {
-  final _VideoCardData data;
-  final VoidCallback onTap;
-
-  const _VideoCard({required this.data, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 174,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  data.image,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      Container(color: Colors.grey.shade400),
-                ),
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Color(0xCC000000)],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 8,
-                  right: 8,
-                  bottom: 8,
-                  child: Text(
-                    data.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.montserrat(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

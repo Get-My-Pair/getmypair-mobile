@@ -111,6 +111,7 @@ class ApiEndpoints {
   static String get rentListings => '$baseUrl$rentPrefix/listings';
   static String get rentAvailable => '$baseUrl$rentPrefix/available';
   static String get rentRequests => '$baseUrl$rentPrefix/requests';
+  static String get rentCheckout => '$baseUrl$rentPrefix/checkout';
   static String get rentIncomingRequests => '$baseUrl$rentPrefix/requests/incoming';
 
   static const String donatePrefix = '/api/donate';
@@ -176,6 +177,7 @@ class ApiEndpoints {
   static String get paymentLink => '$baseUrl$paymentPrefix/link';
   static String get paymentVerify => '$baseUrl$paymentPrefix/verify';
   static String get paymentOrder => '$baseUrl$paymentPrefix/order';
+  static String get paymentOpenCart => '$baseUrl$paymentPrefix/open-cart';
   static String paymentHistory({int page = 1, int limit = 20}) =>
       '$baseUrl$paymentPrefix/history?page=$page&limit=$limit';
   static String paymentById(String paymentId) =>
