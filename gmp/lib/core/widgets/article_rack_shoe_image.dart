@@ -34,10 +34,18 @@ class ArticleRackShoeImage extends StatelessWidget {
       return _maybeBox(emptyPh);
     }
 
+    // Phone photos are often 3000–4000px wide; decode at drawn size instead.
+    final media = MediaQuery.of(context);
+    final logicalWidth = width ?? media.size.width;
+    final decodeWidth =
+        (logicalWidth * media.devicePixelRatio).clamp(64.0, 1440.0).round();
+
     Widget image = Image.network(
       imageUrl,
       fit: fit,
       alignment: alignment,
+      cacheWidth: decodeWidth,
+      gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) => errPh,
     );
 

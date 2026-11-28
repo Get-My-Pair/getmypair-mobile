@@ -10,11 +10,13 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../features/auth/domain/usecases/get_valid_access_token.dart';
 import '../../../../injection_container.dart';
+import '../../domain/entities/payment.dart';
 import '../../domain/usecases/payment_usecases.dart';
 import '../bloc/payment_bloc.dart';
 import '../services/payment_analytics.dart';
 import '../services/payment_external_launcher.dart';
 import '../utils/cart_navigation.dart';
+import '../utils/payment_amount_formatter.dart';
 import '../widgets/payment_loader.dart';
 import '../widgets/payment_page_shell.dart';
 import 'payment_failed_page.dart';
@@ -32,6 +34,10 @@ class PaymentCheckoutPage extends StatefulWidget {
   final double amount;
   final VoidCallback? onZohoUnavailable;
 
+  /// True when this page was pushed from the Cart — closing it then simply goes
+  /// back (and the Cart refreshes) instead of opening a second Cart on top.
+  final bool openedFromCart;
+
   const PaymentCheckoutPage({
     super.key,
     required this.checkoutUrl,
@@ -40,6 +46,7 @@ class PaymentCheckoutPage extends StatefulWidget {
     required this.serviceRequestId,
     required this.amount,
     this.onZohoUnavailable,
+    this.openedFromCart = false,
   });
 
   @override
@@ -152,7 +159,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
 
       if (!mounted || _handledSuccess || _handledFailure) return;
       if (result.verified || result.payment.isSuccess) {
-        await _goToAppSuccess();
+        await _goToAppSuccess(result.payment);
       } else if (result.payment.isFailed) {
         _goToFailed(result.payment.failureReason);
       }
@@ -346,7 +353,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
     if (mounted) setState(() => _pageLoaded = true);
   }
 
-  Future<void> _goToAppSuccess() async {
+  Future<void> _goToAppSuccess(Payment? payment) async {
     if (_handledSuccess || _handledFailure || !mounted) return;
     _handledSuccess = true;
     _loadTimeout?.cancel();
@@ -362,7 +369,10 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
           orderId: widget.orderId,
           amount: widget.amount,
           serviceRequestId: widget.serviceRequestId,
-          paidAt: DateTime.now(),
+          // The server's paid time — never the time this screen happened to open.
+          paidAt: payment?.completedAt ?? DateTime.now(),
+          paidVia: payment?.paymentViaText,
+          transactionId: payment?.zohoPaymentId,
         ),
       ),
     );
@@ -400,6 +410,11 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
 
   void _moveToCart() {
     if (_handledSuccess || !mounted) return;
+    _statusPollTimer?.cancel();
+    if (widget.openedFromCart && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(false);
+      return;
+    }
     replaceWithCustomerCart(context);
   }
 
@@ -407,7 +422,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
   Widget build(BuildContext context) {
     return PaymentPageShell(
       title: 'Secure checkout',
-      subtitle: 'Complete payment in the window below.',
+      subtitle: 'Pay with UPI (GPay, PhonePe, Paytm), card or net banking.',
       actions: [
         IconButton(
           tooltip: 'Close',
@@ -415,7 +430,21 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
           icon: const Icon(Icons.close_rounded, color: PaymentPageTheme.titleColor),
         ),
       ],
-      body: kIsWeb
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _CheckoutSummaryBar(
+            orderId: widget.orderId,
+            amount: widget.amount,
+          ),
+          Expanded(child: _checkoutBody()),
+        ],
+      ),
+    );
+  }
+
+  Widget _checkoutBody() {
+    return kIsWeb
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -447,7 +476,78 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage>
                       message: 'Loading Zoho secure checkout…',
                     )
                   : WebViewWidget(controller: _webController!),
+            );
+  }
+}
+
+/// Order + amount strip above the gateway so the user always knows what they
+/// are paying for (and which order to quote if something goes wrong).
+class _CheckoutSummaryBar extends StatelessWidget {
+  const _CheckoutSummaryBar({required this.orderId, required this.amount});
+
+  final String orderId;
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: PaymentPageTheme.heroGradient,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Order ID',
+                  style: GoogleFonts.montserrat(
+                    color: AppColors.onGradientMuted,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  orderId.isEmpty ? '—' : orderId,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.montserrat(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'You pay',
+                style: GoogleFonts.montserrat(
+                  color: AppColors.onGradientMuted,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                PaymentAmountFormatter.formatGrouped(amount),
+                style: GoogleFonts.montserrat(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

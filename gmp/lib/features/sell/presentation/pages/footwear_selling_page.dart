@@ -57,6 +57,17 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
   bool get _isLuxury => widget.footwearType == 'luxury';
   bool get _proofsComplete => _proofs.every((item) => _proofUrls.containsKey(item.$1));
 
+  String? _nextMissingProof() {
+    for (final item in _proofs) {
+      if (!_proofUrls.containsKey(item.$1)) return item.$1;
+    }
+    return null;
+  }
+
+  String _proofLabel(String proofType) {
+    return _proofs.firstWhere((item) => item.$1 == proofType).$2;
+  }
+
   @override
   void dispose() {
     _retailController.dispose();
@@ -75,12 +86,24 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
   }
 
   Future<void> _pickProof(String proofType) async {
+    final label = _proofLabel(proofType);
     final source = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.montserrat(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Take picture'),
@@ -155,6 +178,18 @@ class _FootwearSellingPageState extends State<FootwearSellingPage> {
             _proofUrls[proofType] = url;
             _busy = false;
           });
+          final next = _nextMissingProof();
+          final nextLabel = next == null ? null : _proofLabel(next);
+          await showAppFeedbackAlert(
+            context,
+            title: 'Uploaded',
+            message: nextLabel == null
+                ? '$label uploaded successfully.'
+                : '$label uploaded. Tap OK to upload $nextLabel.',
+            type: AppFeedbackType.success,
+          );
+          if (!mounted || next == null) return;
+          await _pickProof(next);
         } catch (e) {
           if (!mounted) return;
           setState(() {

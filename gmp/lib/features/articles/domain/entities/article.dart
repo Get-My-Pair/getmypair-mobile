@@ -32,6 +32,9 @@ class Article extends Equatable {
   final DateTime? lastWornAt;
   final DateTime? lastShoeCareAt;
 
+  /// Marked with the heart; listed on the Favorites tab.
+  final bool isFavorite;
+
   const Article({
     required this.id,
     required this.ownerId,
@@ -48,7 +51,28 @@ class Article extends Equatable {
     this.shoeSize,
     this.lastWornAt,
     this.lastShoeCareAt,
+    this.isFavorite = false,
   });
+
+  /// Copy with a new favourite flag (everything else unchanged).
+  Article copyWithFavorite(bool value) => Article(
+        id: id,
+        ownerId: ownerId,
+        brand: brand,
+        model: model,
+        category: category,
+        footwearType: footwearType,
+        color: color,
+        purchaseYear: purchaseYear,
+        materials: materials,
+        condition: condition,
+        images: images,
+        createdAt: createdAt,
+        shoeSize: shoeSize,
+        lastWornAt: lastWornAt,
+        lastShoeCareAt: lastShoeCareAt,
+        isFavorite: value,
+      );
 
   /// First image URL for list thumbnail, or null if no images.
   String? get thumbnailImage =>
@@ -75,5 +99,6 @@ class Article extends Equatable {
         shoeSize,
         lastWornAt,
         lastShoeCareAt,
+        isFavorite,
       ];
 }

@@ -205,8 +205,8 @@ class _ArticleEditPageState extends State<ArticleEditPage> {
     _imageFiles.clear();
 
     final color = article.color.trim();
-    _selectedColorHex =
-        color.isEmpty ? null : footwearColourDisplayName(color);
+    // Keep the saved value as-is (exact hex, or a legacy colour name).
+    _selectedColorHex = color.isEmpty ? null : color;
 
     _selectedSizeNumber = null;
     _parseShoeSize(article.shoeSize);

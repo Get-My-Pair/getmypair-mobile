@@ -11,6 +11,7 @@ import 'package:gmp/core/theme/app_colors.dart';
 import 'package:gmp/core/widgets/app_feedback_alert.dart';
 import 'package:gmp/core/widgets/app_skeleton.dart';
 import 'package:gmp/core/navigation/customer_cart_nav_hook.dart';
+import 'package:gmp/core/navigation/customer_favorites_nav_hook.dart';
 import 'package:gmp/features/profile/domain/entities/user_profile.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:gmp/features/profile/presentation/bloc/profile_state.dart';
@@ -24,7 +25,7 @@ import 'package:gmp/features/profile/presentation/pages/profile_page.dart';
 /// (Figma `3042:4601`), flips at the left end, then walks back right.
 ///
 /// [currentIndex] stays semantic: `0` home, `1` rack, `2` profile.
-/// Favorites stays coming-soon; Cart calls [onCartTap] (wired to Cart page).
+/// Favorites opens the Favorites page (via [openCustomerFavoritesHook]); Cart calls [onCartTap] (wired to Cart page).
 ///
 /// The exported SVG uses `foreignObject` + HTML conic-gradient; Flutter cannot
 /// render that as an asset, so the same stops are applied via [SweepGradient].
@@ -35,7 +36,9 @@ class FloatingGradientBottomNav extends StatelessWidget {
     required this.onChanged,
     this.showWalkingShoe = false,
     this.highlightCart = false,
+    this.highlightFavorites = false,
     this.onCartTap,
+    this.onFavoritesTap,
   });
 
   /// Semantic dashboard tab: `0` home, `1` rack, `2` profile.
@@ -49,8 +52,15 @@ class FloatingGradientBottomNav extends StatelessWidget {
   /// When true, the Cart tab (visual index 3) shows as selected.
   final bool highlightCart;
 
+  /// When true, the Favorites tab (visual index 1) shows as selected.
+  /// Use with currentIndex: -1 when Favorites is the active screen.
+  final bool highlightFavorites;
+
   /// Opens the Cart screen (4th tab). Required for Cart to work.
   final VoidCallback? onCartTap;
+
+  /// Opens the Favorites screen (2nd tab). Falls back to [openCustomerFavoritesHook].
+  final VoidCallback? onFavoritesTap;
 
   /// Inner pill from Figma: `rect … height="58" rx="29"` (`3042:4601`).
   static const double barHeight = 58;
@@ -109,7 +119,7 @@ class FloatingGradientBottomNav extends StatelessWidget {
     _NavTab(svgAsset: _homeIcon, semanticIndex: 0),
     _NavTab(
       svgAsset: _favoritesIcon,
-      comingSoonFeature: 'Favorites',
+      isFavorites: true,
     ),
     _NavTab(svgAsset: _middleShoeIcon, semanticIndex: 1),
     _NavTab(
@@ -130,8 +140,11 @@ class FloatingGradientBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedVisual =
-        highlightCart ? 3 : _visualIndexFor(currentIndex);
+    final selectedVisual = highlightFavorites
+        ? 1
+        : highlightCart
+            ? 3
+            : _visualIndexFor(currentIndex);
     final shoeW = showWalkingShoe ? walkingShoeWidthOf(context) : walkingShoeWidth;
     final shoeH =
         showWalkingShoe ? walkingShoeHeightOf(context) : walkingShoeHeight;
@@ -210,6 +223,20 @@ class FloatingGradientBottomNav extends StatelessWidget {
                                       showComingSoon(
                                         context,
                                         feature: 'Cart',
+                                      );
+                                    }
+                                    return;
+                                  }
+                                  if (tab.isFavorites) {
+                                    if (highlightFavorites) return;
+                                    if (onFavoritesTap != null) {
+                                      onFavoritesTap!();
+                                    } else if (!invokeOpenCustomerFavorites(
+                                      context,
+                                    )) {
+                                      showComingSoon(
+                                        context,
+                                        feature: 'Favorites',
                                       );
                                     }
                                     return;
@@ -359,7 +386,7 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
     // value 0 = right edge, value 1 = left edge; reverse walks back right.
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 8200),
+      duration: const Duration(milliseconds: 11000),
     )..addListener(_onTick)..repeat(reverse: true);
     _messageTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
@@ -404,73 +431,88 @@ class _WalkingNavShoeState extends State<_WalkingNavShoe>
     final bubbleLead = 56.0 * shoeScale;
     final unitWidth = widget.shoeWidth + bubbleLead;
 
+    final movingLeft = _movingLeft;
+    // Left→right: mirrored shoe, bubble leads on the left.
+    // Right→left: natural shoe, bubble leads on the right.
+    final shoeScaleX = movingLeft ? 1.0 : -1.0;
+    final shoeLeft = movingLeft ? 0.0 : bubbleLead;
+    final bubbleLeft = movingLeft ? widget.shoeWidth : 0.0;
+
+    // Built once per direction / message change, not every animation frame.
+    final unit = RepaintBoundary(
+      child: SizedBox(
+        width: unitWidth,
+        height: widget.unitHeight,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: shoeLeft,
+              bottom: 0,
+              width: widget.shoeWidth,
+              height: widget.shoeHeight,
+              child: Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.diagonal3Values(shoeScaleX, 1, 1),
+                child: Image.asset(
+                  widget.asset,
+                  width: widget.shoeWidth,
+                  height: widget.shoeHeight,
+                  // Fill the reserved box — never shrink in leftover space.
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.none,
+                  gaplessPlayback: true,
+                  alignment: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            Positioned(
+              left: bubbleLeft,
+              top: 0,
+              child: Transform.scale(
+                scale: shoeScale,
+                alignment:
+                    movingLeft ? Alignment.topRight : Alignment.topLeft,
+                child: _WalkingShoeBubble(
+                  message: _kWalkingShoeMessages[_messageIndex],
+                  messageKey: ValueKey<int>(_messageIndex),
+                  mirrorTail: movingLeft,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final travel = math.max(0.0, constraints.maxWidth - unitWidth);
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            final t = Curves.easeInOut.transform(_controller.value);
-            // Start at the right and move left; reverse returns to the right.
-            final left = (1.0 - t) * travel;
-            final movingLeft = _movingLeft;
-            // Left→right: mirrored shoe, bubble leads on the left.
-            // Right→left: natural shoe, bubble leads on the right.
-            final shoeScaleX = movingLeft ? 1.0 : -1.0;
-            final shoeLeft = movingLeft ? 0.0 : bubbleLead;
-            final bubbleLeft = movingLeft ? widget.shoeWidth : 0.0;
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: left,
-                  bottom: 0,
-                  width: unitWidth,
-                  height: widget.unitHeight,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        left: shoeLeft,
-                        bottom: 0,
-                        width: widget.shoeWidth,
-                        height: widget.shoeHeight,
-                        child: Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.diagonal3Values(shoeScaleX, 1, 1),
-                          child: Image.asset(
-                            widget.asset,
-                            width: widget.shoeWidth,
-                            height: widget.shoeHeight,
-                            // Fill the reserved box — never shrink in leftover space.
-                            fit: BoxFit.fill,
-                            filterQuality: FilterQuality.none,
-                            gaplessPlayback: true,
-                            alignment: Alignment.bottomCenter,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: bubbleLeft,
-                        top: 0,
-                        child: Transform.scale(
-                          scale: shoeScale,
-                          alignment: movingLeft
-                              ? Alignment.topRight
-                              : Alignment.topLeft,
-                          child: _WalkingShoeBubble(
-                            message: _kWalkingShoeMessages[_messageIndex],
-                            messageKey: ValueKey<int>(_messageIndex),
-                            mirrorTail: movingLeft,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+        return RepaintBoundary(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 0,
+                bottom: 0,
+                width: unitWidth,
+                height: widget.unitHeight,
+                // Translate only — no relayout of the bar on each frame.
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  child: unit,
+                  builder: (context, child) {
+                    final t = Curves.easeInOut.transform(_controller.value);
+                    // Start at the right and move left; reverse returns right.
+                    return Transform.translate(
+                      offset: Offset((1.0 - t) * travel, 0),
+                      child: child,
+                    );
+                  },
                 ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         );
       },
     );
@@ -663,6 +705,7 @@ class _NavTab {
     this.semanticIndex,
     this.comingSoonFeature,
     this.isCart = false,
+    this.isFavorites = false,
   });
 
   final String? svgAsset;
@@ -671,6 +714,7 @@ class _NavTab {
   final int? semanticIndex;
   final String? comingSoonFeature;
   final bool isCart;
+  final bool isFavorites;
 }
 
 /// Outer padding around [FloatingGradientBottomNav] on [CustomerDashboardPage]
@@ -717,6 +761,7 @@ class DashboardLinkedBottomNav extends StatelessWidget {
     super.key,
     this.selectedTabIndex = 2,
     this.highlightCart = false,
+    this.highlightFavorites = false,
     this.onCartTap,
     this.onProfileTabWhenCannotPop,
   });
@@ -727,6 +772,9 @@ class DashboardLinkedBottomNav extends StatelessWidget {
 
   /// Cart tab selected (4th visual button).
   final bool highlightCart;
+
+  /// Favorites tab selected (2nd visual button). Use with selectedTabIndex: -1.
+  final bool highlightFavorites;
 
   /// Opens Cart. Defaults to [openCustomerCartPage] when null — pass explicitly
   /// from call sites that import cart navigation to avoid cycles.
@@ -743,6 +791,7 @@ class DashboardLinkedBottomNav extends StatelessWidget {
       child: FloatingGradientBottomNav(
         currentIndex: selectedTabIndex < 0 ? -1 : selectedTabIndex.clamp(0, 2),
         highlightCart: highlightCart,
+        highlightFavorites: highlightFavorites,
         onCartTap: onCartTap ??
             () {
               if (openCustomerCartHook != null) {
@@ -753,7 +802,9 @@ class DashboardLinkedBottomNav extends StatelessWidget {
             },
         onChanged: (i) {
           final tab = i.clamp(0, 2);
-          if (!highlightCart && tab == selectedTabIndex) return;
+          if (!highlightCart && !highlightFavorites && tab == selectedTabIndex) {
+            return;
+          }
           customerDashboardTabIndex.value = tab;
           final nav = Navigator.of(context);
           if (tab == 2) {

@@ -43,6 +43,10 @@ class _CartPageState extends State<CartPage> {
   String? _error;
   List<_CartPayableItem> _items = const [];
 
+  /// Ids / order numbers paid during this session. If the server is slow to flip
+  /// a payment to paid, the item still must not reappear in the Cart.
+  final Set<String> _paidKeys = {};
+
   @override
   void initState() {
     super.initState();
@@ -57,11 +61,14 @@ class _CartPageState extends State<CartPage> {
         page: 1,
         limit: 100,
       );
-      return history.items
-          .where((p) => p.countsAsPaid)
-          .map((p) => p.serviceRequestId.trim().toLowerCase())
-          .where((id) => id.isNotEmpty)
-          .toSet();
+      final ids = <String>{};
+      for (final p in history.items.where((p) => p.countsAsPaid)) {
+        for (final raw in [p.serviceRequestId, p.orderId, p.id]) {
+          final id = raw.trim().toLowerCase();
+          if (id.isNotEmpty) ids.add(id);
+        }
+      }
+      return ids;
     } catch (_) {
       return {};
     }
@@ -102,7 +109,7 @@ class _CartPageState extends State<CartPage> {
           // Paid state comes only from payment APIs / service request DB —
           // never SharedPreferences.
           final historyPaid = await _paidIdsFromPaymentHistory(token);
-          final paidIds = {...historyPaid};
+          final paidIds = {...historyPaid, ..._paidKeys};
 
           final res = await sl<DioClient>().get(
             ApiEndpoints.serviceMy,
@@ -145,8 +152,10 @@ class _CartPageState extends State<CartPage> {
           final open = await _openCheckoutItems(token);
           final seen = items.map((row) => row.id).toSet();
           for (final row in open) {
+            if (_isKnownPaid(row, paidIds)) continue;
             if (seen.add(row.id)) items.add(row);
           }
+          items = items.where((row) => !_isKnownPaid(row, paidIds)).toList();
 
           if (!mounted) return;
           setState(() {
@@ -162,6 +171,21 @@ class _CartPageState extends State<CartPage> {
         }
       },
     );
+  }
+
+  bool _isKnownPaid(_CartPayableItem row, Set<String> paidIds) {
+    for (final raw in [row.id, row.orderId, row.paymentId]) {
+      final key = raw.trim().toLowerCase();
+      if (key.isNotEmpty && paidIds.contains(key)) return true;
+    }
+    return false;
+  }
+
+  void _markPaid(_CartPayableItem item) {
+    for (final raw in [item.id, item.orderId, item.paymentId]) {
+      final key = raw.trim().toLowerCase();
+      if (key.isNotEmpty) _paidKeys.add(key);
+    }
   }
 
   Future<List<_CartPayableItem>> _openCheckoutItems(String token) async {
@@ -192,11 +216,20 @@ class _CartPageState extends State<CartPage> {
             paymentId: item.paymentId,
             serviceRequestId: item.id,
             amount: item.amount,
+            openedFromCart: true,
           ),
         ),
       );
       if (!mounted) return;
-      if (paid == true) await _load();
+      if (paid == true) {
+        // Remove right away; the reload below confirms with the server.
+        _markPaid(item);
+        setState(() {
+          _items = [for (final row in _items) if (row.id != item.id) row];
+        });
+      }
+      // Always refresh: the payment may have completed even if X was tapped.
+      await _load();
       return;
     }
     final paid = await Navigator.of(context).push<bool>(
@@ -214,14 +247,12 @@ class _CartPageState extends State<CartPage> {
     );
     if (!mounted) return;
     if (paid == true) {
+      _markPaid(item);
       setState(() {
-        _items = [
-          for (final row in _items)
-            row.id == item.id ? row.copyWith(isPaid: true) : row,
-        ];
+        _items = [for (final row in _items) if (row.id != item.id) row];
       });
-      await _load();
     }
+    await _load();
   }
 
   @override
@@ -730,6 +761,9 @@ class _CartPayableItem {
       imageUrl: imageUrl,
       amount: amount,
       isPaid: isPaid ?? this.isPaid,
+      checkoutUrl: checkoutUrl,
+      orderId: orderId,
+      paymentId: paymentId,
     );
   }
 

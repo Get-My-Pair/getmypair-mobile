@@ -8,7 +8,8 @@ import 'package:gmp/features/recycle/presentation/pages/recycle_slideshow_page.d
 import 'package:gmp/injection_container.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Save hub — two actions only. Donation requests appear below when any exist.
+/// Save hub — donate and recycle, then how the path works.
+/// Donation requests appear below when any exist.
 class SaveMyPairPage extends StatefulWidget {
   const SaveMyPairPage({super.key});
 
@@ -126,6 +127,8 @@ class _SaveMyPairPageState extends State<SaveMyPairPage> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 28),
+                        const _HowSavingWorks(),
                         if (_requests.isNotEmpty) ...[
                           const SizedBox(height: 28),
                           Text(
@@ -237,6 +240,187 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _HowSavingWorks extends StatelessWidget {
+  const _HowSavingWorks();
+
+  static const _steps = <({String step, String title, String body})>[
+    (
+      step: '1',
+      title: 'Choose the path',
+      body:
+          'Donate a pair someone can still wear. Recycle a pair that is torn or no longer safe to walk in.',
+    ),
+    (
+      step: '2',
+      title: 'Hand the pair in',
+      body:
+          'Donate starts with a photo. Recycle is a hub drop or a pickup, with both shoes kept together.',
+    ),
+    (
+      step: '3',
+      title: 'We confirm it',
+      body:
+          'Donation requests show on this page while they are reviewed. A recycle drop ends with a confirmation.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'How saving works',
+          style: GoogleFonts.boldonse(
+            color: const Color(0xFF062F35),
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Give a wearable pair to someone else, or send a worn-out pair to be recovered.',
+          style: GoogleFonts.montserrat(
+            color: const Color(0xFF3D5A60),
+            fontSize: 13,
+            height: 1.35,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < _steps.length; i++) ...[
+                if (i > 0)
+                  const Divider(height: 1, thickness: 1, color: Color(0xFFE6EEF0)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0F6876),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          _steps[i].step,
+                          style: GoogleFonts.montserrat(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _steps[i].title,
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF062F35),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _steps[i].body,
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF3D5A60),
+                                fontSize: 13,
+                                height: 1.35,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Row(
+          children: [
+            Expanded(
+              child: _PathNote(
+                title: 'Donate',
+                body: 'Still wearable',
+              ),
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: _PathNote(
+                title: 'Recycle',
+                body: 'Worn out',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PathNote extends StatelessWidget {
+  final String title;
+  final String body;
+
+  const _PathNote({required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDFE7E9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF0F6876)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.boldonse(
+              color: const Color(0xFF062F35),
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            body,
+            style: GoogleFonts.montserrat(
+              color: const Color(0xFF062F35),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

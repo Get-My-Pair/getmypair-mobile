@@ -758,14 +758,19 @@ class _AiOnboardingPageState extends State<AiOnboardingPage>
               alignment: Alignment.topCenter,
               child: FractionallySizedBox(
                 widthFactor: 1,
-                child: Opacity(
-                  opacity: 0.55,
-                  child: Image.asset(
-                    'assets/images/bg/ai-onbording.png',
-                    fit: BoxFit.fitWidth,
-                    alignment: Alignment.topCenter,
-                    filterQuality: FilterQuality.high,
-                  ),
+                child: Image.asset(
+                  'assets/images/bg/ai-onbording.png',
+                  fit: BoxFit.fitWidth,
+                  alignment: Alignment.topCenter,
+                  // Image-level opacity avoids an offscreen layer.
+                  opacity: const AlwaysStoppedAnimation(0.55),
+                  // Source is 1720×3728 (~5 MB); decode near screen width.
+                  cacheWidth: (MediaQuery.sizeOf(context).width *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .clamp(400.0, 1720.0)
+                      .round(),
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.medium,
                 ),
               ),
             ),

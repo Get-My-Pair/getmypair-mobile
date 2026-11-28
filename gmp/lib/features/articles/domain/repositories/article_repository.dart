@@ -31,6 +31,7 @@ abstract class ArticleRepository {
     List<Map<String, dynamic>>? materials,
     List<String>? imageUrls,
     String? shoeSize,
+    bool? isFavorite,
   });
   Future<void> deleteArticle(String accessToken, String articleId);
 }

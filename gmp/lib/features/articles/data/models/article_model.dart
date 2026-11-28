@@ -17,7 +17,15 @@ class ArticleModel extends Article {
     super.shoeSize,
     super.lastWornAt,
     super.lastShoeCareAt,
+    super.isFavorite,
   });
+
+  static bool _parseBool(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) return v.toLowerCase() == 'true' || v == '1';
+    return false;
+  }
 
   static String _stringId(dynamic v) {
     if (v == null) return '';
@@ -103,6 +111,7 @@ class ArticleModel extends Article {
             json['shoeCareAt'] ??
             json['lastSentToShoeCare'],
       ),
+      isFavorite: _parseBool(json['isFavorite']),
     );
   }
 
@@ -123,6 +132,7 @@ class ArticleModel extends Article {
       if (shoeSize != null) 'shoeSize': shoeSize,
       if (lastWornAt != null) 'lastWornAt': lastWornAt!.toIso8601String(),
       if (lastShoeCareAt != null) 'lastShoeCareAt': lastShoeCareAt!.toIso8601String(),
+      'isFavorite': isFavorite,
     };
   }
 }

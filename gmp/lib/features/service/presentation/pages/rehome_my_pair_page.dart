@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmp/core/bgtheme.dart';
 import 'package:gmp/core/constants/api_endpoints.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
@@ -9,6 +10,7 @@ import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/features/rent/presentation/pages/available_rent_footwear_page.dart';
 import 'package:gmp/features/rent/presentation/pages/rent_my_pair_page.dart';
 import 'package:gmp/features/sell/presentation/pages/sell_my_pair_page.dart';
+import 'package:gmp/features/service/presentation/widgets/brand_logo_svgs.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_gradient_search_bar.dart';
 import 'package:gmp/features/service/presentation/widgets/hub_scoped_search_results.dart';
 import 'package:gmp/core/widgets/floating_gradient_bottom_nav.dart';
@@ -320,11 +322,8 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                                 (18.0 * s).clamp(10.0, 24.0);
                             final cardGap =
                                 (8.0 * uiScale).clamp(6.0, 12.0);
-                            final brandH =
-                                (105.0 * hScale).clamp(72.0, 105.0);
                             final stylesH =
                                 (96.0 * hScale).clamp(68.0, 96.0);
-                            final brandScale = brandH / 105.0;
 
                             return Padding(
                               padding: EdgeInsets.fromLTRB(
@@ -333,9 +332,9 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                                 contentPadH,
                                 contentPadBottom,
                               ),
-                              child: SizedBox(
+                              child: _FitOrScroll(
                                 height: available,
-                                width: double.infinity,
+                                scroll: !distribute && !searching,
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
@@ -423,46 +422,9 @@ class _RehomeMyPairPageState extends State<RehomeMyPairPage> {
                                               _subsectionLabel(subSize),
                                         ),
                                         SizedBox(height: gapSm),
-                                        SizedBox(
-                                          height: brandH,
-                                          child: SingleChildScrollView(
-                                            scrollDirection:
-                                                Axis.horizontal,
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                            ),
-                                            child: Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _DemandBrandImage(
-                                                  asset:
-                                                      'assets/images/rehome1 (2).png',
-                                                  width: 184 * brandScale,
-                                                  height: brandH * 0.98,
-                                                ),
-                                                SizedBox(
-                                                  width: 14 * brandScale,
-                                                ),
-                                                _DemandBrandImage(
-                                                  asset:
-                                                      'assets/images/rehome1 (1).png',
-                                                  width: 129 * brandScale,
-                                                  height: brandH,
-                                                ),
-                                                SizedBox(
-                                                  width: 14 * brandScale,
-                                                ),
-                                                _DemandBrandImage(
-                                                  asset:
-                                                      'assets/images/rehome1 (3).png',
-                                                  width: 187 * brandScale,
-                                                  height: brandH,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
+                                        _BrandLogoStrip(
+                                          size: (52.0 * hScale)
+                                              .clamp(44.0, 52.0),
                                         ),
                                         if (distribute)
                                           const Spacer(flex: 2)
@@ -872,31 +834,48 @@ class _SecondaryServiceCard extends StatelessWidget {
   }
 }
 
-class _DemandBrandImage extends StatelessWidget {
-  final String asset;
-  final double width;
-  final double height;
+class _BrandLogoStrip extends StatelessWidget {
+  const _BrandLogoStrip({required this.size});
 
-  const _DemandBrandImage({
-    required this.asset,
-    required this.width,
-    required this.height,
-  });
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: width,
-      height: height,
-      child: Image.asset(
-        asset,
-        fit: BoxFit.cover,
-        alignment: Alignment.center,
+      height: size,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: kFootwearBrandLogos.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final brand = kFootwearBrandLogos[i];
+          return Tooltip(
+            message: brand.name,
+            child: Container(
+              width: size,
+              height: size,
+              padding: EdgeInsets.all(size * 0.18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFDFE7E9)),
+              ),
+              child: SvgPicture.string(
+                brand.svg,
+                fit: BoxFit.contain,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF062F35),
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 }
-
 class _RentalStyleData {
   final String label;
   final String imageUrl;
@@ -975,5 +954,27 @@ class _RentalStyle extends StatelessWidget {
         );
       },
     );
+  }
+}
+/// Fixed-height panel when content is meant to fill it; scrolls when the screen is too short.
+class _FitOrScroll extends StatelessWidget {
+  const _FitOrScroll({
+    required this.height,
+    required this.scroll,
+    required this.child,
+  });
+
+  final double height;
+  final bool scroll;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (scroll) {
+      return SingleChildScrollView(
+        child: SizedBox(width: double.infinity, child: child),
+      );
+    }
+    return SizedBox(height: height, width: double.infinity, child: child);
   }
 }

@@ -637,6 +637,9 @@ class _HomePageState extends State<HomePage> {
       url,
       width: double.infinity,
       height: double.infinity,
+      // Rack thumbs are at most ~120 logical px wide.
+      cacheWidth: 400,
+      gaplessPlayback: true,
       errorBuilder: (_, _, _) => const Center(
         child: Icon(
           Icons.checkroom_outlined,
@@ -2225,7 +2228,9 @@ class _HomeTopCard extends StatelessWidget {
     final deviceIconScale =
         (shortestSide / _kHomeDesignWidth).clamp(0.82, 1.0).toDouble();
     final locationIconSize = (20 * s * deviceIconScale).clamp(15.0, 28.0);
-    final greetingName = userName.isEmpty ? 'Aashi' : userName;
+    // No placeholder name: until the real name is known, show the skeleton.
+    final greetingName = userName.trim();
+    final greetingLoading = contentLoading || greetingName.isEmpty;
     final horizontal = Responsive.horizontalPaddingOf(context);
     final headerHorizontal = (horizontal - 2).clamp(14.0, horizontal);
     final addressLine = _addressLineForHome(currentAddress);
@@ -2276,7 +2281,14 @@ class _HomeTopCard extends StatelessWidget {
                 _kHomeHeaderBgAsset,
                 fit: BoxFit.cover,
                 alignment: Alignment.center,
-                filterQuality: FilterQuality.high,
+                // Source is 1816px wide; decode near screen width instead.
+                cacheWidth: (MediaQuery.sizeOf(context).width *
+                        MediaQuery.devicePixelRatioOf(context) *
+                        1.3)
+                    .clamp(400.0, 1816.0)
+                    .round(),
+                gaplessPlayback: true,
+                filterQuality: FilterQuality.medium,
                 errorBuilder: (_, _, _) => Image.asset(
                   'assets/images/bg.png',
                   fit: BoxFit.cover,
@@ -2296,7 +2308,7 @@ class _HomeTopCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: contentLoading
+                          child: greetingLoading
                               ? Align(
                                   alignment: Alignment.centerLeft,
                                   child: _HomeSkeletonBone(
@@ -3178,6 +3190,22 @@ class _CarbonCreditsPopup extends StatelessWidget {
   }
 }
 
+/// Original thrift artwork peaks around alpha 64. Scale it to solid so the
+/// same icon paints in the tile color instead of looking faded.
+List<double> _solidIconTint(Color color) {
+  const alphaScale = 255 / 64;
+  // Translation column is 0–255, not 0–1.
+  final r = color.r * 255.0;
+  final g = color.g * 255.0;
+  final b = color.b * 255.0;
+  return <double>[
+    0, 0, 0, 0, r,
+    0, 0, 0, 0, g,
+    0, 0, 0, 0, b,
+    0, 0, 0, alphaScale, 0,
+  ];
+}
+
 class _QuickActionCard extends StatelessWidget {
   final String label;
   final String? iconAssetUrl;
@@ -3340,16 +3368,26 @@ class _QuickActionCard extends StatelessWidget {
         lower.endsWith('.jpg') ||
         lower.endsWith('.jpeg') ||
         lower.endsWith('.webp')) {
-      return Image.asset(
+      final image = Image.asset(
         source,
         width: size,
         height: size,
         fit: BoxFit.contain,
-        color: textColor,
-        colorBlendMode: BlendMode.srcIn,
+        color: source == _kThriftStoreIconAsset ? null : textColor,
+        colorBlendMode:
+            source == _kThriftStoreIconAsset ? null : BlendMode.srcIn,
         errorBuilder: (_, _, _) =>
             Icon(Icons.widgets_outlined, size: size * 0.85, color: textColor),
       );
+      // Keep the original artwork. Its pixels are only ~25% opaque, so a
+      // normal tint stays pale. Scale that alpha up and paint the tile color.
+      if (source == _kThriftStoreIconAsset) {
+        return ColorFiltered(
+          colorFilter: ColorFilter.matrix(_solidIconTint(textColor)),
+          child: image,
+        );
+      }
+      return image;
     }
 
     return SvgPicture.asset(

@@ -14,7 +14,6 @@ import '../../../../core/constants/google_maps_config.dart';
 import '../../../../core/bgtheme.dart';
 import '../../../../core/maps/google_maps_js_loader.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_feedback_alert.dart';
 import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../core/widgets/floating_gradient_bottom_nav.dart';
 import '../../../../core/utils/responsive.dart';
@@ -27,6 +26,7 @@ import '../../../profile/domain/entities/user_profile.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
 import '../../../payment/presentation/utils/cart_navigation.dart';
+import '../../../favorites/presentation/utils/favorites_navigation.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../profile/presentation/utils/saved_location_sync.dart';
 import '../../../../injection_container.dart';
@@ -1626,11 +1626,7 @@ class _ShoeCareBottomNav extends StatelessWidget {
             selected: false,
             icon: Icons.favorite_border_rounded,
             onTap: () {
-              showAppFeedbackAlert(
-                context,
-                message: 'Favorites coming soon',
-                type: AppFeedbackType.info,
-              );
+              openCustomerFavoritesPage(context);
             },
           ),
           _navItem(

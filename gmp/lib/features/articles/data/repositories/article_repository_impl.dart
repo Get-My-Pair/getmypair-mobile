@@ -69,6 +69,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
     List<Map<String, dynamic>>? materials,
     List<String>? imageUrls,
     String? shoeSize,
+    bool? isFavorite,
   }) async {
     return remoteDataSource.updateArticle(accessToken, articleId,
       brand: brand,
@@ -81,6 +82,7 @@ class ArticleRepositoryImpl implements ArticleRepository {
       materials: materials,
       imageUrls: imageUrls,
       shoeSize: shoeSize,
+      isFavorite: isFavorite,
     );
   }
 

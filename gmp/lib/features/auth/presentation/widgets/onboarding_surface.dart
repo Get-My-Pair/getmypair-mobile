@@ -40,13 +40,23 @@ class OnboardingGradientBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const RepaintBoundary(
+    // Source is 1720×3728 (~5 MB); decode near screen width instead.
+    final decodeWidth = (MediaQuery.sizeOf(context).width *
+            MediaQuery.devicePixelRatioOf(context) *
+            1.1)
+        .clamp(400.0, 1720.0)
+        .round();
+    return RepaintBoundary(
       child: SizedBox.expand(
         child: Image(
-          image: AssetImage(assetPath),
+          image: ResizeImage(
+            const AssetImage(assetPath),
+            width: decodeWidth,
+          ),
           fit: BoxFit.cover,
           alignment: Alignment.topCenter,
-          filterQuality: FilterQuality.high,
+          gaplessPlayback: true,
+          filterQuality: FilterQuality.medium,
         ),
       ),
     );

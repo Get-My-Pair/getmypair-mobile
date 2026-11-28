@@ -17,6 +17,7 @@ class UpdateArticle {
     List<Map<String, dynamic>>? materials,
     List<String>? imageUrls,
     String? shoeSize,
+    bool? isFavorite,
   }) {
     return repository.updateArticle(accessToken, articleId,
       brand: brand,
@@ -29,6 +30,7 @@ class UpdateArticle {
       materials: materials,
       imageUrls: imageUrls,
       shoeSize: shoeSize,
+      isFavorite: isFavorite,
     );
   }
 }

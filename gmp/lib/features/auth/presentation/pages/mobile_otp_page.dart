@@ -677,99 +677,6 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               ),
                             ),
                           ],
-                          SizedBox(height: verticalGapMd.clamp(12.0, 28.0)),
-                          SizedBox(
-                            height: controlHeight.clamp(42.0, 56.0),
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(100),
-                                gradient: const LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [Color(0xFF12899B), Color(0xFF09E0FF)],
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x1A000000),
-                                    blurRadius: 4,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(1),
-                                child: ElevatedButton(
-                                  onPressed: (_isPhoneValid && !_isSendingOtp) ? _sendOtp : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _kAccent,
-                                    foregroundColor: _kOnGradient,
-                                    disabledBackgroundColor: _kAccent,
-                                    disabledForegroundColor: _kOnGradient,
-                                    surfaceTintColor: Colors.transparent,
-                                    elevation: 0,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(100),
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: _isSendingOtp
-                                      ? _SendingOtpProgress(progress: _sendingProgress)
-                                      : Text(
-                                          'Send OTP',
-                                          style: GoogleFonts.boldonse(
-                                            fontSize: (14.0 * scale).clamp(13.0, 16.0),
-                                            fontWeight: FontWeight.w400,
-                                            color: _kOnGradient,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Social sign-up (Facebook, Google, Apple) is not needed for now.
-                          // SizedBox(height: verticalGapLg.clamp(12.0, 34.0)),
-                          // Row(
-                          //   children: [
-                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                          //     Padding(
-                          //       padding: EdgeInsets.symmetric(
-                          //         horizontal: (constraints.maxWidth * 0.07).clamp(12.0, 30.0),
-                          //       ),
-                          //       child: Text(
-                          //         'or Sign Up with',
-                          //         style: GoogleFonts.montserrat(
-                          //           color: const Color(0x33000000),
-                          //           fontSize: fieldTextSize,
-                          //           fontWeight: FontWeight.w400,
-                          //         ),
-                          //       ),
-                          //     ),
-                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
-                          //   ],
-                          // ),
-                          // SizedBox(height: verticalGapSm.clamp(22.0, 38.0)),
-                          // Wrap(
-                          //   alignment: WrapAlignment.center,
-                          //   spacing: (constraints.maxWidth * 0.14).clamp(16.0, 48.0),
-                          //   runSpacing: verticalGapSm.clamp(8.0, 18.0),
-                          //   children: [
-                          //     _SocialIconTile(
-                          //       assetPath: _kAuthFacebookIcon,
-                          //       contentInset: 6,
-                          //       innerScale: 1.0,
-                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
-                          //     ),
-                          //     _SocialIconTile(
-                          //       assetPath: _kAuthGoogleIcon,
-                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
-                          //     ),
-                          //     _SocialIconTile(
-                          //       assetPath: _kAuthAppleIcon,
-                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
-                          //     ),
-                          //   ],
-                          // ),
                           SizedBox(height: verticalGapMd.clamp(8.0, 16.0)),
                         LayoutBuilder(
                             builder: (context, constraints) {
@@ -902,6 +809,99 @@ class _MobileOTPPageState extends State<MobileOTPPage> {
                               );
                             },
                           ),
+                          SizedBox(height: verticalGapMd.clamp(12.0, 28.0)),
+                          SizedBox(
+                            height: controlHeight.clamp(42.0, 56.0),
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(100),
+                                gradient: const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [Color(0xFF12899B), Color(0xFF09E0FF)],
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x1A000000),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(1),
+                                child: ElevatedButton(
+                                  onPressed: (_isPhoneValid && !_isSendingOtp) ? _sendOtp : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _kAccent,
+                                    foregroundColor: _kOnGradient,
+                                    disabledBackgroundColor: _kAccent,
+                                    disabledForegroundColor: _kOnGradient,
+                                    surfaceTintColor: Colors.transparent,
+                                    elevation: 0,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(100),
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: _isSendingOtp
+                                      ? _SendingOtpProgress(progress: _sendingProgress)
+                                      : Text(
+                                          'Send OTP',
+                                          style: GoogleFonts.boldonse(
+                                            fontSize: (14.0 * scale).clamp(13.0, 16.0),
+                                            fontWeight: FontWeight.w400,
+                                            color: _kOnGradient,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Social sign-up (Facebook, Google, Apple) is not needed for now.
+                          // SizedBox(height: verticalGapLg.clamp(12.0, 34.0)),
+                          // Row(
+                          //   children: [
+                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                          //     Padding(
+                          //       padding: EdgeInsets.symmetric(
+                          //         horizontal: (constraints.maxWidth * 0.07).clamp(12.0, 30.0),
+                          //       ),
+                          //       child: Text(
+                          //         'or Sign Up with',
+                          //         style: GoogleFonts.montserrat(
+                          //           color: const Color(0x33000000),
+                          //           fontSize: fieldTextSize,
+                          //           fontWeight: FontWeight.w400,
+                          //         ),
+                          //       ),
+                          //     ),
+                          //     const Expanded(child: Divider(color: Color(0x4D8D8D8D), thickness: 1)),
+                          //   ],
+                          // ),
+                          // SizedBox(height: verticalGapSm.clamp(22.0, 38.0)),
+                          // Wrap(
+                          //   alignment: WrapAlignment.center,
+                          //   spacing: (constraints.maxWidth * 0.14).clamp(16.0, 48.0),
+                          //   runSpacing: verticalGapSm.clamp(8.0, 18.0),
+                          //   children: [
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthFacebookIcon,
+                          //       contentInset: 6,
+                          //       innerScale: 1.0,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthGoogleIcon,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //     _SocialIconTile(
+                          //       assetPath: _kAuthAppleIcon,
+                          //       tileSize: iconTileSize.clamp(36.0, 48.0),
+                          //     ),
+                          //   ],
+                          // ),
                         ],
                       ),
                         );

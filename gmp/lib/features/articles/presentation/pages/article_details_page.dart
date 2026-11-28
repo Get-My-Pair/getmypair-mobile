@@ -14,6 +14,7 @@ import 'package:gmp/core/widgets/article_rack_shoe_image.dart';
 import 'package:gmp/features/articles/domain/entities/article.dart';
 import 'package:gmp/features/articles/domain/usecases/delete_article.dart';
 import 'package:gmp/features/articles/domain/usecases/get_article_by_id.dart';
+import 'package:gmp/features/articles/domain/usecases/update_article.dart';
 import 'package:gmp/features/auth/domain/usecases/get_valid_access_token.dart';
 import 'package:gmp/injection_container.dart';
 import 'package:gmp/features/articles/presentation/widgets/footwear_colour_picker.dart';
@@ -43,6 +44,7 @@ class ArticleDetailsPage extends StatefulWidget {
 class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
   Article? _article;
   bool _loading = true;
+  bool _favoriteSaving = false;
   String? _error;
 
   static const Color _rackTealAccent = Color(0xFF11899B);
@@ -281,6 +283,59 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
     final hex = RegExp(r'#?([0-9A-Fa-f]{6})').firstMatch(s.trim())?.group(1);
     if (hex == null) return null;
     return Color(int.parse(hex, radix: 16) + 0xFF000000);
+  }
+
+  /// Heart: favourite / un-favourite right away. Rolls back on failure.
+  Future<void> _toggleFavorite() async {
+    final article = _article;
+    if (article == null || _favoriteSaving) return;
+    final next = !article.isFavorite;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
+    void say(String text) {
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(text),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
+
+    setState(() {
+      _article = article.copyWithFavorite(next);
+      _favoriteSaving = true;
+    });
+
+    void rollback() {
+      if (!mounted) return;
+      setState(() {
+        _article = _article?.copyWithFavorite(!next);
+        _favoriteSaving = false;
+      });
+    }
+
+    final tokenResult = await sl<GetValidAccessToken>().call();
+    if (!mounted) return;
+    await tokenResult.fold(
+      (_) async {
+        rollback();
+        say('Please sign in again');
+      },
+      (token) async {
+        try {
+          await sl<UpdateArticle>().call(token, article.id, isFavorite: next);
+          if (!mounted) return;
+          setState(() => _favoriteSaving = false);
+          say(next ? 'Added to Favorites' : 'Removed from Favorites');
+        } catch (e) {
+          rollback();
+          say(e.toString().replaceFirst('Exception: ', ''));
+        }
+      },
+    );
   }
 
   Future<void> _deleteArticle() async {
@@ -658,6 +713,38 @@ class _ArticleDetailsPageState extends State<ArticleDetailsPage> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            tooltip: article.isFavorite
+                                ? 'Remove from Favorites'
+                                : 'Add to Favorites',
+                            style: IconButton.styleFrom(
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              minimumSize: Size.zero,
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            constraints: BoxConstraints.tightFor(
+                              width: math.max(30.0, 26 * scale),
+                              height: math.max(30.0, 26 * scale),
+                            ),
+                            onPressed: _favoriteSaving ? null : _toggleFavorite,
+                            icon: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 220),
+                              transitionBuilder: (child, animation) =>
+                                  ScaleTransition(scale: animation, child: child),
+                              child: Icon(
+                                article.isFavorite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                key: ValueKey<bool>(article.isFavorite),
+                                size: (24 * scale).clamp(22.0, 26.0),
+                                color: article.isFavorite
+                                    ? const Color(0xFFFF5A7A)
+                                    : _rackTealAccent,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: (10 * scale).clamp(8.0, 14.0)),
                           IconButton(
                             style: IconButton.styleFrom(
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,

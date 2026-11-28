@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/bgtheme.dart';
 import '../services/payment_analytics.dart';
+import '../utils/payment_amount_formatter.dart';
 
 /// Full-screen Zoho payment success celebration.
 class PaymentSuccessPage extends StatefulWidget {
@@ -15,12 +16,20 @@ class PaymentSuccessPage extends StatefulWidget {
   final String serviceRequestId;
   final DateTime? paidAt;
 
+  /// e.g. "UPI · name@okicici" — shown on the receipt when the server knows it.
+  final String? paidVia;
+
+  /// Gateway transaction reference (optional).
+  final String? transactionId;
+
   const PaymentSuccessPage({
     super.key,
     required this.orderId,
     required this.amount,
     required this.serviceRequestId,
     this.paidAt,
+    this.paidVia,
+    this.transactionId,
   });
 
   @override
@@ -31,7 +40,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
     with TickerProviderStateMixin {
   static const _checkAsset =
       'assets/images/payment/payment_success_check.png';
-  static const _homeDelay = Duration(seconds: 6);
+  static const _homeDelay = Duration(seconds: 12);
 
   late final AnimationController _popupController;
   late final AnimationController _confettiController;
@@ -39,6 +48,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
   late final Animation<double> _popupFade;
   late final Animation<double> _checkScale;
   Timer? _homeTimer;
+  final DateTime _openedAt = DateTime.now();
 
   @override
   void initState() {
@@ -124,7 +134,9 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
             ),
             SafeArea(
               child: Center(
-                child: FadeTransition(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: FadeTransition(
                   opacity: _popupFade,
                   child: ScaleTransition(
                     scale: _popupScale,
@@ -164,15 +176,118 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                               height: 1.35,
                             ),
                           ),
+                          const SizedBox(height: 22),
+                          _ReceiptCard(
+                            orderId: widget.orderId,
+                            amount: widget.amount,
+                            paidAt: widget.paidAt ?? _openedAt,
+                            paidVia: widget.paidVia,
+                            transactionId: widget.transactionId,
+                          ),
+                          const SizedBox(height: 18),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 46,
+                            child: OutlinedButton(
+                              onPressed: _finishPaidFlow,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Colors.white70),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                              ),
+                              child: Text(
+                                'Done',
+                                style: GoogleFonts.montserrat(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ReceiptCard extends StatelessWidget {
+  const _ReceiptCard({
+    required this.orderId,
+    required this.amount,
+    required this.paidAt,
+    this.paidVia,
+    this.transactionId,
+  });
+
+  final String orderId;
+  final double amount;
+  final DateTime paidAt;
+  final String? paidVia;
+  final String? transactionId;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <(String, String)>[
+      ('Amount paid', PaymentAmountFormatter.format(amount)),
+      ('Paid on', PaymentAmountFormatter.formatFriendly(paidAt)),
+      if ((paidVia ?? '').trim().isNotEmpty) ('Paid via', paidVia!.trim()),
+      ('Order ID', orderId),
+      if ((transactionId ?? '').trim().isNotEmpty)
+        ('Transaction ID', transactionId!.trim()),
+    ];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0)
+              Divider(height: 1, color: Colors.white.withValues(alpha: 0.18)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rows[i].$1,
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white70,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      rows[i].$2,
+                      textAlign: TextAlign.end,
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
